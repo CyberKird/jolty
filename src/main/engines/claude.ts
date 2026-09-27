@@ -1,0 +1,588 @@
+import { execFile, spawn } from 'child_process'
+import { randomUUID } from 'crypto'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { shell } from 'electron'
+import type {
+  CanUseTool,
+  Options,
+  PermissionMode as SdkPermissionMode,
+  PermissionResult,
+  PermissionUpdate,
+  Query,
+  SDKMessage,
+  SDKUserMessage
+} from '@anthropic-ai/claude-agent-sdk'
+import type {
+  AccountStatus,
+  ChatItem,
+  ExternalSession,
+  LimitWindow,
+  ModelOption,
+  PermissionDecision,
+  PermissionMode,
+  Profile,
+  RateLimitSnapshot,
+  SessionMeta
+} from '@shared/types'
+import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
+import { getSecret, profileDir } from '../store'
+import { claudeToolDiffs, claudeToolTitle, toolResultText, truncate } from './format'
+import type { EngineDriver, EngineHost, EngineSession } from './types'
+
+type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
+let sdkModule: Promise<SdkModule> | undefined
+const loadSdk = (): Promise<SdkModule> => (sdkModule ??= import('@anthropic-ai/claude-agent-sdk'))
+
+const MODE_MAP: Record<PermissionMode, SdkPermissionMode> = {
+  ask: 'default',
+  autoEdit: 'acceptEdits',
+  plan: 'plan',
+  full: 'bypassPermissions'
+}
+
+const LIMIT_LABELS: Record<string, string> = {
+  five_hour: '5 ore',
+  seven_day: '7 zile',
+  seven_day_opus: '7 zile (Opus)',
+  seven_day_sonnet: '7 zile (Sonnet)',
+  seven_day_oauth_apps: '7 zile (aplicații)',
+  seven_day_overage_included: '7 zile (cu extra)',
+  overage: 'Extra'
+}
+
+const APPEND_PROMPT =
+  'You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead.'
+
+function percent(u: number | null | undefined): number | undefined {
+  if (u == null || Number.isNaN(u)) return undefined
+  return u <= 1 ? u * 100 : u
+}
+
+function toMs(t: number | string | null | undefined): number | undefined {
+  if (t == null) return undefined
+  if (typeof t === 'string') {
+    const n = Date.parse(t)
+    return Number.isNaN(n) ? undefined : n
+  }
+  return t < 1e12 ? t * 1000 : t
+}
+
+/** Async iterable fed by the UI: every pushed message becomes a new user turn. */
+class InputQueue implements AsyncIterable<SDKUserMessage> {
+  private items: SDKUserMessage[] = []
+  private waiters: ((r: IteratorResult<SDKUserMessage>) => void)[] = []
+  private closed = false
+
+  push(text: string): void {
+    const msg: SDKUserMessage = { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null }
+    const w = this.waiters.shift()
+    if (w) w({ value: msg, done: false })
+    else this.items.push(msg)
+  }
+
+  close(): void {
+    this.closed = true
+    for (const w of this.waiters.splice(0)) w({ value: undefined, done: true })
+  }
+
+  [Symbol.asyncIterator](): AsyncIterator<SDKUserMessage> {
+    return {
+      next: () => {
+        const item = this.items.shift()
+        if (item) return Promise.resolve({ value: item, done: false })
+        if (this.closed) return Promise.resolve({ value: undefined, done: true })
+        return new Promise((resolve) => this.waiters.push(resolve))
+      }
+    }
+  }
+}
+
+function baseOptions(profile: Profile, cwd: string, model?: string): Options {
+  const exe = claudeExecutable()
+  return {
+    cwd,
+    env: claudeEnv(profile, model),
+    ...(exe ? { pathToClaudeCodeExecutable: exe } : {})
+  }
+}
+
+/** Runs a short-lived Claude Code process to ask it something (models, usage) without a prompt. */
+async function withProbe<T>(profile: Profile, fn: (q: Query) => Promise<T>, timeoutMs = 45000): Promise<T> {
+  const sdk = await loadSdk()
+  prepareProfileDir(profile)
+  const input = new InputQueue()
+  const q = sdk.query({ prompt: input, options: { ...baseOptions(profile, os.homedir()), settingSources: [] } })
+  // drain messages so the process never blocks on a full pipe
+  void (async () => {
+    try {
+      for await (const _ of q) void _
+    } catch {
+      // probe errors surface through fn()
+    }
+  })()
+  let timer: NodeJS.Timeout | undefined
+  try {
+    return await Promise.race([
+      fn(q),
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Claude Code nu a răspuns la timp')), timeoutMs)
+      })
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+    input.close()
+    q.close()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mapping Claude Code messages to Jolty chat items
+// ---------------------------------------------------------------------------
+type Block = { type: string; [k: string]: unknown }
+
+function contentBlocks(message: unknown): Block[] {
+  const content = (message as { content?: unknown })?.content
+  if (typeof content === 'string') return [{ type: 'text', text: content }]
+  return Array.isArray(content) ? (content as Block[]) : []
+}
+
+function toolItem(block: Block, status: 'running' | 'done' | 'error'): ChatItem {
+  const name = String(block.name)
+  const input = (block.input ?? {}) as Record<string, unknown>
+  return {
+    kind: 'tool',
+    id: String(block.id),
+    name,
+    title: claudeToolTitle(name, input),
+    status,
+    command: name === 'Bash' ? String(input.command ?? '') : undefined,
+    input,
+    diffs: claudeToolDiffs(name, input)
+  }
+}
+
+/** Converts a stored Claude Code transcript into chat items. */
+export function claudeHistoryItems(messages: { type: string; uuid: string; message: unknown; parent_tool_use_id?: string | null }[]): ChatItem[] {
+  const items: ChatItem[] = []
+  const tools = new Map<string, Extract<ChatItem, { kind: 'tool' }>>()
+  for (const m of messages) {
+    if (m.parent_tool_use_id) continue
+    const blocks = contentBlocks(m.message)
+    blocks.forEach((b, i) => {
+      if (m.type === 'user') {
+        if (b.type === 'text' && String(b.text ?? '').trim()) items.push({ kind: 'user', id: `${m.uuid}:${i}`, text: String(b.text) })
+        if (b.type === 'tool_result') {
+          const t = tools.get(String(b.tool_use_id))
+          if (t) {
+            t.status = b.is_error ? 'error' : 'done'
+            t.output = truncate(toolResultText(b.content))
+          }
+        }
+      } else if (m.type === 'assistant') {
+        if (b.type === 'text' && String(b.text ?? '').trim()) items.push({ kind: 'assistant', id: `${m.uuid}:${i}`, text: String(b.text) })
+        if (b.type === 'tool_use') {
+          const t = toolItem(b, 'done') as Extract<ChatItem, { kind: 'tool' }>
+          tools.set(t.id, t)
+          items.push(t)
+        }
+      }
+    })
+  }
+  return items
+}
+
+// ---------------------------------------------------------------------------
+// Live session
+// ---------------------------------------------------------------------------
+interface Pending {
+  resolve: (r: PermissionResult) => void
+  input: Record<string, unknown>
+  suggestions?: PermissionUpdate[]
+}
+
+class ClaudeSession implements EngineSession {
+  private q?: Query
+  private input = new InputQueue()
+  private pending = new Map<string, Pending>()
+  private currentMsgId = ''
+  private streamed = new Map<number, string>()
+  private tools = new Map<string, Extract<ChatItem, { kind: 'tool' }>>()
+  private lastCost = 0
+  private limitWindows = new Map<string, LimitWindow>()
+
+  constructor(
+    readonly meta: SessionMeta,
+    private profile: Profile,
+    private host: EngineHost
+  ) {}
+
+  private async ensureStarted(): Promise<void> {
+    if (this.q) return
+    const sdk = await loadSdk()
+    prepareProfileDir(this.profile)
+    const canUseTool: CanUseTool = (toolName, input, opts) => this.ask(toolName, input, opts)
+    const options: Options = {
+      ...baseOptions(this.profile, this.meta.cwd, this.meta.model),
+      model: this.meta.model || undefined,
+      permissionMode: MODE_MAP[this.meta.permissionMode],
+      // Claude Code refuses this flag when run as root, so only pass it when it is actually needed.
+      allowDangerouslySkipPermissions: this.meta.permissionMode === 'full',
+      resume: this.meta.engineSessionId,
+      includePartialMessages: true,
+      settingSources: ['user', 'project', 'local'],
+      systemPrompt: { type: 'preset', preset: 'claude_code', append: APPEND_PROMPT },
+      disallowedTools: ['AskUserQuestion'],
+      canUseTool,
+      stderr: (d) => {
+        if (process.env.JOLTY_DEBUG) console.error('[claude]', d)
+      }
+    }
+    this.input = new InputQueue()
+    this.q = sdk.query({ prompt: this.input, options })
+    void this.pump(this.q)
+  }
+
+  private async pump(q: Query): Promise<void> {
+    try {
+      for await (const m of q) this.onMessage(m)
+      this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.notice(message, 'error')
+      this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'error', error: message })
+    } finally {
+      if (this.q === q) this.q = undefined
+    }
+  }
+
+  private notice(text: string, level: 'info' | 'warn' | 'error'): void {
+    this.host.emit({ type: 'item', sessionId: this.meta.id, item: { kind: 'notice', id: randomUUID(), text, level } })
+  }
+
+  private onMessage(m: SDKMessage): void {
+    const sid = this.meta.id
+    switch (m.type) {
+      case 'system': {
+        if (m.subtype === 'init') {
+          this.meta.engineSessionId = m.session_id
+          this.meta.model = m.model
+          this.host.emit({ type: 'meta', sessionId: sid, meta: this.meta })
+        } else if (m.subtype === 'api_retry') {
+          this.notice('Serverul nu răspunde, reîncerc...', 'warn')
+        }
+        return
+      }
+      case 'stream_event': {
+        if (m.parent_tool_use_id) return
+        const ev = m.event as { type: string; index?: number; message?: { id: string }; content_block?: Block; delta?: Record<string, unknown> }
+        if (ev.type === 'message_start' && ev.message) {
+          this.currentMsgId = ev.message.id
+          this.streamed.clear()
+        } else if (ev.type === 'content_block_start' && ev.content_block && ev.index !== undefined) {
+          const kind = ev.content_block.type === 'text' ? 'assistant' : ev.content_block.type === 'thinking' ? 'reasoning' : undefined
+          if (!kind) return
+          const id = `${this.currentMsgId}:${ev.index}`
+          this.streamed.set(ev.index, id)
+          this.host.emit({ type: 'item', sessionId: sid, item: { kind, id, text: '' } })
+        } else if (ev.type === 'content_block_delta' && ev.delta && ev.index !== undefined) {
+          const id = this.streamed.get(ev.index)
+          if (!id) return
+          if (ev.delta.type === 'text_delta') this.host.emit({ type: 'delta', sessionId: sid, itemId: id, kind: 'assistant', delta: String(ev.delta.text ?? '') })
+          if (ev.delta.type === 'thinking_delta') this.host.emit({ type: 'delta', sessionId: sid, itemId: id, kind: 'reasoning', delta: String(ev.delta.thinking ?? '') })
+        }
+        return
+      }
+      case 'assistant': {
+        if (m.parent_tool_use_id) return
+        const msgId = (m.message as { id?: string }).id || m.uuid
+        contentBlocks(m.message).forEach((b, i) => {
+          const id = `${msgId}:${i}`
+          if (b.type === 'text') this.host.emit({ type: 'item', sessionId: sid, item: { kind: 'assistant', id, text: String(b.text ?? '') } })
+          else if (b.type === 'thinking' && String(b.thinking ?? '').trim()) this.host.emit({ type: 'item', sessionId: sid, item: { kind: 'reasoning', id, text: String(b.thinking) } })
+          else if (b.type === 'tool_use') {
+            const t = toolItem(b, 'running') as Extract<ChatItem, { kind: 'tool' }>
+            this.tools.set(t.id, t)
+            this.host.emit({ type: 'item', sessionId: sid, item: t })
+          }
+        })
+        if (m.error) this.notice(`Eroare Claude: ${m.error}`, 'error')
+        return
+      }
+      case 'user': {
+        if (m.parent_tool_use_id) return
+        for (const b of contentBlocks(m.message)) {
+          if (b.type !== 'tool_result') continue
+          const t = this.tools.get(String(b.tool_use_id))
+          if (!t) continue
+          t.status = b.is_error ? 'error' : 'done'
+          t.output = truncate(toolResultText(b.content))
+          this.host.emit({ type: 'item', sessionId: sid, item: t })
+          this.tools.delete(t.id)
+        }
+        return
+      }
+      case 'result': {
+        const u = m.usage as { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number }
+        // total_cost_usd grows over the life of the process; keep only this turn's share.
+        const cost = m.total_cost_usd >= this.lastCost ? m.total_cost_usd - this.lastCost : m.total_cost_usd
+        this.lastCost = m.total_cost_usd
+        this.host.recordUsage({
+          profileId: this.profile.id,
+          engine: 'claude',
+          model: this.meta.model || 'necunoscut',
+          inputTokens: u?.input_tokens ?? 0,
+          outputTokens: u?.output_tokens ?? 0,
+          cacheReadTokens: u?.cache_read_input_tokens ?? 0,
+          cacheWriteTokens: u?.cache_creation_input_tokens ?? 0,
+          costUsd: cost,
+          ts: Date.now()
+        })
+        if (m.subtype !== 'success') this.notice(`Claude s-a oprit: ${m.subtype}`, 'warn')
+        this.host.emit({ type: 'status', sessionId: sid, status: 'idle' })
+        return
+      }
+      case 'rate_limit_event': {
+        const info = m.rate_limit_info
+        const key = info.rateLimitType || 'five_hour'
+        const used = percent(info.utilization)
+        if (used !== undefined) this.limitWindows.set(key, { label: LIMIT_LABELS[key] || key, usedPercent: used, resetsAt: toMs(info.resetsAt) })
+        this.host.recordLimits({
+          profileId: this.profile.id,
+          windows: [...this.limitWindows.values()],
+          note: info.status === 'rejected' ? 'Limita abonamentului a fost atinsă' : undefined,
+          updatedAt: Date.now()
+        })
+        if (info.status === 'rejected') this.notice('Ai atins limita abonamentului Claude pentru acest profil.', 'error')
+        return
+      }
+      default:
+        return
+    }
+  }
+
+  private ask(toolName: string, input: Record<string, unknown>, opts: Parameters<CanUseTool>[2]): Promise<PermissionResult> {
+    const id = randomUUID()
+    const detail = toolName === 'Bash' ? String(input.command ?? '') : toolName === 'ExitPlanMode' ? undefined : truncate(JSON.stringify(input, null, 2), 4000)
+    this.host.emit({
+      type: 'permission',
+      sessionId: this.meta.id,
+      request: {
+        id,
+        toolName,
+        title: opts.title || claudeToolTitle(toolName, input),
+        detail,
+        diffs: claudeToolDiffs(toolName, input),
+        plan: toolName === 'ExitPlanMode' ? String(input.plan ?? '') : undefined,
+        canAllowForSession: Boolean(opts.suggestions?.length)
+      }
+    })
+    return new Promise((resolve) => {
+      this.pending.set(id, { resolve, input, suggestions: opts.suggestions })
+      opts.signal.addEventListener('abort', () => {
+        if (!this.pending.delete(id)) return
+        this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId: id })
+        resolve({ behavior: 'deny', message: 'Cererea a fost anulată.' })
+      })
+    })
+  }
+
+  respond(requestId: string, decision: PermissionDecision): void {
+    const p = this.pending.get(requestId)
+    if (!p) return
+    this.pending.delete(requestId)
+    this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId })
+    if (decision === 'deny') p.resolve({ behavior: 'deny', message: 'Utilizatorul a refuzat această acțiune.' })
+    else if (decision === 'allowSession') p.resolve({ behavior: 'allow', updatedInput: p.input, updatedPermissions: p.suggestions })
+    else p.resolve({ behavior: 'allow', updatedInput: p.input })
+  }
+
+  async send(text: string): Promise<void> {
+    await this.ensureStarted()
+    this.host.emit({ type: 'item', sessionId: this.meta.id, item: { kind: 'user', id: randomUUID(), text } })
+    this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'running' })
+    this.input.push(text)
+  }
+
+  async interrupt(): Promise<void> {
+    await this.q?.interrupt()
+  }
+
+  async setModel(model: string): Promise<void> {
+    this.meta.model = model
+    if (this.profile.auth === 'endpoint') {
+      // the endpoint's model mapping lives in environment variables: restart on next message
+      await this.close()
+      return
+    }
+    await this.q?.setModel(model)
+  }
+
+  async setPermissionMode(mode: PermissionMode): Promise<void> {
+    const needsRestart = mode === 'full' && this.meta.permissionMode !== 'full'
+    this.meta.permissionMode = mode
+    // bypassPermissions must be allowed when the process starts: restart it on the next message
+    if (needsRestart) await this.close()
+    else await this.q?.setPermissionMode(MODE_MAP[mode])
+  }
+
+  async close(): Promise<void> {
+    for (const [id, p] of this.pending) {
+      p.resolve({ behavior: 'deny', message: 'Sesiunea a fost închisă.' })
+      this.pending.delete(id)
+    }
+    this.input.close()
+    this.q?.close()
+    this.q = undefined
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Driver: accounts, models, sessions on disk
+// ---------------------------------------------------------------------------
+function runCli(profile: Profile, args: string[], timeoutMs = 30000): Promise<{ code: number; stdout: string; stderr: string }> {
+  const exe = claudeExecutable()
+  if (!exe) return Promise.reject(new Error('Nu găsesc Claude Code (binarul inclus lipsește)'))
+  prepareProfileDir(profile)
+  return new Promise((resolve) => {
+    execFile(exe, args, { env: claudeEnv(profile), timeout: timeoutMs, windowsHide: true }, (err, stdout, stderr) => {
+      const code = err && typeof (err as { code?: unknown }).code === 'number' ? Number((err as { code: number }).code) : err ? 1 : 0
+      resolve({ code, stdout: String(stdout), stderr: String(stderr) })
+    })
+  })
+}
+
+/** Opens a console window running an official login command, so the user signs in with Anthropic directly. */
+function openLoginWindow(exe: string, args: string[], env: Record<string, string>): void {
+  if (process.platform === 'win32') {
+    const cmdline = `start "Jolty - autentificare" "${exe}" ${args.join(' ')}`
+    spawn('cmd.exe', ['/d', '/s', '/c', `"${cmdline}"`], { env, detached: true, stdio: 'ignore', windowsVerbatimArguments: true }).unref()
+    return
+  }
+  if (process.platform === 'darwin') {
+    const script = path.join(os.tmpdir(), `jolty-login-${Date.now()}.command`)
+    const exports = Object.entries(env)
+      .filter(([k]) => k.startsWith('CLAUDE_') || k === 'PATH' || k === 'HOME')
+      .map(([k, v]) => `export ${k}='${v.replace(/'/g, `'\\''`)}'`)
+      .join('\n')
+    fs.writeFileSync(script, `#!/bin/sh\n${exports}\n'${exe}' ${args.join(' ')}\n`, { mode: 0o755 })
+    void shell.openPath(script)
+    return
+  }
+  // Linux: no reliable terminal; run it and open the sign-in URL it prints.
+  const child = spawn(exe, args, { env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  const onData = (buf: Buffer): void => {
+    const url = buf.toString().match(/https:\/\/\S+/)?.[0]
+    if (url) void shell.openExternal(url)
+  }
+  child.stdout?.on('data', onData)
+  child.stderr?.on('data', onData)
+  child.unref()
+}
+
+export class ClaudeDriver implements EngineDriver {
+  private modelCache = new Map<string, { at: number; models: ModelOption[] }>()
+
+  createSession(profile: Profile, meta: SessionMeta, host: EngineHost): EngineSession {
+    return new ClaudeSession(meta, profile, host)
+  }
+
+  async status(profile: Profile): Promise<AccountStatus> {
+    if (profile.auth !== 'subscription') {
+      const has = Boolean(getSecret(profile.id))
+      return { profileId: profile.id, loggedIn: has, detail: profile.auth === 'endpoint' ? profile.baseUrl : 'Cheie API Anthropic', error: has ? undefined : 'Lipsește cheia' }
+    }
+    try {
+      const r = await runCli(profile, ['auth', 'status', '--json'])
+      const s = JSON.parse(r.stdout || '{}') as Record<string, unknown>
+      return {
+        profileId: profile.id,
+        loggedIn: Boolean(s.loggedIn),
+        email: (s.email as string) || (s.emailAddress as string) || undefined,
+        plan: (s.subscriptionType as string) || undefined,
+        detail: (s.orgName as string) || (s.organization as string) || undefined
+      }
+    } catch (err) {
+      return { profileId: profile.id, loggedIn: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  async login(profile: Profile): Promise<AccountStatus> {
+    if (profile.auth !== 'subscription') return this.status(profile)
+    const exe = claudeExecutable()
+    if (!exe) throw new Error('Nu găsesc Claude Code (binarul inclus lipsește)')
+    prepareProfileDir(profile)
+    openLoginWindow(exe, ['auth', 'login', '--claudeai'], claudeEnv(profile))
+    return this.status(profile)
+  }
+
+  async logout(profile: Profile): Promise<AccountStatus> {
+    if (profile.auth === 'subscription') await runCli(profile, ['auth', 'logout'])
+    return this.status(profile)
+  }
+
+  async models(profile: Profile): Promise<ModelOption[]> {
+    if (profile.auth === 'endpoint') {
+      return (profile.models || []).map((id, i) => ({ id, label: id, isDefault: i === 0 }))
+    }
+    const cached = this.modelCache.get(profile.id)
+    if (cached && Date.now() - cached.at < 10 * 60 * 1000) return cached.models
+    const list = await withProbe(profile, (q) => q.supportedModels())
+    const models = list.map((m) => ({ id: m.value, label: m.displayName || m.value, description: m.description, isDefault: m.value === 'default' }))
+    this.modelCache.set(profile.id, { at: Date.now(), models })
+    return models
+  }
+
+  private async withConfigDir<T>(profile: Profile, fn: () => Promise<T>): Promise<T> {
+    // listSessions/getSessionMessages read files in-process and honor CLAUDE_CONFIG_DIR.
+    const dir = profileDir(profile)
+    const prev = process.env.CLAUDE_CONFIG_DIR
+    if (dir) process.env.CLAUDE_CONFIG_DIR = dir
+    else delete process.env.CLAUDE_CONFIG_DIR
+    try {
+      return await fn()
+    } finally {
+      if (prev === undefined) delete process.env.CLAUDE_CONFIG_DIR
+      else process.env.CLAUDE_CONFIG_DIR = prev
+    }
+  }
+
+  async externalSessions(profile: Profile, cwd: string): Promise<ExternalSession[]> {
+    const sdk = await loadSdk()
+    const list = await this.withConfigDir(profile, () => sdk.listSessions({ dir: cwd, limit: 40 }))
+    return list.map((s) => ({
+      engine: 'claude',
+      profileId: profile.id,
+      engineSessionId: s.sessionId,
+      title: s.customTitle || s.summary || s.firstPrompt || s.sessionId,
+      cwd: s.cwd || cwd,
+      updatedAt: s.lastModified
+    }))
+  }
+
+  async history(profile: Profile, engineSessionId: string, cwd: string): Promise<ChatItem[]> {
+    const sdk = await loadSdk()
+    const messages = await this.withConfigDir(profile, () => sdk.getSessionMessages(engineSessionId, { dir: cwd }))
+    return claudeHistoryItems(messages)
+  }
+
+  async limits(profile: Profile): Promise<RateLimitSnapshot | undefined> {
+    if (profile.auth !== 'subscription') return undefined
+    const usage = await withProbe(profile, (q) => q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }))
+    if (!usage.rate_limits_available || !usage.rate_limits) {
+      return { profileId: profile.id, windows: [], note: 'Claude Code nu raportează limite pentru acest cont', updatedAt: Date.now() }
+    }
+    const windows: LimitWindow[] = []
+    for (const [key, w] of Object.entries(usage.rate_limits as Record<string, { utilization: number | null; resets_at: string | null } | null>)) {
+      const used = percent(w?.utilization)
+      if (used === undefined) continue
+      windows.push({ label: LIMIT_LABELS[key] || key, usedPercent: used, resetsAt: toMs(w?.resets_at) })
+    }
+    return { profileId: profile.id, windows, note: usage.subscription_type ? `Plan: ${usage.subscription_type}` : undefined, updatedAt: Date.now() }
+  }
+
+  async shutdown(): Promise<void> {
+    // sessions own their processes; nothing global to stop
+  }
+}
