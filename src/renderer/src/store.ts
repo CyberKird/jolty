@@ -75,7 +75,12 @@ let toastId = 0
 
 function upsert(list: ChatItem[], item: ChatItem): ChatItem[] {
   const i = list.findIndex((x) => x.id === item.id)
-  if (i < 0) return [...list, item]
+  if (i < 0) {
+    const dup = item.kind === 'assistant' || item.kind === 'reasoning' ?
+      list.find(x => x.kind === item.kind && 'text' in x && x.text === item.text) : null
+    if (dup) return list
+    return [...list, item]
+  }
   const next = list.slice()
   next[i] = item
   return next

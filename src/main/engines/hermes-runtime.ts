@@ -28,5 +28,5 @@ export function launchHermes(): JsonRpcProcess {
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined && !/^(CLAUDECODE|CLAUDE_.*|ANTHROPIC_.*|CODEX_.*|OPENAI_.*|ELECTRON_RUN_AS_NODE)$/i.test(key)) env[key] = value
   }
-  return new JsonRpcProcess(exe, [], { ...env, HERMES_HOME: hermesHome(), PYTHONUTF8: '1', DO_NOT_TRACK: '1' }, { jsonrpc: true, label: 'Hermes' })
+  return new JsonRpcProcess(exe, [], { ...env, HERMES_HOME: hermesHome(), PYTHONUTF8: '1', DO_NOT_TRACK: '1' })
 }

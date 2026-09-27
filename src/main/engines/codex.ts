@@ -140,7 +140,7 @@ function saveImages(images: Attachment[]): string[] {
   return images.map((img) => {
     const ext = img.mime.split('/')[1]?.replace('jpeg', 'jpg') || 'png'
     const file = path.join(dir, `${randomUUID()}.${ext}`)
-    fs.writeFileSync(file, Buffer.from(img.data, 'base64'))
+    fs.writeFileSync(file, Buffer.from(img.data!, 'base64'))
     return file
   })
 }

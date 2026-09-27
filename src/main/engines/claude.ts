@@ -79,7 +79,7 @@ function userMessage(text: string, images: Attachment[], uuid?: string): SDKUser
   const id = uuid ? { uuid: uuid as SDKUserMessage['uuid'] } : {}
   if (!images.length) return { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null, ...id }
   const content = [
-    ...images.map((img) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: img.mime as 'image/png', data: img.data } })),
+    ...images.map((img) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: img.mime as 'image/png', data: img.data! } })),
     { type: 'text' as const, text }
   ]
   return { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, ...id }
@@ -257,6 +257,7 @@ class ClaudeSession implements EngineSession {
   private input = new InputQueue()
   private pending = new Map<string, Pending>()
   private currentMsgId = ''
+  private blockN = 0
   private streamed = new Map<number, string>()
   private drafts = new Map<number, { id: string; name: string; json: string; last: number }>()
   private tools = new Map<string, Extract<ChatItem, { kind: 'tool' }>>()
@@ -338,6 +339,7 @@ class ClaudeSession implements EngineSession {
         const ev = m.event as { type: string; index?: number; message?: { id: string }; content_block?: Block; delta?: Record<string, unknown> }
         if (ev.type === 'message_start' && ev.message) {
           this.currentMsgId = ev.message.id
+          this.blockN = 0
           this.streamed.clear()
           this.drafts.clear()
         } else if (ev.type === 'content_block_start' && ev.content_block?.type === 'tool_use' && ev.index !== undefined) {
@@ -375,9 +377,12 @@ class ClaudeSession implements EngineSession {
           const u = m.message.usage
           if (u) this.contextUsed = (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.output_tokens ?? 0)
         }
-        const msgId = (m.message as { id?: string }).id || m.uuid
-        contentBlocks(m.message).forEach((b, i) => {
-          const id = `${msgId}:${i}`
+        const msgId = this.currentMsgId || (m.message as { id?: string }).id || m.uuid
+        // each streamed assistant frame carries one block: its position is a running count, not contentBlocks' local index
+        const inStream = Boolean(this.currentMsgId)
+        const blocks = contentBlocks(m.message)
+        blocks.forEach((b, i) => {
+          const id = `${msgId}:${inStream ? this.blockN + i : i}`
           if (b.type === 'text') this.host.emit({ type: 'item', sessionId: sid, item: { kind: 'assistant', id, text: String(b.text ?? '') } })
           else if (b.type === 'thinking' && String(b.thinking ?? '').trim()) this.host.emit({ type: 'item', sessionId: sid, item: { kind: 'reasoning', id, text: String(b.thinking) } })
           else if (b.type === 'tool_use') {
@@ -394,6 +399,7 @@ class ClaudeSession implements EngineSession {
             }
           }
         })
+        if (inStream) this.blockN += blocks.length
         if (m.error) this.notice(`Eroare Claude: ${m.error}`, 'error')
         return
       }
@@ -417,6 +423,8 @@ class ClaudeSession implements EngineSession {
         return
       }
       case 'result': {
+        this.currentMsgId = ''
+        this.blockN = 0
         {
           const windows = Object.values((m as { modelUsage?: Record<string, { contextWindow?: number }> }).modelUsage || {}).map((x) => x.contextWindow || 0)
           if (windows.length) this.contextWindow = Math.max(...windows) || this.contextWindow
