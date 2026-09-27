@@ -8,6 +8,7 @@ import type { ChatEvent, ChatItem } from '../src/shared/types'
 import { endpointCost, fetchBalance, hasBalance } from '../src/main/balance'
 import { assess, recommend } from '../src/shared/complexity'
 import { TaskBoard } from '../src/main/engines/tasks'
+import { syncSettings } from '../src/main/runtime'
 import { Jolty } from '../src/main/jolty'
 import * as store from '../src/main/store'
 
@@ -81,6 +82,21 @@ app.whenReady().then(async () => {
     const u = { profileId: 'x', engine: 'claude' as const, model: 'm', inputTokens: 1e6, outputTokens: 5e5, cacheReadTokens: 2e6, cacheWriteTokens: 0, ts: 0 }
     check(endpointCost(u, ep('https://api.deepseek.com/anthropic', { price: { input: 0.3, output: 1.2, cacheRead: 0.03 } })) === 0.3 + 0.6 + 0.06, 'real cost from the provider prices')
     check(endpointCost(u, ep('https://api.deepseek.com/anthropic')) === undefined && endpointCost(u, ep('http://127.0.0.1:11434', { local: true })) === 0, 'no price = no invented cost; local models cost nothing')
+  }
+
+  // ---------------- second Claude account: plugins, marketplaces and hooks follow the main account ----------------
+  {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-settings-'))
+    const mainFile = path.join(d, 'main.json')
+    const own = path.join(d, 'own.json')
+    fs.writeFileSync(mainFile, JSON.stringify({ enabledPlugins: { 'a@m': true, 'b@m': true }, hooks: { Stop: [{ hooks: [] }] }, env: { ANTHROPIC_BASE_URL: 'x' } }))
+    fs.writeFileSync(own, JSON.stringify({ enabledPlugins: { 'a@m': false, 'mine@m': true }, model: 'opus' }))
+    syncSettings(mainFile, own)
+    const r = JSON.parse(fs.readFileSync(own, 'utf8'))
+    check(r.enabledPlugins['a@m'] === true && r.enabledPlugins['b@m'] === true && r.enabledPlugins['mine@m'] === true && Boolean(r.hooks?.Stop), 'settings sync: main plugins and hooks arrive, profile-only plugins stay')
+    check(r.model === 'opus' && !r.env, 'settings sync: the profile keeps its own settings, env (endpoints, keys) is never copied')
+    fs.writeFileSync(own, '{broken')
+    check(!syncSettings(mainFile, own) && fs.readFileSync(own, 'utf8') === '{broken', 'settings sync: an unreadable profile file is left alone')
   }
 
   // ---------------- task list: TaskCreate / TaskUpdate / TaskList and the older TodoWrite ----------------

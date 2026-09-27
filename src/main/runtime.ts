@@ -162,6 +162,31 @@ function syncMcpServers(dir: string): void {
   fs.renameSync(tmp, file)
 }
 
+/** Settings that make the extra Claude accounts behave like the main one; env (endpoints, keys) is never copied. */
+const SHARED_SETTINGS = ['enabledPlugins', 'extraKnownMarketplaces', 'hooks'] as const
+
+/**
+ * Brings the main ~/.claude/settings.json plugins, marketplaces and hooks into a profile's settings.json on
+ * every start (the main account wins on the same names; entries only the profile has stay).
+ */
+export function syncSettings(mainFile: string, file: string): boolean {
+  const main = readJsonFile(mainFile)
+  if (!main) return false
+  const own = readJsonFile(file)
+  if (fs.existsSync(file) && !own) return false // unreadable: never overwrite it
+  const next: Record<string, unknown> = { ...(own || {}) }
+  for (const key of SHARED_SETTINGS) {
+    const m = main[key]
+    if (!m || typeof m !== 'object') continue
+    next[key] = { ...((next[key] as Record<string, unknown>) || {}), ...(m as Record<string, unknown>) }
+  }
+  if (JSON.stringify(next) === JSON.stringify(own || {})) return false
+  const tmp = `${file}.${process.pid}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(next, null, 2))
+  fs.renameSync(tmp, file)
+  return true
+}
+
 export function prepareProfileDir(profile: Profile): void {
   const dir = profileDir(profile)
   if (!dir) return
@@ -172,6 +197,11 @@ export function prepareProfileDir(profile: Profile): void {
     const claudeMd = path.join(dir, 'CLAUDE.md')
     if (!fs.existsSync(claudeMd)) fs.writeFileSync(claudeMd, '@~/.claude/CLAUDE.md\n')
     copyIfMissing(path.join(mainDir, 'settings.json'), path.join(dir, 'settings.json'))
+    try {
+      syncSettings(path.join(mainDir, 'settings.json'), path.join(dir, 'settings.json'))
+    } catch {
+      // the profile still starts with its own settings
+    }
     linkDir(path.join(mainDir, 'skills'), path.join(dir, 'skills'))
     linkDir(path.join(mainDir, 'agents'), path.join(dir, 'agents'))
     linkDir(path.join(mainDir, 'commands'), path.join(dir, 'commands'))
