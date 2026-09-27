@@ -31,6 +31,7 @@ import type {
 import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
 import { getSecret, profileDir } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultText, truncate } from './format'
+import { WRITING_RULES } from './prompt'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 
 type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
@@ -54,8 +55,7 @@ const LIMIT_LABELS: Record<string, string> = {
   overage: 'Extra'
 }
 
-const APPEND_PROMPT =
-  'You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead.'
+const APPEND_PROMPT = `You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead. ${WRITING_RULES}`
 
 function percent(u: number | null | undefined): number | undefined {
   if (u == null || Number.isNaN(u)) return undefined

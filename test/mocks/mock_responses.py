@@ -40,7 +40,7 @@ class H(BaseHTTPRequestHandler):
         has_output = any(isinstance(i, dict) and i.get("type") in ("function_call_output", "custom_tool_call_output") for i in inp)
         if LOG:
             with open(LOG, "a") as f:
-                f.write(json.dumps({"path": self.path, "model": req.get("model"), "tools": tool_names, "has_output": has_output, "stream": req.get("stream")}) + "\n")
+                f.write(json.dumps({"path": self.path, "model": req.get("model"), "tools": tool_names, "has_output": has_output, "stream": req.get("stream"), "dash_rule": b"U+2014" in raw}) + "\n")
         COUNTER[0] += 1
         rid = f"resp_{COUNTER[0]}"
         self.send_response(200)

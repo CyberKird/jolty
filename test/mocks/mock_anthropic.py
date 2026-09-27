@@ -44,7 +44,8 @@ class H(BaseHTTPRequestHandler):
         if LOG:
             with open(LOG, "a") as f:
                 f.write(json.dumps({"path": path, "model": req.get("model"), "auth": (self.headers.get("authorization") or self.headers.get("x-api-key") or "")[:14],
-                                    "stream": req.get("stream"), "n_tools": len(req.get("tools") or []), "last": last[:200], "has_image": "IMAGE_BLOCK" in all_text, "desc_in_prompt": "Imagine atașată" in all_text, "handoff": "Preiei o conversa" in all_text}) + "\n")
+                                    "stream": req.get("stream"), "n_tools": len(req.get("tools") or []), "last": last[:200], "has_image": "IMAGE_BLOCK" in all_text, "desc_in_prompt": "Imagine atașată" in all_text, "handoff": "Preiei o conversa" in all_text,
+                                    "dash_rule": "U+2014" in json.dumps(req.get("system"))}) + "\n")
         if path.endswith("/count_tokens"):
             body = json.dumps({"input_tokens": 42}).encode()
             self.send_response(200)

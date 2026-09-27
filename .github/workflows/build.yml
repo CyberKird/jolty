@@ -35,6 +35,7 @@ jobs:
         env:
           JOLTY_DATA_DIR: ${{ runner.temp }}/jolty-engines
           MOCK_ANTHROPIC_LOG: ${{ runner.temp }}/mock_anthropic.log
+          MOCK_RESPONSES_LOG: ${{ runner.temp }}/mock_responses.log
       - name: UI test (screenshots of every page)
         run: xvfb-run -a -s "-screen 0 1600x1000x24" node test/ui-test.mjs
         env:

@@ -39,7 +39,7 @@ const usage = []
 for (let d = 13; d >= 0; d--) {
   const turns = 3 + ((d * 7) % 9)
   for (let t = 0; t < turns; t++) {
-    usage.push({ profileId: 'claude-main', engine: 'claude', model: t % 3 ? 'claude-sonnet-5' : 'claude-opus-5-5', inputTokens: 18000 + ((d * 997 + t * 131) % 40000), outputTokens: 2500 + ((d * 311 + t * 17) % 6000), cacheReadTokens: 30000, cacheWriteTokens: 4000, costUsd: 0.08 + ((d + t) % 5) * 0.03, ts: now - d * 24 * hour - t * 600e3 })
+    usage.push({ profileId: 'claude-main', engine: 'claude', model: t % 3 ? 'model-echilibrat' : 'model-mare', inputTokens: 18000 + ((d * 997 + t * 131) % 40000), outputTokens: 2500 + ((d * 311 + t * 17) % 6000), cacheReadTokens: 30000, cacheWriteTokens: 4000, costUsd: 0.08 + ((d + t) % 5) * 0.03, ts: now - d * 24 * hour - t * 600e3 })
     if (t % 2 === 0) usage.push({ profileId: 'codex-main', engine: 'codex', model: 'gpt-6-sol', inputTokens: 9000 + ((d * 503 + t * 71) % 20000), outputTokens: 1500 + ((d * 97 + t) % 3000), cacheReadTokens: 5000, cacheWriteTokens: 0, ts: now - d * 24 * hour - t * 900e3 })
   }
 }

@@ -1,6 +1,14 @@
 ﻿; Jolty installer additions: installs the Microsoft Visual C++ runtime when it is missing.
 !include LogicLib.nsh
 
+; NSIS 3.04 has no Romanian text for the "for me / for everyone" page. Defined here, before the
+; language files load, they replace the English fallback (a build warning, treated as an error).
+!define MULTIUSER_TEXT_INSTALLMODE_TITLE "Alegeți utilizatorii"
+!define MULTIUSER_TEXT_INSTALLMODE_SUBTITLE "Alegeți pentru care utilizatori instalați $(^NameDA)."
+!define MULTIUSER_INNERTEXT_INSTALLMODE_TOP "Alegeți dacă instalați $(^NameDA) doar pentru dumneavoastră sau pentru toți utilizatorii acestui calculator. $(^ClickNext)"
+!define MULTIUSER_INNERTEXT_INSTALLMODE_ALLUSERS "Instalează pentru toți utilizatorii acestui calculator"
+!define MULTIUSER_INNERTEXT_INSTALLMODE_CURRENTUSER "Instalează doar pentru mine"
+
 !macro customInstall
   SetRegView 64
   ReadRegDWORD $0 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" "Installed"

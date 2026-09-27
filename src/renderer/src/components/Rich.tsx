@@ -28,8 +28,25 @@ const marked = new Marked({
   }
 })
 
+/**
+ * Em and en dashes in prose become plain hyphens, as the user wants none in the app. Code blocks and
+ * inline code keep their exact characters, since they show what is really in the files.
+ */
+export function plainDashes(text: string): string {
+  return text
+    .split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/g)
+    .map((part, i) =>
+      i % 2
+        ? part
+        : part.replace(/([ \t]*)[\u2013\u2014]([ \t]*)/g, (_m, before: string, after: string, at: number, s: string) =>
+            at === 0 || s[at - 1] === '\n' ? `${before}-${after}` : before || after ? ' - ' : '-'
+          )
+    )
+    .join('')
+}
+
 export const Markdown = memo(function Markdown({ text }: { text: string }) {
-  const html = useMemo(() => DOMPurify.sanitize(marked.parse(text, { async: false }) as string), [text])
+  const html = useMemo(() => DOMPurify.sanitize(marked.parse(plainDashes(text), { async: false }) as string), [text])
   return <div className="md" dangerouslySetInnerHTML={{ __html: html }} />
 })
 

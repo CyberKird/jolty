@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
 import type { ChatItem, PermissionDecision, PermissionRequest } from '@shared/types'
-import { DiffView, Markdown } from './Rich'
+import { DiffView, Markdown, plainDashes } from './Rich'
 
 type Tool = Extract<ChatItem, { kind: 'tool' }>
 
@@ -73,7 +73,7 @@ function Reasoning({ text, live }: { text: string; live: boolean }) {
   return (
     <details className="reasoning" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
       <summary style={{ color: live ? 'var(--volt)' : undefined }}>{live ? 'Se gândește…' : `Raționament ${open ? '−' : '+'}`}</summary>
-      {text && <div className="body">{text}</div>}
+      {text && <div className="body">{plainDashes(text)}</div>}
     </details>
   )
 }
@@ -104,7 +104,7 @@ export const MessageItem = memo(function MessageItem({ item, live }: { item: Cha
     case 'tool':
       return <ToolRow item={item} />
     case 'notice':
-      return <div className={`msg-notice ${item.level}`}>{item.text}</div>
+      return <div className={`msg-notice ${item.level}`}>{plainDashes(item.text)}</div>
   }
 })
 

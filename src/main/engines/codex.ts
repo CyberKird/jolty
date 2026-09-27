@@ -21,6 +21,7 @@ import { codexEnv, codexExecutable, prepareProfileDir } from '../runtime'
 import { getSecret } from '../store'
 import { truncate } from './format'
 import { JsonRpcProcess, type RpcNotification, type RpcRequest } from './jsonrpc'
+import { WRITING_RULES } from './prompt'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 
 // Loose views of the app-server payloads (the full types come from `codex app-server generate-ts`).
@@ -305,7 +306,7 @@ class CodexSession implements EngineSession, ThreadListener {
     const rpc = await this.server.get()
     if (this.threadId) return rpc
     const mode = MODES[this.meta.permissionMode]
-    const common = { cwd: this.meta.cwd, model: this.meta.model || null, approvalPolicy: mode.approvalPolicy, sandbox: mode.sandbox }
+    const common = { cwd: this.meta.cwd, model: this.meta.model || null, approvalPolicy: mode.approvalPolicy, sandbox: mode.sandbox, developerInstructions: WRITING_RULES }
     const resp = this.meta.engineSessionId
       ? await rpc.request<Any>('thread/resume', { threadId: this.meta.engineSessionId, ...common })
       : await rpc.request<Any>('thread/start', common)

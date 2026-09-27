@@ -119,6 +119,7 @@ app.whenReady().then(async () => {
     const log = fs.readFileSync(process.env.MOCK_ANTHROPIC_LOG!, 'utf8').trim().split('\n').map((l) => JSON.parse(l))
     check(log.some((r) => r.model === 'mock-vision' && r.has_image), 'the vision profile received the image')
     check(log.some((r) => r.model === 'mock-blind' && r.desc_in_prompt && !r.has_image), 'the blind model received a text description instead of the image')
+    check(log.some((r) => r.model === 'mock-blind' && r.n_tools > 0 && r.dash_rule), 'claude conversations carry the no-dash writing rule')
     const drafts = events.filter((e) => e.type === 'draft' && e.sessionId === s.id) as Extract<ChatEvent, { type: 'draft' }>[]
     check(drafts.length >= 3, `live code: ${drafts.length} partial updates while the file was written`)
     check(drafts.some((d) => !d.done && d.content.length > 0 && d.content.length < 800) && drafts.some((d) => d.done && d.content.includes('line 40')), 'live code grows until the full file')
@@ -165,6 +166,10 @@ app.whenReady().then(async () => {
     console.log(`   external codex threads: ${ext.length}`)
     const hist = await jolty.codex.history(jolty.profile(p.id), meta!.engineSessionId!)
     check(hist.some((i) => i.kind === 'assistant'), 'codex thread history can be read back')
+    if (process.env.MOCK_RESPONSES_LOG) {
+      const rlog = fs.readFileSync(process.env.MOCK_RESPONSES_LOG, 'utf8').trim().split('\n').map((l) => JSON.parse(l))
+      check(rlog.some((r) => r.dash_rule), 'codex conversations carry the no-dash writing rule')
+    }
 
     // handoff Codex -> Claude
     if (process.env.TEST_CLAUDE !== '0') {
