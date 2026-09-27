@@ -270,6 +270,7 @@ export class Jolty {
       cwd: input.cwd,
       title: input.title || 'Conversație nouă',
       model: input.model,
+      effort: input.effort,
       permissionMode: input.permissionMode,
       engineSessionId: input.resumeEngineSessionId,
       createdAt: now,
@@ -400,6 +401,14 @@ export class Jolty {
     this.saveMeta(meta)
   }
 
+  async setEffort(sessionId: string, effort: string): Promise<void> {
+    const s = this.live.get(sessionId)
+    if (s) await s.setEffort(effort)
+    const meta = s?.meta || this.meta(sessionId)
+    meta.effort = effort || undefined
+    this.saveMeta(meta)
+  }
+
   async setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void> {
     const s = this.live.get(sessionId)
     if (s) await s.setPermissionMode(mode)
@@ -420,6 +429,7 @@ export class Jolty {
       profileId: targetProfileId,
       cwd: src.cwd,
       permissionMode: src.permissionMode,
+      effort: src.effort,
       title: `${src.title} (continuare)`
     })
     meta.handoffFrom = src.id

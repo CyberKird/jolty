@@ -58,6 +58,9 @@ export interface ModelOption {
   isDefault?: boolean
   /** false when the model cannot read images (Jolty then describes them with the vision profile) */
   vision?: boolean
+  /** effort levels the model accepts, in the engine's own names (low, medium, high, xhigh, max) */
+  efforts?: string[]
+  defaultEffort?: string
 }
 
 export interface Attachment {
@@ -75,6 +78,7 @@ export interface SessionMeta {
   cwd: string
   title: string
   model?: string
+  effort?: string
   permissionMode: PermissionMode
   /** Claude session id or Codex thread id, once the engine has one */
   engineSessionId?: string
@@ -165,9 +169,16 @@ export type ChatEvent =
   | { type: 'permissionResolved'; sessionId: string; requestId: string }
   | { type: 'usage'; sessionId: string; usage: TurnUsage }
   | { type: 'limits'; snapshot: RateLimitSnapshot }
+  /** the agent's own step-by-step plan (Claude's todo list, Codex's plan) */
+  | { type: 'plan'; sessionId: string; steps: PlanStep[] }
   /** a file being written right now: content grows as the model generates it */
   | { type: 'draft'; sessionId: string; toolId: string; name: string; path?: string; content: string; done: boolean }
   | { type: 'pull'; tag: string; status: string; completed?: number; total?: number; done?: boolean; error?: string }
+
+export interface PlanStep {
+  text: string
+  status: 'pending' | 'active' | 'done'
+}
 
 export interface UsageDay {
   day: string
@@ -187,7 +198,8 @@ export interface UsageSummary {
 }
 
 export interface AppSettings {
-  brainDir: string
+  /** where Jolty keeps profiles, conversations and usage (read-only) */
+  dataDir: string
   /** profile that describes images for models that cannot see them */
   visionProfileId?: string
   claudePath?: string
@@ -200,6 +212,7 @@ export interface StartSessionInput {
   profileId: string
   cwd: string
   model?: string
+  effort?: string
   permissionMode: PermissionMode
   /** resume an existing Claude session / Codex thread */
   resumeEngineSessionId?: string
@@ -279,6 +292,7 @@ export interface JoltyApi {
     send(sessionId: string, text: string, attachments?: Attachment[]): Promise<void>
     interrupt(sessionId: string): Promise<void>
     setModel(sessionId: string, model: string): Promise<void>
+    setEffort(sessionId: string, effort: string): Promise<void>
     setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void>
     respond(sessionId: string, requestId: string, decision: PermissionDecision): Promise<void>
     handoff(sessionId: string, targetProfileId: string): Promise<SessionMeta>

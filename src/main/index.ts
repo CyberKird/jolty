@@ -6,6 +6,8 @@ import * as local from './local'
 import * as store from './store'
 import * as system from './system'
 
+declare const __JOLTY_VERSION__: string
+
 let win: BrowserWindow | undefined
 let jolty: Jolty
 
@@ -59,6 +61,7 @@ function registerIpc(): void {
   handle('sessions:send', (id: string, text: string, attachments) => jolty.sendMessage(id, text, (attachments as never) || []))
   handle('sessions:interrupt', (id: string) => jolty.interrupt(id))
   handle('sessions:setModel', (id: string, model: string) => jolty.setModel(id, model))
+  handle('sessions:setEffort', (id: string, effort: string) => jolty.setEffort(id, effort))
   handle('sessions:setPermissionMode', (id: string, mode) => jolty.setPermissionMode(id, mode as never))
   handle('sessions:respond', (id: string, requestId: string, decision) => jolty.respond(id, requestId, decision as never))
   handle('sessions:handoff', (id: string, target: string) => jolty.handoff(id, target))
@@ -91,7 +94,7 @@ function registerIpc(): void {
   handle('app:openPath', async (p: string) => {
     await shell.openPath(p)
   })
-  handle('app:version', () => app.getVersion())
+  handle('app:version', () => __JOLTY_VERSION__)
 }
 
 app.whenReady().then(() => {

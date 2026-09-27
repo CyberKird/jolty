@@ -6,6 +6,7 @@ import path from 'path'
 import { shell } from 'electron'
 import type {
   CanUseTool,
+  EffortLevel,
   Options,
   PermissionMode as SdkPermissionMode,
   PermissionResult,
@@ -271,6 +272,8 @@ class ClaudeSession implements EngineSession {
     const options: Options = {
       ...baseOptions(this.profile, this.meta.cwd, this.meta.model),
       model: this.meta.model || undefined,
+      // third-party endpoints get no effort: their models may not accept it
+      ...(this.meta.effort && this.profile.auth !== 'endpoint' ? { effort: this.meta.effort as EffortLevel } : {}),
       permissionMode: MODE_MAP[this.meta.permissionMode],
       // Claude Code refuses this flag when run as root, so only pass it when it is actually needed.
       allowDangerouslySkipPermissions: this.meta.permissionMode === 'full',
@@ -365,6 +368,17 @@ class ClaudeSession implements EngineSession {
             const t = toolItem(b, 'running') as Extract<ChatItem, { kind: 'tool' }>
             this.tools.set(t.id, t)
             this.host.emit({ type: 'item', sessionId: sid, item: t })
+            const todos = (b.input as { todos?: { content?: string; activeForm?: string; status?: string }[] })?.todos
+            if (t.name === 'TodoWrite' && Array.isArray(todos)) {
+              this.host.emit({
+                type: 'plan',
+                sessionId: sid,
+                steps: todos.map((td) => ({
+                  text: String((td.status === 'in_progress' ? td.activeForm : td.content) || td.content || ''),
+                  status: td.status === 'completed' ? 'done' : td.status === 'in_progress' ? 'active' : 'pending'
+                }))
+              })
+            }
           }
         })
         if (m.error) this.notice(`Eroare Claude: ${m.error}`, 'error')
@@ -485,6 +499,12 @@ class ClaudeSession implements EngineSession {
     await this.q?.setModel(model)
   }
 
+  async setEffort(effort: string): Promise<void> {
+    this.meta.effort = effort || undefined
+    // null clears the override and goes back to the model's own default ("Auto")
+    if (this.profile.auth !== 'endpoint') await this.q?.applyFlagSettings({ effortLevel: (effort || null) as EffortLevel | null })
+  }
+
   async setPermissionMode(mode: PermissionMode): Promise<void> {
     const needsRestart = mode === 'full' && this.meta.permissionMode !== 'full'
     this.meta.permissionMode = mode
@@ -595,7 +615,13 @@ export class ClaudeDriver implements EngineDriver {
     const cached = this.modelCache.get(profile.id)
     if (cached && Date.now() - cached.at < 10 * 60 * 1000) return cached.models
     const list = await withProbe(profile, (q) => q.supportedModels())
-    const models = list.map((m) => ({ id: m.value, label: m.displayName || m.value, description: m.description, isDefault: m.value === 'default' }))
+    const models = list.map((m) => ({
+      id: m.value,
+      label: m.displayName || m.value,
+      description: m.description,
+      isDefault: m.value === 'default',
+      efforts: m.supportsEffort === false ? [] : m.supportedEffortLevels
+    }))
     this.modelCache.set(profile.id, { at: Date.now(), models })
     return models
   }

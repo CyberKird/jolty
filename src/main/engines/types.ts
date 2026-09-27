@@ -25,6 +25,7 @@ export interface EngineSession {
   send(text: string, images?: Attachment[]): Promise<void>
   interrupt(): Promise<void>
   setModel(model: string): Promise<void>
+  setEffort(effort: string): Promise<void>
   setPermissionMode(mode: PermissionMode): Promise<void>
   respond(requestId: string, decision: PermissionDecision): void
   close(): Promise<void>

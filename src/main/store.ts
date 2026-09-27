@@ -1,6 +1,5 @@
 import { app, safeStorage } from 'electron'
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
 import type { AppSettings, ChatItem, Profile, RateLimitSnapshot, SessionMeta, TurnUsage } from '@shared/types'
 
@@ -132,14 +131,11 @@ export function saveLimit(snapshot: RateLimitSnapshot): void {
 // Settings
 // ---------------------------------------------------------------------------
 export function loadSettings(): AppSettings {
-  return {
-    brainDir: path.join(os.homedir(), '.ai-brain'),
-    ...readJson<Partial<AppSettings>>('settings.json', {})
-  }
+  return { ...readJson<Partial<AppSettings>>('settings.json', {}), dataDir: dataDir() }
 }
 
 export function saveSettings(patch: Partial<AppSettings>): AppSettings {
-  const next = { ...loadSettings(), ...patch }
+  const { dataDir: _computed, ...next } = { ...loadSettings(), ...patch }
   writeJson('settings.json', next)
-  return next
+  return { ...next, dataDir: dataDir() }
 }

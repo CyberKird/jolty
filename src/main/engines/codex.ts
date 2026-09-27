@@ -287,6 +287,7 @@ class CodexSession implements EngineSession, ThreadListener {
   private lastTotal?: Usage
   private turnUsage: Usage = { totalTokens: 0, inputTokens: 0, cachedInputTokens: 0, cacheWriteInputTokens: 0, outputTokens: 0 }
   private overrides: Record<string, unknown> = {}
+  private effortSent = false
   private flushTimer?: NodeJS.Timeout
 
   constructor(
@@ -321,6 +322,10 @@ class CodexSession implements EngineSession, ThreadListener {
     try {
       const rpc = await this.ensureThread()
       const input = [...saveImages(images).map((p) => ({ type: 'localImage', path: p })), { type: 'text', text, text_elements: [] }]
+      if (this.meta.effort && !this.effortSent) {
+        this.overrides.effort = this.meta.effort
+        this.effortSent = true
+      }
       const params = { threadId: this.threadId, input, ...this.overrides }
       this.overrides = {}
       const r = await rpc.request<Any>('turn/start', params)
@@ -381,6 +386,13 @@ class CodexSession implements EngineSession, ThreadListener {
         this.host.emit({ type: 'item', sessionId: sid, item })
         return
       }
+      case 'turn/plan/updated':
+        this.host.emit({
+          type: 'plan',
+          sessionId: sid,
+          steps: (p.plan || []).map((st: Any) => ({ text: st.step, status: st.status === 'completed' ? 'done' : st.status === 'inProgress' ? 'active' : 'pending' }))
+        })
+        return
       case 'item/fileChange/patchUpdated':
         for (const c of p.changes || []) {
           this.host.emit({ type: 'draft', sessionId: sid, toolId: `${p.itemId}:${c.path}`, name: 'Edit', path: c.path, content: c.diff || '', done: false })
@@ -479,6 +491,12 @@ class CodexSession implements EngineSession, ThreadListener {
     this.overrides.model = model
   }
 
+  async setEffort(effort: string): Promise<void> {
+    this.meta.effort = effort
+    this.overrides.effort = effort
+    this.effortSent = true
+  }
+
   async setPermissionMode(mode: PermissionMode): Promise<void> {
     this.meta.permissionMode = mode
     this.overrides.approvalPolicy = MODES[mode].approvalPolicy
@@ -486,6 +504,7 @@ class CodexSession implements EngineSession, ThreadListener {
   }
 
   onServerExit(reason: string): void {
+    this.effortSent = false
     this.threadId = undefined
     this.turnId = undefined
     for (const id of this.pending.keys()) this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId: id })
@@ -588,7 +607,9 @@ export class CodexDriver implements EngineDriver {
           label: m.displayName || m.model,
           description: m.description,
           isDefault: Boolean(m.isDefault),
-          vision: Array.isArray(m.inputModalities) ? m.inputModalities.includes('image') : undefined
+          vision: Array.isArray(m.inputModalities) ? m.inputModalities.includes('image') : undefined,
+          efforts: (m.supportedReasoningEfforts || []).map((e: Any) => e.reasoningEffort),
+          defaultEffort: m.defaultReasoningEffort || undefined
         })
       }
       cursor = r?.nextCursor ?? null

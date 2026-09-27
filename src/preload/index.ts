@@ -30,6 +30,7 @@ const api: JoltyApi = {
     send: (id, text, attachments) => call('sessions:send', id, text, attachments),
     interrupt: (id) => call('sessions:interrupt', id),
     setModel: (id, model) => call('sessions:setModel', id, model),
+    setEffort: (id, effort) => call('sessions:setEffort', id, effort),
     setPermissionMode: (id, mode) => call('sessions:setPermissionMode', id, mode),
     respond: (id, requestId, decision) => call('sessions:respond', id, requestId, decision),
     handoff: (id, target) => call('sessions:handoff', id, target),
