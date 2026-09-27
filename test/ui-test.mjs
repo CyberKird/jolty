@@ -72,8 +72,10 @@ const pickModel = async (profileName, nth = 0) => {
   await opt.waitFor({ timeout: 30000 })
   await opt.click()
 }
-await pickModel('Claude (contul principal)')
+// the menu itself; subscription accounts are logged out on CI, so nothing here depends on a login
 await win.click('.composer .picker-btn >> nth=0')
+await win.waitForSelector('.picker-opt', { timeout: 30000 })
+await win.waitForTimeout(1500)
 await shot('01a-model-menu')
 await win.keyboard.press('Escape')
 await win.fill('.composer textarea', 'Refactorizează tot proiectul să folosească TypeScript, optimizează netcode-ul pentru multiplayer și adaugă teste complete')
