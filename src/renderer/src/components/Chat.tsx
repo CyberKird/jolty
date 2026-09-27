@@ -15,27 +15,29 @@ const EMPTY: ChatItem[] = []
 // Images: pasted, dropped or picked, downscaled so they stay light
 // ---------------------------------------------------------------------------
 async function toAttachment(file: File): Promise<Attachment> {
-  const url = URL.createObjectURL(file)
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const i = new Image()
-      i.onload = () => resolve(i)
-      i.onerror = reject
-      i.src = url
-    })
-    const max = 1600
-    const scale = Math.min(1, max / Math.max(img.width, img.height))
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.round(img.width * scale)
-    canvas.height = Math.round(img.height * scale)
-    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
-    const png = file.type === 'image/png' && file.size < 1.5e6
-    const mime = png ? 'image/png' : 'image/jpeg'
-    const data = canvas.toDataURL(mime, 0.9).split(',')[1]
-    return { id: crypto.randomUUID(), name: file.name || 'imagine.png', mime, data }
-  } finally {
-    URL.revokeObjectURL(url)
-  }
+  // decode via a data: URL, not blob: + <img>: CSP img-src is 'self' data: only
+  const src = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('fișierul nu a putut fi citit'))
+    reader.readAsDataURL(file)
+  })
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image()
+    i.onload = () => resolve(i)
+    i.onerror = () => reject(new Error('imagine invalidă'))
+    i.src = src
+  })
+  const max = 1600
+  const scale = Math.min(1, max / Math.max(img.width, img.height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(img.width * scale)
+  canvas.height = Math.round(img.height * scale)
+  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+  const png = file.type === 'image/png' && file.size < 1.5e6
+  const mime = png ? 'image/png' : 'image/jpeg'
+  const data = canvas.toDataURL(mime, 0.9).split(',')[1]
+  return { id: crypto.randomUUID(), name: file.name || 'imagine.png', mime, data }
 }
 
 export function ProfileDot({ profile, size = 7 }: { profile?: Profile; size?: number }) {
