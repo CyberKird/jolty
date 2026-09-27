@@ -1,6 +1,7 @@
-import { ArrowRight, ArrowUp, FolderOpen, Globe, RotateCcw, ImagePlus, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
-import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowRight, ArrowUp, FolderOpen, Globe, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
+import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
+import { usageRisk } from '@shared/usage-risk'
 import type { Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import { api, basename, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
@@ -111,6 +112,7 @@ interface ComposerProps {
 }
 
 function Composer(p: ComposerProps) {
+  const engine = p.profiles.find((profile) => profile.id === p.profileId)?.engine
   const [text, setText] = useState('')
   const [atts, setAtts] = useState<Attachment[]>([])
   const [dragging, setDragging] = useState(false)
@@ -120,11 +122,15 @@ function Composer(p: ComposerProps) {
   const toast = useStore((s) => s.toast)
   const [caret, setCaret] = useState(0)
   const mentions = useMentions(text, caret, p.cwd)
+  const costNote = usageRisk(text, atts.filter((a) => a.mime.startsWith('image/')).length, atts.filter((a) => a.mime.startsWith('video/')).length)
   // messages written while the model works wait here and go out, in order, when the turn ends
-  const [queue, setQueue] = useState<{ text: string; atts: Attachment[] }[]>([])
+  const [queue, setQueue] = useState<{ id: string; text: string; atts: Attachment[] }[]>([])
+  const queuedSent = useRef(false)
 
   useEffect(() => {
-    if (p.running || !queue.length) return
+    if (p.running) { queuedSent.current = false; return }
+    if (!queue.length || queuedSent.current) return
+    queuedSent.current = true
     const [next, ...rest] = queue
     setQueue(rest)
     void p.onSend(next.text, next.atts)
@@ -147,12 +153,35 @@ function Composer(p: ComposerProps) {
 
   const addFiles = useCallback(
     async (files: File[]) => {
-      const imgs = files.filter((f) => f.type.startsWith('image/'))
-      if (files.length && !imgs.length) toast('Deocamdată se pot atașa doar imagini.', true)
-      const converted = await Promise.all(imgs.map(toAttachment))
+      if (!files.length) return
+      const room = Math.max(0, 8 - atts.length)
+      if (files.length > room) toast('Maximum 8 fișiere per mesaj.', true)
+      const converted: Attachment[] = []
+      for (const file of files.slice(0, room)) {
+        try {
+          if (file.type.startsWith('image/')) {
+            converted.push(await toAttachment(file))
+            continue
+          }
+          const localPath = api.files.path(file)
+          if (localPath) {
+            converted.push({ id: crypto.randomUUID(), name: file.name, mime: file.type || 'application/octet-stream', path: localPath, size: file.size })
+          } else if (file.size <= 16 * 1024 * 1024) {
+            const data = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onload = () => resolve(String(reader.result).split(',')[1] || '')
+              reader.onerror = () => reject(reader.error)
+              reader.readAsDataURL(file)
+            })
+            converted.push({ id: crypto.randomUUID(), name: file.name, mime: file.type || 'application/octet-stream', data, size: file.size })
+          } else {
+            toast(`${file.name}: lipește un fișier sub 16 MB sau alege-l de pe disc.`, true)
+          }
+        } catch (err) { toast(`${file.name}: ${errMsg(err)}`, true) }
+      }
       setAtts((a) => [...a, ...converted].slice(0, 8))
     },
-    [toast]
+    [toast, atts.length]
   )
 
   const submit = async (): Promise<void> => {
@@ -162,7 +191,7 @@ function Composer(p: ComposerProps) {
     const a = atts
     setAtts([])
     if (p.running) {
-      setQueue((q) => [...q, { text: t, atts: a }])
+      setQueue((q) => [...q, { id: crypto.randomUUID(), text: t, atts: a }])
       return
     }
     await p.onSend(t, a)
@@ -182,11 +211,13 @@ function Composer(p: ComposerProps) {
     <div className="composer-wrap">
       {queue.length > 0 && (
         <div className="queue" aria-live="polite">
+          <div className="queue-title">În așteptare <span>{queue.length}</span></div>
           {queue.map((q, i) => (
-            <div className="queued" key={i}>
-              <span className="queued-label">în așteptare</span>
-              <span className="ellipsis">{q.text || `${q.atts.length} imagini`}</span>
-              <button onClick={() => setQueue((x) => x.filter((_, j) => j !== i))} aria-label="Scoate mesajul din așteptare" title="Scoate din așteptare">
+            <div className="queued" key={q.id}>
+              <span className="queued-order">{i + 1}</span>
+              <span className="queued-text" title={q.text || q.atts.map((a) => a.name).join(', ')}>{q.text || q.atts.map((a) => a.name).join(', ')}</span>
+              {q.atts.length > 0 && <span className="queued-files"><Paperclip size={11} /> {q.atts.length}</span>}
+              <button onClick={() => setQueue((x) => x.filter((item) => item.id !== q.id))} aria-label="Scoate mesajul din așteptare" title="Scoate din așteptare">
                 <X size={12} />
               </button>
             </div>
@@ -205,19 +236,25 @@ function Composer(p: ComposerProps) {
           setDragging(false)
           void addFiles([...e.dataTransfer.files])
         }}
+        onPaste={(e) => {
+          const files = [...e.clipboardData.items].filter((item) => item.kind === 'file').map((item) => item.getAsFile()).filter((file): file is File => Boolean(file))
+          if (files.length) { e.preventDefault(); void addFiles(files) }
+        }}
       >
         {atts.length > 0 && (
           <div className="attachments">
             {atts.map((a) => (
-              <div className="attachment" key={a.id} title={a.name}>
-                <img src={`data:${a.mime};base64,${a.data}`} alt={a.name} />
-                <button onClick={() => setAtts((x) => x.filter((y) => y.id !== a.id))} aria-label="Scoate imaginea">
+              <div className={`attachment ${a.mime.startsWith('image/') ? 'attachment-image' : 'attachment-file'}`} key={a.id} title={a.name}>
+                {a.mime.startsWith('image/') && a.data ? <img src={`data:${a.mime};base64,${a.data}`} alt={a.name} /> : <Paperclip size={15} />}
+                {!a.mime.startsWith('image/') && <span className="attachment-name">{a.name}</span>}
+                <button onClick={() => setAtts((x) => x.filter((y) => y.id !== a.id))} aria-label={`Scoate ${a.name}`}>
                   <X size={11} />
                 </button>
               </div>
             ))}
           </div>
         )}
+        {atts.some((a) => a.mime.startsWith('image/')) && engine === 'claude' && p.profiles.find((profile) => profile.id === p.profileId)?.vision === false && <div className="attachment-note">Modelul ales nu vede imagini. Jolty va folosi încă un profil ca să le descrie, cu consum suplimentar.</div>}
         {mentions.open && <MentionMenu items={mentions.items} index={mentions.index} onPick={pickMention} onHover={(i) => mentions.move(i - mentions.index)} />}
         <textarea
           ref={taRef}
@@ -228,13 +265,6 @@ function Composer(p: ComposerProps) {
             setCaret(e.target.selectionStart)
           }}
           onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
-          onPaste={(e) => {
-            const files = [...e.clipboardData.files]
-            if (files.some((f) => f.type.startsWith('image/'))) {
-              e.preventDefault()
-              void addFiles(files)
-            }
-          }}
           onKeyDown={(e) => {
             if (mentions.open) {
               if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -261,8 +291,9 @@ function Composer(p: ComposerProps) {
             // Shift+Tab cycles the permission mode, like Claude Code
             if (e.key === 'Tab' && e.shiftKey) {
               e.preventDefault()
-              const i = MODES.findIndex((m) => m.id === p.mode)
-              p.onMode(MODES[(i + 1) % MODES.length].id)
+              const modes = engine === 'hermes' ? (['ask', 'autoEdit', 'full'] as const) : MODES.map((m) => m.id)
+              const i = modes.findIndex((mode) => mode === p.mode)
+              p.onMode(modes[(i + 1) % modes.length])
               return
             }
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -284,11 +315,12 @@ function Composer(p: ComposerProps) {
             else if (e) p.onEffort(e)
           }}
         />
+        {costNote && <div className="attachment-note" role="status">{costNote}</div>}
         <div className="composer-bar">
-          <button className="btn ghost small icon" title="Atașează imagini" onClick={() => fileRef.current?.click()}>
-            <ImagePlus size={15} />
+          <button className="btn ghost small icon" title="Atașează imagini, videouri sau fișiere" onClick={() => fileRef.current?.click()}>
+            <Paperclip size={15} />
           </button>
-          <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void addFiles([...(e.target.files || [])])} />
+          <input ref={fileRef} type="file" multiple hidden onChange={(e) => { void addFiles([...(e.target.files || [])]); e.target.value = '' }} />
           {p.onCwd && (
             <button className="pill-select" style={{ paddingRight: 10, cursor: 'pointer', background: 'transparent' }} onClick={p.onCwd} title={p.cwd}>
               <FolderOpen size={13} /> <span style={{ color: 'var(--white)' }}>{p.cwd ? basename(p.cwd) : 'Alege proiectul'}</span>
@@ -308,13 +340,14 @@ function Composer(p: ComposerProps) {
             onEffort={p.onEffort}
             otherProfileHint={p.otherProfileHint}
           />
-          <ModePicker mode={p.mode} onMode={p.onMode} />
+          <ModePicker mode={p.mode} onMode={p.onMode} engine={engine} />
           <button
             className={`chrome-toggle ${p.browser ? 'on' : ''}`}
+            disabled={engine === 'hermes'}
             aria-pressed={Boolean(p.browser)}
             onClick={() => p.onBrowser(!p.browser)}
             title={
-              p.browser
+              engine === 'hermes' ? 'Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.' : p.browser
                 ? 'Jolty în browser e pornit: modelul poate folosi browserul tău (Chrome, Vivaldi, Edge, Brave), cu login-urile tale. Clic ca să-l oprești.'
                 : 'Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări).'
             }
@@ -476,16 +509,37 @@ function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Pr
 function useStickToBottom(dep: unknown): React.RefObject<HTMLDivElement | null> {
   const ref = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
+    let lastInput = 0
+    const markInput = (): void => { lastInput = Date.now() }
     const onScroll = (): void => {
-      stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+      if (nearBottom || Date.now() - lastInput < 500) stick.current = nearBottom
     }
+    const onKey = (event: KeyboardEvent): void => {
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) markInput()
+    }
+    const follow = (): void => { if (stick.current) el.scrollTop = el.scrollHeight }
+    el.addEventListener('wheel', markInput, { passive: true })
+    el.addEventListener('touchmove', markInput, { passive: true })
+    el.addEventListener('pointerdown', markInput)
+    el.addEventListener('keydown', onKey)
     el.addEventListener('scroll', onScroll)
-    return () => el.removeEventListener('scroll', onScroll)
+    const resize = new ResizeObserver(follow)
+    if (el.firstElementChild) resize.observe(el.firstElementChild)
+    follow()
+    return () => {
+      el.removeEventListener('wheel', markInput)
+      el.removeEventListener('touchmove', markInput)
+      el.removeEventListener('pointerdown', markInput)
+      el.removeEventListener('keydown', onKey)
+      el.removeEventListener('scroll', onScroll)
+      resize.disconnect()
+    }
   }, [])
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current
     if (el && stick.current) el.scrollTop = el.scrollHeight
   }, [dep])
@@ -586,7 +640,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
         effort={session.effort}
         onEffort={(e) => void api.sessions.setEffort(session.id, e).then(loadSessions).catch((err) => toast(errMsg(err), true))}
         mode={session.permissionMode}
-        onMode={(m) => void api.sessions.setPermissionMode(session.id, m).then(loadSessions)}
+        onMode={(m) => void api.sessions.setPermissionMode(session.id, m).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         browser={session.browser}
         onBrowser={(on) => void api.sessions.setBrowser(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         onStop={() => void api.sessions.interrupt(session.id)}
@@ -673,6 +727,10 @@ export function NewChat() {
         profileId={profileId}
         model={model}
         onPick={(id, m, e) => {
+          if (profiles.find((p) => p.id === id)?.engine === 'hermes') {
+            if (mode === 'plan' || mode === 'auto') setMode('ask')
+            setBrowser(false)
+          }
           if (id !== profileId) {
             setProfileId(id)
             void api.app.saveSettings({ lastProfileId: id })

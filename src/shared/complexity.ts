@@ -138,7 +138,7 @@ const text = (m: ModelOption): string => `${m.id} ${m.label} ${m.description || 
 export function capability(profile: Profile, m: ModelOption): Capability {
   const t = text(m)
   if (profile.local) return { grade: 2, tag: 'local', compare: 'Model local: cel mult la nivelul lui Haiku 4.5 (estimare din catalogul Jolty, nu test propriu).' }
-  if (profile.auth === 'endpoint')
+  if (profile.auth === 'endpoint' || profile.engine === 'hermes')
     return { grade: 3, tag: 'nevalidat', compare: 'API extern: nu există o comparație verificată cu Claude. Bun pentru sarcini medii; la cele grele un model de top e mai sigur.' }
   if (profile.engine === 'claude') {
     if (/fable/i.test(t)) return { grade: 5, tag: 'top', compare: 'Cel mai capabil model Claude, pentru sarcinile cele mai grele și lungi.' }
@@ -201,7 +201,7 @@ export function recommend(a: Assessment, groups: ModelGroupLite[], current: Pick
 
   // every model that can do the job, from every account that is connected and not at its limit
   const candidates = groups
-    .filter((g) => !g.error && limitLoad(limits[g.profile.id]) < 95)
+    .filter((g) => !g.error && (g.profile.engine !== 'hermes' || g.profile.id === current.profileId) && limitLoad(limits[g.profile.id]) < 95)
     .flatMap((g) =>
       g.models
         .filter((m) => !EXTRA_COST.test(text(m)) && !/\[1m\]|-1m\b/i.test(m.id))

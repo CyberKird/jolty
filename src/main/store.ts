@@ -41,7 +41,7 @@ export function saveProfiles(profiles: Profile[]): void {
 
 /** Per-profile config folder (CLAUDE_CONFIG_DIR / CODEX_HOME) for non-default profiles. */
 export function profileDir(profile: Profile): string | undefined {
-  if (profile.isDefaultDir) return undefined
+  if (profile.isDefaultDir || profile.engine === 'hermes') return undefined
   return path.join(dataDir(), 'profiles', profile.id, profile.engine)
 }
 

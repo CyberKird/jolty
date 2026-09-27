@@ -3,7 +3,7 @@
 import { Check, ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { capability } from '@shared/complexity'
-import type { ModelOption, PermissionMode, Profile } from '@shared/types'
+import type { EngineKind, ModelOption, PermissionMode, Profile } from '@shared/types'
 import { api, ENGINE_LABEL, errMsg } from '../store'
 
 export interface ModelGroup {
@@ -226,14 +226,21 @@ export const MODES: { id: PermissionMode; label: string; desc: string; title: st
   }
 ]
 
-export function ModePicker({ mode, onMode }: { mode: PermissionMode; onMode: (m: PermissionMode) => void }) {
+const HERMES_MODES = [
+  { id: 'ask' as const, label: 'Aprobă editările', desc: 'Cere acordul pentru fișiere și comenzi periculoase', title: 'Hermes cere acordul înainte de editări și comenzi periculoase. Alte comenzi pot rula automat.' },
+  { id: 'autoEdit' as const, label: 'Acceptă editările', desc: 'Editează automat în proiect și în folderul temporar', title: 'Hermes aprobă editările în proiect și în folderul temporar. Cere acordul pentru căi sensibile și comenzi periculoase.' },
+  { id: 'full' as const, label: 'Editări extinse', desc: 'Aprobă editările din afara proiectului', title: 'Hermes aprobă editările în această sesiune, cu excepția căilor sensibile. Comenzile periculoase cer în continuare acordul.' }
+]
+
+export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onMode: (m: PermissionMode) => void; engine?: EngineKind }) {
   const { open, setOpen, ref } = usePopover()
-  const current = MODES.find((m) => m.id === mode) || MODES[0]
+  const choices = engine === 'hermes' ? HERMES_MODES : MODES
+  const current = choices.find((m) => m.id === mode) || choices[0]
   // 1-5 pick a mode while the menu is open, like the Claude app
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent): void => {
-      const m = MODES[Number(e.key) - 1]
+      const m = choices[Number(e.key) - 1]
       if (!m || e.ctrlKey || e.altKey || e.metaKey) return
       e.preventDefault()
       setOpen(false)
@@ -241,7 +248,7 @@ export function ModePicker({ mode, onMode }: { mode: PermissionMode; onMode: (m:
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onMode, setOpen])
+  }, [open, onMode, setOpen, choices])
   return (
     <div className="picker" ref={ref}>
       <button className={`picker-btn mode-${mode}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title={current.title}>
@@ -252,7 +259,7 @@ export function ModePicker({ mode, onMode }: { mode: PermissionMode; onMode: (m:
         <div className="picker-pop small" role="menu" aria-label="Permisiuni">
           <div className="picker-list">
             <div className="picker-group-head">Mod</div>
-            {MODES.map((m, i) => (
+            {choices.map((m, i) => (
               <button
                 key={m.id}
                 data-opt

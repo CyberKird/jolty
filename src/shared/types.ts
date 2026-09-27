@@ -1,13 +1,13 @@
 // Types shared by the main process, the preload bridge and the renderer.
 
-export type EngineKind = 'claude' | 'codex'
+export type EngineKind = 'claude' | 'codex' | 'hermes'
 
 /**
  * subscription: the official CLI login (claude.ai or ChatGPT) stored in the profile's config dir.
  * apiKey:       the provider's own API key (Anthropic for Claude, OpenAI for Codex).
  * endpoint:     Claude engine only - any Anthropic-compatible endpoint (DeepSeek, OpenRouter, LiteLLM...).
  */
-export type AuthKind = 'subscription' | 'apiKey' | 'endpoint'
+export type AuthKind = 'subscription' | 'apiKey' | 'endpoint' | 'existing'
 
 export interface Profile {
   id: string
@@ -87,8 +87,11 @@ export interface Attachment {
   id: string
   name: string
   mime: string
-  /** base64 without the data: prefix */
-  data: string
+  /** base64 without the data: prefix, used for images and clipboard files */
+  data?: string
+  /** Local path of a file chosen or dropped by the user. */
+  path?: string
+  size?: number
 }
 
 export interface SessionMeta {
@@ -127,7 +130,7 @@ export interface FileDiff {
 }
 
 export type ChatItem =
-  | { kind: 'user'; id: string; text: string; images?: { name: string; dataUrl: string }[] }
+  | { kind: 'user'; id: string; text: string; images?: { name: string; dataUrl: string }[]; files?: { name: string; mime: string }[] }
   | { kind: 'assistant'; id: string; text: string }
   | { kind: 'reasoning'; id: string; text: string }
   | {
@@ -229,6 +232,7 @@ export interface AppSettings {
   visionProfileId?: string
   claudePath?: string
   codexPath?: string
+  hermesPath?: string
   lastCwd?: string
   lastProfileId?: string
   /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
@@ -335,6 +339,7 @@ export interface SystemCheck {
 }
 
 export interface JoltyApi {
+  files: { path(file: File): string }
   profiles: {
     list(): Promise<Profile[]>
     create(input: ProfileInput): Promise<Profile>

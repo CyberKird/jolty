@@ -21,7 +21,7 @@ fs.writeFileSync(
     { id: 'claude-main', name: 'Claude (contul principal)', engine: 'claude', auth: 'subscription', isDefaultDir: true, color: '#d97757' },
     { id: 'codex-main', name: 'Codex (contul principal)', engine: 'codex', auth: 'subscription', isDefaultDir: true, color: '#10a37f' },
     { id: 'claude-2', name: 'Claude (al doilea cont)', engine: 'claude', auth: 'subscription', isDefaultDir: false, color: '#6c8cff' },
-    { id: 'mock', name: 'DeepSeek (test)', engine: 'claude', auth: 'endpoint', isDefaultDir: true, baseUrl: 'http://127.0.0.1:8766', models: ['mock-model'], vision: false, color: '#e0a23b' }
+    { id: 'mock', name: 'DeepSeek (test)', engine: 'claude', auth: 'endpoint', isDefaultDir: true, baseUrl: process.env.MOCK_ANTHROPIC || 'http://127.0.0.1:8766', models: ['mock-model'], vision: false, color: '#e0a23b' }
   ])
 )
 fs.writeFileSync(path.join(data, 'secrets.json'), JSON.stringify({ mock: { enc: false, value: 'sk-mock' } }))
@@ -103,10 +103,48 @@ await win.waitForTimeout(6000)
 await shot('02-chat-live-code')
 await win.waitForSelector('.permission', { timeout: 60000 })
 await shot('03-permission')
+await win.fill('.composer textarea', 'Mesaj foarte lung pentru a verifica aspectul în așteptare. '.repeat(18))
+await win.keyboard.press('Enter')
+await win.waitForSelector('.queued')
+const queuedFits = await win.locator('.queued').evaluate((element) => element.scrollWidth <= element.clientWidth + 1)
+if (!queuedFits) errors.push('Mesajul în așteptare iese din panou')
+await shot('03b-queued')
+await win.click('.queued button')
 await win.click('.permission .btn.primary')
 await win.waitForSelector('.msg-assistant', { timeout: 60000 })
 await win.waitForTimeout(1500)
 await shot('04-chat-done')
+await win.locator('input[type="file"]').setInputFiles(path.join(project, 'README.md'))
+await win.waitForSelector('.attachment-file')
+await shot('04a-file-attachment')
+await win.click('.attachment-file button')
+await win.locator('.composer').evaluate((element) => {
+  const binary = atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lL8AAAAASUVORK5CYII=')
+  const file = new File([Uint8Array.from(binary, (char) => char.charCodeAt(0))], 'lipita.png', { type: 'image/png' })
+  const clipboard = new DataTransfer()
+  clipboard.items.add(file)
+  element.dispatchEvent(new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true }))
+})
+await win.waitForSelector('.attachment-image img')
+await shot('04a-pasted-image')
+await win.click('.attachment-image button')
+const sticks = await win.locator('.messages').evaluate(async (element) => {
+  const content = element.firstElementChild
+  const tall = document.createElement('div')
+  tall.style.height = '1500px'
+  content.append(tall)
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  const atBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 2
+  element.dispatchEvent(new WheelEvent('wheel', { deltaY: -500, bubbles: true }))
+  element.scrollTop = 0
+  element.dispatchEvent(new Event('scroll'))
+  tall.style.height = '1800px'
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  const stayedUp = element.scrollTop < 20
+  tall.remove()
+  return atBottom && stayedUp
+})
+if (!sticks) errors.push('Derularea automată sau pauza la derularea manuală a eșuat')
 // the agent's task list above the composer, collapsed then open
 await win.fill('.composer textarea', 'Fă un plan pentru migrare RUN_TODO')
 await win.keyboard.press('Enter')

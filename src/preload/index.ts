@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { ChatEvent, JoltyApi } from '@shared/types'
 
 // Main-process errors arrive as "Error invoking remote method 'x': Error: message"; keep the message.
@@ -12,6 +12,7 @@ async function call<T>(channel: string, ...args: unknown[]): Promise<T> {
 }
 
 const api: JoltyApi = {
+  files: { path: (file) => webUtils.getPathForFile(file) },
   profiles: {
     list: () => call('profiles:list'),
     create: (input) => call('profiles:create', input),

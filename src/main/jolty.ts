@@ -23,11 +23,15 @@ import type {
 } from '@shared/types'
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
+import { HermesDriver } from './engines/hermes'
+import { hermesExecutable } from './engines/hermes-runtime'
+import { hermesMode } from './engines/hermes-session'
 import type { EngineDriver, EngineHost, EngineSession } from './engines/types'
 import { DESCRIBE_PROMPT } from './engines/claude'
 import { endpointCost, fetchBalance } from './balance'
 import * as local from './local'
 import { claudeSettingsOverride } from './runtime'
+import { prepareAttachments, filePrompt } from './attachments'
 import * as store from './store'
 
 const COLORS = ['#d97757', '#10a37f', '#6c8cff', '#e0a23b', '#c060d0', '#3bb3c3', '#e05a7a', '#8fb339']
@@ -37,7 +41,7 @@ const DEFAULT_PROFILES: Profile[] = [
   { id: 'codex-main', name: 'Codex (contul principal)', engine: 'codex', auth: 'subscription', isDefaultDir: true, color: COLORS[1] }
 ]
 
-export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex' }
+export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes' }
 
 function gitState(cwd: string): Promise<string> {
   const run = (args: string[]): Promise<string> =>
@@ -77,6 +81,7 @@ export function handoffPrompt(src: SessionMeta, srcProfile: Profile | undefined,
 export class Jolty {
   readonly claude = new ClaudeDriver()
   readonly codex = new CodexDriver()
+  readonly hermes = new HermesDriver()
   private live = new Map<string, EngineSession>()
   private transcripts = new Map<string, ChatItem[]>()
   private saveTimers = new Map<string, NodeJS.Timeout>()
@@ -84,10 +89,17 @@ export class Jolty {
   constructor(private send: (e: ChatEvent) => void) {
     this.codex.onLimits = (s) => this.recordLimits(s)
     if (store.loadProfiles().length === 0) store.saveProfiles(DEFAULT_PROFILES)
+    const profiles = store.loadProfiles()
+    if (!profiles.some((p) => p.engine === 'hermes') && hermesExecutable()) {
+      store.saveProfiles([...profiles, { id: 'hermes-main', name: 'Hermes', engine: 'hermes', auth: 'existing', isDefaultDir: true, color: COLORS[2] }])
+    }
   }
 
   private driver(engine: EngineKind): EngineDriver {
-    return engine === 'claude' ? this.claude : this.codex
+    if (engine === 'hermes') return this.hermes
+    if (engine === 'claude') return this.claude
+    if (engine === 'codex') return this.codex
+    throw new Error('Motor necunoscut')
   }
 
   // -------------------------------------------------------------------------
@@ -106,6 +118,10 @@ export class Jolty {
 
   createProfile(input: ProfileInput): Profile {
     const all = store.loadProfiles()
+    if (!['claude', 'codex', 'hermes'].includes(input.engine)) throw new Error('Motor necunoscut')
+    if ((input.engine === 'hermes') !== (input.auth === 'existing')) throw new Error('Hermes folosește configurația existentă.')
+    if (input.engine === 'hermes' && all.some((p) => p.engine === 'hermes')) throw new Error('Profilul Hermes există deja.')
+    if (input.engine === 'hermes' && (input.secret || input.baseUrl || input.models?.length)) throw new Error('Configurează modelul și cheia în Hermes.')
     if (input.engine === 'codex' && input.auth === 'endpoint') throw new Error('Endpoint-urile compatibile sunt disponibile doar pentru motorul Claude Code')
     const profile: Profile = {
       id: randomUUID().slice(0, 8),
@@ -113,7 +129,7 @@ export class Jolty {
       engine: input.engine,
       auth: input.auth,
       // Claude API-key/endpoint profiles reuse ~/.claude (settings, skills, MCP); logins need their own folder.
-      isDefaultDir: input.engine === 'claude' && input.auth !== 'subscription',
+      isDefaultDir: input.engine === 'hermes' || (input.engine === 'claude' && input.auth !== 'subscription'),
       baseUrl: input.baseUrl?.trim() || undefined,
       models: input.models?.map((m) => m.trim()).filter(Boolean),
       vision: input.vision,
@@ -130,6 +146,7 @@ export class Jolty {
     const all = store.loadProfiles()
     const p = all.find((x) => x.id === id)
     if (!p) throw new Error('Profil inexistent')
+    if (p.engine === 'hermes' && (patch.secret !== undefined || patch.baseUrl !== undefined || patch.models !== undefined)) throw new Error('Configurează modelul și cheia în Hermes.')
     if (patch.name !== undefined) p.name = patch.name.trim() || p.name
     if (patch.baseUrl !== undefined) p.baseUrl = patch.baseUrl.trim() || undefined
     if (patch.models !== undefined) p.models = patch.models.map((m) => m.trim()).filter(Boolean)
@@ -270,6 +287,10 @@ export class Jolty {
 
   async startSession(input: StartSessionInput): Promise<SessionMeta> {
     const p = this.profile(input.profileId)
+    if (p.engine === 'hermes') {
+      hermesMode(input.permissionMode)
+      if (input.browser) throw new Error('Conectarea la browserul Jolty nu este disponibilă pentru Hermes.')
+    }
     const now = Date.now()
     const meta: SessionMeta = {
       id: randomUUID(),
@@ -278,7 +299,7 @@ export class Jolty {
       cwd: input.cwd,
       title: input.title || 'Conversație nouă',
       model: input.model,
-      effort: input.effort,
+      effort: p.engine === 'hermes' ? undefined : input.effort,
       permissionMode: input.permissionMode,
       browser: input.browser || undefined,
       engineSessionId: input.resumeEngineSessionId,
@@ -377,6 +398,7 @@ export class Jolty {
   private async canSee(meta: SessionMeta): Promise<boolean> {
     const p = this.profile(meta.profileId)
     if (p.engine === 'claude') return p.auth === 'endpoint' ? Boolean(p.vision) : true
+    if (p.engine === 'hermes') return true
     try {
       const models = await this.codex.models(p)
       const m = models.find((x) => x.id === meta.model) || models.find((x) => x.isDefault)
@@ -390,7 +412,7 @@ export class Jolty {
   visionProfile(): Profile | undefined {
     const all = store.loadProfiles()
     const chosen = all.find((p) => p.id === store.loadSettings().visionProfileId)
-    if (chosen) return chosen
+    if (chosen && chosen.engine !== 'hermes') return chosen
     return (
       all.find((p) => p.engine === 'claude' && p.auth !== 'endpoint') ||
       all.find((p) => p.engine === 'codex') ||
@@ -410,6 +432,7 @@ export class Jolty {
 
   async sendMessage(sessionId: string, text: string, attachments: Attachment[] = [], display?: string): Promise<void> {
     const s = this.liveSession(sessionId)
+    const prepared = prepareAttachments(attachments)
     if (s.meta.title === 'Conversație nouă') {
       s.meta.title = text.replace(/\s+/g, ' ').trim().slice(0, 60) || attachments[0]?.name || s.meta.title
       this.saveMeta(s.meta)
@@ -419,13 +442,15 @@ export class Jolty {
     this.onEngineEvent({
       type: 'item',
       sessionId,
-      item: { kind: 'user', id: userId, text: display ?? text, images: attachments.map((a) => ({ name: a.name, dataUrl: `data:${a.mime};base64,${a.data}` })) }
+      item: { kind: 'user', id: userId, text: display ?? text,
+        images: prepared.images.map((a) => ({ name: a.name, dataUrl: `data:${a.mime};base64,${a.data}` })),
+        files: prepared.files.map((f) => ({ name: f.name, mime: f.mime })) }
     })
-    let prompt = text
-    let images = attachments
-    if (attachments.length && !(await this.canSee(s.meta))) {
+    let prompt = [text, filePrompt(prepared.files)].filter(Boolean).join('\n\n')
+    let images = prepared.images
+    if (images.length && !(await this.canSee(s.meta))) {
       try {
-        prompt = `${await this.describeImages(sessionId, attachments)}\n\n${text}`
+        prompt = `${await this.describeImages(sessionId, images)}\n\n${prompt}`
         images = []
       } catch (err) {
         this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: `Nu am putut descrie imaginea: ${err instanceof Error ? err.message : err}`, level: 'error' } })
@@ -495,6 +520,7 @@ export class Jolty {
   }
 
   async setEffort(sessionId: string, effort: string): Promise<void> {
+    if (effort && this.meta(sessionId).engine === 'hermes') throw new Error('Hermes folosește efortul din configurația proprie.')
     const s = this.live.get(sessionId)
     if (s) await s.setEffort(effort)
     const meta = s?.meta || this.meta(sessionId)
@@ -503,6 +529,7 @@ export class Jolty {
   }
 
   async setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void> {
+    if (this.meta(sessionId).engine === 'hermes') hermesMode(mode)
     const s = this.live.get(sessionId)
     if (s) await s.setPermissionMode(mode)
     const meta = s?.meta || this.meta(sessionId)
@@ -511,6 +538,7 @@ export class Jolty {
   }
 
   async setBrowser(sessionId: string, on: boolean): Promise<void> {
+    if (on && this.meta(sessionId).engine === 'hermes') throw new Error('Conectarea la browserul Jolty nu este disponibilă pentru Hermes.')
     const s = this.live.get(sessionId)
     if (s) await s.setBrowser(on)
     const meta = s?.meta || this.meta(sessionId)
@@ -525,12 +553,13 @@ export class Jolty {
   async handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string): Promise<SessionMeta> {
     const src = this.meta(sessionId)
     const srcProfile = store.loadProfiles().find((p) => p.id === src.profileId)
+    const targetHermes = this.profile(targetProfileId).engine === 'hermes'
     const prompt = handoffPrompt(src, srcProfile, this.transcript(sessionId), await gitState(src.cwd))
     const meta = await this.startSession({
       profileId: targetProfileId,
       cwd: src.cwd,
-      permissionMode: src.permissionMode,
-      browser: src.browser,
+      permissionMode: targetHermes && (src.permissionMode === 'plan' || src.permissionMode === 'auto') ? 'ask' : src.permissionMode,
+      browser: targetHermes ? undefined : src.browser,
       model,
       // effort names differ between models; a picked model starts on its own default
       effort: model ? effort : src.effort,
@@ -617,5 +646,6 @@ export class Jolty {
     }
     await this.claude.shutdown()
     await this.codex.shutdown()
+    await this.hermes.shutdown()
   }
 }

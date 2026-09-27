@@ -15,6 +15,7 @@
     "dist:win": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish never",
     "dist:release": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish always",
     "test:engines": "esbuild test/engine-test.ts --bundle --platform=node --format=cjs --external:electron --external:@anthropic-ai/claude-agent-sdk --external:@playwright/mcp --alias:@shared=./src/shared --outfile=out-test/engine-test.js --log-level=warning && electron --no-sandbox out-test/engine-test.js",
+    "test:hermes": "esbuild test/hermes-test.ts --bundle --platform=node --format=cjs --external:electron --alias:@shared=./src/shared --outfile=out-test/hermes-test.cjs --log-level=warning && node --test out-test/hermes-test.cjs",
     "test:ui": "electron-vite build && node test/ui-test.mjs",
     "icon": "electron scripts/make-icon.cjs"
   },

@@ -1,3 +1,4 @@
+import { Paperclip } from 'lucide-react'
 import { memo, useState } from 'react'
 import type { ChatItem, PermissionDecision, PermissionRequest } from '@shared/types'
 import { DiffView, Markdown, plainDashes } from './Rich'
@@ -90,6 +91,7 @@ export const MessageItem = memo(function MessageItem({ item, live }: { item: Cha
               ))}
             </div>
           ) : null}
+          {item.files?.length ? <div className="message-files">{item.files.map((file, i) => <span key={`${file.name}-${i}`} title={file.mime}><Paperclip size={11} />{file.name}</span>)}</div> : null}
           {item.text}
         </div>
       )

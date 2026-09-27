@@ -7,7 +7,8 @@ import { api, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } from '../sto
 const AUTH_LABEL: Record<AuthKind, string> = {
   subscription: 'Abonament',
   apiKey: 'Cheie API',
-  endpoint: 'Endpoint compatibil'
+  endpoint: 'Endpoint compatibil',
+  existing: 'Configurația existentă'
 }
 
 const PRESETS = [
@@ -117,7 +118,8 @@ function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void
       )}
       {profile.auth === 'subscription' && <LimitMeters profileId={profile.id} />}
       <div className="row wrap" style={{ marginTop: 12 }}>
-        {!status?.loggedIn && profile.auth !== 'endpoint' && (
+        {profile.auth === 'existing' && <button className="btn small" onClick={() => void refresh()}><RefreshCw size={14} /> Verifică Hermes</button>}
+        {!status?.loggedIn && profile.auth !== 'endpoint' && profile.auth !== 'existing' && (
           <button className="btn primary small" disabled={busy} onClick={() => void login()}>
             <LogIn size={14} /> {profile.auth === 'subscription' ? 'Conectează contul' : 'Conectează cheia'}
           </button>
@@ -224,13 +226,14 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
             <div className="field">
               <label>Motor</label>
               <div className="segmented">
-                {(['claude', 'codex'] as EngineKind[]).map((e) => (
+                {(['claude', 'codex', 'hermes'] as EngineKind[]).map((e) => (
                   <button
                     key={e}
                     className={engine === e ? 'on' : ''}
                     onClick={() => {
                       setEngine(e)
-                      if (e === 'codex' && auth === 'endpoint') setAuth('subscription')
+                      if (e === 'hermes') setAuth('existing')
+                      else if (auth === 'existing' || (e === 'codex' && auth === 'endpoint')) setAuth('subscription')
                     }}
                   >
                     {ENGINE_LABEL[e]}
@@ -241,8 +244,8 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
             <div className="field">
               <label>Autentificare</label>
               <div className="segmented">
-                {(['subscription', 'apiKey', 'endpoint'] as AuthKind[])
-                  .filter((a) => engine === 'claude' || a !== 'endpoint')
+                {(['subscription', 'apiKey', 'endpoint', 'existing'] as AuthKind[])
+                  .filter((a) => engine === 'hermes' ? a === 'existing' : a !== 'existing' && (engine === 'claude' || a !== 'endpoint'))
                   .map((a) => (
                     <button key={a} className={auth === a ? 'on' : ''} onClick={() => setAuth(a)}>
                       {AUTH_LABEL[a]}
@@ -250,6 +253,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
                   ))}
               </div>
               <div className="hint">
+                {auth === 'existing' && 'Folosește modelul, cheia, memoria și skill-urile deja configurate în Hermes. Nu trebuie să copiezi cheia aici.'}
                 {auth === 'subscription' &&
                   (engine === 'claude'
                     ? 'Te conectezi cu contul tău claude.ai în fereastra oficială Claude Code. Fiecare profil are login-ul lui, deci poți avea mai multe conturi.'
@@ -328,7 +332,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
             )}
           </>
         )}
-        {auth !== 'subscription' && (
+        {auth !== 'subscription' && auth !== 'existing' && (
           <div className="field">
             <label>
               <KeyRound size={12} /> Cheie API {editing && profile?.hasSecret ? '(lasă gol ca s-o păstrezi)' : ''}

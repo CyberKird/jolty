@@ -18,7 +18,7 @@ export function SettingsPage() {
     void api.browser.info().then(setBrowserInfo)
   }, [])
   if (!s) return null
-  const visionCandidates = profiles.filter((p) => p.auth !== 'endpoint' || p.vision)
+  const visionCandidates = profiles.filter((p) => p.engine !== 'hermes' && (p.auth !== 'endpoint' || p.vision))
   return (
     <div className="page">
       <div className="page-inner narrow">
@@ -167,7 +167,7 @@ export function SettingsPage() {
         </label>
         <div className="card" style={{ marginBottom: 14 }}>
           <b>Motoare</b>
-          <p className="muted small">Jolty folosește versiunile incluse. Completează doar dacă vrei alt executabil.</p>
+          <p className="muted small">Claude Code și Codex sunt incluse. Hermes folosește instalarea de pe PC. Completează doar dacă vrei alt executabil.</p>
           <div className="field">
             <label>Claude Code (claude.exe)</label>
             <input className="input mono" value={s.claudePath || ''} placeholder="versiunea inclusă" onChange={(e) => setS({ ...s, claudePath: e.target.value || undefined })} />
@@ -175,6 +175,10 @@ export function SettingsPage() {
           <div className="field">
             <label>Codex (codex.exe)</label>
             <input className="input mono" value={s.codexPath || ''} placeholder="versiunea inclusă" onChange={(e) => setS({ ...s, codexPath: e.target.value || undefined })} />
+          </div>
+          <div className="field">
+            <label>Hermes ACP (hermes-acp.exe)</label>
+            <input className="input mono" value={s.hermesPath || ''} placeholder="instalarea existentă" onChange={(e) => setS({ ...s, hermesPath: e.target.value || undefined })} />
           </div>
         </div>
         <div className="row">
