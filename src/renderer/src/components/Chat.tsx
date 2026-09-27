@@ -1,26 +1,14 @@
-import { ArrowRight, ArrowUp, FolderOpen, ImagePlus, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
+import { ArrowRight, ArrowUp, FolderOpen, Globe, RotateCcw, ImagePlus, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
-import { assess, sameModel, suggest } from '@shared/complexity'
+import { assess, recommend } from '@shared/complexity'
 import type { Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import { api, basename, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
+import { DEFAULT_MODE, MODES, ModelPicker, ModePicker, useAllModels, type ModelGroup } from './ModelPicker'
+import { MentionMenu, useMentions } from './Mentions'
+import { TaskStrip } from './Tasks'
 
 const EMPTY: ChatItem[] = []
-
-const MODES: { id: PermissionMode; label: string; title: string }[] = [
-  { id: 'ask', label: 'Întreabă', title: 'Cere voie înainte de modificări și comenzi' },
-  { id: 'autoEdit', label: 'Editează', title: 'Modifică fișiere fără să întrebe; cere voie pentru comenzi' },
-  { id: 'plan', label: 'Plan', title: 'Doar citește și propune un plan' },
-  { id: 'full', label: 'Total', title: 'Fără aprobări (doar în proiecte în care ai încredere)' }
-]
-
-const EFFORT_TITLES: Record<string, string> = {
-  low: 'Răspunsuri rapide, gândire minimă',
-  medium: 'Gândire moderată',
-  high: 'Gândire în profunzime',
-  xhigh: 'Mai adânc decât high: cel mai bun pentru cod și sarcini lungi',
-  max: 'Efort maxim: cel mai lent și cel mai scump'
-}
 
 // ---------------------------------------------------------------------------
 // Images: pasted, dropped or picked, downscaled so they stay light
@@ -49,23 +37,6 @@ async function toAttachment(file: File): Promise<Attachment> {
   }
 }
 
-function useModels(profileId?: string): { models: ModelOption[]; loading: boolean } {
-  const [state, setState] = useState<{ models: ModelOption[]; loading: boolean }>({ models: [], loading: false })
-  useEffect(() => {
-    if (!profileId) return
-    let alive = true
-    setState({ models: [], loading: true })
-    api.profiles
-      .models(profileId)
-      .then((models) => alive && setState({ models, loading: false }))
-      .catch(() => alive && setState({ models: [], loading: false }))
-    return () => {
-      alive = false
-    }
-  }, [profileId])
-  return state
-}
-
 export function ProfileDot({ profile, size = 7 }: { profile?: Profile; size?: number }) {
   return <span className="dot" style={{ width: size, height: size, background: profile?.color || 'var(--grey-2)' }} />
 }
@@ -73,41 +44,41 @@ export function ProfileDot({ profile, size = 7 }: { profile?: Profile; size?: nu
 // ---------------------------------------------------------------------------
 // Suggestion strip: task complexity -> model and effort
 // ---------------------------------------------------------------------------
-function Advice({ text, images, profile, models, model, effort, onApply }: {
+function Advice({ text, images, groups, profileId, model, effort, onApply }: {
   text: string
   images: number
-  profile?: Profile
-  models: ModelOption[]
+  groups: ModelGroup[]
+  profileId?: string
   model?: string
   effort?: string
-  onApply: (model: string | undefined, effort: string | undefined) => void
+  onApply: (profileId: string, model: string, effort: string | undefined) => void
 }) {
   const deferred = useDeferredValue(text)
+  const limits = useStore((s) => s.limits)
   const a = useMemo(() => assess(deferred, images), [deferred, images])
-  if (!a) return null
-  const s = suggest(a, profile, models)
-  const currentModel = models.find((m) => m.id === model) || models.find((m) => m.isDefault)
-  const modelOk = !s.model || sameModel(s.model, currentModel)
-  const effortOk = !s.effort || s.effort === (effort || currentModel?.defaultEffort)
-  const fits = modelOk && effortOk
+  const r = useMemo(
+    () => (a && profileId ? recommend(a, groups, { profileId, modelId: model, effort }, limits) : undefined),
+    [a, groups, profileId, model, effort, limits]
+  )
+  // silent while the current choice fits: the strip only appears when something is clearly off
+  if (!a || !r || r.kind === 'none') return null
+  const t = r.target
+  const other = t && t.profileId !== profileId
   return (
-    <div className="advice" aria-live="polite">
-      <span className="advice-level" title={a.reasons.join(' · ')}>
-        {[1, 2, 3, 4].map((n) => (
-          <i key={n} className={n <= a.level ? (n === a.level ? 'on' : 'fill') : ''} />
-        ))}
+    <div className={`advice ${r.kind}`} aria-live="polite">
+      <span className="advice-why" title={a.reasons.join(' · ')}>
+        {r.text}
       </span>
-      <span className="advice-label">{a.label}</span>
-      {a.reasons.length > 0 && <span className="advice-why">{a.reasons.join(' · ')}</span>}
       <span className="spacer" />
-      {s.note ? (
-        <span className="advice-note">{s.note}</span>
-      ) : fits ? (
-        <span className="advice-ok">Potrivit</span>
-      ) : (
-        <button className="advice-apply" onClick={() => onApply(modelOk ? undefined : s.model?.id, effortOk ? undefined : s.effort)}>
-          {!modelOk && s.model ? s.model.label : currentModel?.label}
-          {s.effort ? ` · ${s.effort}` : ''}
+      {t && (
+        <button
+          className="advice-apply"
+          title={other ? `Conversația continuă în ${t.profileName}, cu istoricul ei` : undefined}
+          onClick={() => onApply(t.profileId, t.model.id, t.effort)}
+        >
+          {other ? `${t.profileName} · ` : ''}
+          {t.model.label}
+          {t.effort ? ` · ${t.effort}` : ''}
           <ArrowRight size={12} />
         </button>
       )}
@@ -124,14 +95,16 @@ interface ComposerProps {
   onStop?: () => void
   profiles: Profile[]
   profileId?: string
-  onProfile?: (id: string) => void
-  profileLocked?: boolean
   model?: string
-  onModel: (m: string) => void
+  /** a model from any profile; the parent decides what switching profile means */
+  onPick: (profileId: string, model: string, effort?: string) => void
+  otherProfileHint?: string
   effort?: string
   onEffort: (e: string) => void
   mode: PermissionMode
   onMode: (m: PermissionMode) => void
+  browser?: boolean
+  onBrowser: (on: boolean) => void
   cwd?: string
   onCwd?: () => void
   seed?: string
@@ -143,11 +116,20 @@ function Composer(p: ComposerProps) {
   const [dragging, setDragging] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const { models, loading } = useModels(p.profileId)
+  const groups = useAllModels(p.profiles)
   const toast = useStore((s) => s.toast)
-  const profile = p.profiles.find((x) => x.id === p.profileId)
-  const current = models.find((m) => m.id === p.model) || models.find((m) => m.isDefault)
-  const efforts = current?.efforts || []
+  const [caret, setCaret] = useState(0)
+  const mentions = useMentions(text, caret, p.cwd)
+  // messages written while the model works wait here and go out, in order, when the turn ends
+  const [queue, setQueue] = useState<{ text: string; atts: Attachment[] }[]>([])
+
+  useEffect(() => {
+    if (p.running || !queue.length) return
+    const [next, ...rest] = queue
+    setQueue(rest)
+    void p.onSend(next.text, next.atts)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.running, queue])
 
   useEffect(() => {
     if (p.seed) {
@@ -175,15 +157,42 @@ function Composer(p: ComposerProps) {
 
   const submit = async (): Promise<void> => {
     const t = text.trim()
-    if ((!t && !atts.length) || p.running) return
+    if (!t && !atts.length) return
     setText('')
     const a = atts
     setAtts([])
+    if (p.running) {
+      setQueue((q) => [...q, { text: t, atts: a }])
+      return
+    }
     await p.onSend(t, a)
+  }
+
+  const pickMention = (i: Parameters<typeof mentions.apply>[0]): void => {
+    const r = mentions.apply(i)
+    setText(r.text)
+    setCaret(r.caret)
+    requestAnimationFrame(() => {
+      taRef.current?.focus()
+      taRef.current?.setSelectionRange(r.caret, r.caret)
+    })
   }
 
   return (
     <div className="composer-wrap">
+      {queue.length > 0 && (
+        <div className="queue" aria-live="polite">
+          {queue.map((q, i) => (
+            <div className="queued" key={i}>
+              <span className="queued-label">în așteptare</span>
+              <span className="ellipsis">{q.text || `${q.atts.length} imagini`}</span>
+              <button onClick={() => setQueue((x) => x.filter((_, j) => j !== i))} aria-label="Scoate mesajul din așteptare" title="Scoate din așteptare">
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div
         className={`composer ${dragging ? 'dragging' : ''}`}
         onDragOver={(e) => {
@@ -209,11 +218,16 @@ function Composer(p: ComposerProps) {
             ))}
           </div>
         )}
+        {mentions.open && <MentionMenu items={mentions.items} index={mentions.index} onPick={pickMention} onHover={(i) => mentions.move(i - mentions.index)} />}
         <textarea
           ref={taRef}
           value={text}
-          placeholder="Descrie ce vrei să facă. Poți lipi sau trage imagini."
-          onChange={(e) => setText(e.target.value)}
+          placeholder={p.running ? 'Scrie următorul mesaj: pleacă imediat ce termină.' : 'Descrie ce vrei să facă. / pentru skill-uri, @ pentru fișiere.'}
+          onChange={(e) => {
+            setText(e.target.value)
+            setCaret(e.target.selectionStart)
+          }}
+          onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
           onPaste={(e) => {
             const files = [...e.clipboardData.files]
             if (files.some((f) => f.type.startsWith('image/'))) {
@@ -222,6 +236,35 @@ function Composer(p: ComposerProps) {
             }
           }}
           onKeyDown={(e) => {
+            if (mentions.open) {
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault()
+                mentions.move(e.key === 'ArrowDown' ? 1 : -1)
+                return
+              }
+              if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
+                e.preventDefault()
+                pickMention(mentions.items[mentions.index])
+                return
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                mentions.close()
+                return
+              }
+            }
+            if (e.key === 'Escape' && p.running && p.onStop) {
+              e.preventDefault()
+              p.onStop()
+              return
+            }
+            // Shift+Tab cycles the permission mode, like Claude Code
+            if (e.key === 'Tab' && e.shiftKey) {
+              e.preventDefault()
+              const i = MODES.findIndex((m) => m.id === p.mode)
+              p.onMode(MODES[(i + 1) % MODES.length].id)
+              return
+            }
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
               void submit()
@@ -232,13 +275,13 @@ function Composer(p: ComposerProps) {
         <Advice
           text={text}
           images={atts.length}
-          profile={profile}
-          models={models}
+          groups={groups}
+          profileId={p.profileId}
           model={p.model}
           effort={p.effort}
-          onApply={(m, e) => {
-            if (m) p.onModel(m)
-            if (e) p.onEffort(e)
+          onApply={(pid, m, e) => {
+            if (pid !== p.profileId || m !== p.model) p.onPick(pid, m, e)
+            else if (e) p.onEffort(e)
           }}
         />
         <div className="composer-bar">
@@ -251,56 +294,46 @@ function Composer(p: ComposerProps) {
               <FolderOpen size={13} /> <span style={{ color: 'var(--white)' }}>{p.cwd ? basename(p.cwd) : 'Alege proiectul'}</span>
             </button>
           )}
-          <div className="pill-select" title="Profil">
-            <ProfileDot profile={profile} />
-            <select value={p.profileId} disabled={p.profileLocked} onChange={(e) => p.onProfile?.(e.target.value)} aria-label="Profil">
-              {p.profiles.map((pr) => (
-                <option key={pr.id} value={pr.id}>
-                  {pr.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="pill-select" title={current?.description || 'Model'}>
-            <select value={p.model || ''} onChange={(e) => p.onModel(e.target.value)} aria-label="Model">
-              <option value="">{loading ? 'Se încarcă…' : 'Model implicit'}</option>
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                  {m.vision === false ? ' · fără imagini' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-          {efforts.length > 0 && (
-            <div className="segmented" role="radiogroup" aria-label="Efort">
-              {/* a model without a declared default (Claude) runs its own default when nothing is picked */}
-              {!current?.defaultEffort && (
-                <button className={!p.effort ? 'on' : ''} title="Efortul implicit al modelului" onClick={() => p.onEffort('')}>
-                  auto
-                </button>
-              )}
-              {efforts.map((e) => (
-                <button key={e} className={(p.effort || current?.defaultEffort) === e ? 'on' : ''} title={EFFORT_TITLES[e] || e} onClick={() => p.onEffort(e)}>
-                  {e}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="segmented" role="radiogroup" aria-label="Permisiuni">
-            {MODES.map((m) => (
-              <button key={m.id} className={p.mode === m.id ? 'on' : ''} title={m.title} onClick={() => p.onMode(m.id)}>
-                {m.label}
-              </button>
-            ))}
-          </div>
+          <ModelPicker
+            groups={groups}
+            profileId={p.profileId}
+            model={p.model}
+            effort={p.effort}
+            onPick={(pid, m) => {
+              p.onPick(pid, m)
+              // effort levels belong to the model: drop one the new model does not accept
+              const next = groups.find((g) => g.profile.id === pid)?.models.find((x) => x.id === m)
+              if (pid === p.profileId && p.effort && !next?.efforts?.includes(p.effort)) p.onEffort('')
+            }}
+            onEffort={p.onEffort}
+            otherProfileHint={p.otherProfileHint}
+          />
+          <ModePicker mode={p.mode} onMode={p.onMode} />
+          <button
+            className={`chrome-toggle ${p.browser ? 'on' : ''}`}
+            aria-pressed={Boolean(p.browser)}
+            onClick={() => p.onBrowser(!p.browser)}
+            title={
+              p.browser
+                ? 'Jolty în browser e pornit: modelul poate folosi browserul tău (Chrome, Vivaldi, Edge, Brave), cu login-urile tale. Clic ca să-l oprești.'
+                : 'Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări).'
+            }
+          >
+            <Globe size={14} strokeWidth={1.8} /> Browser
+          </button>
           <div className="spacer" />
-          {p.running ? (
-            <button className="btn send-btn" onClick={p.onStop} title="Oprește">
+          {p.running && (
+            <button className="btn send-btn" onClick={p.onStop} title="Oprește (Esc)">
               <Square size={12} fill="currentColor" />
             </button>
-          ) : (
-            <button className="btn primary send-btn" onClick={() => void submit()} disabled={!text.trim() && !atts.length} title="Trimite (Enter)">
+          )}
+          {(!p.running || text.trim() || atts.length > 0) && (
+            <button
+              className="btn primary send-btn"
+              onClick={() => void submit()}
+              disabled={!text.trim() && !atts.length}
+              title={p.running ? 'Pune în așteptare (Enter)' : 'Trimite (Enter)'}
+            >
               <ArrowUp size={17} />
             </button>
           )}
@@ -313,6 +346,73 @@ function Composer(p: ComposerProps) {
 // ---------------------------------------------------------------------------
 // Header pieces
 // ---------------------------------------------------------------------------
+/**
+ * A user message with "undo from here": the button appears only after a dry run (on hover) finds
+ * files Claude Code can actually restore; a second click confirms.
+ */
+function UserTurn({ sessionId, itemId, disabled, children }: { sessionId: string; itemId: string; disabled: boolean; children: React.ReactNode }) {
+  const [armed, setArmed] = useState(false)
+  const [preview, setPreview] = useState<number>()
+  const toast = useStore((s) => s.toast)
+  useEffect(() => {
+    if (!armed) return
+    const t = setTimeout(() => setArmed(false), 4000)
+    return () => clearTimeout(t)
+  }, [armed])
+  const probe = (): void => {
+    if (disabled || preview !== undefined) return
+    setPreview(-1)
+    void api.sessions
+      .rewind(sessionId, itemId, true)
+      .then((r) => setPreview(r.files.length))
+      .catch(() => setPreview(0))
+  }
+  return (
+    <div className="user-turn" onMouseEnter={probe}>
+      {children}
+      {!disabled && preview !== undefined && preview > 0 && (
+        <button
+          className={`rewind ${armed ? 'armed' : ''}`}
+          title="Readuce fișierele proiectului la starea de dinainte de acest mesaj"
+          onClick={() => {
+            if (!armed) return setArmed(true)
+            setArmed(false)
+            void api.sessions
+              .rewind(sessionId, itemId)
+              .then((r) => {
+                setPreview(0)
+                toast(`Am anulat modificările din ${r.files.length} ${r.files.length === 1 ? 'fișier' : 'fișiere'}`)
+              })
+              .catch((e) => toast(errMsg(e), true))
+          }}
+        >
+          <RotateCcw size={12} /> {armed ? 'Sigur? Clic din nou' : `Anulează modificările de aici (${preview} ${preview === 1 ? 'fișier' : 'fișiere'})`}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** How full the context is, with one click to compact it, like the Claude app's context indicator. */
+function ContextMeter({ sessionId, running }: { sessionId: string; running: boolean }) {
+  const ctx = useStore((s) => s.contexts[sessionId])
+  const toast = useStore((s) => s.toast)
+  if (!ctx?.used) return null
+  const pct = ctx.window ? Math.min(100, (ctx.used / ctx.window) * 100) : undefined
+  const k = (n: number): string => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round(n / 1000)}k`)
+  return (
+    <button
+      className={`context-meter ${pct !== undefined && pct >= 80 ? 'high' : ''}`}
+      disabled={running}
+      title={`${k(ctx.used)}${ctx.window ? ` din ${k(ctx.window)}` : ''} tokeni în context. Clic ca să compactezi: modelul rezumă conversația și eliberează loc.`}
+      onClick={() => void api.sessions.compact(sessionId).then(() => toast('Compactez conversația…')).catch((e) => toast(errMsg(e), true))}
+    >
+      <span className="context-ring" style={{ ['--p' as string]: `${pct ?? 0}` }} aria-hidden />
+      {pct !== undefined ? `${Math.round(pct)}%` : k(ctx.used)}
+    </button>
+  )
+}
+
 function MiniLimits({ profileId }: { profileId: string }) {
   const snap = useStore((s) => s.limits[profileId])
   if (!snap?.windows.length) return null
@@ -397,7 +497,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
   const items = useStore((s) => s.transcripts[session.id]) || EMPTY
   const status = useStore((s) => s.status[session.id])
   const perms = useStore((s) => s.permissions[session.id])
-  const { toast, liveOpen, setLiveOpen, loadSessions } = useStore()
+  const { toast, liveOpen, setLiveOpen, loadSessions, openSession } = useStore()
   const running = status === 'running'
   const profile = profiles.find((p) => p.id === session.profileId)
   const scrollRef = useStickToBottom(items)
@@ -417,6 +517,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
         </span>
         <span className="meta-chip">{profile?.name || 'profil șters'}</span>
         <div className="spacer" />
+        <ContextMeter sessionId={session.id} running={running} />
         <MiniLimits profileId={session.profileId} />
         <HandoffMenu session={session} profiles={profiles} />
         <button className="btn ghost small icon" onClick={() => setLiveOpen(!liveOpen)} title={liveOpen ? 'Ascunde panoul Live' : 'Arată panoul Live'}>
@@ -434,7 +535,13 @@ export function ChatView({ session }: { session: SessionMeta }) {
                     <ProfileDot profile={profile} /> {who}
                   </div>
                 )}
-                <MessageItem item={it} live={running && it.id === lastReasoning} />
+                {it.kind === 'user' && session.engine === 'claude' ? (
+                  <UserTurn sessionId={session.id} itemId={it.id} disabled={running}>
+                    <MessageItem item={it} live={false} />
+                  </UserTurn>
+                ) : (
+                  <MessageItem item={it} live={running && it.id === lastReasoning} />
+                )}
               </Fragment>
             )
           })}
@@ -448,17 +555,40 @@ export function ChatView({ session }: { session: SessionMeta }) {
           ))}
         </div>
       </div>
+      <TaskStrip sessionId={session.id} />
       <Composer
         running={running}
         profiles={profiles}
         profileId={session.profileId}
-        profileLocked
+        cwd={session.cwd}
         model={session.model}
-        onModel={(m) => void api.sessions.setModel(session.id, m).then(loadSessions).catch((e) => toast(errMsg(e), true))}
+        otherProfileHint="Continuă conversația în acest cont"
+        onPick={(profileId, m, effort) => {
+          if (profileId === session.profileId) {
+            void api.sessions
+              .setModel(session.id, m)
+              .then(() => (effort ? api.sessions.setEffort(session.id, effort) : undefined))
+              .then(loadSessions)
+              .catch((e) => toast(errMsg(e), true))
+            return
+          }
+          // another account or engine cannot join a running engine session: carry the conversation over
+          const target = profiles.find((x) => x.id === profileId)
+          void api.sessions
+            .handoff(session.id, profileId, m, effort)
+            .then(async (meta) => {
+              await loadSessions()
+              await openSession(meta.id)
+              toast(`Conversația continuă în ${target?.name || 'alt profil'}`)
+            })
+            .catch((e) => toast(errMsg(e), true))
+        }}
         effort={session.effort}
         onEffort={(e) => void api.sessions.setEffort(session.id, e).then(loadSessions).catch((err) => toast(errMsg(err), true))}
         mode={session.permissionMode}
         onMode={(m) => void api.sessions.setPermissionMode(session.id, m).then(loadSessions)}
+        browser={session.browser}
+        onBrowser={(on) => void api.sessions.setBrowser(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         onStop={() => void api.sessions.interrupt(session.id)}
         onSend={async (text, atts) => {
           try {
@@ -490,7 +620,8 @@ export function NewChat() {
   const [profileId, setProfileId] = useState<string>()
   const [model, setModel] = useState('')
   const [effort, setEffort] = useState<string>()
-  const [mode, setMode] = useState<PermissionMode>('ask')
+  const [mode, setMode] = useState<PermissionMode>(DEFAULT_MODE)
+  const [browser, setBrowser] = useState(false)
   const [cwd, setCwd] = useState<string>()
   const [seed, setSeed] = useState<string>()
 
@@ -540,21 +671,21 @@ export function NewChat() {
         running={false}
         profiles={profiles}
         profileId={profileId}
-        onProfile={(id) => {
-          setProfileId(id)
-          setModel('')
-          setEffort(undefined)
-          void api.app.saveSettings({ lastProfileId: id })
-        }}
         model={model}
-        onModel={(m) => {
+        onPick={(id, m, e) => {
+          if (id !== profileId) {
+            setProfileId(id)
+            void api.app.saveSettings({ lastProfileId: id })
+          }
           setModel(m)
-          setEffort(undefined)
+          setEffort(e)
         }}
         effort={effort}
         onEffort={setEffort}
         mode={mode}
         onMode={setMode}
+        browser={browser}
+        onBrowser={setBrowser}
         cwd={cwd}
         onCwd={() => void pickCwd()}
         seed={seed}
@@ -566,7 +697,7 @@ export function NewChat() {
           }
           if (!profileId) return
           try {
-            const meta = await api.sessions.start({ profileId, cwd, model: model || undefined, effort: effort || undefined, permissionMode: mode })
+            const meta = await api.sessions.start({ profileId, cwd, model: model || undefined, effort: effort || undefined, permissionMode: mode, browser })
             await loadSessions()
             await openSession(meta.id)
             await api.sessions.send(meta.id, text, atts)

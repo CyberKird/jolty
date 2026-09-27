@@ -25,7 +25,25 @@ export interface Profile {
   vision?: boolean
   /** created from the local-models page (Ollama) */
   local?: boolean
+  /** endpoint profiles: the provider's prices in $ per 1M tokens, for a real cost instead of Anthropic's */
+  price?: TokenPrice
   color: string
+}
+
+export interface TokenPrice {
+  input: number
+  output: number
+  /** cache hits; the input price when not set */
+  cacheRead?: number
+}
+
+/** What is left on a pay-as-you-go provider account (DeepSeek, Kimi, OpenRouter key limit). */
+export interface ProviderBalance {
+  profileId: string
+  amount?: number
+  currency?: string
+  note?: string
+  updatedAt: number
 }
 
 export interface ProfileInput {
@@ -37,6 +55,7 @@ export interface ProfileInput {
   secret?: string
   vision?: boolean
   local?: boolean
+  price?: TokenPrice | null
 }
 
 export interface AccountStatus {
@@ -49,7 +68,8 @@ export interface AccountStatus {
 }
 
 /** Jolty's permission modes, mapped onto each engine's own settings. */
-export type PermissionMode = 'ask' | 'autoEdit' | 'plan' | 'full'
+/** auto: the engine decides which actions need approval (Claude's classifier, Codex on-request) */
+export type PermissionMode = 'auto' | 'ask' | 'autoEdit' | 'plan' | 'full'
 
 export interface ModelOption {
   id: string
@@ -80,6 +100,8 @@ export interface SessionMeta {
   model?: string
   effort?: string
   permissionMode: PermissionMode
+  /** Jolty in Chrome: the model may drive the user's Chrome through the Playwright extension */
+  browser?: boolean
   /** Claude session id or Codex thread id, once the engine has one */
   engineSessionId?: string
   createdAt: number
@@ -167,7 +189,10 @@ export type ChatEvent =
   | { type: 'delta'; sessionId: string; itemId: string; kind: 'assistant' | 'reasoning'; delta: string }
   | { type: 'permission'; sessionId: string; request: PermissionRequest }
   | { type: 'permissionResolved'; sessionId: string; requestId: string }
-  | { type: 'usage'; sessionId: string; usage: TurnUsage }
+  | { type: 'usage'; usage: TurnUsage }
+  /** how full the model's context window is after the last request */
+  | { type: 'context'; sessionId: string; used: number; window?: number }
+  | { type: 'update'; status: UpdateStatus }
   | { type: 'limits'; snapshot: RateLimitSnapshot }
   /** the agent's own step-by-step plan (Claude's todo list, Codex's plan) */
   | { type: 'plan'; sessionId: string; steps: PlanStep[] }
@@ -206,6 +231,39 @@ export interface AppSettings {
   codexPath?: string
   lastCwd?: string
   lastProfileId?: string
+  /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
+  reduceMotion?: boolean
+  /** Chrome profile folder for Jolty in Chrome ("Default", "Profile 1"); the last used one when empty */
+  browserProfileDir?: string
+  /** which Chromium browser Jolty in Chrome drives; the Windows default when empty */
+  browserApp?: BrowserApp
+}
+
+export interface UpdateStatus {
+  /** dev: a development build, nothing to compare; latest: checked, nothing newer */
+  state: 'idle' | 'dev' | 'checking' | 'latest' | 'downloading' | 'ready' | 'error'
+  current: string
+  version?: string
+  percent?: number
+  error?: string
+  checkedAt?: number
+}
+
+export interface SlashItem {
+  name: string
+  description: string
+  kind: 'skill' | 'command'
+  scope: 'proiect' | 'global'
+}
+
+export type BrowserApp = 'chrome' | 'vivaldi' | 'edge' | 'brave'
+
+export interface BrowserInfo {
+  installed: { id: BrowserApp; name: string }[]
+  /** the browser Jolty will open */
+  active?: BrowserApp
+  /** the Windows default, when it is a supported Chromium browser */
+  defaultApp?: BrowserApp
 }
 
 export interface StartSessionInput {
@@ -214,6 +272,7 @@ export interface StartSessionInput {
   model?: string
   effort?: string
   permissionMode: PermissionMode
+  browser?: boolean
   /** resume an existing Claude session / Codex thread */
   resumeEngineSessionId?: string
   title?: string
@@ -260,6 +319,8 @@ export interface CatalogModel {
   equivalent: string
   tier: 1 | 2 | 3 | 4
   notes: string
+  /** refusals removed (abliterated); for creative or adult work other models would block */
+  unrestricted?: boolean
   fit: Fit
   installed: boolean
 }
@@ -289,19 +350,28 @@ export interface JoltyApi {
     external(profileId: string, cwd?: string): Promise<ExternalSession[]>
     start(input: StartSessionInput): Promise<SessionMeta>
     history(sessionId: string): Promise<ChatItem[]>
+    /** every conversation from every login folder, skipping ones already in Jolty */
+    importAll(): Promise<{ imported: number; failed: string[] }>
     send(sessionId: string, text: string, attachments?: Attachment[]): Promise<void>
     interrupt(sessionId: string): Promise<void>
     setModel(sessionId: string, model: string): Promise<void>
     setEffort(sessionId: string, effort: string): Promise<void>
     setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void>
+    setBrowser(sessionId: string, on: boolean): Promise<void>
+    /** summarize the conversation so far to free context (Claude /compact, Codex thread compaction) */
+    compact(sessionId: string): Promise<void>
+    /** Claude only: the project's files go back to how they were before that user message */
+    rewind(sessionId: string, itemId: string, dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }>
     respond(sessionId: string, requestId: string, decision: PermissionDecision): Promise<void>
-    handoff(sessionId: string, targetProfileId: string): Promise<SessionMeta>
+    handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string): Promise<SessionMeta>
     remove(sessionId: string): Promise<void>
     onEvent(cb: (e: ChatEvent) => void): () => void
   }
   usage: {
     summary(): Promise<UsageSummary[]>
     refreshLimits(profileId: string): Promise<RateLimitSnapshot | undefined>
+    /** undefined when the provider has no documented balance endpoint */
+    balance(profileId: string): Promise<ProviderBalance | undefined>
   }
   local: {
     hardware(): Promise<HardwareInfo>
@@ -319,6 +389,23 @@ export interface JoltyApi {
   codexImport: {
     detect(profileId: string, cwd?: string): Promise<{ items: { itemType: string; description: string; cwd: string | null }[] }>
     run(profileId: string, cwd?: string, itemTypes?: string[]): Promise<void>
+  }
+  updates: {
+    status(): Promise<UpdateStatus>
+    check(): Promise<UpdateStatus>
+    /** quits, installs the downloaded version and starts it again */
+    install(): Promise<void>
+  }
+  composer: {
+    slash(cwd?: string): Promise<SlashItem[]>
+    files(cwd: string): Promise<string[]>
+  }
+  browser: {
+    /** whether an extension token is saved (the value never leaves the main process) */
+    hasToken(): Promise<boolean>
+    info(): Promise<BrowserInfo>
+    setToken(token: string): Promise<void>
+    openExtensionPage(): Promise<void>
   }
   app: {
     settings(): Promise<AppSettings>

@@ -66,10 +66,24 @@ function isInheritedAuthVar(name: string): boolean {
   return n === 'CLAUDECODE' || n.startsWith('CLAUDE_') || n.startsWith('ANTHROPIC_') || n.startsWith('CODEX_') || n.startsWith('OPENAI_')
 }
 
+/** No telemetry, error reports, feedback surveys or other non-essential traffic from either engine. */
+const PRIVATE_ENV: Record<string, string> = {
+  DO_NOT_TRACK: '1',
+  DISABLE_TELEMETRY: '1',
+  DISABLE_ERROR_REPORTING: '1',
+  DISABLE_BUG_COMMAND: '1',
+  DISABLE_FEEDBACK_COMMAND: '1',
+  CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY: '1',
+  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1'
+}
+
+/** Codex config overrides with the same effect (checked against `codex app-server --strict-config`). */
+export const CODEX_PRIVATE_ARGS = ['-c', 'analytics.enabled=false', '-c', 'feedback.enabled=false', '-c', 'otel.exporter="none"', '-c', 'otel.log_user_prompt=false']
+
 function baseEnv(): Record<string, string> {
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !isInheritedAuthVar(k)) env[k] = v
-  return env
+  return { ...env, ...PRIVATE_ENV }
 }
 
 export function claudeEnv(profile: Profile, model?: string): Record<string, string> {
@@ -161,6 +175,7 @@ export function prepareProfileDir(profile: Profile): void {
     linkDir(path.join(mainDir, 'skills'), path.join(dir, 'skills'))
     linkDir(path.join(mainDir, 'agents'), path.join(dir, 'agents'))
     linkDir(path.join(mainDir, 'commands'), path.join(dir, 'commands'))
+    linkDir(path.join(mainDir, 'plugins'), path.join(dir, 'plugins'))
     try {
       syncMcpServers(dir)
     } catch {
@@ -172,6 +187,9 @@ export function prepareProfileDir(profile: Profile): void {
     // Codex has no import syntax: refresh the copy every time the profile starts.
     if (fs.existsSync(agents)) fs.copyFileSync(agents, path.join(dir, 'AGENTS.md'))
     copyIfMissing(path.join(mainDir, 'config.toml'), path.join(dir, 'config.toml'))
+    copyIfMissing(path.join(mainDir, 'hooks.json'), path.join(dir, 'hooks.json'))
+    linkDir(path.join(mainDir, 'skills'), path.join(dir, 'skills'))
+    linkDir(path.join(mainDir, 'plugins'), path.join(dir, 'plugins'))
   }
 }
 

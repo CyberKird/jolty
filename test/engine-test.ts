@@ -5,6 +5,9 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import type { ChatEvent, ChatItem } from '../src/shared/types'
+import { endpointCost, fetchBalance, hasBalance } from '../src/main/balance'
+import { assess, recommend } from '../src/shared/complexity'
+import { TaskBoard } from '../src/main/engines/tasks'
 import { Jolty } from '../src/main/jolty'
 import * as store from '../src/main/store'
 
@@ -54,6 +57,89 @@ app.whenReady().then(async () => {
       setTimeout(() => jolty.respond(e.sessionId, e.request.id, 'allow'), 200)
     }
   })
+
+  // ---------------- provider balance and real cost (fetch mocked, no real keys) ----------------
+  {
+    const ep = (baseUrl: string, extra = {}) => ({ id: 'x', name: 'x', engine: 'claude' as const, auth: 'endpoint' as const, isDefaultDir: true, baseUrl, color: '', ...extra })
+    const real = globalThis.fetch
+    const seen: string[] = []
+    const reply = (body: unknown) => async (url: string | URL | Request, init?: RequestInit) => {
+      seen.push(`${url} ${(init?.headers as Record<string, string>)?.Authorization}`)
+      return new Response(JSON.stringify(body), { status: 200 })
+    }
+    globalThis.fetch = reply({ is_available: true, balance_infos: [{ currency: 'CNY', total_balance: '30.00' }, { currency: 'USD', total_balance: '4.20' }] }) as typeof fetch
+    const ds = await fetchBalance(ep('https://api.deepseek.com/anthropic'), 'sk-ds')
+    check(ds?.amount === 4.2 && ds.currency === 'USD' && seen[0] === 'https://api.deepseek.com/user/balance Bearer sk-ds', 'DeepSeek balance read from its official endpoint (USD preferred)')
+    globalThis.fetch = reply({ code: 0, data: { available_balance: 12.5, voucher_balance: 0, cash_balance: 12.5 }, status: true }) as typeof fetch
+    const kimi = await fetchBalance(ep('https://api.moonshot.cn/anthropic'), 'sk-k')
+    check(kimi?.amount === 12.5 && kimi.currency === 'CNY' && seen[1].startsWith('https://api.moonshot.cn/v1/users/me/balance'), 'Kimi balance from the same host, CNY on .cn')
+    globalThis.fetch = reply({ data: { limit_remaining: null, usage: 3 } }) as typeof fetch
+    const or = await fetchBalance(ep('https://openrouter.ai/api'), 'sk-or')
+    check(or?.amount === undefined && Boolean(or?.note), 'OpenRouter key without a limit says so instead of inventing a balance')
+    check(!hasBalance(ep('https://api.xiaomimimo.com/anthropic')) && !hasBalance(ep('http://api.deepseek.com/anthropic')) && !hasBalance(ep('https://evil.example/api.deepseek.com')), 'no balance call for undocumented providers, plain http or look-alike hosts')
+    globalThis.fetch = real
+    const u = { profileId: 'x', engine: 'claude' as const, model: 'm', inputTokens: 1e6, outputTokens: 5e5, cacheReadTokens: 2e6, cacheWriteTokens: 0, ts: 0 }
+    check(endpointCost(u, ep('https://api.deepseek.com/anthropic', { price: { input: 0.3, output: 1.2, cacheRead: 0.03 } })) === 0.3 + 0.6 + 0.06, 'real cost from the provider prices')
+    check(endpointCost(u, ep('https://api.deepseek.com/anthropic')) === undefined && endpointCost(u, ep('http://127.0.0.1:11434', { local: true })) === 0, 'no price = no invented cost; local models cost nothing')
+  }
+
+  // ---------------- task list: TaskCreate / TaskUpdate / TaskList and the older TodoWrite ----------------
+  {
+    const b = new TaskBoard()
+    b.created({ subject: 'Citesc proiectul', activeForm: 'Citesc proiectul' }, { task: { id: '1', subject: 'Citesc proiectul' } }, '')
+    b.created({ subject: 'Scriu testele', activeForm: 'Scriu testele acum' }, undefined, 'Task #2 created successfully: Scriu testele')
+    b.created({ subject: 'Build' }, { task: { id: '3', subject: 'Build' } }, '')
+    b.updated({ taskId: '1', status: 'completed' })
+    b.updated({ taskId: '2', status: 'in_progress' })
+    b.updated({ taskId: '3', status: 'deleted' })
+    const st = b.steps()
+    check(st.length === 2 && st[0].status === 'done' && st[1].status === 'active' && st[1].text === 'Scriu testele acum', 'tasks: created by id (structured or from the text), updated, deleted')
+    b.listed({ tasks: [{ id: '2', subject: 'Scriu testele', status: 'completed', blockedBy: [] }] })
+    check(b.steps().length === 1 && b.steps()[0].status === 'done', 'tasks: TaskList result replaces the list')
+    b.todos([{ content: 'A', activeForm: 'Fac A', status: 'in_progress' }, { content: 'B', status: 'pending' }])
+    check(b.steps()[0].text === 'Fac A' && b.steps()[1].status === 'pending', 'tasks: TodoWrite from older Claude Code still works')
+  }
+
+  // ---------------- model recommendation: quiet when the pick fits, across accounts ----------------
+  {
+    const E = ['low', 'medium', 'high', 'xhigh', 'max']
+    const prof = (id: string, engine: 'claude' | 'codex', auth: 'subscription' | 'endpoint') => ({ id, name: id, engine, auth, isDefaultDir: true, color: '' })
+    const claude = {
+      profile: prof('claude', 'claude', 'subscription'),
+      models: [
+        { id: 'default', label: 'Default (recommended)', description: 'Opus 5.5 · Best for everyday, complex tasks', isDefault: true, efforts: E },
+        { id: 'fable', label: 'Fable', description: 'Fable 5.1 · Most capable for your hardest tasks · $10/$50 per Mtok', efforts: E },
+        { id: 'opus', label: 'Opus', description: 'Opus 5.5 · Best for everyday, complex tasks', efforts: E },
+        { id: 'sonnet', label: 'Sonnet', description: 'Sonnet 5 · Efficient for routine tasks', efforts: E },
+        { id: 'haiku', label: 'Haiku', description: 'Haiku 4.5 · Fastest for quick answers', efforts: [] }
+      ]
+    }
+    const codex = {
+      profile: prof('codex', 'codex', 'subscription'),
+      models: [
+        { id: 'gpt-6-astra', label: 'GPT-6-Astra', description: 'Frontier intelligence for the most demanding work.', isDefault: true, efforts: E },
+        { id: 'gpt-6-sol', label: 'GPT-6-Sol', description: 'Workhorse model for coding and everyday work.', efforts: E }
+      ]
+    }
+    const ds = { profile: prof('ds', 'claude', 'endpoint'), models: [{ id: 'deepseek-chat', label: 'deepseek-chat', isDefault: true }] }
+    const groups = [claude, codex, ds]
+    const hard = assess('Refactorizează tot proiectul să folosească TypeScript, optimizează netcode-ul pentru multiplayer și adaugă teste complete')!
+    const small = assess('redenumește variabila x în playerSpeed')!
+    check(hard.level === 4 && small.level === 1, `assessment levels (hard ${hard.level}, small ${small.level})`)
+    const r1 = recommend(hard, groups, { profileId: 'ds' }, {})
+    check(r1.kind === 'weak' && r1.target?.profileId === 'claude' && r1.target.model.id === 'opus' && r1.target.effort === 'xhigh', `hard task on DeepSeek -> Opus xhigh on the Claude plan (${r1.target?.profileId}/${r1.target?.model.id}/${r1.target?.effort})`)
+    check(recommend(hard, groups, { profileId: 'claude', modelId: 'opus' }, {}).kind === 'none', 'Opus on auto effort for a hard task: silent')
+    const full = { claude: { profileId: 'claude', windows: [{ label: '7 zile', usedPercent: 97 }], updatedAt: 0 } }
+    const r3 = recommend(hard, groups, { profileId: 'claude', modelId: 'opus' }, full)
+    check(r3.target?.profileId === 'codex' && r3.target.model.id === 'gpt-6-astra', `Claude at 97% -> the top Codex model instead (${r3.kind} ${r3.target?.model.id})`)
+    const r4 = recommend(small, groups, { profileId: 'claude', modelId: 'opus' }, {})
+    check(r4.kind === 'overkill' && r4.target?.model.id === 'haiku' && r4.target.profileId === 'claude', 'a rename on Opus: quiet hint to Haiku on the same account')
+    check(recommend(small, groups, { profileId: 'claude', modelId: 'sonnet' }, {}).kind === 'none', 'a rename on Sonnet: silent')
+    const r6 = recommend(hard, groups, { profileId: 'claude', modelId: 'opus', effort: 'low' }, {})
+    check(r6.kind === 'weak' && r6.target?.model.id === 'opus' && r6.target.effort === 'xhigh', 'Opus on low for a hard task -> raise the effort, same model')
+    const r7 = recommend(hard, [ds, { ...claude, error: 'not logged in' }], { profileId: 'ds' }, {})
+    check(r7.kind === 'weak' && !r7.target, 'no connected model is strong enough: says so, suggests nothing it cannot run')
+  }
 
   // ---------------- Claude Code via an Anthropic-compatible endpoint ----------------
   if (process.env.TEST_CLAUDE !== '0') {
@@ -108,6 +194,35 @@ app.whenReady().then(async () => {
     const blind = jolty.createProfile({ name: 'Fara vision (mock)', engine: 'claude', auth: 'endpoint', baseUrl: url, models: ['mock-blind'], secret: 'sk-mock', vision: false })
     store.saveSettings({ visionProfileId: eyes.id })
     const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    // undo from a message: the file the model wrote goes away; the context indicator gets numbers
+    {
+      const proj2 = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-rewind-'))
+      const rw = jolty.createProfile({ name: 'Rewind (mock)', engine: 'claude', auth: 'endpoint', baseUrl: url, models: ['mock-model'], secret: 'sk-mock' })
+      fs.writeFileSync(path.join(proj2, 'live_demo.txt'), 'original\n')
+      const r = await jolty.startSession({ profileId: rw.id, cwd: proj2, permissionMode: 'full' })
+      await jolty.sendMessage(r.id, `Scrie fisierul RUN_WRITE WRITE_TO=${path.join(proj2, 'live_demo.txt')}`)
+      await waitFor(() => idleCount(r.id) >= 1, 120000, 'rewind write turn')
+      const file = path.join(proj2, 'live_demo.txt')
+      check(fs.readFileSync(file, 'utf8').includes('jolty live code'), 'rewind: the model overwrote the file')
+      check(events.some((e) => e.type === 'context' && e.sessionId === r.id && e.used > 0), 'context indicator: used tokens reported after the turn')
+      const userItem = jolty.history(r.id).find((i) => i.kind === 'user')!
+      const dry = await jolty.rewind(r.id, userItem.id, true).catch((e: Error) => ({ error: e.message, files: [] as string[] }))
+      check(dry.files.length === 1 && fs.readFileSync(file, 'utf8').includes('jolty live code'), 'rewind preview: finds the file and changes nothing')
+      const res = await jolty.rewind(r.id, userItem.id).catch((e: Error) => ({ error: e.message, files: [] as string[] }))
+      console.log(`   rewind: ${JSON.stringify(res)} -> ${JSON.stringify(fs.readFileSync(file, 'utf8').slice(0, 30))}`)
+      check(fs.readFileSync(file, 'utf8') === 'original\n' && res.files.length === 1, 'rewind: the file is back to its content before that message')
+    }
+    // Jolty in the browser: Playwright MCP reaches the model with the safety rule, the unsafe tool does not
+    if (process.env.MOCK_ANTHROPIC_LOG) {
+      const web = jolty.createProfile({ name: 'Browser (mock)', engine: 'claude', auth: 'endpoint', baseUrl: url, models: ['mock-model'], secret: 'sk-mock' })
+      const b = await jolty.startSession({ profileId: web.id, cwd: project, permissionMode: 'ask', browser: true })
+      await jolty.sendMessage(b.id, 'Salut din browser')
+      await waitFor(() => idleCount(b.id) >= 1, 120000, 'browser turn')
+      const req = fs.readFileSync(process.env.MOCK_ANTHROPIC_LOG, 'utf8').trim().split('\n').map((l) => JSON.parse(l)).filter((r) => r.path.endsWith('/messages')).pop()
+      check(req?.browser_tools === true, 'browser session: the Playwright tools reach the model')
+      check(req?.unsafe_tool === false, 'browser session: browser_run_code_unsafe is blocked')
+      check(req?.browser_rule === true, 'browser session: page content is data, ask before acting')
+    }
     const s = await jolty.startSession({ profileId: blind.id, cwd: project, permissionMode: 'autoEdit' })
     await jolty.sendMessage(s.id, 'Ce vezi in poza? RUN_WRITE', [{ id: 'img1', name: 'captura.png', mime: 'image/png', data: png }])
     await waitFor(() => idleCount(s.id) >= 1, 120000, 'vision bridge turn')
@@ -155,6 +270,21 @@ app.whenReady().then(async () => {
     const items = jolty.history(s.id)
     show(items)
     check(items.some((i) => i.kind === 'assistant' && i.text.includes('ok from mock responses')), 'codex answered')
+    {
+      // Jolty in the browser on Codex: the thread starts with the Playwright MCP server and it comes up
+      const b = await jolty.startSession({ profileId: p.id, cwd: project, permissionMode: 'ask', model: 'mock-model', browser: true })
+      await jolty.sendMessage(b.id, 'Salut din browser')
+      await waitFor(() => idleCount(b.id) >= 1, 120000, 'codex browser turn')
+      check(jolty.history(b.id).some((i) => i.kind === 'assistant'), 'codex answers with the browser server attached')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rpc = await (jolty.codex as any).server(jolty.profile(p.id)).get()
+      const meta = jolty.sessions().find((x) => x.id === b.id)!
+      const st = await rpc.request('mcpServerStatus/list', { threadId: meta.engineSessionId, detail: 'toolsAndAuthOnly' }).catch((e: Error) => ({ error: e.message }))
+      const mine = (st?.data || []).find((x: { name: string }) => x.name === 'jolty-browser')
+      const tools = Object.keys(mine?.tools || {})
+      console.log(`   codex jolty-browser: ${tools.length} tools${st?.error ? ` (${st.error})` : ''}`)
+      check(tools.includes('browser_navigate') && !tools.includes('browser_run_code_unsafe'), 'codex sees the browser tools, without the unsafe one')
+    }
     const ctool = items.find((i) => i.kind === 'tool') as Extract<ChatItem, { kind: 'tool' }> | undefined
     check(Boolean(ctool) && (ctool!.output || '').includes('jolty-codex-ok'), 'codex ran the shell command and captured its output')
     check(events.some((e) => e.type === 'permission' && e.sessionId === s.id), 'codex asked for approval before running the command')
@@ -179,7 +309,7 @@ app.whenReady().then(async () => {
       const hItems = jolty.history(h.id)
       check(hItems.some((i) => i.kind === 'user' && i.text.includes('Preia conversația')), 'handoff shows a short message to the user')
       const log = fs.readFileSync(process.env.MOCK_ANTHROPIC_LOG || '/dev/null', 'utf8')
-      check(!process.env.MOCK_ANTHROPIC_LOG || log.includes('Preiei o conversa'), 'handoff sends the previous conversation to the other engine')
+      check(!process.env.MOCK_ANTHROPIC_LOG || log.includes('"handoff": true'), 'handoff sends the previous conversation to the other engine')
       check(hItems.some((i) => i.kind === 'assistant'), 'the other engine answers after the handoff')
     }
   }

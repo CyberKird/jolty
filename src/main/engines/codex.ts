@@ -17,7 +17,8 @@ import type {
   RateLimitSnapshot,
   SessionMeta
 } from '@shared/types'
-import { codexEnv, codexExecutable, prepareProfileDir } from '../runtime'
+import { CODEX_PRIVATE_ARGS, codexEnv, codexExecutable, prepareProfileDir } from '../runtime'
+import { BROWSER_BLOCKED_TOOLS, BROWSER_PROMPT, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer } from '../browser'
 import { getSecret } from '../store'
 import { truncate } from './format'
 import { JsonRpcProcess, type RpcNotification, type RpcRequest } from './jsonrpc'
@@ -29,6 +30,7 @@ import type { EngineDriver, EngineHost, EngineSession } from './types'
 type Any = any
 
 const MODES: Record<PermissionMode, { approvalPolicy: string; sandbox: 'read-only' | 'workspace-write' | 'danger-full-access' }> = {
+  auto: { approvalPolicy: 'on-request', sandbox: 'workspace-write' },
   ask: { approvalPolicy: 'untrusted', sandbox: 'workspace-write' },
   autoEdit: { approvalPolicy: 'on-request', sandbox: 'workspace-write' },
   plan: { approvalPolicy: 'on-request', sandbox: 'read-only' },
@@ -199,7 +201,7 @@ class CodexServer {
     const exe = codexExecutable()
     if (!exe) throw new Error('Nu găsesc Codex (binarul inclus lipsește)')
     prepareProfileDir(this.profile)
-    const rpc = new JsonRpcProcess(exe, ['app-server'], codexEnv(this.profile, exe))
+    const rpc = new JsonRpcProcess(exe, ['app-server', ...CODEX_PRIVATE_ARGS], codexEnv(this.profile, exe))
     rpc.on('notification', (n: RpcNotification) => this.onNotification(n))
     rpc.on('request', (r: RpcRequest) => this.onRequest(rpc, r))
     rpc.on('exit', (reason: string) => {
@@ -306,7 +308,14 @@ class CodexSession implements EngineSession, ThreadListener {
     const rpc = await this.server.get()
     if (this.threadId) return rpc
     const mode = MODES[this.meta.permissionMode]
-    const common = { cwd: this.meta.cwd, model: this.meta.model || null, approvalPolicy: mode.approvalPolicy, sandbox: mode.sandbox, developerInstructions: WRITING_RULES }
+    const common = {
+      cwd: this.meta.cwd,
+      model: this.meta.model || null,
+      approvalPolicy: mode.approvalPolicy,
+      sandbox: mode.sandbox,
+      developerInstructions: this.meta.browser ? `${WRITING_RULES} ${BROWSER_PROMPT}` : WRITING_RULES,
+      ...(this.meta.browser ? { config: { mcp_servers: { [BROWSER_SERVER]: this.browserConfig() } } } : {})
+    }
     const resp = this.meta.engineSessionId
       ? await rpc.request<Any>('thread/resume', { threadId: this.meta.engineSessionId, ...common })
       : await rpc.request<Any>('thread/start', common)
@@ -411,6 +420,11 @@ class CodexSession implements EngineSession, ThreadListener {
         return
       }
       case 'thread/tokenUsage/updated': {
+        const last = p.tokenUsage?.last as Record<string, number> | undefined
+        if (last) {
+          const used = last.totalTokens || (last.inputTokens || 0) + (last.outputTokens || 0)
+          this.host.emit({ type: 'context', sessionId: sid, used, window: p.tokenUsage?.modelContextWindow || undefined })
+        }
         const total = p.tokenUsage?.total as Usage | undefined
         if (!total) return
         const prev = this.lastTotal
@@ -481,6 +495,15 @@ class CodexSession implements EngineSession, ThreadListener {
     this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId })
   }
 
+  async rewind(_id: string, _dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }> {
+    throw new Error('Codex nu păstrează copii ale fișierelor pe mesaj. Folosește git pentru a reveni.')
+  }
+
+  async compact(): Promise<void> {
+    const rpc = await this.ensureThread()
+    await rpc.request('thread/compact/start', { threadId: this.threadId })
+  }
+
   async interrupt(): Promise<void> {
     if (!this.threadId || !this.turnId) return
     const rpc = await this.server.get()
@@ -496,6 +519,19 @@ class CodexSession implements EngineSession, ThreadListener {
     this.meta.effort = effort
     this.overrides.effort = effort
     this.effortSent = true
+  }
+
+  /** The Playwright server for this thread; reading pages runs on its own outside Manual mode. */
+  private browserConfig(): Record<string, unknown> {
+    const tools = this.meta.permissionMode === 'ask' ? {} : Object.fromEntries(BROWSER_READ_TOOLS.map((t) => [t, { approval_mode: 'approve' }]))
+    return { ...browserServer(), disabled_tools: BROWSER_BLOCKED_TOOLS, tools }
+  }
+
+  async setBrowser(on: boolean): Promise<void> {
+    if (Boolean(this.meta.browser) === on) return
+    this.meta.browser = on
+    // thread config is fixed at start: the next message resumes the same thread with the new servers
+    if (!this.turnId) this.threadId = undefined
   }
 
   async setPermissionMode(mode: PermissionMode): Promise<void> {

@@ -1,6 +1,7 @@
 import { execFile } from 'child_process'
 import { randomUUID } from 'crypto'
 import fs from 'fs'
+import os from 'os'
 import type {
   AccountStatus,
   Attachment,
@@ -13,6 +14,7 @@ import type {
   PermissionMode,
   Profile,
   ProfileInput,
+  ProviderBalance,
   RateLimitSnapshot,
   SessionMeta,
   StartSessionInput,
@@ -23,6 +25,7 @@ import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
 import type { EngineDriver, EngineHost, EngineSession } from './engines/types'
 import { DESCRIBE_PROMPT } from './engines/claude'
+import { endpointCost, fetchBalance } from './balance'
 import * as local from './local'
 import { claudeSettingsOverride } from './runtime'
 import * as store from './store'
@@ -115,6 +118,7 @@ export class Jolty {
       models: input.models?.map((m) => m.trim()).filter(Boolean),
       vision: input.vision,
       local: input.local,
+      price: input.price || undefined,
       color: COLORS[all.length % COLORS.length]
     }
     store.saveProfiles([...all, profile])
@@ -130,6 +134,7 @@ export class Jolty {
     if (patch.baseUrl !== undefined) p.baseUrl = patch.baseUrl.trim() || undefined
     if (patch.models !== undefined) p.models = patch.models.map((m) => m.trim()).filter(Boolean)
     if (patch.vision !== undefined) p.vision = patch.vision
+    if (patch.price !== undefined) p.price = patch.price || undefined
     if (patch.secret !== undefined) store.setSecret(id, patch.secret.trim() || undefined)
     store.saveProfiles(all)
     if (p.engine === 'codex') this.codex.reset(id)
@@ -184,7 +189,10 @@ export class Jolty {
   }
 
   private recordUsage(u: TurnUsage): void {
+    const p = store.loadProfiles().find((x) => x.id === u.profileId)
+    if (p?.auth === 'endpoint') u = { ...u, costUsd: endpointCost(u, p) }
     store.appendUsage(u)
+    this.send({ type: 'usage', usage: u })
   }
 
   private recordLimits(s: RateLimitSnapshot): void {
@@ -272,6 +280,7 @@ export class Jolty {
       model: input.model,
       effort: input.effort,
       permissionMode: input.permissionMode,
+      browser: input.browser || undefined,
       engineSessionId: input.resumeEngineSessionId,
       createdAt: now,
       updatedAt: now
@@ -289,8 +298,68 @@ export class Jolty {
     return meta
   }
 
+  /** The transcript; a bulk-imported session reads its history from the engine the first time it opens. */
   history(sessionId: string): ChatItem[] {
     return this.transcript(sessionId)
+  }
+
+  async loadHistory(sessionId: string): Promise<ChatItem[]> {
+    const t = this.transcript(sessionId)
+    const meta = store.loadSessions().find((s) => s.id === sessionId)
+    if (t.length || !meta?.engineSessionId || this.live.has(sessionId)) return t
+    try {
+      const p = this.profile(meta.profileId)
+      const items = await this.driver(p.engine).history(p, meta.engineSessionId, meta.cwd)
+      this.transcripts.set(sessionId, items)
+      store.saveTranscript(sessionId, items)
+      return items
+    } catch (err) {
+      return [{ kind: 'notice', id: randomUUID(), text: `Nu am putut încărca istoricul: ${err instanceof Error ? err.message : err}`, level: 'warn' }]
+    }
+  }
+
+  /**
+   * Brings every Claude Code and Codex conversation on this PC into Jolty, once per login folder,
+   * skipping the ones already here. Histories load lazily when a conversation is opened.
+   */
+  async importAll(): Promise<{ imported: number; failed: string[] }> {
+    const metas = store.loadSessions()
+    const known = new Set(metas.map((s) => s.engineSessionId).filter(Boolean))
+    const dirs = new Set<string>()
+    const failed: string[] = []
+    let imported = 0
+    // subscription profiles first: API-key and endpoint profiles share the main folder, their sessions belong there
+    const profiles = [...store.loadProfiles()].sort((a, b) => Number(b.auth === 'subscription') - Number(a.auth === 'subscription'))
+    for (const p of profiles) {
+      const dir = `${p.engine}:${store.profileDir(p) || 'main'}`
+      if (dirs.has(dir)) continue
+      dirs.add(dir)
+      let list: ExternalSession[]
+      try {
+        list = await this.driver(p.engine).externalSessions(p)
+      } catch {
+        failed.push(p.name)
+        continue
+      }
+      for (const s of list) {
+        if (known.has(s.engineSessionId)) continue
+        known.add(s.engineSessionId)
+        metas.push({
+          id: randomUUID(),
+          profileId: p.id,
+          engine: p.engine,
+          cwd: s.cwd || os.homedir(),
+          title: s.title.replace(/\s+/g, ' ').trim().slice(0, 60) || 'Sesiune importată',
+          permissionMode: 'autoEdit',
+          engineSessionId: s.engineSessionId,
+          createdAt: s.updatedAt,
+          updatedAt: s.updatedAt
+        })
+        imported++
+      }
+    }
+    store.saveSessions(metas)
+    return { imported, failed }
   }
 
   private liveSession(sessionId: string): EngineSession {
@@ -346,10 +415,11 @@ export class Jolty {
       this.saveMeta(s.meta)
       this.send({ type: 'meta', sessionId, meta: s.meta })
     }
+    const userId = randomUUID()
     this.onEngineEvent({
       type: 'item',
       sessionId,
-      item: { kind: 'user', id: randomUUID(), text: display ?? text, images: attachments.map((a) => ({ name: a.name, dataUrl: `data:${a.mime};base64,${a.data}` })) }
+      item: { kind: 'user', id: userId, text: display ?? text, images: attachments.map((a) => ({ name: a.name, dataUrl: `data:${a.mime};base64,${a.data}` })) }
     })
     let prompt = text
     let images = attachments
@@ -362,7 +432,7 @@ export class Jolty {
         return
       }
     }
-    await s.send(prompt || 'Uită-te la imaginea atașată.', images)
+    await s.send(prompt || 'Uită-te la imaginea atașată.', images, userId)
     this.saveMeta(s.meta)
   }
 
@@ -387,6 +457,29 @@ export class Jolty {
       vision: info.vision,
       local: true
     })
+  }
+
+  /** dryRun: only says what would change, so the UI offers undo only where there is something to undo */
+  async rewind(sessionId: string, itemId: string, dryRun = false): Promise<{ files: string[]; insertions: number; deletions: number }> {
+    const s = this.liveSession(sessionId)
+    let target = itemId
+    if (s.meta.engine === 'claude' && s.meta.engineSessionId) {
+      // Claude Code names messages itself: the Nth prompt of Jolty's transcript is its Nth prompt
+      const mine = this.transcript(sessionId).filter((i) => i.kind === 'user')
+      const n = mine.findIndex((i) => i.id === itemId)
+      const ids = await this.claude.promptIds(this.profile(s.meta.profileId), s.meta.engineSessionId, s.meta.cwd)
+      const offset = ids.length - mine.length
+      target = ids[n + Math.max(0, offset)] || itemId
+    }
+    const r = await s.rewind(target, dryRun)
+    if (dryRun) return r
+    const what = r.files.length ? `${r.files.length} ${r.files.length === 1 ? 'fișier' : 'fișiere'} (+${r.insertions} -${r.deletions})` : 'nimic de schimbat'
+    this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: `Fișierele au revenit la starea de dinainte de acel mesaj: ${what}.`, level: 'info' } })
+    return r
+  }
+
+  async compact(sessionId: string): Promise<void> {
+    await this.liveSession(sessionId).compact()
   }
 
   async interrupt(sessionId: string): Promise<void> {
@@ -417,11 +510,19 @@ export class Jolty {
     this.saveMeta(meta)
   }
 
+  async setBrowser(sessionId: string, on: boolean): Promise<void> {
+    const s = this.live.get(sessionId)
+    if (s) await s.setBrowser(on)
+    const meta = s?.meta || this.meta(sessionId)
+    meta.browser = on || undefined
+    this.saveMeta(meta)
+  }
+
   respond(sessionId: string, requestId: string, decision: PermissionDecision): void {
     this.live.get(sessionId)?.respond(requestId, decision)
   }
 
-  async handoff(sessionId: string, targetProfileId: string): Promise<SessionMeta> {
+  async handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string): Promise<SessionMeta> {
     const src = this.meta(sessionId)
     const srcProfile = store.loadProfiles().find((p) => p.id === src.profileId)
     const prompt = handoffPrompt(src, srcProfile, this.transcript(sessionId), await gitState(src.cwd))
@@ -429,7 +530,10 @@ export class Jolty {
       profileId: targetProfileId,
       cwd: src.cwd,
       permissionMode: src.permissionMode,
-      effort: src.effort,
+      browser: src.browser,
+      model,
+      // effort names differ between models; a picked model starts on its own default
+      effort: model ? effort : src.effort,
       title: `${src.title} (continuare)`
     })
     meta.handoffFrom = src.id
@@ -490,6 +594,12 @@ export class Jolty {
         limits: limits[p.id]
       }
     })
+  }
+
+  async balance(profileId: string): Promise<ProviderBalance | undefined> {
+    const p = this.profile(profileId)
+    const secret = store.getSecret(p.id)
+    return secret ? fetchBalance(p, secret) : undefined
   }
 
   async refreshLimits(profileId: string): Promise<RateLimitSnapshot | undefined> {

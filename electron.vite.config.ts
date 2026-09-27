@@ -10,5 +10,6 @@ const version = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf
 export default defineConfig({
   main: { resolve: { alias }, define: { __JOLTY_VERSION__: JSON.stringify(version) } },
   preload: { resolve: { alias } },
-  renderer: { resolve: { alias }, plugins: [react()] }
+  // minified: a third of the size to parse on every launch
+  renderer: { resolve: { alias }, plugins: [react()], build: { minify: 'esbuild' } }
 })

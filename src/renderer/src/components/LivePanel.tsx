@@ -1,8 +1,9 @@
+import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { ChatItem, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
+import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
 import { basename, useStore, type Draft } from '../store'
 import { toolKind } from './Messages'
-import { highlight, langOf } from './Rich'
+import { DiffView, highlight, langOf } from './Rich'
 
 type Tool = Extract<ChatItem, { kind: 'tool' }>
 
@@ -271,8 +272,75 @@ function PlanView({ steps }: { steps: PlanStep[] }) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Changes: every file the agent touched, with its diff, like Claude Code's diff pane
+// ---------------------------------------------------------------------------
+interface Change {
+  path: string
+  kind: FileDiff['kind']
+  add: number
+  del: number
+  diffs: FileDiff[]
+}
+
+function changesOf(items: ChatItem[], cwd: string): Change[] {
+  const m = new Map<string, Change>()
+  for (const it of items) {
+    if (it.kind !== 'tool' || it.status === 'error') continue
+    for (const d of it.diffs || []) {
+      const path = relPath(d.path, cwd)
+      const c = m.get(path) || { path, kind: d.kind, add: 0, del: 0, diffs: [] }
+      if (d.kind === 'delete') c.kind = 'delete'
+      for (const l of d.diff.split('\n')) {
+        if (l.startsWith('+') && !l.startsWith('+++')) c.add++
+        else if (l.startsWith('-') && !l.startsWith('---')) c.del++
+      }
+      c.diffs.push({ ...d, path })
+      // most recently touched file first
+      m.delete(path)
+      m.set(path, c)
+    }
+  }
+  return [...m.values()].reverse()
+}
+
+function ChangesView({ changes }: { changes: Change[] }) {
+  const [open, setOpen] = useState<string>()
+  if (!changes.length) return <div className="faint small">Fișierele modificate apar aici, cu diferențele linie cu linie.</div>
+  const add = changes.reduce((a, c) => a + c.add, 0)
+  const del = changes.reduce((a, c) => a + c.del, 0)
+  return (
+    <>
+      <div className="changes-sum">
+        {changes.length} {changes.length === 1 ? 'fișier' : 'fișiere'} <b className="plus">+{add}</b> <b className="minus">-{del}</b>
+      </div>
+      {changes.map((c) => {
+        const dir = c.path.includes('/') ? c.path.slice(0, c.path.lastIndexOf('/') + 1) : ''
+        return (
+          <div className="change" key={c.path}>
+            <button className="change-row" aria-expanded={open === c.path} onClick={() => setOpen(open === c.path ? undefined : c.path)} title={c.path}>
+              <span className={`change-kind ${c.kind}`}>{c.kind === 'add' ? 'A' : c.kind === 'delete' ? 'D' : 'M'}</span>
+              <span className="ellipsis change-path">
+                <span className="faint">{dir}</span>
+                {basename(c.path)}
+              </span>
+              <b className="plus">+{c.add}</b>
+              <b className="minus">-{c.del}</b>
+            </button>
+            {open === c.path && (
+              <div className="change-diff">
+                <DiffView diffs={c.diffs} />
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
 function TerminalView({ items }: { items: ChatItem[] }) {
-  const runs = items.filter((i): i is Tool => i.kind === 'tool' && toolKind(i.name) === 'run').slice(-3)
+  const runs = items.filter((i): i is Tool => i.kind === 'tool' && toolKind(i.name) === 'run').slice(-20)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
@@ -290,14 +358,27 @@ function TerminalView({ items }: { items: ChatItem[] }) {
   )
 }
 
+type Tab = 'changes' | 'plan' | 'terminal' | 'code' | 'files'
+
+const WIDTH_KEY = 'jolty.liveWidth'
+function savedWidth(): number {
+  try {
+    return Number(localStorage.getItem(WIDTH_KEY)) || 380
+  } catch {
+    return 380
+  }
+}
+
 export function LivePanel({ session }: { session?: SessionMeta }) {
   const id = session?.id || ''
+  const cwd = session?.cwd || ''
   const items = useStore((s) => s.transcripts[id]) || EMPTY
   const status = useStore((s) => s.status[id])
   const perms = useStore((s) => s.permissions[id]) || []
   const plan = useStore((s) => s.plans[id])
   const draftMap = useStore((s) => s.drafts[id])
   const open = useStore((s) => s.liveOpen)
+  const setLiveOpen = useStore((s) => s.setLiveOpen)
   const drafts = useMemo(() => Object.values(draftMap || {}).sort((a, b) => a.at - b.at), [draftMap])
   const phase = phaseOf(items, status, perms, drafts)
   const tools = items.filter((i): i is Tool => i.kind === 'tool')
@@ -305,13 +386,66 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   const edits = new Set(tools.filter((t) => ['edit', 'write'].includes(toolKind(t.name)) || t.diffs?.length).flatMap(toolPaths)).size
   const runs = tools.filter((t) => toolKind(t.name) === 'run').length
   const planDone = plan ? plan.filter((s) => s.status === 'done').length : 0
+  const changes = useMemo(() => changesOf(items, cwd), [items, cwd])
+  const fileCount = useMemo(() => fileCells(items, cwd, drafts).length, [items, cwd, drafts])
+
+  // The tab follows what the agent does until the user picks one; each conversation starts following again.
+  const [picked, setPicked] = useState<Tab>()
+  const auto = useRef<Tab>('changes')
+  useEffect(() => {
+    setPicked(undefined)
+    auto.current = 'changes'
+  }, [id])
+  if (phase.key === 'write' || phase.key === 'edit') auto.current = 'code'
+  else if (phase.key === 'run') auto.current = 'terminal'
+  else if (phase.key === 'plan' && plan?.length) auto.current = 'plan'
+  else if (phase.key === 'idle' && changes.length) auto.current = 'changes'
+  const tab = picked || auto.current
+
+  const [width, setWidth] = useState(savedWidth)
+  const [resizing, setResizing] = useState(false)
+  const startResize = (e: React.PointerEvent): void => {
+    setResizing(true)
+    const x0 = e.clientX
+    const w0 = width
+    let w = w0
+    const move = (ev: PointerEvent): void => {
+      w = Math.max(300, Math.min(window.innerWidth * 0.55, w0 + x0 - ev.clientX))
+      setWidth(w)
+    }
+    const up = (): void => {
+      setResizing(false)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      try {
+        localStorage.setItem(WIDTH_KEY, String(Math.round(w)))
+      } catch {
+        // remembering the width is a convenience only
+      }
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
+  const TABS: { id: Tab; label: string; count?: string }[] = [
+    { id: 'changes', label: 'Modificări', count: changes.length ? String(changes.length) : undefined },
+    { id: 'plan', label: 'Plan', count: plan?.length ? `${planDone}/${plan.length}` : undefined },
+    { id: 'terminal', label: 'Terminal', count: runs ? String(runs) : undefined },
+    { id: 'code', label: 'Cod live', count: drafts.some((d) => !d.done) ? '●' : undefined },
+    { id: 'files', label: 'Fișiere', count: fileCount ? String(fileCount) : undefined }
+  ]
 
   return (
-    <aside className={`live ${open ? '' : 'closed'}`} aria-label="Ce face modelul acum">
-      <div className="live-section">
+    <aside className={`live ${open ? '' : 'closed'} ${resizing ? 'resizing' : ''}`} style={open ? { width } : undefined} aria-label="Ce face modelul acum">
+      {open && <div className="live-resize" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label="Lățimea panoului" />}
+      <div className="live-section live-status">
         <div className="live-label">
           <span>Live</span>
           {phase.on && <span className="volt">● activ</span>}
+          {/* only shown when the panel floats over the chat and covers the header toggle */}
+          <button className="live-close" onClick={() => setLiveOpen(false)} aria-label="Închide panoul Live" title="Închide panoul Live">
+            <X size={14} />
+          </button>
         </div>
         <Signal phase={phase} />
         <div className={`state-name ${phase.on && phase.key !== 'approval' ? 'on' : ''}`} style={phase.key === 'approval' ? { color: 'var(--warning)' } : undefined}>
@@ -333,34 +467,21 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
           </div>
         </div>
       </div>
-      {plan && plan.length > 0 && (
-        <div className="live-section">
-          <div className="live-label">
-            <span>Plan</span>
-            <span>
-              {planDone}/{plan.length}
-            </span>
-          </div>
-          <PlanView steps={plan} />
-        </div>
-      )}
-      <div className="live-section">
-        <div className="live-label">
-          <span>Fișiere</span>
-        </div>
-        <FileMap items={items} cwd={session?.cwd || ''} drafts={drafts} />
+      <div className="live-tabs" role="tablist" aria-label="Panouri">
+        {TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id} className={`live-tab ${tab === t.id ? 'on' : ''}`} onClick={() => setPicked(t.id)}>
+            {t.label}
+            {t.count && <span className="live-tab-count">{t.count}</span>}
+          </button>
+        ))}
       </div>
-      <div className="live-section">
-        <div className="live-label">
-          <span>Cod live</span>
-        </div>
-        <LiveCode drafts={drafts} />
-      </div>
-      <div className="live-section" style={{ borderBottom: 0 }}>
-        <div className="live-label">
-          <span>Terminal</span>
-        </div>
-        <TerminalView items={items} />
+      <div className="live-pane" role="tabpanel">
+        {tab === 'changes' && <ChangesView changes={changes} />}
+        {tab === 'plan' &&
+          (plan?.length ? <PlanView steps={plan} /> : <div className="faint small">Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.</div>)}
+        {tab === 'terminal' && <TerminalView items={items} />}
+        {tab === 'code' && <LiveCode drafts={drafts} />}
+        {tab === 'files' && <FileMap items={items} cwd={cwd} drafts={drafts} />}
       </div>
     </aside>
   )

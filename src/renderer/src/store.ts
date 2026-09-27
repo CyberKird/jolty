@@ -6,7 +6,9 @@ import type {
   PermissionRequest,
   PlanStep,
   Profile,
+  ProviderBalance,
   RateLimitSnapshot,
+  UpdateStatus,
   SessionMeta
 } from '@shared/types'
 
@@ -48,17 +50,25 @@ interface State {
   drafts: Record<string, Record<string, Draft>>
   plans: Record<string, PlanStep[]>
   limits: Record<string, RateLimitSnapshot>
+  /** tokens and cost per profile over the last 24 h, kept live from usage events */
+  spend: Record<string, { tokens: number; costUsd: number }>
+  balances: Record<string, ProviderBalance>
+  contexts: Record<string, { used: number; window?: number }>
+  update?: UpdateStatus
   pulls: Record<string, PullState>
   toasts: Toast[]
   liveOpen: boolean
+  sidebarOpen: boolean
 
   setPage(p: Page): void
   toast(text: string, error?: boolean): void
   loadProfiles(): Promise<void>
   loadSessions(): Promise<void>
+  loadUsage(): Promise<void>
   openSession(id: string | undefined): Promise<void>
   onEvent(e: ChatEvent): void
   setLiveOpen(v: boolean): void
+  setSidebarOpen(v: boolean): void
 }
 
 let toastId = 0
@@ -81,12 +91,18 @@ export const useStore = create<State>((set, get) => ({
   drafts: {},
   plans: {},
   limits: {},
+  spend: {},
+  balances: {},
+  contexts: {},
   pulls: {},
   toasts: [],
-  liveOpen: true,
+  // on a narrow window the live panel floats over the chat, so it starts closed there
+  liveOpen: window.innerWidth >= 1180,
+  sidebarOpen: true,
 
   setPage: (page) => set({ page }),
   setLiveOpen: (liveOpen) => set({ liveOpen }),
+  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
 
   toast: (text, error) => {
     const id = ++toastId
@@ -100,6 +116,14 @@ export const useStore = create<State>((set, get) => ({
 
   loadSessions: async () => {
     set({ sessions: await api.sessions.list() })
+  },
+
+  loadUsage: async () => {
+    const list = await api.usage.summary()
+    set((s) => ({
+      spend: Object.fromEntries(list.map((u) => [u.profileId, { tokens: u.last24h.tokens, costUsd: u.last24h.costUsd }])),
+      limits: { ...s.limits, ...Object.fromEntries(list.filter((u) => u.limits).map((u) => [u.profileId, u.limits!])) }
+    }))
   },
 
   openSession: async (id) => {
@@ -135,6 +159,8 @@ export const useStore = create<State>((set, get) => ({
           // a finished turn has no pending approvals left
           set((s) => ({ permissions: { ...s.permissions, [e.sessionId]: [] } }))
           void get().loadSessions()
+          const profile = get().profiles.find((p) => p.id === get().sessions.find((x) => x.id === e.sessionId)?.profileId)
+          if (profile) refreshLimitsSoon(profile)
         }
         return
       case 'meta':
@@ -166,11 +192,47 @@ export const useStore = create<State>((set, get) => ({
       case 'pull':
         set((s) => ({ pulls: { ...s.pulls, [e.tag]: { status: e.status, completed: e.completed, total: e.total, done: e.done, error: e.error } } }))
         return
-      case 'usage':
+      case 'update':
+        set({ update: e.status })
         return
+      case 'context':
+        set((s) => ({ contexts: { ...s.contexts, [e.sessionId]: { used: e.used, window: e.window ?? s.contexts[e.sessionId]?.window } } }))
+        return
+      case 'usage': {
+        const u = e.usage
+        const tokens = u.inputTokens + u.outputTokens + u.cacheReadTokens + u.cacheWriteTokens
+        set((s) => {
+          const cur = s.spend[u.profileId] || { tokens: 0, costUsd: 0 }
+          return { spend: { ...s.spend, [u.profileId]: { tokens: cur.tokens + tokens, costUsd: cur.costUsd + (u.costUsd || 0) } } }
+        })
+        return
+      }
     }
   }
 }))
+
+// After a turn, ask the account for its current 5 h / 7 d limits so the sidebar stays live.
+// ponytail: one probe per profile per minute at most; Codex also pushes limits by itself
+const lastProbe = new Map<string, number>()
+export function refreshLimitsSoon(p: Profile, force = false): void {
+  if (p.local || (!force && Date.now() - (lastProbe.get(p.id) || 0) < 60e3)) return
+  if (p.auth === 'endpoint') {
+    // pay-as-you-go providers: what is left on the account instead of 5 h / 7 d windows
+    if (!p.hasSecret) return
+    lastProbe.set(p.id, Date.now())
+    api.usage
+      .balance(p.id)
+      .then((b) => b && useStore.setState((s) => ({ balances: { ...s.balances, [p.id]: b } })))
+      .catch(() => undefined)
+    return
+  }
+  if (p.auth !== 'subscription') return
+  lastProbe.set(p.id, Date.now())
+  api.usage
+    .refreshLimits(p.id)
+    .then((snap) => snap && useStore.getState().onEvent({ type: 'limits', snapshot: snap }))
+    .catch(() => undefined)
+}
 
 // ---------------------------------------------------------------------------
 // helpers

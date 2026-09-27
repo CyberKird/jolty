@@ -72,6 +72,27 @@ const CATALOG: Omit<CatalogModel, 'fit' | 'installed'>[] = [
   { tag: 'nemotron-3-nano:30b', title: 'Nemotron 3 Nano 30B', vramGb: 24, vision: false, tier: 3, equivalent: 'În jurul lui Haiku 4.5', notes: 'Recomandat de Ollama pentru agenți; încape în 24 GB VRAM.' },
   { tag: 'qwen3.6', title: 'Qwen3.6', vramGb: 24, vision: true, tier: 3, equivalent: 'Între Haiku 4.5 și Sonnet 5, pe sarcini ușoare', notes: 'Raționament, cod și imagini (~24 GB VRAM).' },
   { tag: 'glm-4.7-flash', title: 'GLM-4.7 Flash', vramGb: 25, vision: false, tier: 3, equivalent: 'În jurul lui Haiku 4.5', notes: 'Raționament și generare de cod (~25 GB VRAM).' },
+  // Refusals removed by abliteration (community builds, pages on ollama.com show the tools badge).
+  {
+    tag: 'huihui_ai/gemma-4-abliterated:12b',
+    title: 'Gemma 4 12B fără restricții',
+    vramGb: 10,
+    vision: true,
+    tier: 2,
+    unrestricted: true,
+    equivalent: 'Sub Haiku 4.5',
+    notes: 'Gemma 4 fără refuzuri, vede imagini. Pentru texte creative sau pentru adulți. Pentru cod rămâne mult sub Claude.'
+  },
+  {
+    tag: 'huihui_ai/qwen3-abliterated:14b',
+    title: 'Qwen3 14B fără restricții',
+    vramGb: 11,
+    vision: false,
+    tier: 2,
+    unrestricted: true,
+    equivalent: 'Sub Haiku 4.5',
+    notes: 'Qwen3 fără refuzuri, cu gândire. Versiune comunitară: calitatea poate varia față de modelul original.'
+  },
   { tag: 'gpt-oss:120b', title: 'gpt-oss 120B', vramGb: 70, vision: false, tier: 4, equivalent: 'Între Haiku 4.5 și Sonnet 5', notes: 'Cere hardware de stație de lucru (80 GB VRAM sau foarte multă memorie).' }
 ]
 

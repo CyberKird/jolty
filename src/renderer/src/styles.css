@@ -59,32 +59,6 @@ body {
   overflow: hidden;
 }
 
-/* film grain, the same texture as joltarise.com */
-body::after {
-  content: '';
-  position: fixed;
-  inset: -50%;
-  z-index: 100;
-  pointer-events: none;
-  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwBAMAAAClLOS0AAAAElBMVEUAAAAAAAAAAAAAAAAAAAAAAAAwd29XAAAAB3RSTlMABgkMDxIVjcpJQAAAAIRJREFUOMvt0DEOgCAQRdFpLNyBG3D/u7JACAlQGMdYmPgyNJN/M4UA/2oBkopMoYKRAKRkNMCXJJsCHpBNAAvIJoADZFPAALIpYATZFDCBbAqYQTYFLCCbAlaQTQEHyKaAE2RT4KOAqUvXAFKcBnAMsQCkOB5g+5kVOKlP5YFbAPiVF4gHMGn2JJBcAAAAAElFTkSuQmCC');
-  opacity: 0.035;
-  animation: grain 0.8s steps(2) infinite;
-}
-@keyframes grain {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  25% {
-    transform: translate(-5%, -5%);
-  }
-  50% {
-    transform: translate(5%, -10%);
-  }
-  75% {
-    transform: translate(-10%, 5%);
-  }
-}
 
 ::selection {
   background: var(--volt);
@@ -168,24 +142,28 @@ a {
 
 /* ------------------------------------------------------------------ layout */
 .app {
+  position: relative;
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr) auto;
+  grid-template-rows: 36px minmax(0, 1fr);
   height: 100%;
+  transition: grid-template-columns 0.28s var(--ease);
+}
+.app.no-sidebar {
+  grid-template-columns: 0 minmax(0, 1fr) auto;
+}
+.app.no-sidebar .sidebar {
+  visibility: hidden;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
   border-right: 1px solid var(--line);
   background: var(--s1);
-}
-.brand {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  padding: 20px 20px 18px;
-  border-bottom: 1px solid var(--line);
 }
 .brand-name {
   font-family: var(--display);
@@ -196,14 +174,6 @@ a {
 .brand-name b {
   color: var(--volt);
   font-weight: 400;
-}
-.brand-sub {
-  font-family: var(--label);
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--grey-2);
-  padding-bottom: 2px;
 }
 .new-chat {
   margin: 14px 14px 6px;
@@ -1723,17 +1693,12 @@ a {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  body::after {
-    animation: none;
-  }
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
 }
 
 /* ------------------------------------------------------------------ task advice */
@@ -1812,4 +1777,957 @@ a {
 .advice-apply:hover {
   background: var(--volt);
   color: var(--black);
+}
+
+/* ---------------------------------------------------------------------------
+   Model and permission pickers (one menu for every profile's models + effort)
+   --------------------------------------------------------------------------- */
+.picker {
+  position: relative;
+  min-width: 0;
+}
+.picker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  max-width: 280px;
+  padding: 0 9px 0 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--white);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.picker-btn:hover,
+.picker-btn[aria-expanded='true'] {
+  border-color: var(--line-2);
+  background: rgba(255, 255, 255, 0.03);
+}
+.picker-btn:focus-visible {
+  outline: 1px solid var(--volt);
+  outline-offset: 1px;
+}
+.picker-btn svg {
+  flex: none;
+  color: var(--grey);
+}
+.picker-btn.mode-full {
+  color: var(--serious);
+}
+.picker-btn.mode-plan {
+  color: var(--volt);
+}
+.picker-effort {
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+.picker-pop {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 40;
+  width: 340px;
+  max-width: calc(100vw - 48px);
+  border: 1px solid var(--line-2);
+  background: var(--s2);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  animation: fade 0.14s var(--ease);
+}
+.picker-pop.small {
+  width: 290px;
+}
+.picker-list {
+  max-height: min(58vh, 460px);
+  overflow-y: auto;
+  padding: 6px;
+}
+.picker-group + .picker-group {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.picker-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 4px;
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-2);
+}
+.picker-engine {
+  margin-left: auto;
+  flex: none;
+}
+.picker-empty {
+  padding: 6px 10px 8px;
+  font-size: 12.5px;
+  color: var(--grey-2);
+}
+.picker-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  text-align: left;
+  cursor: pointer;
+}
+.picker-opt:hover,
+.picker-opt:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--white);
+}
+.picker-opt.on {
+  color: var(--white);
+}
+.picker-opt > svg {
+  flex: none;
+  margin-left: auto;
+  color: var(--volt);
+}
+.picker-opt-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.picker-opt-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+}
+.picker-opt-desc {
+  font-size: 12px;
+  color: var(--grey-2);
+  line-height: 1.35;
+}
+.picker-tag {
+  font-family: var(--label);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-2);
+  border: 1px solid var(--line-2);
+  padding: 1px 4px;
+}
+.picker-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.picker-foot-label {
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-2);
+}
+.picker-foot .segmented button:focus-visible {
+  outline: 1px solid var(--volt);
+  outline-offset: -1px;
+}
+
+/* ---------------------------------------------------------------------------
+   Sidebar live usage meter
+   --------------------------------------------------------------------------- */
+.meter {
+  flex: none;
+  max-height: 40%;
+  overflow-y: auto;
+  padding: 10px 8px 12px;
+  border-top: 1px solid var(--line);
+}
+.meter-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 6px;
+}
+.meter-refresh {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: transparent;
+  color: var(--grey-2);
+  cursor: pointer;
+}
+.meter-refresh:hover {
+  color: var(--white);
+}
+.meter-empty {
+  padding: 2px 12px;
+}
+.meter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  text-align: left;
+  cursor: pointer;
+}
+.meter-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--white);
+}
+.meter-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12.5px;
+}
+.meter-24h {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--label);
+  font-size: 9.5px;
+  color: var(--grey-2);
+}
+.meter-limit {
+  display: grid;
+  grid-template-columns: 44px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--label);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--grey-2);
+}
+.meter-limit .track {
+  height: 3px;
+  background: var(--line-2);
+}
+.meter-limit .fill {
+  display: block;
+  height: 100%;
+  transition: width 0.4s var(--ease);
+}
+.meter-pct {
+  text-align: right;
+  color: var(--grey);
+}
+
+/* ---------------------------------------------------------------------------
+   Live panel as tabbed panes (Changes, Plan, Terminal, Live code, Files)
+   --------------------------------------------------------------------------- */
+.live {
+  position: relative;
+  overflow: hidden;
+}
+.live-status {
+  flex: none;
+  padding: 16px 20px 18px;
+}
+.live-resize {
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 5;
+}
+.live-resize:hover,
+.live-resize:active {
+  background: var(--volt-line);
+}
+.live-tabs {
+  flex: none;
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  padding: 0 8px;
+  scrollbar-width: none;
+}
+.live-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--grey-2);
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.live-tab:hover {
+  color: var(--white);
+}
+.live-tab.on {
+  color: var(--white);
+  border-bottom-color: var(--volt);
+}
+.live-tab:focus-visible {
+  outline: 1px solid var(--volt);
+  outline-offset: -1px;
+}
+.live-tab-count {
+  color: var(--volt);
+}
+.live-pane {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 20px 22px;
+}
+.live-pane .terminal,
+.live-pane .code-live pre {
+  max-height: none;
+}
+.changes-sum {
+  margin-bottom: 10px;
+  font-family: var(--label);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--grey);
+}
+.plus {
+  color: var(--add-ink);
+  font-weight: 400;
+}
+.minus {
+  color: var(--del-ink);
+  font-weight: 400;
+}
+.change {
+  border: 1px solid var(--line);
+  margin-bottom: -1px;
+}
+.change-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--white);
+  text-align: left;
+  font-family: var(--code);
+  font-size: 12px;
+  cursor: pointer;
+}
+.change-row:hover,
+.change-row[aria-expanded='true'] {
+  background: rgba(255, 255, 255, 0.03);
+}
+.change-row b {
+  flex: none;
+  font-family: var(--label);
+  font-size: 10px;
+}
+.change-path {
+  flex: 1;
+  min-width: 0;
+}
+.change-kind {
+  flex: none;
+  width: 16px;
+  font-family: var(--label);
+  font-size: 10px;
+  text-align: center;
+  color: var(--warning);
+}
+.change-kind.add {
+  color: var(--add-ink);
+}
+.change-kind.delete {
+  color: var(--del-ink);
+}
+.change-diff {
+  border-top: 1px solid var(--line);
+  background: var(--black);
+  max-height: 420px;
+  overflow: auto;
+}
+.picker-key {
+  flex: none;
+  min-width: 18px;
+  margin-left: auto;
+  padding: 1px 4px;
+  border: 1px solid var(--line-2);
+  font-family: var(--label);
+  font-size: 9.5px;
+  text-align: center;
+  color: var(--grey-2);
+}
+.picker-opt.on > .picker-key {
+  margin-left: 4px;
+}
+.picker-btn.mode-auto {
+  color: var(--volt);
+}
+.meter-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+}
+.meter-balance b {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--white);
+}
+.meter-balance b.low {
+  color: var(--serious);
+}
+.picker-tag.grade-5 {
+  color: var(--volt);
+  border-color: var(--volt-line);
+}
+.picker-tag.grade-3 {
+  color: var(--warning);
+  border-color: rgba(250, 178, 25, 0.3);
+}
+.advice.weak .advice-why,
+.advice.limit .advice-why {
+  color: var(--white);
+}
+.advice.overkill {
+  opacity: 0.8;
+}
+
+/* ---------------------------------------------------------------------------
+   Title bar: dark, draggable, native caption buttons drawn by Windows on the right
+   --------------------------------------------------------------------------- */
+.titlebar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  /* the caption buttons sit over the right edge (titleBarOverlay) */
+  padding: 0 calc(100vw - env(titlebar-area-width, calc(100vw - 144px)) + 8px) 0 8px;
+  background: var(--s1);
+  border-bottom: 1px solid var(--line);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.titlebar button {
+  -webkit-app-region: no-drag;
+}
+.titlebar-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 26px;
+  border: 0;
+  background: transparent;
+  color: var(--grey-2);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.titlebar-btn:hover {
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.05);
+}
+.titlebar-btn:focus-visible {
+  outline: 1px solid var(--volt);
+  outline-offset: -1px;
+}
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 6px;
+}
+.bolt {
+  fill: var(--volt);
+  flex: none;
+}
+.titlebar .brand-name {
+  font-size: 21px;
+  line-height: 1;
+  margin-top: 2px;
+}
+.titlebar-by {
+  font-family: var(--label);
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--grey-2);
+}
+.titlebar-wordmark {
+  height: 11px;
+  width: auto;
+  opacity: 0.85;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion: one vocabulary (ease-out, short), panels slide, menus unfold from their button
+   --------------------------------------------------------------------------- */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.picker-pop {
+  transform-origin: bottom left;
+  animation: pop 0.18s var(--ease);
+}
+/* the panel opens at once; its content slides in on the compositor, the chat never reflows mid-animation */
+@keyframes live-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.live:not(.closed) > :not(.live-resize) {
+  animation: live-in 0.24s var(--ease);
+}
+.live.resizing {
+  user-select: none;
+}
+.page {
+  animation: rise 0.32s var(--ease);
+}
+
+/* long conversations: only what is on screen is laid out and painted */
+.messages-inner > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
+}
+
+/* ---------------------------------------------------------------------------
+   Scaling: narrow windows keep the chat readable
+   --------------------------------------------------------------------------- */
+.live-close {
+  display: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: -4px -6px -4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  cursor: pointer;
+}
+.live-close:hover {
+  color: var(--white);
+}
+@media (max-width: 1180px) {
+  .live-close {
+    display: grid;
+  }
+  .live-label .volt {
+    margin-left: auto;
+  }
+  .live {
+    position: absolute;
+    top: 36px;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    box-shadow: -18px 0 48px rgba(0, 0, 0, 0.55);
+  }
+  .live.closed {
+    box-shadow: none;
+  }
+}
+@media (max-width: 1080px) {
+  .app {
+    grid-template-columns: 220px minmax(0, 1fr) auto;
+  }
+  .page {
+    padding: 32px 28px 56px;
+  }
+  .composer-wrap {
+    padding: 0 20px 18px;
+  }
+}
+@media (min-width: 1700px) {
+  .composer,
+  .messages-inner {
+    max-width: 880px;
+  }
+}
+
+/* short windows: the conversation list and the live tabs keep their room */
+@media (max-height: 780px) {
+  .meter {
+    max-height: 30%;
+  }
+  .state-line {
+    height: 40px;
+    margin: 0 0 6px;
+  }
+  .state-name {
+    font-size: 30px;
+  }
+  .counters {
+    margin-top: 12px;
+  }
+}
+
+/* Jolty in Chrome toggle, next to the mode menu */
+.chrome-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--grey);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.chrome-toggle:hover {
+  color: var(--white);
+  border-color: var(--line-2);
+}
+.chrome-toggle.on {
+  color: var(--volt);
+  border-color: var(--volt-line);
+  background: var(--volt-dim);
+}
+.chrome-toggle:focus-visible {
+  outline: 1px solid var(--volt);
+  outline-offset: 1px;
+}
+.steps {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   The agent's task list above the composer
+   --------------------------------------------------------------------------- */
+.tasks {
+  flex: none;
+  max-width: 800px;
+  width: calc(100% - 64px);
+  margin: 0 auto -1px;
+  border: 1px solid var(--line-2);
+  border-bottom: 0;
+  background: var(--s1);
+  animation: pop 0.18s var(--ease);
+}
+.tasks-list {
+  max-height: min(40vh, 320px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 10px 16px 6px;
+  list-style: none;
+  border-bottom: 1px solid var(--line);
+}
+.tasks-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  text-align: left;
+  cursor: pointer;
+}
+.tasks-bar:hover {
+  color: var(--white);
+}
+.tasks-bar:focus-visible {
+  outline: 1px solid var(--volt);
+  outline-offset: -1px;
+}
+.tasks-count {
+  flex: none;
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.tasks-track {
+  flex: none;
+  width: 64px;
+  height: 2px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+.tasks-track span {
+  display: block;
+  height: 100%;
+  background: var(--volt);
+  transform-origin: left;
+  transition: transform 0.5s var(--ease);
+}
+.tasks-now {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  color: var(--white);
+}
+.tasks-now.live::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  background: var(--volt);
+  vertical-align: 1px;
+  animation: blink-soft 1.2s steps(2) infinite;
+}
+@media (max-width: 1080px) {
+  .tasks {
+    width: calc(100% - 40px);
+  }
+}
+@media (min-width: 1700px) {
+  .tasks {
+    max-width: 880px;
+  }
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* "/" and "@" suggestions, opening above the text */
+.composer {
+  position: relative;
+}
+.mentions {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: calc(100% + 6px);
+  z-index: 35;
+  border: 1px solid var(--line-2);
+  background: var(--s2);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  padding: 6px;
+  animation: pop 0.14s var(--ease);
+}
+.mention {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  text-align: left;
+  cursor: pointer;
+}
+.mention.on {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--white);
+}
+.mention svg {
+  flex: none;
+  color: var(--volt);
+}
+.mention-label {
+  flex: none;
+  font-family: var(--code);
+  font-size: 12.5px;
+}
+.mention-detail {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--grey-2);
+}
+.mentions-hint {
+  padding: 6px 10px 2px;
+  font-family: var(--label);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--grey-2);
+}
+/* messages waiting for the current turn to end */
+.queue {
+  max-width: 800px;
+  margin: 0 auto 6px;
+  display: grid;
+  gap: 4px;
+}
+.queued {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 12px;
+  border: 1px dashed var(--line-2);
+  font-size: 13px;
+  color: var(--grey);
+  animation: pop 0.18s var(--ease);
+}
+.queued-label {
+  flex: none;
+  font-family: var(--label);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--volt);
+}
+.queued button {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: transparent;
+  color: var(--grey-2);
+  cursor: pointer;
+}
+.queued button:hover {
+  color: var(--white);
+}
+
+/* context indicator in the chat header */
+.context-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--grey);
+  font-family: var(--label);
+  font-size: 10px;
+  cursor: pointer;
+}
+.context-meter:hover:not(:disabled) {
+  color: var(--white);
+  border-color: var(--line-3);
+}
+.context-meter:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.context-ring {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: conic-gradient(var(--volt) calc(var(--p) * 1%), var(--line-2) 0);
+}
+.context-meter.high .context-ring {
+  background: conic-gradient(var(--serious) calc(var(--p) * 1%), var(--line-2) 0);
+}
+
+/* undo from a message: quiet until the pointer is on the message */
+.rewind {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -6px;
+  padding: 3px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--grey-2);
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.user-turn {
+  display: flex;
+  flex-direction: column;
+}
+.user-turn:hover .rewind,
+.rewind:hover,
+.rewind:focus-visible,
+.rewind.armed {
+  opacity: 1;
+}
+.rewind:hover {
+  color: var(--white);
+}
+.rewind.armed {
+  color: var(--serious);
+}
+.rewind:disabled {
+  display: none;
+}
+
+/* update ready, in the title bar */
+.titlebar-spacer {
+  flex: 1;
+}
+.update-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--volt-line);
+  background: var(--volt-dim);
+  color: var(--volt);
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  animation: pop 0.2s var(--ease);
+}
+.update-pill:hover {
+  background: var(--volt);
+  color: var(--black);
+}
+.update-pill.quiet {
+  border-color: var(--line-2);
+  background: transparent;
+  color: var(--grey-2);
+  cursor: default;
 }

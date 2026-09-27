@@ -176,6 +176,11 @@ export function LocalPage() {
                   <span className="tag volt" title="Estimare orientativă față de modelele Claude">
                     ≈ {m.equivalent}
                   </span>
+                  {m.unrestricted && (
+                    <span className="tag warn" title="Refuzurile au fost scoase din model. Tu răspunzi de ce generezi cu el.">
+                      fără restricții
+                    </span>
+                  )}
                   <span className={`tag ${fit.cls}`}>{fit.label}</span>
                   <span className="tag">~{m.vramGb} GB</span>
                   {m.vision && (

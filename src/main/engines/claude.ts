@@ -29,6 +29,8 @@ import type {
   SessionMeta
 } from '@shared/types'
 import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
+import { BROWSER_BLOCKED_TOOLS, BROWSER_PROMPT, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer } from '../browser'
+import { TaskBoard } from './tasks'
 import { getSecret, profileDir } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultText, truncate } from './format'
 import { WRITING_RULES } from './prompt'
@@ -39,6 +41,7 @@ let sdkModule: Promise<SdkModule> | undefined
 const loadSdk = (): Promise<SdkModule> => (sdkModule ??= import('@anthropic-ai/claude-agent-sdk'))
 
 const MODE_MAP: Record<PermissionMode, SdkPermissionMode> = {
+  auto: 'auto',
   ask: 'default',
   autoEdit: 'acceptEdits',
   plan: 'plan',
@@ -71,13 +74,15 @@ function toMs(t: number | string | null | undefined): number | undefined {
   return t < 1e12 ? t * 1000 : t
 }
 
-function userMessage(text: string, images: Attachment[]): SDKUserMessage {
-  if (!images.length) return { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null }
+function userMessage(text: string, images: Attachment[], uuid?: string): SDKUserMessage {
+  // the uuid ties Jolty's chat item to Claude Code's file checkpoint for that message
+  const id = uuid ? { uuid: uuid as SDKUserMessage['uuid'] } : {}
+  if (!images.length) return { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null, ...id }
   const content = [
     ...images.map((img) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: img.mime as 'image/png', data: img.data } })),
     { type: 'text' as const, text }
   ]
-  return { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }
+  return { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, ...id }
 }
 
 /** Pulls a (possibly still incomplete) string field out of streamed tool-input JSON. */
@@ -120,8 +125,8 @@ class InputQueue implements AsyncIterable<SDKUserMessage> {
   private waiters: ((r: IteratorResult<SDKUserMessage>) => void)[] = []
   private closed = false
 
-  push(text: string, images: Attachment[] = []): void {
-    const msg = userMessage(text, images)
+  push(text: string, images: Attachment[] = [], uuid?: string): void {
+    const msg = userMessage(text, images, uuid)
     const w = this.waiters.shift()
     if (w) w({ value: msg, done: false })
     else this.items.push(msg)
@@ -255,6 +260,9 @@ class ClaudeSession implements EngineSession {
   private streamed = new Map<number, string>()
   private drafts = new Map<number, { id: string; name: string; json: string; last: number }>()
   private tools = new Map<string, Extract<ChatItem, { kind: 'tool' }>>()
+  private board = new TaskBoard()
+  private contextWindow?: number
+  private contextUsed = 0
   private lastCost = 0
   private limitWindows = new Map<string, LimitWindow>()
 
@@ -274,14 +282,17 @@ class ClaudeSession implements EngineSession {
       model: this.meta.model || undefined,
       // third-party endpoints get no effort: their models may not accept it
       ...(this.meta.effort && this.profile.auth !== 'endpoint' ? { effort: this.meta.effort as EffortLevel } : {}),
-      permissionMode: MODE_MAP[this.meta.permissionMode],
+      permissionMode: this.sdkMode(this.meta.permissionMode),
       // Claude Code refuses this flag when run as root, so only pass it when it is actually needed.
       allowDangerouslySkipPermissions: this.meta.permissionMode === 'full',
       resume: this.meta.engineSessionId,
       includePartialMessages: true,
+      // a backup before every edit, so any message can be undone with rewind()
+      enableFileCheckpointing: true,
       settingSources: ['user', 'project', 'local'],
-      systemPrompt: { type: 'preset', preset: 'claude_code', append: APPEND_PROMPT },
-      disallowedTools: ['AskUserQuestion'],
+      systemPrompt: { type: 'preset', preset: 'claude_code', append: this.meta.browser ? `${APPEND_PROMPT} ${BROWSER_PROMPT}` : APPEND_PROMPT },
+      ...(this.meta.browser ? { mcpServers: { [BROWSER_SERVER]: { type: 'stdio' as const, ...browserServer() } } } : {}),
+      disallowedTools: ['AskUserQuestion', ...BROWSER_BLOCKED_TOOLS.map((t) => `mcp__${BROWSER_SERVER}__${t}`)],
       canUseTool,
       stderr: (d) => {
         if (process.env.JOLTY_DEBUG) console.error('[claude]', d)
@@ -359,6 +370,11 @@ class ClaudeSession implements EngineSession {
       }
       case 'assistant': {
         if (m.parent_tool_use_id) return
+        {
+          // each request's input is the whole conversation so far: that is what fills the context
+          const u = m.message.usage
+          if (u) this.contextUsed = (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.output_tokens ?? 0)
+        }
         const msgId = (m.message as { id?: string }).id || m.uuid
         contentBlocks(m.message).forEach((b, i) => {
           const id = `${msgId}:${i}`
@@ -368,16 +384,13 @@ class ClaudeSession implements EngineSession {
             const t = toolItem(b, 'running') as Extract<ChatItem, { kind: 'tool' }>
             this.tools.set(t.id, t)
             this.host.emit({ type: 'item', sessionId: sid, item: t })
-            const todos = (b.input as { todos?: { content?: string; activeForm?: string; status?: string }[] })?.todos
+            const todos = (b.input as { todos?: unknown[] })?.todos
             if (t.name === 'TodoWrite' && Array.isArray(todos)) {
-              this.host.emit({
-                type: 'plan',
-                sessionId: sid,
-                steps: todos.map((td) => ({
-                  text: String((td.status === 'in_progress' ? td.activeForm : td.content) || td.content || ''),
-                  status: td.status === 'completed' ? 'done' : td.status === 'in_progress' ? 'active' : 'pending'
-                }))
-              })
+              this.board.todos(todos)
+              this.host.emit({ type: 'plan', sessionId: sid, steps: this.board.steps() })
+            } else if (t.name === 'TaskUpdate') {
+              this.board.updated(b.input)
+              this.host.emit({ type: 'plan', sessionId: sid, steps: this.board.steps() })
             }
           }
         })
@@ -393,11 +406,22 @@ class ClaudeSession implements EngineSession {
           t.status = b.is_error ? 'error' : 'done'
           t.output = truncate(toolResultText(b.content))
           this.host.emit({ type: 'item', sessionId: sid, item: t })
+          // the new task list tools: ids only exist once TaskCreate has answered
+          if (!b.is_error && (t.name === 'TaskCreate' || t.name === 'TaskList')) {
+            if (t.name === 'TaskCreate') this.board.created(t.input, m.tool_use_result, toolResultText(b.content))
+            else this.board.listed(m.tool_use_result)
+            this.host.emit({ type: 'plan', sessionId: sid, steps: this.board.steps() })
+          }
           this.tools.delete(t.id)
         }
         return
       }
       case 'result': {
+        {
+          const windows = Object.values((m as { modelUsage?: Record<string, { contextWindow?: number }> }).modelUsage || {}).map((x) => x.contextWindow || 0)
+          if (windows.length) this.contextWindow = Math.max(...windows) || this.contextWindow
+          if (this.contextUsed) this.host.emit({ type: 'context', sessionId: sid, used: this.contextUsed, window: this.contextWindow })
+        }
         const u = m.usage as { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number }
         // total_cost_usd grows over the life of the process; keep only this turn's share.
         const cost = m.total_cost_usd >= this.lastCost ? m.total_cost_usd - this.lastCost : m.total_cost_usd
@@ -444,6 +468,11 @@ class ClaudeSession implements EngineSession {
   }
 
   private ask(toolName: string, input: Record<string, unknown>, opts: Parameters<CanUseTool>[2]): Promise<PermissionResult> {
+    // reading pages is not an action on the user's behalf: only Manual mode asks for it
+    const [, server, tool] = /^mcp__(.+?)__(.+)$/.exec(toolName) || []
+    if (server === BROWSER_SERVER && BROWSER_READ_TOOLS.includes(tool) && this.meta.permissionMode !== 'ask') {
+      return Promise.resolve({ behavior: 'allow', updatedInput: input })
+    }
     const id = randomUUID()
     const detail = toolName === 'Bash' ? String(input.command ?? '') : toolName === 'ExitPlanMode' ? undefined : truncate(JSON.stringify(input, null, 2), 4000)
     this.host.emit({
@@ -479,14 +508,31 @@ class ClaudeSession implements EngineSession {
     else p.resolve({ behavior: 'allow', updatedInput: p.input })
   }
 
-  async send(text: string, images: Attachment[] = []): Promise<void> {
+  async send(text: string, images: Attachment[] = [], clientId?: string): Promise<void> {
     await this.ensureStarted()
     this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'running' })
-    this.input.push(text, images)
+    this.input.push(text, images, clientId)
+  }
+
+  /** `cliId`: Claude Code's own id for the message (it does not keep the one Jolty sends) */
+  async rewind(cliId: string, dryRun = false): Promise<{ files: string[]; insertions: number; deletions: number }> {
+    await this.ensureStarted()
+    // only a dry run reports what changes, so the real rewind returns the preview's numbers
+    const preview = await this.q!.rewindFiles(cliId, { dryRun: true })
+    if (!preview.canRewind) throw new Error(preview.error || 'Nu există o copie a fișierelor pentru acest mesaj (de exemplu, a fost trimis înainte de actualizarea Jolty).')
+    if (!dryRun) {
+      const r = await this.q!.rewindFiles(cliId)
+      if (!r.canRewind) throw new Error(r.error || 'Claude Code nu a putut readuce fișierele.')
+    }
+    return { files: preview.filesChanged || [], insertions: preview.insertions || 0, deletions: preview.deletions || 0 }
   }
 
   async interrupt(): Promise<void> {
     await this.q?.interrupt()
+  }
+
+  async compact(): Promise<void> {
+    await this.send('/compact')
   }
 
   async setModel(model: string): Promise<void> {
@@ -510,7 +556,19 @@ class ClaudeSession implements EngineSession {
     this.meta.permissionMode = mode
     // bypassPermissions must be allowed when the process starts: restart it on the next message
     if (needsRestart) await this.close()
-    else await this.q?.setPermissionMode(MODE_MAP[mode])
+    else await this.q?.setPermissionMode(this.sdkMode(mode))
+  }
+
+  async setBrowser(on: boolean): Promise<void> {
+    if (Boolean(this.meta.browser) === on) return
+    this.meta.browser = on
+    // the running process swaps its dynamic MCP servers; the prompt addition comes with the next start
+    await this.q?.setMcpServers(on ? { [BROWSER_SERVER]: { type: 'stdio', ...browserServer() } } : {})
+  }
+
+  private sdkMode(mode: PermissionMode): SdkPermissionMode {
+    // the auto classifier runs on Anthropic models; other endpoints get "accept edits" instead
+    return mode === 'auto' && this.profile.auth === 'endpoint' ? 'acceptEdits' : MODE_MAP[mode]
   }
 
   async close(): Promise<void> {
@@ -651,6 +709,22 @@ export class ClaudeDriver implements EngineDriver {
       cwd: s.cwd || cwd || '',
       updatedAt: s.lastModified
     }))
+  }
+
+  /** Claude Code's ids of the user's own prompts, in order (tool results, commands and reminders left out). */
+  async promptIds(profile: Profile, engineSessionId: string, cwd: string): Promise<string[]> {
+    const sdk = await loadSdk()
+    const messages = await this.withConfigDir(profile, () => sdk.getSessionMessages(engineSessionId, { dir: cwd }))
+    return messages
+      .filter((m) => m.type === 'user' && !m.parent_tool_use_id)
+      .filter((m) => {
+        const c = (m.message as { content?: unknown })?.content
+        const blocks = Array.isArray(c) ? (c as { type?: string; text?: string }[]) : [{ type: 'text', text: String(c ?? '') }]
+        if (blocks.some((b) => b.type === 'tool_result')) return false
+        const text = blocks.find((b) => b.type === 'text')?.text?.trim() || ''
+        return Boolean(text || blocks.some((b) => b.type === 'image')) && !text.startsWith('<') && !text.startsWith('/')
+      })
+      .map((m) => m.uuid)
   }
 
   async history(profile: Profile, engineSessionId: string, cwd: string): Promise<ChatItem[]> {

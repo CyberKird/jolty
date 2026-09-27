@@ -1,4 +1,4 @@
-import { ArrowRightLeft, FolderOpen, Loader2, PlayCircle, RefreshCw } from 'lucide-react'
+import { ArrowRightLeft, DownloadCloud, FolderOpen, Loader2, PlayCircle, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { ExternalSession } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
@@ -82,7 +82,23 @@ export function ImportPage() {
   const [profileId, setProfileId] = useState<string>()
   const [list, setList] = useState<ExternalSession[]>()
   const [loading, setLoading] = useState(false)
+  const [importing, setImporting] = useState(false)
   const profile = profiles.find((p) => p.id === profileId)
+
+  const importAll = async (): Promise<void> => {
+    setImporting(true)
+    try {
+      const r = await api.sessions.importAll()
+      await loadSessions()
+      toast(r.imported ? `Am importat ${r.imported} conversații. Cele deja existente au rămas neatinse.` : 'Totul era deja importat.')
+      if (r.failed.length) toast(`Nu am putut citi: ${r.failed.join(', ')} (verifică login-ul în Conturi și chei)`, true)
+      await load()
+    } catch (err) {
+      toast(errMsg(err), true)
+    } finally {
+      setImporting(false)
+    }
+  }
 
   useEffect(() => {
     if (!profileId && profiles.length) setProfileId(profiles[0].id)
@@ -119,6 +135,19 @@ export function ImportPage() {
         <p className="lead">
           Jolty folosește aceleași fișiere ca aplicațiile oficiale, așa că tot ce ai în Claude Code pe PC (CLAUDE.md, skills, servere MCP, subagenți, comenzi, setări) funcționează direct. Aici deschizi orice conversație existentă și o continui din Jolty.
         </p>
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="row">
+            <DownloadCloud size={16} color="var(--volt)" />
+            <b>Importă tot</b>
+            <div className="spacer" />
+            <button className="btn primary small" disabled={importing} onClick={() => void importAll()}>
+              {importing ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <DownloadCloud size={14} />} Importă tot
+            </button>
+          </div>
+          <div className="muted small" style={{ marginTop: 8 }}>
+            Aduce conversațiile din toate conturile Claude și Codex conectate. Ce e deja în Jolty nu se importă a doua oară, iar istoricul se încarcă abia când deschizi conversația.
+          </div>
+        </div>
         <div className="row" style={{ marginBottom: 16 }}>
           <div className="pill-select">
             <ProfileDot profile={profile} />
@@ -168,7 +197,7 @@ export function ImportPage() {
                             const meta = await api.sessions.start({
                               profileId: s.profileId,
                               cwd: s.cwd || cwd,
-                              permissionMode: 'ask',
+                              permissionMode: 'autoEdit',
                               resumeEngineSessionId: s.engineSessionId,
                               title: s.title.slice(0, 60)
                             })

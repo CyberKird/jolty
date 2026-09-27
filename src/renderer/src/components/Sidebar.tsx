@@ -1,6 +1,77 @@
-import { BarChart3, Cpu, Download, KeyRound, Plus, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { api, basename, timeAgo, useStore, type Page } from '../store'
+import { BarChart3, Cpu, Download, KeyRound, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
+
+function money(n: number, currency = 'USD'): string {
+  const v = n.toFixed(2)
+  return currency === 'USD' ? `$${v}` : `${v} ${currency}`
+}
+
+/** Always-visible meter: each account's 5 h / 7 d limits and its last 24 h, updated as turns finish. */
+function UsageMeter() {
+  const { profiles, limits, spend, balances, status, setPage, loadUsage } = useStore()
+  const running = Object.values(status).some((s) => s === 'running')
+  useEffect(() => {
+    for (const p of profiles) refreshLimitsSoon(p)
+  }, [profiles])
+  const rows = profiles.filter((p) => limits[p.id]?.windows.length || spend[p.id]?.tokens || balances[p.id])
+  return (
+    <section className="meter" aria-label="Consum live">
+      <div className="meter-head">
+        <span className={`dot ${running ? 'running' : ''}`} style={{ background: running ? 'var(--volt)' : 'var(--grey-2)' }} />
+        <span className="label">Consum live</span>
+        <button
+          className="meter-refresh"
+          title="Actualizează limitele acum"
+          onClick={() => {
+            for (const p of profiles) refreshLimitsSoon(p, true)
+            void loadUsage()
+          }}
+        >
+          <RefreshCw size={12} />
+        </button>
+      </div>
+      {rows.length === 0 && <div className="faint small meter-empty">Nimic folosit în ultimele 24 h.</div>}
+      {rows.map((p) => {
+        const s = spend[p.id]
+        return (
+          <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title="Deschide Consum">
+            <span className="meter-name">
+              <span className="dot" style={{ width: 6, height: 6, background: p.color }} />
+              <span className="ellipsis">{p.name}</span>
+              {s?.tokens ? (
+                <span className="meter-24h" title="Ultimele 24 de ore">
+                  {fmtTokens(s.tokens)}
+                  {s.costUsd ? ` · ${fmtUsd(s.costUsd)}` : ''}
+                </span>
+              ) : null}
+            </span>
+            {balances[p.id] && (
+              <span className="meter-balance" title={`Actualizat ${timeAgo(balances[p.id].updatedAt)}`}>
+                {balances[p.id].amount !== undefined ? (
+                  <>
+                    <span className="meter-limit-label">Rămas</span>
+                    <b className={balances[p.id].amount! <= 1 ? 'low' : ''}>{money(balances[p.id].amount!, balances[p.id].currency)}</b>
+                  </>
+                ) : null}
+                {balances[p.id].note && <span className="faint">{balances[p.id].note}</span>}
+              </span>
+            )}
+            {limits[p.id]?.windows.slice(0, 2).map((w) => (
+              <span className="meter-limit" key={w.label} title={`${w.label}: ${Math.round(w.usedPercent)}% folosit, ${resetIn(w.resetsAt)}`}>
+                <span className="meter-limit-label">{w.label}</span>
+                <span className="track">
+                  <span className="fill" style={{ width: `${Math.min(100, w.usedPercent)}%`, background: levelColor(w.usedPercent) }} />
+                </span>
+                <span className="meter-pct">{Math.round(w.usedPercent)}%</span>
+              </span>
+            ))}
+          </button>
+        )
+      })}
+    </section>
+  )
+}
 
 const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
   { id: 'import', label: 'Importă sesiuni', icon: Download },
@@ -23,12 +94,6 @@ export function Sidebar() {
 
   return (
     <nav className="sidebar" aria-label="Navigare">
-      <div className="brand">
-        <div className="brand-name">
-          JOLT<b>Y</b>
-        </div>
-        <div className="brand-sub">by Joltarise</div>
-      </div>
       <button className="btn primary new-chat" onClick={() => void openSession(undefined)}>
         <Plus size={14} strokeWidth={2.5} /> Conversație nouă
       </button>
@@ -80,6 +145,7 @@ export function Sidebar() {
           </div>
         ))}
       </div>
+      <UsageMeter />
     </nav>
   )
 }

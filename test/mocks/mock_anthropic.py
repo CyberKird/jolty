@@ -4,6 +4,8 @@ Scenario: when the prompt contains "RUN_TOOL" and no tool_result was sent yet, t
 asks to run Bash `echo jolty-tool-ok`; otherwise it answers with plain text.
 """
 import json
+import os
+import re
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -45,7 +47,9 @@ class H(BaseHTTPRequestHandler):
             with open(LOG, "a") as f:
                 f.write(json.dumps({"path": path, "model": req.get("model"), "auth": (self.headers.get("authorization") or self.headers.get("x-api-key") or "")[:14],
                                     "stream": req.get("stream"), "n_tools": len(req.get("tools") or []), "last": last[:200], "has_image": "IMAGE_BLOCK" in all_text, "desc_in_prompt": "Imagine atașată" in all_text, "handoff": "Preiei o conversa" in all_text,
-                                    "dash_rule": "U+2014" in json.dumps(req.get("system"))}) + "\n")
+                                    "dash_rule": "U+2014" in json.dumps(req.get("system")),
+                                    "browser_tools": "jolty-browser__browser_navigate" in json.dumps(req), "unsafe_tool": "browser_run_code_unsafe" in json.dumps(req),
+                                    "browser_rule": "jolty-browser tools" in json.dumps(req.get("system"))}) + "\n")
         if path.endswith("/count_tokens"):
             body = json.dumps({"input_tokens": 42}).encode()
             self.send_response(200)
@@ -59,6 +63,7 @@ class H(BaseHTTPRequestHandler):
         tail = "\n".join(flatten(m.get("content")) for m in msgs[idx + 1:])
         want_tool = "RUN_TOOL" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
         want_write = "RUN_WRITE" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
+        want_todo = "RUN_TODO" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
         model = req.get("model")
         if not req.get("stream"):
             content = [{"type": "text", "text": "Titlu test"}]
@@ -76,9 +81,23 @@ class H(BaseHTTPRequestHandler):
         mid = "msg_mock_%d" % (abs(hash(all_text)) % 10**8)
         sse(self, "message_start", {"type": "message_start", "message": {"id": mid, "type": "message", "role": "assistant", "model": model, "content": [],
             "stop_reason": None, "stop_sequence": None, "usage": {"input_tokens": 100, "output_tokens": 1, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}})
-        if want_write:
+        if want_todo:
+            todos = [{"content": c, "activeForm": c, "status": st} for c, st in [("Citesc structura proiectului", "completed"), ("Mut clasa jucatorului in TypeScript", "completed"),
+                     ("Adaug tipurile pentru inventar", "in_progress"), ("Scriu testele pentru miscare", "pending"), ("Rulez build-ul si testele", "pending")]]
+            sse(self, "content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "toolu_t" + mid, "name": "TodoWrite", "input": {}}})
+            sse(self, "content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": json.dumps({"todos": todos})}})
+            sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})
+            sse(self, "message_delta", {"type": "message_delta", "delta": {"stop_reason": "tool_use", "stop_sequence": None}, "usage": {"output_tokens": 30}})
+        elif want_write:
             content = "\n".join(f"line {i}: jolty live code" for i in range(1, 41))
-            payload = json.dumps({"file_path": "live_demo.txt", "content": content})
+            # real models write absolute paths (Claude Code's file checkpoints track those)
+            sys_text = flatten(req.get("system")) if isinstance(req.get("system"), list) else str(req.get("system") or "")
+            wd = re.search(r"[Ww]orking directory: *([^\r\n]+)", sys_text)
+            target = os.path.join(wd.group(1).strip(), "live_demo.txt") if wd else "live_demo.txt"
+            forced = re.search(r"WRITE_TO=(\S+)", tail)
+            if forced:
+                target = forced.group(1)
+            payload = json.dumps({"file_path": target, "content": content})
             sse(self, "content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "toolu_w" + mid, "name": "Write", "input": {}}})
             step = max(1, len(payload) // 12)
             for k in range(0, len(payload), step):

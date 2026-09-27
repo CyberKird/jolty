@@ -1,8 +1,13 @@
 appId: com.joltarise.jolty
 productName: Jolty
 npmRebuild: false
-# no auto-update server: new versions come from the GitHub release page
-publish: null
+# releases stay in the private repo; the app reads them with the local GitHub CLI login (see src/main/updater.ts)
+publish:
+  provider: github
+  owner: CyberKird
+  repo: jolty
+  private: true
+  releaseType: release
 copyright: Copyright © 2026 Joltarise
 directories:
   output: dist
@@ -14,6 +19,10 @@ files:
 asarUnpack:
   - node_modules/@anthropic-ai/claude-agent-sdk-*/**
   - node_modules/@openai/codex-*/**
+  # Jolty in Chrome: Playwright MCP runs as a child process, outside the archive
+  - node_modules/@playwright/mcp/**
+  - node_modules/playwright/**
+  - node_modules/playwright-core/**
 extraResources:
   # Microsoft Visual C++ runtime, installed by the setup when missing (downloaded by CI, see README)
   - from: build/redist/vc_redist.x64.exe

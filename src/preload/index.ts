@@ -27,13 +27,17 @@ const api: JoltyApi = {
     external: (profileId, cwd) => call('sessions:external', profileId, cwd),
     start: (input) => call('sessions:start', input),
     history: (id) => call('sessions:history', id),
+    importAll: () => call('sessions:importAll'),
     send: (id, text, attachments) => call('sessions:send', id, text, attachments),
     interrupt: (id) => call('sessions:interrupt', id),
     setModel: (id, model) => call('sessions:setModel', id, model),
     setEffort: (id, effort) => call('sessions:setEffort', id, effort),
     setPermissionMode: (id, mode) => call('sessions:setPermissionMode', id, mode),
+    setBrowser: (id, on) => call('sessions:setBrowser', id, on),
+    compact: (id) => call('sessions:compact', id),
+    rewind: (id, itemId, dryRun) => call('sessions:rewind', id, itemId, dryRun),
     respond: (id, requestId, decision) => call('sessions:respond', id, requestId, decision),
-    handoff: (id, target) => call('sessions:handoff', id, target),
+    handoff: (id, target, model, effort) => call('sessions:handoff', id, target, model, effort),
     remove: (id) => call('sessions:remove', id),
     onEvent: (cb) => {
       const listener = (_e: unknown, ev: ChatEvent): void => cb(ev)
@@ -43,6 +47,7 @@ const api: JoltyApi = {
   },
   usage: {
     summary: () => call('usage:summary'),
+    balance: (id) => call('usage:balance', id),
     refreshLimits: (id) => call('usage:refreshLimits', id)
   },
   local: {
@@ -61,6 +66,21 @@ const api: JoltyApi = {
   codexImport: {
     detect: (id, cwd) => call('codexImport:detect', id, cwd),
     run: (id, cwd, types) => call('codexImport:run', id, cwd, types)
+  },
+  updates: {
+    status: () => call('updates:status'),
+    check: () => call('updates:check'),
+    install: () => call('updates:install')
+  },
+  composer: {
+    slash: (cwd) => call('composer:slash', cwd),
+    files: (cwd) => call('composer:files', cwd)
+  },
+  browser: {
+    hasToken: () => call('browser:hasToken'),
+    info: () => call('browser:info'),
+    setToken: (token) => call('browser:setToken', token),
+    openExtensionPage: () => call('browser:openExtensionPage')
   },
   app: {
     settings: () => call('app:settings'),

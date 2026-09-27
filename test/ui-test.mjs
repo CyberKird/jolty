@@ -48,7 +48,7 @@ fs.writeFileSync(path.join(data, 'usage.jsonl'), usage.map((u) => JSON.stringify
 const app = await electron.launch({
   executablePath: path.resolve('node_modules/.bin/electron'),
   args: ['--no-sandbox', path.resolve('out/main/index.js')],
-  env: { ...process.env, JOLTY_DATA_DIR: data, HOME: home }
+  env: { ...process.env, JOLTY_DATA_DIR: data, HOME: home, JOLTY_TEST: '1' }
 })
 const win = await app.firstWindow()
 await win.setViewportSize({ width: 1500, height: 920 })
@@ -65,15 +65,33 @@ await win.waitForSelector('.brand-name')
 await shot('01-welcome')
 
 // the complexity advice while typing, on a Claude profile (real model list with effort levels)
-await win.selectOption('.composer select[aria-label="Profil"]', 'claude-main')
+// the model menu: every profile's models in one list, effort underneath, like the Claude app
+const pickModel = async (profileName, nth = 0) => {
+  await win.click('.composer .picker-btn >> nth=0')
+  const opt = win.locator(`.picker-group:has(.picker-group-head:has-text("${profileName}")) .picker-opt`).nth(nth)
+  await opt.waitFor({ timeout: 30000 })
+  await opt.click()
+}
+await pickModel('Claude (contul principal)')
+await win.click('.composer .picker-btn >> nth=0')
+await shot('01a-model-menu')
+await win.keyboard.press('Escape')
 await win.fill('.composer textarea', 'Refactorizează tot proiectul să folosească TypeScript, optimizează netcode-ul pentru multiplayer și adaugă teste complete')
 await win.waitForTimeout(9000)
 await shot('01b-advice-complex')
 await win.fill('.composer textarea', 'redenumește variabila x în playerSpeed')
 await win.waitForTimeout(800)
 await shot('01c-advice-simple')
-await win.selectOption('.composer select[aria-label="Profil"]', 'mock')
+await pickModel('DeepSeek (test)')
 await win.waitForTimeout(500)
+// a hard task on a third-party model: the only time the advice strip speaks up
+await win.fill('.composer textarea', 'Refactorizează tot proiectul să folosească TypeScript, optimizează netcode-ul pentru multiplayer și adaugă teste complete')
+await win.waitForTimeout(800)
+await shot('01e-advice-weak')
+// the mode menu, Claude style; 2 = Manual so the write below asks for approval
+await win.click('.composer .picker-btn >> nth=1')
+await shot('01d-mode-menu')
+await win.keyboard.press('2')
 
 // a conversation with the mock model: it streams a file, asks for approval, then answers
 await win.fill('.composer textarea', 'Rescrie clasa jucătorului. RUN_WRITE SLOW')
@@ -87,6 +105,18 @@ await win.click('.permission .btn.primary')
 await win.waitForSelector('.msg-assistant', { timeout: 60000 })
 await win.waitForTimeout(1500)
 await shot('04-chat-done')
+// the agent's task list above the composer, collapsed then open
+await win.fill('.composer textarea', 'Fă un plan pentru migrare RUN_TODO')
+await win.keyboard.press('Enter')
+await win.waitForSelector('.tasks-bar', { timeout: 60000 })
+await win.waitForTimeout(1500)
+await shot('04c-tasks')
+await win.click('.tasks-bar')
+await shot('04d-tasks-open')
+await win.click('.tasks-bar')
+await win.click('.live-tab:has-text("Modificări")')
+await win.click('.change-row >> nth=0')
+await shot('04b-changes')
 
 for (const [label, name] of [
   ['Conturi și chei', '05-accounts'],
@@ -106,6 +136,21 @@ await win.click('.nav-item:has-text("Conturi și chei")')
 await win.click('button:has-text("Adaugă profil")')
 await win.click('.segmented button:has-text("Endpoint compatibil")')
 await shot('11-add-profile')
+
+// scaling: a small window, the live panel floating over the chat, the sidebar folded away
+await win.click('.modal .btn.ghost')
+await win.click('.session-item >> nth=0')
+await win.setViewportSize({ width: 1024, height: 700 })
+await shot('12-narrow')
+// the panel opened at full width now floats over the chat; its own close button hides it
+await win.click('.live-close')
+await shot('12b-narrow-closed')
+await win.click('.titlebar-btn')
+await win.waitForTimeout(400)
+await shot('12c-no-sidebar')
+await win.setViewportSize({ width: 1920, height: 1080 })
+await win.click('.titlebar-btn')
+await shot('13-wide')
 
 console.log(errors.length ? `renderer errors:\n${errors.join('\n')}` : 'no renderer errors')
 await app.close()

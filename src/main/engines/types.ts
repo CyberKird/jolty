@@ -22,11 +22,15 @@ export interface EngineHost {
 
 export interface EngineSession {
   readonly meta: SessionMeta
-  send(text: string, images?: Attachment[]): Promise<void>
+  send(text: string, images?: Attachment[], clientId?: string): Promise<void>
+  /** puts the project's files back as they were before the user message `clientId` */
+  rewind(clientId: string, dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }>
   interrupt(): Promise<void>
+  compact(): Promise<void>
   setModel(model: string): Promise<void>
   setEffort(effort: string): Promise<void>
   setPermissionMode(mode: PermissionMode): Promise<void>
+  setBrowser(on: boolean): Promise<void>
   respond(requestId: string, decision: PermissionDecision): void
   close(): Promise<void>
 }

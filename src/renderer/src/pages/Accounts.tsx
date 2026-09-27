@@ -179,7 +179,19 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
   const [preset, setPreset] = useState<string>()
   const [models, setModels] = useState(profile?.models?.join(', ') || '')
   const [vision, setVision] = useState(Boolean(profile?.vision))
+  const [price, setPrice] = useState({ input: String(profile?.price?.input ?? ''), output: String(profile?.price?.output ?? ''), cacheRead: String(profile?.price?.cacheRead ?? '') })
   const editing = Boolean(profile)
+
+  // $ per 1M tokens; both input and output are needed for a cost, cache is optional
+  const parsedPrice = (): ProfileInput['price'] => {
+    const n = (s: string): number | undefined => (s.trim() === '' ? undefined : Number(s.replace(',', '.')))
+    const input = n(price.input)
+    const output = n(price.output)
+    const cacheRead = n(price.cacheRead)
+    const ok = (v?: number): boolean => v !== undefined && Number.isFinite(v) && v >= 0 && v < 1000
+    if (!ok(input) || !ok(output)) return null
+    return { input: input!, output: output!, ...(ok(cacheRead) ? { cacheRead } : {}) }
+  }
 
   const save = async (): Promise<void> => {
     const input: ProfileInput = {
@@ -189,10 +201,11 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
       baseUrl: auth === 'endpoint' ? baseUrl : undefined,
       models: auth === 'endpoint' ? models.split(',').map((m) => m.trim()).filter(Boolean) : undefined,
       secret: secret || undefined,
-      vision: auth === 'endpoint' ? vision : undefined
+      vision: auth === 'endpoint' ? vision : undefined,
+      price: auth === 'endpoint' ? parsedPrice() : undefined
     }
     try {
-      if (profile) await api.profiles.update(profile.id, { name: input.name, baseUrl: input.baseUrl, models: input.models, vision: input.vision, ...(secret ? { secret } : {}) })
+      if (profile) await api.profiles.update(profile.id, { name: input.name, baseUrl: input.baseUrl, models: input.models, vision: input.vision, price: input.price, ...(secret ? { secret } : {}) })
       else await api.profiles.create(input)
       await loadProfiles()
       toast(editing ? 'Profil salvat' : 'Profil adăugat')
@@ -288,6 +301,31 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
             <label className="row small" style={{ marginBottom: 14, cursor: 'pointer' }}>
               <input type="checkbox" checked={vision} onChange={(e) => setVision(e.target.checked)} /> Modelul vede imagini (altfel Jolty i le descrie)
             </label>
+            {!profile?.local && (
+              <div className="field">
+                <label>Preț în $ pe 1 milion de tokeni (opțional)</label>
+                <div className="row" style={{ gap: 8 }}>
+                  {(
+                    [
+                      ['input', 'Intrare'],
+                      ['output', 'Ieșire'],
+                      ['cacheRead', 'Din cache']
+                    ] as const
+                  ).map(([k, label]) => (
+                    <input
+                      key={k}
+                      className="input mono"
+                      inputMode="decimal"
+                      aria-label={label}
+                      placeholder={label}
+                      value={price[k]}
+                      onChange={(e) => setPrice({ ...price, [k]: e.target.value })}
+                    />
+                  ))}
+                </div>
+                <div className="hint">Copiază-le din pagina de prețuri a furnizorului. Fără ele, Jolty arată doar tokenii: estimarea Claude Code folosește prețurile Anthropic și ar fi greșită.</div>
+              </div>
+            )}
           </>
         )}
         {auth !== 'subscription' && (

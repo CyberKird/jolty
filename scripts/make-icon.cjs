@@ -1,26 +1,20 @@
-// Renders the app icon (build/icon.png + build/icon.ico) with Electron, from the Joltarise fonts.
+// Renders the app icon (build/icon.png + build/icon.ico) with Electron, from the Joltarise bolt symbol.
 // Run: electron scripts/make-icon.cjs   (on Linux without a screen: xvfb-run -a electron ...)
 const { app, BrowserWindow } = require('electron')
 const fs = require('fs')
 const path = require('path')
 
 const root = path.resolve(__dirname, '..')
-const font = fs.readFileSync(path.join(root, 'node_modules/@fontsource/bebas-neue/files/bebas-neue-latin-400-normal.woff2')).toString('base64')
+
+// joltarise-v2/public/brand/joltarise-symbol.svg: ink tile, volt bolt drawn heavy enough for 16 px
+const SYMBOL = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#0b0b0a"/><svg x="14" y="6" width="72" height="88" viewBox="0 0 205 740"><polygon fill="#d4ff00" points="52,0 170,0 118,300 205,284 56,740 84,408 0,426"/></svg></svg>`
 
 function html(size) {
-  // small sizes get a heavier letter and no inner frame so the J stays readable at 16 px
-  const small = size <= 48
   return `<!doctype html><html><head><style>
-@font-face { font-family: Bebas; src: url(data:font/woff2;base64,${font}) format('woff2'); }
 html { zoom: __S__; }
 html, body { margin: 0; width: ${size}px; height: ${size}px; background: transparent; overflow: hidden; }
-.tile { position: absolute; inset: 0; background: #020204; }
-.frame { position: absolute; inset: ${size * 0.06}px; border: ${Math.max(1, size / 128)}px solid #1d1f24; display: ${small ? 'none' : 'block'}; }
-.j { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center;
-     font-family: Bebas; color: #d4ff00; font-size: ${size * (small ? 1.02 : 0.86)}px; line-height: 1;
-     margin-top: ${size * (small ? 0.06 : 0.05)}px; ${small ? `-webkit-text-stroke: ${size / 40}px #d4ff00;` : ''} }
-.bar { position: absolute; left: ${size * 0.06}px; right: ${size * 0.06}px; bottom: ${size * 0.06}px; height: ${Math.max(1, size * 0.018)}px; background: #d4ff00; display: ${small ? 'none' : 'block'}; }
-</style></head><body><div class="tile"></div><div class="frame"></div><div class="j">J</div><div class="bar"></div></body></html>`
+svg { display: block; width: ${size}px; height: ${size}px; }
+</style></head><body>${SYMBOL}</body></html>`
 }
 
 /** Renders the `size` design on a canvas of at least 256 px, then scales it down. */
@@ -31,7 +25,6 @@ async function render(size) {
   fs.writeFileSync(file, html(size).replace(/__S__/g, String(canvas / size)))
   await w.loadFile(file)
   fs.rmSync(file, { force: true })
-  await w.webContents.executeJavaScript('document.fonts.ready.then(() => true)')
   await new Promise((r) => setTimeout(r, 150))
   const img = await w.webContents.capturePage({ x: 0, y: 0, width: canvas, height: canvas })
   w.destroy()
