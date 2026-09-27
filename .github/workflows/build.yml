@@ -1,0 +1,92 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (engines + UI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx electron-vite build
+      - name: Start mock model servers
+        run: |
+          python3 test/mocks/mock_anthropic.py 8766 "$RUNNER_TEMP/mock_anthropic.log" &
+          python3 test/mocks/mock_responses.py 8767 "$RUNNER_TEMP/mock_responses.log" &
+          sleep 2
+      - name: Install a virtual screen
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Engine test (Claude Code + Codex through Jolty)
+        run: xvfb-run -a npm run test:engines
+        env:
+          JOLTY_DATA_DIR: ${{ runner.temp }}/jolty-engines
+          MOCK_ANTHROPIC_LOG: ${{ runner.temp }}/mock_anthropic.log
+      - name: UI test (screenshots of every page)
+        run: xvfb-run -a -s "-screen 0 1600x1000x24" node test/ui-test.mjs
+        env:
+          JOLTY_DATA_DIR: ${{ runner.temp }}/jolty-ui
+          SHOTS: ${{ runner.temp }}/shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore
+
+  windows:
+    name: Windows installer
+    needs: test
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Build the installer
+        run: npm run dist:win
+      - name: Check that the engines are bundled
+        shell: pwsh
+        run: |
+          $res = "dist/win-unpacked/resources"
+          $need = @(
+            "$res/app.asar.unpacked/node_modules/@anthropic-ai/claude-agent-sdk-win32-x64/claude.exe",
+            "$res/app.asar.unpacked/node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe",
+            "$res/redist/vc_redist.x64.exe"
+          )
+          foreach ($f in $need) { if (-not (Test-Path $f)) { throw "Missing from the build: $f" } else { "ok  $f" } }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Jolty-Setup
+          path: dist/Jolty-Setup-*.exe
+          if-no-files-found: error
+      - name: Start the Anthropic mock
+        shell: pwsh
+        run: Start-Process python -ArgumentList "test/mocks/mock_anthropic.py","8766" -WindowStyle Hidden; Start-Sleep 2
+      - name: Smoke test of the packaged app
+        run: node test/packaged-smoke.mjs
+        env:
+          MOCK_ANTHROPIC: http://127.0.0.1:8766
+      - name: Attach the installer to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Jolty-Setup-*.exe

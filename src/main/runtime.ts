@@ -121,6 +121,33 @@ function copyIfMissing(src: string, dest: string): void {
   if (fs.existsSync(src) && !fs.existsSync(dest)) fs.copyFileSync(src, dest)
 }
 
+function readJsonFile(file: string): Record<string, unknown> | undefined {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'))
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * User-level MCP servers live in ~/.claude.json, next to the login. A profile with its own config
+ * folder has its own .claude.json, so the servers are copied in (same names follow the main file;
+ * servers added only to this profile stay).
+ */
+function syncMcpServers(dir: string): void {
+  const main = readJsonFile(path.join(os.homedir(), '.claude.json'))?.mcpServers as Record<string, unknown> | undefined
+  if (!main || !Object.keys(main).length) return
+  const file = path.join(dir, '.claude.json')
+  const own = readJsonFile(file)
+  if (fs.existsSync(file) && !own) return // unreadable: never overwrite the profile's login
+  const config = own || {}
+  const merged = { ...((config.mcpServers as Record<string, unknown>) || {}), ...main }
+  if (JSON.stringify(merged) === JSON.stringify(config.mcpServers)) return
+  const tmp = `${file}.${process.pid}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify({ ...config, mcpServers: merged }, null, 2))
+  fs.renameSync(tmp, file)
+}
+
 export function prepareProfileDir(profile: Profile): void {
   const dir = profileDir(profile)
   if (!dir) return
@@ -134,6 +161,11 @@ export function prepareProfileDir(profile: Profile): void {
     linkDir(path.join(mainDir, 'skills'), path.join(dir, 'skills'))
     linkDir(path.join(mainDir, 'agents'), path.join(dir, 'agents'))
     linkDir(path.join(mainDir, 'commands'), path.join(dir, 'commands'))
+    try {
+      syncMcpServers(dir)
+    } catch {
+      // the profile still works without the shared MCP servers
+    }
   } else {
     const mainDir = path.join(home, '.codex')
     const agents = path.join(mainDir, 'AGENTS.md')

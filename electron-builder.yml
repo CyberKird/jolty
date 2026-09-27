@@ -1,0 +1,42 @@
+appId: com.joltarise.jolty
+productName: Jolty
+npmRebuild: false
+# no auto-update server: new versions come from the GitHub release page
+publish: null
+copyright: Copyright © 2026 Joltarise
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+# Claude Code and Codex are native executables: they cannot run from inside app.asar
+asarUnpack:
+  - node_modules/@anthropic-ai/claude-agent-sdk-*/**
+  - node_modules/@openai/codex-*/**
+extraResources:
+  # Microsoft Visual C++ runtime, installed by the setup when missing (downloaded by CI, see README)
+  - from: build/redist/vc_redist.x64.exe
+    to: redist/vc_redist.x64.exe
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  executableName: Jolty
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Jolty
+  artifactName: Jolty-Setup-${version}.${ext}
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  include: build/installer.nsh
+  # Romanian installer texts
+  language: "1048"
+  installerLanguages: [ro_RO]
+  # conversations, profiles and logins stay after an uninstall
+  deleteAppDataOnUninstall: false

@@ -4,3 +4,4 @@ dist/
 *.log
 .DS_Store
 out-test/
+build/redist/*.exe

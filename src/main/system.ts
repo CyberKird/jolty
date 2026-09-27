@@ -84,18 +84,24 @@ export async function check(): Promise<SystemCheck[]> {
   return checks
 }
 
+/** `start` goes through ShellExecute, so installers that need admin rights get the UAC prompt. */
+function startDetached(args: string): void {
+  spawn('cmd.exe', ['/d', '/s', '/c', `"start ${args}"`], { detached: true, stdio: 'ignore', windowsVerbatimArguments: true }).unref()
+}
+
 function winget(id: string, title: string): void {
   if (!isWin) throw new Error('Instalarea automată e disponibilă doar pe Windows')
-  spawn('cmd.exe', ['/d', '/s', '/c', `"start "${title}" winget install -e --id ${id} --accept-source-agreements --accept-package-agreements"`], {
-    detached: true,
-    stdio: 'ignore',
-    windowsVerbatimArguments: true
-  }).unref()
+  startDetached(`"${title}" winget install -e --id ${id} --accept-source-agreements --accept-package-agreements`)
 }
 
 export async function fix(id: string, openPath: (p: string) => Promise<string>): Promise<void> {
   if (id === 'git') winget('Git.Git', 'Jolty - instalare Git')
-  else if (id === 'vcredist') winget('Microsoft.VCRedist.2015+.x64', 'Jolty - instalare Visual C++')
+  else if (id === 'vcredist') {
+    // the installer ships Microsoft's redistributable; winget is only the fallback
+    const bundled = path.join(process.resourcesPath || '', 'redist', 'vc_redist.x64.exe')
+    if (isWin && fs.existsSync(bundled)) startDetached(`"" "${bundled}" /install /passive /norestart`)
+    else winget('Microsoft.VCRedist.2015+.x64', 'Jolty - instalare Visual C++')
+  }
   else if (id === 'ollama') local.installOllama()
   else if (id === 'redirect') await openPath(path.join(os.homedir(), '.claude', 'settings.json'))
 }

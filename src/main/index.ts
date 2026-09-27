@@ -22,7 +22,7 @@ function createWindow(): void {
     minWidth: 960,
     minHeight: 600,
     title: 'Jolty',
-    backgroundColor: '#15161a',
+    backgroundColor: '#020204',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -97,14 +97,25 @@ function registerIpc(): void {
   handle('app:version', () => __JOLTY_VERSION__)
 }
 
-app.whenReady().then(() => {
-  jolty = new Jolty(send)
-  registerIpc()
-  createWindow()
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+// One Jolty at a time: two instances would write the same profile and conversation files
+if (!app.requestSingleInstanceLock()) {
+  app.exit(0)
+} else {
+  app.setAppUserModelId('com.joltarise.jolty')
+  app.on('second-instance', () => {
+    if (!win || win.isDestroyed()) return
+    if (win.isMinimized()) win.restore()
+    win.focus()
   })
-})
+  app.whenReady().then(() => {
+    jolty = new Jolty(send)
+    registerIpc()
+    createWindow()
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
+}
 
 let quitting = false
 app.on('before-quit', (e) => {
