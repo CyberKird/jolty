@@ -2,7 +2,9 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import path from 'path'
 import type { ChatEvent } from '@shared/types'
 import { Jolty } from './jolty'
+import * as local from './local'
 import * as store from './store'
+import * as system from './system'
 
 let win: BrowserWindow | undefined
 let jolty: Jolty
@@ -51,10 +53,10 @@ function registerIpc(): void {
   handle('profiles:models', (id: string) => jolty.models(id))
 
   handle('sessions:list', () => jolty.sessions())
-  handle('sessions:external', (profileId: string, cwd: string) => jolty.externalSessions(profileId, cwd))
+  handle('sessions:external', (profileId: string, cwd?: string) => jolty.externalSessions(profileId, cwd))
   handle('sessions:start', (input) => jolty.startSession(input as never))
   handle('sessions:history', (id: string) => jolty.history(id))
-  handle('sessions:send', (id: string, text: string) => jolty.sendMessage(id, text))
+  handle('sessions:send', (id: string, text: string, attachments) => jolty.sendMessage(id, text, (attachments as never) || []))
   handle('sessions:interrupt', (id: string) => jolty.interrupt(id))
   handle('sessions:setModel', (id: string, model: string) => jolty.setModel(id, model))
   handle('sessions:setPermissionMode', (id: string, mode) => jolty.setPermissionMode(id, mode as never))
@@ -64,6 +66,17 @@ function registerIpc(): void {
 
   handle('usage:summary', () => jolty.usageSummary())
   handle('usage:refreshLimits', (id: string) => jolty.refreshLimits(id))
+
+  handle('local:hardware', () => local.hardware())
+  handle('local:status', () => local.status())
+  handle('local:catalog', () => local.catalog())
+  handle('local:pull', (tag: string) => jolty.pullLocal(tag))
+  handle('local:remove', (tag: string) => local.remove(tag))
+  handle('local:createProfile', (tag: string) => jolty.createLocalProfile(tag))
+  handle('local:installOllama', () => local.installOllama())
+
+  handle('system:check', () => system.check())
+  handle('system:fix', (id: string) => system.fix(id, (p) => shell.openPath(p)))
 
   handle('codexImport:detect', (id: string, cwd?: string) => jolty.codex.importDetect(jolty.profile(id), cwd))
   handle('codexImport:run', (id: string, cwd?: string, types?: string[]) => jolty.codex.importRun(jolty.profile(id), cwd, types))

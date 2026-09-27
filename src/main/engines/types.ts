@@ -1,5 +1,6 @@
 import type {
   AccountStatus,
+  Attachment,
   ChatEvent,
   ChatItem,
   ExternalSession,
@@ -21,7 +22,7 @@ export interface EngineHost {
 
 export interface EngineSession {
   readonly meta: SessionMeta
-  send(text: string): Promise<void>
+  send(text: string, images?: Attachment[]): Promise<void>
   interrupt(): Promise<void>
   setModel(model: string): Promise<void>
   setPermissionMode(mode: PermissionMode): Promise<void>
@@ -36,7 +37,8 @@ export interface EngineDriver {
   login(profile: Profile): Promise<AccountStatus>
   logout(profile: Profile): Promise<AccountStatus>
   models(profile: Profile): Promise<ModelOption[]>
-  externalSessions(profile: Profile, cwd: string): Promise<ExternalSession[]>
+  externalSessions(profile: Profile, cwd?: string): Promise<ExternalSession[]>
+  describe(profile: Profile, images: Attachment[], prompt: string): Promise<string>
   history(profile: Profile, engineSessionId: string, cwd: string): Promise<ChatItem[]>
   limits(profile: Profile): Promise<RateLimitSnapshot | undefined>
   shutdown(): Promise<void>

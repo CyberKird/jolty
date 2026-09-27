@@ -5,6 +5,7 @@ asks to run Bash `echo jolty-tool-ok`; otherwise it answers with plain text.
 """
 import json
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 LOG = sys.argv[2] if len(sys.argv) > 2 else None
@@ -22,6 +23,8 @@ def flatten(content):
     for c in content or []:
         if c.get("type") == "text":
             out.append(c.get("text", ""))
+        elif c.get("type") == "image":
+            out.append("IMAGE_BLOCK")
         elif c.get("type") == "tool_result":
             out.append("TOOL_RESULT:" + json.dumps(c.get("content")))
     return "\n".join(out)
@@ -41,7 +44,7 @@ class H(BaseHTTPRequestHandler):
         if LOG:
             with open(LOG, "a") as f:
                 f.write(json.dumps({"path": path, "model": req.get("model"), "auth": (self.headers.get("authorization") or self.headers.get("x-api-key") or "")[:14],
-                                    "stream": req.get("stream"), "n_tools": len(req.get("tools") or []), "last": last[:200]}) + "\n")
+                                    "stream": req.get("stream"), "n_tools": len(req.get("tools") or []), "last": last[:200], "has_image": "IMAGE_BLOCK" in all_text, "desc_in_prompt": "Imagine atașată" in all_text, "handoff": "Preiei o conversa" in all_text}) + "\n")
         if path.endswith("/count_tokens"):
             body = json.dumps({"input_tokens": 42}).encode()
             self.send_response(200)
@@ -54,6 +57,7 @@ class H(BaseHTTPRequestHandler):
         idx = max([i for i, m in enumerate(msgs) if m.get("role") == "assistant"], default=-1)
         tail = "\n".join(flatten(m.get("content")) for m in msgs[idx + 1:])
         want_tool = "RUN_TOOL" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
+        want_write = "RUN_WRITE" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
         model = req.get("model")
         if not req.get("stream"):
             content = [{"type": "text", "text": "Titlu test"}]
@@ -71,7 +75,17 @@ class H(BaseHTTPRequestHandler):
         mid = "msg_mock_%d" % (abs(hash(all_text)) % 10**8)
         sse(self, "message_start", {"type": "message_start", "message": {"id": mid, "type": "message", "role": "assistant", "model": model, "content": [],
             "stop_reason": None, "stop_sequence": None, "usage": {"input_tokens": 100, "output_tokens": 1, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}})
-        if want_tool:
+        if want_write:
+            content = "\n".join(f"line {i}: jolty live code" for i in range(1, 41))
+            payload = json.dumps({"file_path": "live_demo.txt", "content": content})
+            sse(self, "content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "toolu_w" + mid, "name": "Write", "input": {}}})
+            step = max(1, len(payload) // 12)
+            for k in range(0, len(payload), step):
+                sse(self, "content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": payload[k:k + step]}})
+                time.sleep(0.08)
+            sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})
+            sse(self, "message_delta", {"type": "message_delta", "delta": {"stop_reason": "tool_use", "stop_sequence": None}, "usage": {"output_tokens": 50}})
+        elif want_tool:
             sse(self, "content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}})
             sse(self, "content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Rulez comanda."}})
             sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})

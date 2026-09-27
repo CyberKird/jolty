@@ -16,6 +16,7 @@ import type {
 } from '@anthropic-ai/claude-agent-sdk'
 import type {
   AccountStatus,
+  Attachment,
   ChatItem,
   ExternalSession,
   LimitWindow,
@@ -69,14 +70,57 @@ function toMs(t: number | string | null | undefined): number | undefined {
   return t < 1e12 ? t * 1000 : t
 }
 
+function userMessage(text: string, images: Attachment[]): SDKUserMessage {
+  if (!images.length) return { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null }
+  const content = [
+    ...images.map((img) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: img.mime as 'image/png', data: img.data } })),
+    { type: 'text' as const, text }
+  ]
+  return { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }
+}
+
+/** Pulls a (possibly still incomplete) string field out of streamed tool-input JSON. */
+export function partialJsonString(json: string, key: string): string | undefined {
+  const m = new RegExp(`"${key}"\\s*:\\s*"`).exec(json)
+  if (!m) return undefined
+  let i = m.index + m[0].length
+  let raw = ''
+  while (i < json.length) {
+    const c = json[i]
+    if (c === '\\') {
+      if (i + 1 >= json.length) break
+      if (json[i + 1] === 'u' && i + 5 >= json.length) break
+      raw += json.slice(i, json[i + 1] === 'u' ? i + 6 : i + 2)
+      i += json[i + 1] === 'u' ? 6 : 2
+      continue
+    }
+    if (c === '"') break
+    raw += c
+    i++
+  }
+  try {
+    return JSON.parse(`"${raw}"`) as string
+  } catch {
+    return raw
+  }
+}
+
+const DRAFT_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
+
+export const DESCRIBE_PROMPT =
+  'Another AI model that cannot see images will work from your description instead of the image. ' +
+  'Describe the image completely and precisely: transcribe ALL visible text exactly (code, error messages, numbers, labels), ' +
+  'describe the layout and UI elements, colors, charts or diagrams and how the parts relate. Do not guess beyond what is visible. ' +
+  'Answer with the description only.'
+
 /** Async iterable fed by the UI: every pushed message becomes a new user turn. */
 class InputQueue implements AsyncIterable<SDKUserMessage> {
   private items: SDKUserMessage[] = []
   private waiters: ((r: IteratorResult<SDKUserMessage>) => void)[] = []
   private closed = false
 
-  push(text: string): void {
-    const msg: SDKUserMessage = { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null }
+  push(text: string, images: Attachment[] = []): void {
+    const msg = userMessage(text, images)
     const w = this.waiters.shift()
     if (w) w({ value: msg, done: false })
     else this.items.push(msg)
@@ -208,6 +252,7 @@ class ClaudeSession implements EngineSession {
   private pending = new Map<string, Pending>()
   private currentMsgId = ''
   private streamed = new Map<number, string>()
+  private drafts = new Map<number, { id: string; name: string; json: string; last: number }>()
   private tools = new Map<string, Extract<ChatItem, { kind: 'tool' }>>()
   private lastCost = 0
   private limitWindows = new Map<string, LimitWindow>()
@@ -280,6 +325,21 @@ class ClaudeSession implements EngineSession {
         if (ev.type === 'message_start' && ev.message) {
           this.currentMsgId = ev.message.id
           this.streamed.clear()
+          this.drafts.clear()
+        } else if (ev.type === 'content_block_start' && ev.content_block?.type === 'tool_use' && ev.index !== undefined) {
+          const name = String(ev.content_block.name)
+          if (DRAFT_TOOLS.has(name)) this.drafts.set(ev.index, { id: String(ev.content_block.id), name, json: '', last: 0 })
+        } else if (ev.type === 'content_block_delta' && ev.delta?.type === 'input_json_delta' && ev.index !== undefined) {
+          const d = this.drafts.get(ev.index)
+          if (!d) return
+          d.json += String(ev.delta.partial_json ?? '')
+          if (Date.now() - d.last > 60) {
+            d.last = Date.now()
+            this.emitDraft(d, false)
+          }
+        } else if (ev.type === 'content_block_stop' && ev.index !== undefined && this.drafts.has(ev.index)) {
+          this.emitDraft(this.drafts.get(ev.index)!, true)
+          this.drafts.delete(ev.index)
         } else if (ev.type === 'content_block_start' && ev.content_block && ev.index !== undefined) {
           const kind = ev.content_block.type === 'text' ? 'assistant' : ev.content_block.type === 'thinking' ? 'reasoning' : undefined
           if (!kind) return
@@ -362,6 +422,13 @@ class ClaudeSession implements EngineSession {
     }
   }
 
+  private emitDraft(d: { id: string; name: string; json: string }, done: boolean): void {
+    const path = partialJsonString(d.json, 'file_path') || partialJsonString(d.json, 'notebook_path')
+    const content =
+      d.name === 'Write' ? partialJsonString(d.json, 'content') : d.name === 'NotebookEdit' ? partialJsonString(d.json, 'new_source') : partialJsonString(d.json, 'new_string')
+    this.host.emit({ type: 'draft', sessionId: this.meta.id, toolId: d.id, name: d.name, path, content: content ?? '', done })
+  }
+
   private ask(toolName: string, input: Record<string, unknown>, opts: Parameters<CanUseTool>[2]): Promise<PermissionResult> {
     const id = randomUUID()
     const detail = toolName === 'Bash' ? String(input.command ?? '') : toolName === 'ExitPlanMode' ? undefined : truncate(JSON.stringify(input, null, 2), 4000)
@@ -398,11 +465,10 @@ class ClaudeSession implements EngineSession {
     else p.resolve({ behavior: 'allow', updatedInput: p.input })
   }
 
-  async send(text: string): Promise<void> {
+  async send(text: string, images: Attachment[] = []): Promise<void> {
     await this.ensureStarted()
-    this.host.emit({ type: 'item', sessionId: this.meta.id, item: { kind: 'user', id: randomUUID(), text } })
     this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'running' })
-    this.input.push(text)
+    this.input.push(text, images)
   }
 
   async interrupt(): Promise<void> {
@@ -548,15 +614,15 @@ export class ClaudeDriver implements EngineDriver {
     }
   }
 
-  async externalSessions(profile: Profile, cwd: string): Promise<ExternalSession[]> {
+  async externalSessions(profile: Profile, cwd?: string): Promise<ExternalSession[]> {
     const sdk = await loadSdk()
-    const list = await this.withConfigDir(profile, () => sdk.listSessions({ dir: cwd, limit: 40 }))
+    const list = await this.withConfigDir(profile, () => sdk.listSessions(cwd ? { dir: cwd, limit: 40 } : { limit: 300 }))
     return list.map((s) => ({
       engine: 'claude',
       profileId: profile.id,
       engineSessionId: s.sessionId,
       title: s.customTitle || s.summary || s.firstPrompt || s.sessionId,
-      cwd: s.cwd || cwd,
+      cwd: s.cwd || cwd || '',
       updatedAt: s.lastModified
     }))
   }
@@ -580,6 +646,30 @@ export class ClaudeDriver implements EngineDriver {
       windows.push({ label: LIMIT_LABELS[key] || key, usedPercent: used, resetsAt: toMs(w?.resets_at) })
     }
     return { profileId: profile.id, windows, note: usage.subscription_type ? `Plan: ${usage.subscription_type}` : undefined, updatedAt: Date.now() }
+  }
+
+  /** Asks a Claude model to describe images for a model that cannot see them. */
+  async describe(profile: Profile, images: Attachment[], prompt = DESCRIBE_PROMPT): Promise<string> {
+    const sdk = await loadSdk()
+    prepareProfileDir(profile)
+    const model = profile.auth === 'endpoint' ? profile.models?.[0] : 'haiku'
+    async function* one(): AsyncGenerator<SDKUserMessage> {
+      yield userMessage(prompt, images)
+    }
+    const q = sdk.query({ prompt: one(), options: { ...baseOptions(profile, os.homedir(), model), model, settingSources: [], tools: [], maxTurns: 1 } })
+    const timer = setTimeout(() => q.close(), 180000)
+    try {
+      for await (const m of q) {
+        if (m.type === 'result') {
+          if (m.subtype === 'success' && m.result.trim()) return m.result.trim()
+          throw new Error(`descrierea a eșuat (${m.subtype})`)
+        }
+      }
+      throw new Error('descrierea nu a primit răspuns')
+    } finally {
+      clearTimeout(timer)
+      q.close()
+    }
   }
 
   async shutdown(): Promise<void> {

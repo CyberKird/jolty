@@ -6,6 +6,7 @@ import os from 'os'
 import path from 'path'
 import type { ChatEvent, ChatItem } from '../src/shared/types'
 import { Jolty } from '../src/main/jolty'
+import * as store from '../src/main/store'
 
 const events: ChatEvent[] = []
 let failures = 0
@@ -100,7 +101,32 @@ app.whenReady().then(async () => {
     }
   }
 
-  // ---------------- Codex via LiteLLM -> mock chat completions ----------------
+  // ---------------- vision bridge + live code drafts ----------------
+  if (process.env.TEST_CLAUDE !== '0') {
+    const url = process.env.MOCK_ANTHROPIC || 'http://127.0.0.1:8766'
+    const eyes = jolty.createProfile({ name: 'Ochi (mock)', engine: 'claude', auth: 'endpoint', baseUrl: url, models: ['mock-vision'], secret: 'sk-mock', vision: true })
+    const blind = jolty.createProfile({ name: 'Fara vision (mock)', engine: 'claude', auth: 'endpoint', baseUrl: url, models: ['mock-blind'], secret: 'sk-mock', vision: false })
+    store.saveSettings({ visionProfileId: eyes.id })
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const s = await jolty.startSession({ profileId: blind.id, cwd: project, permissionMode: 'autoEdit' })
+    await jolty.sendMessage(s.id, 'Ce vezi in poza? RUN_WRITE', [{ id: 'img1', name: 'captura.png', mime: 'image/png', data: png }])
+    await waitFor(() => idleCount(s.id) >= 1, 120000, 'vision bridge turn')
+    const items = jolty.history(s.id)
+    show(items)
+    const user = items.find((i) => i.kind === 'user') as Extract<ChatItem, { kind: 'user' }> | undefined
+    check(user?.images?.length === 1, 'the chat keeps the attached image for display')
+    check(items.some((i) => i.kind === 'notice' && i.text.includes('le descrie')), 'Jolty says another profile is describing the image')
+    const log = fs.readFileSync(process.env.MOCK_ANTHROPIC_LOG!, 'utf8').trim().split('\n').map((l) => JSON.parse(l))
+    check(log.some((r) => r.model === 'mock-vision' && r.has_image), 'the vision profile received the image')
+    check(log.some((r) => r.model === 'mock-blind' && r.desc_in_prompt && !r.has_image), 'the blind model received a text description instead of the image')
+    const drafts = events.filter((e) => e.type === 'draft' && e.sessionId === s.id) as Extract<ChatEvent, { type: 'draft' }>[]
+    check(drafts.length >= 3, `live code: ${drafts.length} partial updates while the file was written`)
+    check(drafts.some((d) => !d.done && d.content.length > 0 && d.content.length < 800) && drafts.some((d) => d.done && d.content.includes('line 40')), 'live code grows until the full file')
+    check(drafts[0]?.path === 'live_demo.txt', 'live code knows the file path')
+    check(fs.existsSync(path.join(project, 'live_demo.txt')), 'the file was actually written to disk')
+  }
+
+  // ---------------- Codex via mock Responses API ----------------
   if (process.env.TEST_CODEX !== '0') {
     const p = jolty.createProfile({ name: 'Mock Codex', engine: 'codex', auth: 'subscription' })
     const dir = path.join(process.env.JOLTY_DATA_DIR!, 'profiles', p.id, 'codex')
@@ -146,7 +172,9 @@ app.whenReady().then(async () => {
       const h = await jolty.handoff(s.id, claudeProfile.id)
       await waitFor(() => idleCount(h.id) >= 1, 120000, 'handoff turn')
       const hItems = jolty.history(h.id)
-      check(hItems.some((i) => i.kind === 'user' && i.text.includes('Preiei o conversație')), 'handoff sends the previous conversation to the other engine')
+      check(hItems.some((i) => i.kind === 'user' && i.text.includes('Preia conversația')), 'handoff shows a short message to the user')
+      const log = fs.readFileSync(process.env.MOCK_ANTHROPIC_LOG || '/dev/null', 'utf8')
+      check(!process.env.MOCK_ANTHROPIC_LOG || log.includes('Preiei o conversa'), 'handoff sends the previous conversation to the other engine')
       check(hItems.some((i) => i.kind === 'assistant'), 'the other engine answers after the handoff')
     }
   }

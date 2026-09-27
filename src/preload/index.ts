@@ -27,7 +27,7 @@ const api: JoltyApi = {
     external: (profileId, cwd) => call('sessions:external', profileId, cwd),
     start: (input) => call('sessions:start', input),
     history: (id) => call('sessions:history', id),
-    send: (id, text) => call('sessions:send', id, text),
+    send: (id, text, attachments) => call('sessions:send', id, text, attachments),
     interrupt: (id) => call('sessions:interrupt', id),
     setModel: (id, model) => call('sessions:setModel', id, model),
     setPermissionMode: (id, mode) => call('sessions:setPermissionMode', id, mode),
@@ -43,6 +43,19 @@ const api: JoltyApi = {
   usage: {
     summary: () => call('usage:summary'),
     refreshLimits: (id) => call('usage:refreshLimits', id)
+  },
+  local: {
+    hardware: () => call('local:hardware'),
+    status: () => call('local:status'),
+    catalog: () => call('local:catalog'),
+    pull: (tag) => call('local:pull', tag),
+    remove: (tag) => call('local:remove', tag),
+    createProfile: (tag) => call('local:createProfile', tag),
+    installOllama: () => call('local:installOllama')
+  },
+  system: {
+    check: () => call('system:check'),
+    fix: (id) => call('system:fix', id)
   },
   codexImport: {
     detect: (id, cwd) => call('codexImport:detect', id, cwd),

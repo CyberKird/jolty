@@ -1,7 +1,11 @@
 import { randomUUID } from 'crypto'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
 import { shell } from 'electron'
 import type {
   AccountStatus,
+  Attachment,
   ChatItem,
   ExternalSession,
   FileDiff,
@@ -120,13 +124,62 @@ interface Usage {
   outputTokens: number
 }
 
+interface ThreadListener {
+  onNotification(method: string, p: Any): void
+  onRequest(r: RpcRequest): boolean
+  onServerExit(reason: string): void
+}
+
+/** Writes pasted images to temp files: app-server takes images by path. */
+function saveImages(images: Attachment[]): string[] {
+  const dir = path.join(os.tmpdir(), 'jolty-images')
+  fs.mkdirSync(dir, { recursive: true })
+  return images.map((img) => {
+    const ext = img.mime.split('/')[1]?.replace('jpeg', 'jpg') || 'png'
+    const file = path.join(dir, `${randomUUID()}.${ext}`)
+    fs.writeFileSync(file, Buffer.from(img.data, 'base64'))
+    return file
+  })
+}
+
+/** Collects the answer of a one-off, tool-less thread (used to describe images). */
+class OneShot implements ThreadListener {
+  text = ''
+  done: Promise<string>
+  private resolve!: (t: string) => void
+  private reject!: (e: Error) => void
+
+  constructor() {
+    this.done = new Promise((res, rej) => {
+      this.resolve = res
+      this.reject = rej
+    })
+  }
+
+  onNotification(method: string, p: Any): void {
+    if (method === 'item/completed' && p.item?.type === 'agentMessage') this.text += (this.text ? '\n' : '') + (p.item.text || '')
+    if (method === 'turn/completed') {
+      if (p.turn?.status === 'failed') this.reject(new Error(p.turn.error?.message || 'descrierea a eșuat'))
+      else this.resolve(this.text.trim())
+    }
+  }
+
+  onRequest(): boolean {
+    return false
+  }
+
+  onServerExit(reason: string): void {
+    this.reject(new Error(reason))
+  }
+}
+
 // ---------------------------------------------------------------------------
 // One app-server process per profile (its own CODEX_HOME, so its own login)
 // ---------------------------------------------------------------------------
 class CodexServer {
   rpc?: JsonRpcProcess
   private starting?: Promise<JsonRpcProcess>
-  readonly sessions = new Map<string, CodexSession>()
+  readonly sessions = new Map<string, ThreadListener>()
   private loginWaiters: ((ok: boolean, error?: string) => void)[] = []
   private importWaiters = new Map<string, () => void>()
 
@@ -224,7 +277,7 @@ class CodexServer {
 // ---------------------------------------------------------------------------
 // One Codex thread shown as a Jolty session
 // ---------------------------------------------------------------------------
-class CodexSession implements EngineSession {
+class CodexSession implements EngineSession, ThreadListener {
   private threadId?: string
   private turnId?: string
   private pending = new Map<string, number | string>()
@@ -263,12 +316,12 @@ class CodexSession implements EngineSession {
     return rpc
   }
 
-  async send(text: string): Promise<void> {
-    this.host.emit({ type: 'item', sessionId: this.meta.id, item: { kind: 'user', id: randomUUID(), text } })
+  async send(text: string, images: Attachment[] = []): Promise<void> {
     this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'running' })
     try {
       const rpc = await this.ensureThread()
-      const params = { threadId: this.threadId, input: [{ type: 'text', text, text_elements: [] }], ...this.overrides }
+      const input = [...saveImages(images).map((p) => ({ type: 'localImage', path: p })), { type: 'text', text, text_elements: [] }]
+      const params = { threadId: this.threadId, input, ...this.overrides }
       this.overrides = {}
       const r = await rpc.request<Any>('turn/start', params)
       this.turnId = r?.turn?.id
@@ -315,6 +368,11 @@ class CodexSession implements EngineSession {
         if (method === 'item/completed') {
           this.liveOutput.delete(item.id)
           this.running.delete(item.id)
+          if (p.item?.type === 'fileChange') {
+            for (const c of p.item.changes || []) {
+              this.host.emit({ type: 'draft', sessionId: sid, toolId: `${item.id}:${c.path}`, name: 'Edit', path: c.path, content: c.diff || '', done: true })
+            }
+          }
         } else if (p.item?.type === 'commandExecution') {
           this.running.set(item.id, p.item)
         }
@@ -323,6 +381,11 @@ class CodexSession implements EngineSession {
         this.host.emit({ type: 'item', sessionId: sid, item })
         return
       }
+      case 'item/fileChange/patchUpdated':
+        for (const c of p.changes || []) {
+          this.host.emit({ type: 'draft', sessionId: sid, toolId: `${p.itemId}:${c.path}`, name: 'Edit', path: c.path, content: c.diff || '', done: false })
+        }
+        return
       case 'item/agentMessage/delta':
         this.host.emit({ type: 'delta', sessionId: sid, itemId: p.itemId, kind: 'assistant', delta: p.delta })
         return
@@ -520,7 +583,13 @@ export class CodexDriver implements EngineDriver {
       const r: Any = await rpc.request('model/list', cursor ? { cursor } : {})
       for (const m of r?.data || []) {
         if (m.hidden) continue
-        out.push({ id: m.model, label: m.displayName || m.model, description: m.description, isDefault: Boolean(m.isDefault) })
+        out.push({
+          id: m.model,
+          label: m.displayName || m.model,
+          description: m.description,
+          isDefault: Boolean(m.isDefault),
+          vision: Array.isArray(m.inputModalities) ? m.inputModalities.includes('image') : undefined
+        })
       }
       cursor = r?.nextCursor ?? null
       if (!cursor) break
@@ -528,9 +597,9 @@ export class CodexDriver implements EngineDriver {
     return out
   }
 
-  async externalSessions(profile: Profile, cwd: string): Promise<ExternalSession[]> {
+  async externalSessions(profile: Profile, cwd?: string): Promise<ExternalSession[]> {
     const rpc = await this.server(profile).get()
-    const r = await rpc.request<Any>('thread/list', { cwd, limit: 40 })
+    const r = await rpc.request<Any>('thread/list', cwd ? { cwd, limit: 40 } : { limit: 200 })
     return (r?.data || []).map((t: Any) => ({
       engine: 'codex',
       profileId: profile.id,
@@ -558,6 +627,23 @@ export class CodexDriver implements EngineDriver {
     const rpc = await this.server(profile).get()
     const r = await rpc.request<Any>('account/rateLimits/read', {})
     return r?.rateLimits ? codexLimitSnapshot(profile.id, r.rateLimits) : undefined
+  }
+
+  /** Asks a Codex model to describe images for a model that cannot see them. */
+  async describe(profile: Profile, images: Attachment[], prompt: string): Promise<string> {
+    const server = this.server(profile)
+    const rpc = await server.get()
+    const t = await rpc.request<Any>('thread/start', { cwd: os.tmpdir(), ephemeral: true, approvalPolicy: 'never', sandbox: 'read-only' })
+    const threadId = t.thread.id as string
+    const shot = new OneShot()
+    server.sessions.set(threadId, shot)
+    try {
+      const input = [...saveImages(images).map((p) => ({ type: 'localImage', path: p })), { type: 'text', text: prompt, text_elements: [] }]
+      await rpc.request('turn/start', { threadId, input })
+      return await Promise.race([shot.done, new Promise<string>((_, rej) => setTimeout(() => rej(new Error('descrierea a expirat')), 180000))])
+    } finally {
+      server.sessions.delete(threadId)
+    }
   }
 
   /** Codex's own importer for Claude Code settings, skills, MCP servers and sessions. */

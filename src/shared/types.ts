@@ -21,6 +21,10 @@ export interface Profile {
   /** endpoint profiles: model ids offered in the picker (first one is the default) */
   models?: string[]
   hasSecret?: boolean
+  /** endpoint profiles: whether the model can read images itself */
+  vision?: boolean
+  /** created from the local-models page (Ollama) */
+  local?: boolean
   color: string
 }
 
@@ -31,6 +35,8 @@ export interface ProfileInput {
   baseUrl?: string
   models?: string[]
   secret?: string
+  vision?: boolean
+  local?: boolean
 }
 
 export interface AccountStatus {
@@ -50,6 +56,16 @@ export interface ModelOption {
   label: string
   description?: string
   isDefault?: boolean
+  /** false when the model cannot read images (Jolty then describes them with the vision profile) */
+  vision?: boolean
+}
+
+export interface Attachment {
+  id: string
+  name: string
+  mime: string
+  /** base64 without the data: prefix */
+  data: string
 }
 
 export interface SessionMeta {
@@ -85,7 +101,7 @@ export interface FileDiff {
 }
 
 export type ChatItem =
-  | { kind: 'user'; id: string; text: string }
+  | { kind: 'user'; id: string; text: string; images?: { name: string; dataUrl: string }[] }
   | { kind: 'assistant'; id: string; text: string }
   | { kind: 'reasoning'; id: string; text: string }
   | {
@@ -149,6 +165,9 @@ export type ChatEvent =
   | { type: 'permissionResolved'; sessionId: string; requestId: string }
   | { type: 'usage'; sessionId: string; usage: TurnUsage }
   | { type: 'limits'; snapshot: RateLimitSnapshot }
+  /** a file being written right now: content grows as the model generates it */
+  | { type: 'draft'; sessionId: string; toolId: string; name: string; path?: string; content: string; done: boolean }
+  | { type: 'pull'; tag: string; status: string; completed?: number; total?: number; done?: boolean; error?: string }
 
 export interface UsageDay {
   day: string
@@ -169,6 +188,8 @@ export interface UsageSummary {
 
 export interface AppSettings {
   brainDir: string
+  /** profile that describes images for models that cannot see them */
+  visionProfileId?: string
   claudePath?: string
   codexPath?: string
   lastCwd?: string
@@ -185,6 +206,60 @@ export interface StartSessionInput {
   title?: string
 }
 
+export interface GpuInfo {
+  name: string
+  vramGb: number
+}
+
+export interface HardwareInfo {
+  ramGb: number
+  cpu: string
+  cores: number
+  gpus: GpuInfo[]
+  /** memory available for a model on the GPU (0 = CPU only) */
+  bestVramGb: number
+}
+
+export interface LocalModel {
+  tag: string
+  sizeGb: number
+  vision: boolean
+  tools: boolean
+  thinking: boolean
+}
+
+export interface OllamaStatus {
+  installed: boolean
+  running: boolean
+  version?: string
+  models: LocalModel[]
+  contextLength?: number
+}
+
+export type Fit = 'gpu' | 'cpu' | 'no'
+
+export interface CatalogModel {
+  tag: string
+  title: string
+  vramGb: number
+  vision: boolean
+  /** how it compares with the Claude models the user knows (an estimate, not a benchmark) */
+  equivalent: string
+  tier: 1 | 2 | 3 | 4
+  notes: string
+  fit: Fit
+  installed: boolean
+}
+
+export interface SystemCheck {
+  id: string
+  label: string
+  ok: boolean
+  detail: string
+  fixLabel?: string
+  optional?: boolean
+}
+
 export interface JoltyApi {
   profiles: {
     list(): Promise<Profile[]>
@@ -198,10 +273,10 @@ export interface JoltyApi {
   }
   sessions: {
     list(): Promise<SessionMeta[]>
-    external(profileId: string, cwd: string): Promise<ExternalSession[]>
+    external(profileId: string, cwd?: string): Promise<ExternalSession[]>
     start(input: StartSessionInput): Promise<SessionMeta>
     history(sessionId: string): Promise<ChatItem[]>
-    send(sessionId: string, text: string): Promise<void>
+    send(sessionId: string, text: string, attachments?: Attachment[]): Promise<void>
     interrupt(sessionId: string): Promise<void>
     setModel(sessionId: string, model: string): Promise<void>
     setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void>
@@ -213,6 +288,19 @@ export interface JoltyApi {
   usage: {
     summary(): Promise<UsageSummary[]>
     refreshLimits(profileId: string): Promise<RateLimitSnapshot | undefined>
+  }
+  local: {
+    hardware(): Promise<HardwareInfo>
+    status(): Promise<OllamaStatus>
+    catalog(): Promise<CatalogModel[]>
+    pull(tag: string): Promise<void>
+    remove(tag: string): Promise<void>
+    createProfile(tag: string): Promise<Profile>
+    installOllama(): Promise<void>
+  }
+  system: {
+    check(): Promise<SystemCheck[]>
+    fix(id: string): Promise<void>
   }
   codexImport: {
     detect(profileId: string, cwd?: string): Promise<{ items: { itemType: string; description: string; cwd: string | null }[] }>

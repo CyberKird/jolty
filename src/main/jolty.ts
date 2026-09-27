@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import fs from 'fs'
 import type {
   AccountStatus,
+  Attachment,
   ChatEvent,
   ChatItem,
   EngineKind,
@@ -21,6 +22,8 @@ import type {
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
 import type { EngineDriver, EngineHost, EngineSession } from './engines/types'
+import { DESCRIBE_PROMPT } from './engines/claude'
+import * as local from './local'
 import { claudeSettingsOverride } from './runtime'
 import * as store from './store'
 
@@ -110,6 +113,8 @@ export class Jolty {
       isDefaultDir: input.engine === 'claude' && input.auth !== 'subscription',
       baseUrl: input.baseUrl?.trim() || undefined,
       models: input.models?.map((m) => m.trim()).filter(Boolean),
+      vision: input.vision,
+      local: input.local,
       color: COLORS[all.length % COLORS.length]
     }
     store.saveProfiles([...all, profile])
@@ -124,6 +129,7 @@ export class Jolty {
     if (patch.name !== undefined) p.name = patch.name.trim() || p.name
     if (patch.baseUrl !== undefined) p.baseUrl = patch.baseUrl.trim() || undefined
     if (patch.models !== undefined) p.models = patch.models.map((m) => m.trim()).filter(Boolean)
+    if (patch.vision !== undefined) p.vision = patch.vision
     if (patch.secret !== undefined) store.setSecret(id, patch.secret.trim() || undefined)
     store.saveProfiles(all)
     if (p.engine === 'codex') this.codex.reset(id)
@@ -247,7 +253,7 @@ export class Jolty {
     store.saveSessions(all)
   }
 
-  async externalSessions(profileId: string, cwd: string): Promise<ExternalSession[]> {
+  async externalSessions(profileId: string, cwd?: string): Promise<ExternalSession[]> {
     const p = this.profile(profileId)
     const known = new Set(store.loadSessions().map((s) => s.engineSessionId).filter(Boolean))
     const list = await this.driver(p.engine).externalSessions(p, cwd)
@@ -297,15 +303,89 @@ export class Jolty {
     return s
   }
 
-  async sendMessage(sessionId: string, text: string): Promise<void> {
+  /** Whether the session's current model can read images itself. */
+  private async canSee(meta: SessionMeta): Promise<boolean> {
+    const p = this.profile(meta.profileId)
+    if (p.engine === 'claude') return p.auth === 'endpoint' ? Boolean(p.vision) : true
+    try {
+      const models = await this.codex.models(p)
+      const m = models.find((x) => x.id === meta.model) || models.find((x) => x.isDefault)
+      return m?.vision !== false
+    } catch {
+      return true
+    }
+  }
+
+  /** The profile that describes images for models without vision. */
+  visionProfile(): Profile | undefined {
+    const all = store.loadProfiles()
+    const chosen = all.find((p) => p.id === store.loadSettings().visionProfileId)
+    if (chosen) return chosen
+    return (
+      all.find((p) => p.engine === 'claude' && p.auth !== 'endpoint') ||
+      all.find((p) => p.engine === 'codex') ||
+      all.find((p) => p.engine === 'claude' && p.vision)
+    )
+  }
+
+  private async describeImages(sessionId: string, images: Attachment[]): Promise<string> {
+    const vp = this.visionProfile()
+    if (!vp) throw new Error('Niciun profil nu poate citi imagini: adaugă un profil Claude sau un model local cu vision.')
+    this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: `Modelul curent nu vede imagini: le descrie „${vp.name}”...`, level: 'info' } })
+    const text = await this.driver(vp.engine).describe(vp, images, DESCRIBE_PROMPT)
+    return images.length === 1
+      ? `[Imagine atașată: ${images[0].name}. Modelul tău nu o poate vedea, așa că iată descrierea ei făcută de ${vp.name}:]\n${text}\n[Sfârșitul descrierii]`
+      : `[${images.length} imagini atașate (${images.map((i) => i.name).join(', ')}). Descrierea lor, făcută de ${vp.name}:]\n${text}\n[Sfârșitul descrierii]`
+  }
+
+  async sendMessage(sessionId: string, text: string, attachments: Attachment[] = [], display?: string): Promise<void> {
     const s = this.liveSession(sessionId)
     if (s.meta.title === 'Conversație nouă') {
-      s.meta.title = text.replace(/\s+/g, ' ').trim().slice(0, 60) || s.meta.title
+      s.meta.title = text.replace(/\s+/g, ' ').trim().slice(0, 60) || attachments[0]?.name || s.meta.title
       this.saveMeta(s.meta)
       this.send({ type: 'meta', sessionId, meta: s.meta })
     }
-    await s.send(text)
+    this.onEngineEvent({
+      type: 'item',
+      sessionId,
+      item: { kind: 'user', id: randomUUID(), text: display ?? text, images: attachments.map((a) => ({ name: a.name, dataUrl: `data:${a.mime};base64,${a.data}` })) }
+    })
+    let prompt = text
+    let images = attachments
+    if (attachments.length && !(await this.canSee(s.meta))) {
+      try {
+        prompt = `${await this.describeImages(sessionId, attachments)}\n\n${text}`
+        images = []
+      } catch (err) {
+        this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: `Nu am putut descrie imaginea: ${err instanceof Error ? err.message : err}`, level: 'error' } })
+        return
+      }
+    }
+    await s.send(prompt || 'Uită-te la imaginea atașată.', images)
     this.saveMeta(s.meta)
+  }
+
+  // -------------------------------------------------------------------------
+  // Local models (Ollama)
+  // -------------------------------------------------------------------------
+  async pullLocal(tag: string): Promise<void> {
+    await local.pull(tag, (e) => this.send(e))
+  }
+
+  async createLocalProfile(tag: string): Promise<Profile> {
+    const info = await local.modelInfo(tag)
+    if (!info.tools) throw new Error(`${tag} nu știe să folosească unelte, deci nu poate lucra ca agent (citit și editat fișiere).`)
+    const big = await local.ensureLargeContext(tag)
+    return this.createProfile({
+      name: `Local · ${tag.replace(/:latest$/, '')}`,
+      engine: 'claude',
+      auth: 'endpoint',
+      baseUrl: local.OLLAMA_URL,
+      models: [big],
+      secret: 'ollama',
+      vision: info.vision,
+      local: true
+    })
   }
 
   async interrupt(sessionId: string): Promise<void> {
@@ -344,8 +424,8 @@ export class Jolty {
     })
     meta.handoffFrom = src.id
     this.saveMeta(meta)
-    this.transcript(meta.id).push({ kind: 'notice', id: randomUUID(), text: `Continuare din „${src.title}” (${ENGINE_NAMES[src.engine]}).`, level: 'info' })
-    await this.sendMessage(meta.id, prompt)
+    const display = `Preia conversația „${src.title}” din ${ENGINE_NAMES[src.engine]}${srcProfile ? ` (${srcProfile.name})` : ''} și continuă de unde a rămas.`
+    await this.sendMessage(meta.id, prompt, [], display)
     return meta
   }
 
