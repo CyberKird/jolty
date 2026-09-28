@@ -77,7 +77,17 @@ app.whenReady().then(async () => {
     globalThis.fetch = reply({ data: { limit_remaining: null, usage: 3 } }) as typeof fetch
     const or = await fetchBalance(ep('https://openrouter.ai/api'), 'sk-or')
     check(or?.amount === undefined && Boolean(or?.note), 'OpenRouter key without a limit says so instead of inventing a balance')
-    check(!hasBalance(ep('https://api.xiaomimimo.com/anthropic')) && !hasBalance(ep('http://api.deepseek.com/anthropic')) && !hasBalance(ep('https://evil.example/api.deepseek.com')), 'no balance call for undocumented providers, plain http or look-alike hosts')
+    check(!hasBalance(ep('http://api.deepseek.com/anthropic')) && !hasBalance(ep('https://evil.example/api.deepseek.com')), 'no balance call for plain http or look-alike hosts')
+    let mimoUrl = ''
+    let mimoCookie = ''
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      mimoUrl = String(url)
+      mimoCookie = (init?.headers as Record<string, string>)?.Cookie ?? ''
+      return new Response(JSON.stringify({ code: 0, data: { balance: '8.50', currency: 'CNY', cashBalance: '5', giftBalance: '3.50' } }), { status: 200 })
+    }) as typeof fetch
+    const mimo = await fetchBalance(ep('https://api.xiaomimimo.com/anthropic'), undefined, 'api-platform_serviceToken=x; userId=y')
+    check(mimo?.amount === 8.5 && mimo.currency === 'CNY' && mimoUrl === 'https://platform.xiaomimimo.com/api/v1/balance' && mimoCookie === 'api-platform_serviceToken=x; userId=y', 'MiMo balance from the console with the cookie, not the API key')
+    check((await fetchBalance(ep('https://api.xiaomimimo.com/anthropic'), undefined, undefined)) === undefined, 'MiMo without a cookie does not call or invent a balance')
     globalThis.fetch = real
     const u = { profileId: 'x', engine: 'claude' as const, model: 'm', inputTokens: 1e6, outputTokens: 5e5, cacheReadTokens: 2e6, cacheWriteTokens: 0, ts: 0 }
     check(endpointCost(u, ep('https://api.deepseek.com/anthropic', { price: { input: 0.3, output: 1.2, cacheRead: 0.03 } })) === 0.3 + 0.6 + 0.06, 'real cost from the provider prices')

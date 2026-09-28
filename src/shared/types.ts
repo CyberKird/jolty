@@ -21,6 +21,8 @@ export interface Profile {
   /** endpoint profiles: model ids offered in the picker (first one is the default) */
   models?: string[]
   hasSecret?: boolean
+  /** endpoint profiles with a cookie-only balance (Xiaomi MiMo): a console Cookie header is stored */
+  hasCookie?: boolean
   /** endpoint profiles: whether the model can read images itself */
   vision?: boolean
   /** created from the local-models page (Ollama) */
@@ -53,6 +55,7 @@ export interface ProfileInput {
   baseUrl?: string
   models?: string[]
   secret?: string
+  cookie?: string
   vision?: boolean
   local?: boolean
   price?: TokenPrice | null

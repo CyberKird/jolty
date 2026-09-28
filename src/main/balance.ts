@@ -9,6 +9,8 @@ interface Provider {
   host: RegExp
   url: (base: URL) => string
   parse: (json: any, base: URL) => Parsed
+  /** true when the provider authenticates with browser cookies, not the API key (Xiaomi MiMo) */
+  cookieAuth?: boolean
 }
 
 const num = (v: unknown): number | undefined => {
@@ -46,6 +48,17 @@ const PROVIDERS: Provider[] = [
       const amount = num(j.data.limit_remaining)
       return amount === undefined ? { note: 'Cheia nu are limită. Soldul contului îl vezi pe openrouter.ai.' } : { amount, currency: 'USD' }
     }
+  },
+  // https://platform.xiaomimimo.com console: balance is cookie-only, not the API key
+  {
+    host: /^api\.xiaomimimo\.com$/,
+    cookieAuth: true,
+    url: () => 'https://platform.xiaomimimo.com/api/v1/balance',
+    parse: (j) => {
+      if (j?.code !== 0) return undefined
+      const amount = num(j?.data?.balance)
+      return amount === undefined ? undefined : { amount, currency: String(j.data.currency || 'CNY') }
+    }
   }
 ]
 
@@ -65,11 +78,23 @@ export function hasBalance(profile: Profile): boolean {
   return Boolean(providerOf(profile))
 }
 
-export async function fetchBalance(profile: Profile, secret: string): Promise<ProviderBalance | undefined> {
+export async function fetchBalance(profile: Profile, secret: string | undefined, cookie: string | undefined): Promise<ProviderBalance | undefined> {
   const found = providerOf(profile)
   if (!found) return undefined
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (found.provider.cookieAuth) {
+    if (!cookie) return undefined
+    headers.Cookie = cookie
+    headers.Origin = 'https://platform.xiaomimimo.com'
+    headers.Referer = 'https://platform.xiaomimimo.com/#/console/balance'
+    headers['x-timeZone'] = 'UTC+01:00'
+    headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
+  } else {
+    if (!secret) return undefined
+    headers.Authorization = `Bearer ${secret}`
+  }
   const res = await fetch(found.provider.url(found.base), {
-    headers: { Authorization: `Bearer ${secret}`, Accept: 'application/json' },
+    headers,
     signal: AbortSignal.timeout(10000)
   })
   if (!res.ok) throw new Error(`Soldul nu a putut fi citit (HTTP ${res.status})`)

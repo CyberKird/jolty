@@ -223,7 +223,7 @@ export function refreshLimitsSoon(p: Profile, force = false): void {
   if (p.local || (!force && Date.now() - (lastProbe.get(p.id) || 0) < 60e3)) return
   if (p.auth === 'endpoint') {
     // pay-as-you-go providers: what is left on the account instead of 5 h / 7 d windows
-    if (!p.hasSecret) return
+    if (!p.hasSecret && !p.hasCookie) return
     lastProbe.set(p.id, Date.now())
     api.usage
       .balance(p.id)

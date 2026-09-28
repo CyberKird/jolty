@@ -106,8 +106,10 @@ export class Jolty {
   // Profiles
   // -------------------------------------------------------------------------
   profiles(): Profile[] {
-    const secrets = new Set(store.loadProfiles().filter((p) => store.getSecret(p.id)).map((p) => p.id))
-    return store.loadProfiles().map((p) => ({ ...p, hasSecret: secrets.has(p.id) }))
+    const all = store.loadProfiles()
+    const secrets = new Set(all.filter((p) => store.getSecret(p.id)).map((p) => p.id))
+    const cookies = new Set(all.filter((p) => store.getSecret(p.id + ':cookie')).map((p) => p.id))
+    return all.map((p) => ({ ...p, hasSecret: secrets.has(p.id), hasCookie: cookies.has(p.id) }))
   }
 
   profile(id: string): Profile {
@@ -139,6 +141,7 @@ export class Jolty {
     }
     store.saveProfiles([...all, profile])
     if (input.secret) store.setSecret(profile.id, input.secret.trim())
+    if (input.cookie) store.setSecret(profile.id + ':cookie', input.cookie.trim())
     return profile
   }
 
@@ -153,6 +156,7 @@ export class Jolty {
     if (patch.vision !== undefined) p.vision = patch.vision
     if (patch.price !== undefined) p.price = patch.price || undefined
     if (patch.secret !== undefined) store.setSecret(id, patch.secret.trim() || undefined)
+    if (patch.cookie !== undefined) store.setSecret(id + ':cookie', patch.cookie.trim() || undefined)
     store.saveProfiles(all)
     if (p.engine === 'codex') this.codex.reset(id)
     return p
@@ -164,6 +168,7 @@ export class Jolty {
     for (const s of store.loadSessions().filter((x) => x.profileId === id)) this.removeSession(s.id)
     if (p.engine === 'codex') this.codex.reset(id)
     store.setSecret(id, undefined)
+    store.setSecret(id + ':cookie', undefined)
     const dir = store.profileDir(p)
     if (dir) fs.rmSync(dir, { recursive: true, force: true })
     store.saveProfiles(store.loadProfiles().filter((x) => x.id !== id))
@@ -633,7 +638,9 @@ export class Jolty {
   async balance(profileId: string): Promise<ProviderBalance | undefined> {
     const p = this.profile(profileId)
     const secret = store.getSecret(p.id)
-    return secret ? fetchBalance(p, secret) : undefined
+    const cookie = store.getSecret(p.id + ':cookie')
+    if (!secret && !cookie) return undefined
+    return fetchBalance(p, secret, cookie)
   }
 
   async refreshLimits(profileId: string): Promise<RateLimitSnapshot | undefined> {

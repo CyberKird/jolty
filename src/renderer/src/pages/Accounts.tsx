@@ -177,12 +177,20 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
   const [auth, setAuth] = useState<AuthKind>(profile?.auth || 'subscription')
   const [name, setName] = useState(profile?.name || '')
   const [secret, setSecret] = useState('')
+  const [cookie, setCookie] = useState('')
   const [baseUrl, setBaseUrl] = useState(profile?.baseUrl || '')
   const [preset, setPreset] = useState<string>()
   const [models, setModels] = useState(profile?.models?.join(', ') || '')
   const [vision, setVision] = useState(Boolean(profile?.vision))
   const [price, setPrice] = useState({ input: String(profile?.price?.input ?? ''), output: String(profile?.price?.output ?? ''), cacheRead: String(profile?.price?.cacheRead ?? '') })
   const editing = Boolean(profile)
+  const isMiMo = (() => {
+    try {
+      return new URL(baseUrl).hostname === 'api.xiaomimimo.com'
+    } catch {
+      return false
+    }
+  })()
 
   // $ per 1M tokens; both input and output are needed for a cost, cache is optional
   const parsedPrice = (): ProfileInput['price'] => {
@@ -203,11 +211,12 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
       baseUrl: auth === 'endpoint' ? baseUrl : undefined,
       models: auth === 'endpoint' ? models.split(',').map((m) => m.trim()).filter(Boolean) : undefined,
       secret: secret || undefined,
+      cookie: isMiMo ? cookie || undefined : undefined,
       vision: auth === 'endpoint' ? vision : undefined,
       price: auth === 'endpoint' ? parsedPrice() : undefined
     }
     try {
-      if (profile) await api.profiles.update(profile.id, { name: input.name, baseUrl: input.baseUrl, models: input.models, vision: input.vision, price: input.price, ...(secret ? { secret } : {}) })
+      if (profile) await api.profiles.update(profile.id, { name: input.name, baseUrl: input.baseUrl, models: input.models, vision: input.vision, price: input.price, ...(secret ? { secret } : {}), ...(isMiMo && cookie ? { cookie } : {}) })
       else await api.profiles.create(input)
       await loadProfiles()
       toast(editing ? 'Profil salvat' : 'Profil adăugat')
@@ -339,6 +348,15 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
             </label>
             <input className="input mono" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="sk-..." />
             <div className="hint">Se păstrează criptată cu protecția Windows a contului tău.</div>
+          </div>
+        )}
+        {auth === 'endpoint' && isMiMo && (
+          <div className="field">
+            <label>
+              <KeyRound size={12} /> Cookie platform.xiaomimimo.com {editing && profile?.hasCookie ? '(lasă gol ca să-l păstrezi)' : ''}
+            </label>
+            <input className="input mono" type="password" value={cookie} onChange={(e) => setCookie(e.target.value)} placeholder="api-platform_serviceToken=...; userId=..." />
+            <div className="hint">Soldul MiMo se citește doar cu cookie-urile consolei, nu cu cheia API. Autentifică-te pe platform.xiaomimimo.com, apoi copiază header-ul Cookie dintr-un request. Expiră în ~24 h.</div>
           </div>
         )}
         <div className="row">
