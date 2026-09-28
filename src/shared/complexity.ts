@@ -243,3 +243,21 @@ export function recommend(a: Assessment, groups: ModelGroupLite[], current: Pick
   }
   return none
 }
+
+// ---------------------------------------------------------------------------
+// Auto-delegation: big mechanical work to a cheap endpoint or local model
+// ---------------------------------------------------------------------------
+const DELEGATE = /\b(refactor|rescrie|scrie.{0,20}(teste?|test|doc|documenta|tipuri|types)|tests? for|docstring|documenta|tipuri|\btypes\b|lint|formatat|migrat|convertit|sumariz|rezumat|tradu)/i
+const SECRET = /\b(sk-[a-z0-9]|api[_-]?key|token|password|secret|parola|authorization)\b/i
+
+/**
+ * New chats only: an already running session keeps its engine and model.
+ * ponytail: 20 words is the cost floor; raise it if short refactors start getting routed away.
+ */
+export function delegatePick(text: string, profiles: Profile[], currentId?: string): Profile | undefined {
+  if (text.trim().split(/\s+/).filter(Boolean).length < 20) return undefined
+  if (SECRET.test(text) || !DELEGATE.test(text)) return undefined
+  const current = profiles.find((p) => p.id === currentId)
+  if (current?.local || current?.auth === 'endpoint') return undefined
+  return profiles.find((p) => p.auth === 'endpoint' && p.engine === 'claude' && p.hasSecret) || profiles.find((p) => p.local)
+}

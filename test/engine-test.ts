@@ -4,9 +4,9 @@ import { app } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import type { ChatEvent, ChatItem } from '../src/shared/types'
+import type { ChatEvent, ChatItem, Profile } from '../src/shared/types'
 import { endpointCost, fetchBalance, hasBalance } from '../src/main/balance'
-import { assess, recommend } from '../src/shared/complexity'
+import { assess, delegatePick, recommend } from '../src/shared/complexity'
 import { TaskBoard } from '../src/main/engines/tasks'
 import { syncSettings } from '../src/main/runtime'
 import { Jolty } from '../src/main/jolty'
@@ -155,6 +155,19 @@ app.whenReady().then(async () => {
     check(r6.kind === 'weak' && r6.target?.model.id === 'opus' && r6.target.effort === 'xhigh', 'Opus on low for a hard task -> raise the effort, same model')
     const r7 = recommend(hard, [ds, { ...claude, error: 'not logged in' }], { profileId: 'ds' }, {})
     check(r7.kind === 'weak' && !r7.target, 'no connected model is strong enough: says so, suggests nothing it cannot run')
+
+    // ---------------- auto-delegation of mechanical work to a cheap model ----------------
+    const cheap: Profile = { ...prof('ds', 'claude', 'endpoint'), hasSecret: true }
+    const sub = prof('claude', 'claude', 'subscription') as Profile
+    const local: Profile = { id: 'ollama', name: 'ollama', engine: 'claude', auth: 'endpoint', isDefaultDir: true, color: '', local: true }
+    const list = [sub, cheap]
+    const mechanical = 'Refactorizează tot serviciul de facturare ca să folosească tipuri TypeScript peste tot și scrie teste pentru fiecare rută în parte acum'
+    check(delegatePick(mechanical, list, 'claude')?.id === 'ds', 'a long mechanical task on a subscription goes to the cheap endpoint')
+    check(delegatePick(mechanical, list, 'ds') === undefined, 'already on the cheap endpoint: no hop')
+    check(delegatePick('refactorizează', list, 'claude') === undefined, 'below the size floor: stays where it is')
+    check(delegatePick('scrie teste pentru modulul de plată folosind cheia sk-abc123 și token-ul de auth pentru toate mediile', list, 'claude') === undefined, 'looks like it holds a secret: never routed to a third-party endpoint')
+    check(delegatePick('explică-mi de ce interfața se mișcă greu când derulez lista lungă de sesiuni din bara laterală', list, 'claude') === undefined, 'no mechanical verb: no delegation')
+    check(delegatePick(mechanical, [sub, local], 'claude')?.id === 'ollama', 'falls back to a local model when no endpoint key is set')
   }
 
   // ---------------- Claude Code via an Anthropic-compatible endpoint ----------------

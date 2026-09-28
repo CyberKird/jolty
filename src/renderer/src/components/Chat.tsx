@@ -1,6 +1,6 @@
 import { ArrowRight, ArrowUp, FolderOpen, Globe, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { assess, recommend } from '@shared/complexity'
+import { assess, delegatePick, recommend } from '@shared/complexity'
 import { usageRisk } from '@shared/usage-risk'
 import type { Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import { api, basename, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } from '../store'
@@ -757,7 +757,16 @@ export function NewChat() {
           }
           if (!profileId) return
           try {
-            const meta = await api.sessions.start({ profileId, cwd, model: model || undefined, effort: effort || undefined, permissionMode: mode, browser })
+            const cheap = delegatePick(text, profiles, profileId)
+            if (cheap) toast(`Delegat către ${cheap.name}: sarcină mecanică`)
+            const meta = await api.sessions.start({
+              profileId: cheap?.id || profileId,
+              cwd,
+              model: cheap ? undefined : model || undefined,
+              effort: cheap ? undefined : effort || undefined,
+              permissionMode: mode,
+              browser
+            })
             await loadSessions()
             await openSession(meta.id)
             await api.sessions.send(meta.id, text, atts)
