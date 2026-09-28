@@ -121,10 +121,26 @@ export function loadLimits(): Record<string, RateLimitSnapshot> {
   return readJson<Record<string, RateLimitSnapshot>>('limits.json', {})
 }
 
-export function saveLimit(snapshot: RateLimitSnapshot): void {
+/**
+ * Merges into the stored snapshot instead of replacing it: a failed read (empty windows) or a
+ * live stream event (only the window it hit) must not wipe the other windows. A window whose
+ * reset time has passed is dropped, since its old percentage no longer applies.
+ */
+export function saveLimit(snapshot: RateLimitSnapshot): RateLimitSnapshot {
   const all = loadLimits()
-  all[snapshot.profileId] = snapshot
+  const prev = all[snapshot.profileId]
+  const now = Date.now()
+  const byLabel = new Map((prev?.windows || []).filter((w) => !w.resetsAt || w.resetsAt > now).map((w) => [w.label, w]))
+  for (const w of snapshot.windows) byLabel.set(w.label, w)
+  const merged: RateLimitSnapshot = {
+    ...snapshot,
+    windows: [...byLabel.values()],
+    // keep the plan note when a failed read only says "could not read"
+    note: snapshot.windows.length || !prev?.note ? snapshot.note : snapshot.note && byLabel.size ? prev.note : snapshot.note
+  }
+  all[snapshot.profileId] = merged
   writeJson('limits.json', all)
+  return merged
 }
 
 // ---------------------------------------------------------------------------

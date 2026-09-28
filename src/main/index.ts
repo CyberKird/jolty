@@ -1,8 +1,9 @@
-import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, shell, type MenuItemConstructorOptions } from 'electron'
 import fs from 'fs'
 import path from 'path'
-import type { ChatEvent } from '@shared/types'
-import { BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers } from './browser'
+import { fileURLToPath } from 'url'
+import type { ChatEvent, MenuTarget } from '@shared/types'
+import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers } from './browser'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
 import * as updater from './updater'
@@ -19,8 +20,20 @@ function openWeb(url: unknown): void {
   }
 }
 
+/** A link target from chat text as a Windows path: file:// URLs and /E:/... forms included. */
+function localPath(href: string): string {
+  try {
+    if (/^file:/i.test(href)) return fileURLToPath(href)
+    href = decodeURI(href)
+  } catch {
+    // malformed URL or escape: use the text as written
+  }
+  return path.normalize(href.replace(/^\/(?=[a-z]:)/i, ''))
+}
+
 declare const __JOLTY_VERSION__: string
 
+const APP_ID = 'com.joltarise.jolty'
 let win: BrowserWindow | undefined
 let jolty: Jolty
 
@@ -40,14 +53,16 @@ function send(e: ChatEvent): void {
 }
 
 function createWindow(): void {
+  const icon = app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.ico')
+    : path.join(__dirname, '../../build/icon.ico')
   win = new BrowserWindow({
     width: 1320,
     height: 860,
     minWidth: 960,
     minHeight: 600,
     title: 'Jolty',
-    // the installed exe carries build/icon.ico; in development the window needs it explicitly for the taskbar
-    ...(app.isPackaged ? {} : { icon: path.join(__dirname, '../../build/icon.ico') }),
+    icon,
     backgroundColor: '#020204',
     autoHideMenuBar: true,
     show: false,
@@ -61,6 +76,9 @@ function createWindow(): void {
       sandbox: false
     }
   })
+  if (process.platform === 'win32' && app.isPackaged) {
+    win.setAppDetails({ appId: APP_ID, appIconPath: icon, relaunchCommand: process.execPath, relaunchDisplayName: 'Jolty' })
+  }
   win.webContents.setWindowOpenHandler(({ url }) => {
     openWeb(url)
     return { action: 'deny' }
@@ -143,6 +161,31 @@ function registerIpc(): void {
   handle('app:openPath', async (p: string) => {
     await shell.openPath(p)
   })
+  handle('app:revealPath', (p: string) => shell.showItemInFolder(localPath(p)))
+  handle('app:contextMenu', (t: MenuTarget) => {
+    const items: MenuItemConstructorOptions[] = []
+    const href = typeof t?.href === 'string' ? t.href : ''
+    if (/^https?:\/\//i.test(href)) {
+      const b = activeBrowser()
+      items.push({ label: b ? `Deschide în ${b.name}` : 'Deschide în browser', click: () => (b ? b.open(href) : openWeb(href)) })
+      items.push({ label: 'Copiază linkul', click: () => clipboard.writeText(href) })
+    } else if (href && !href.startsWith('#')) {
+      const p = localPath(href)
+      items.push({ label: 'Deschide', click: () => void shell.openPath(p) })
+      items.push({ label: 'Arată în Explorer', click: () => shell.showItemInFolder(p) })
+      items.push({ label: 'Copiază calea', click: () => clipboard.writeText(p) })
+    }
+    if (t?.selection) {
+      if (items.length) items.push({ type: 'separator' })
+      items.push({ label: 'Copiază selecția', click: () => clipboard.writeText(t.selection!) })
+    }
+    if (t?.text || t?.markdown) {
+      if (items.length) items.push({ type: 'separator' })
+      if (t.text) items.push({ label: 'Copiază mesajul', click: () => clipboard.writeText(t.text!) })
+      if (t.markdown) items.push({ label: 'Copiază mesajul ca Markdown', click: () => clipboard.writeText(t.markdown!) })
+    }
+    if (items.length && win) Menu.buildFromTemplate(items).popup({ window: win })
+  })
   handle('app:version', () => __JOLTY_VERSION__)
 }
 
@@ -150,7 +193,7 @@ function registerIpc(): void {
 if (!app.requestSingleInstanceLock()) {
   app.exit(0)
 } else {
-  app.setAppUserModelId('com.joltarise.jolty')
+  app.setAppUserModelId(APP_ID)
   app.on('second-instance', () => {
     if (!win || win.isDestroyed()) return
     if (win.isMinimized()) win.restore()
@@ -167,6 +210,14 @@ if (!app.requestSingleInstanceLock()) {
         win?.focus()
       }
     )
+    // model lists refreshed in the background, so a newly released model is announced without opening the picker
+    const scanModels = (): void => {
+      for (const p of jolty.profiles()) if (p.engine === 'claude' && p.auth === 'subscription') void jolty.models(p.id).catch(() => undefined)
+    }
+    if (!process.env.JOLTY_TEST) {
+      setTimeout(scanModels, 30000)
+      setInterval(scanModels, 4 * 3600e3)
+    }
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })

@@ -219,6 +219,17 @@ function Composer(p: ComposerProps) {
               <span className="queued-order">{i + 1}</span>
               <span className="queued-text" title={q.text || q.atts.map((a) => a.name).join(', ')}>{q.text || q.atts.map((a) => a.name).join(', ')}</span>
               {q.atts.length > 0 && <span className="queued-files"><Paperclip size={11} /> {q.atts.length}</span>}
+              <button
+                className="queued-send"
+                onClick={() => {
+                  setQueue((x) => x.filter((item) => item.id !== q.id))
+                  void p.onSend(q.text, q.atts)
+                }}
+                aria-label="Trimite acum"
+                title="Trimite acum, fără să aștepți ca răspunsul curent să se termine"
+              >
+                <ArrowUp size={12} />
+              </button>
               <button onClick={() => setQueue((x) => x.filter((item) => item.id !== q.id))} aria-label="Scoate mesajul din așteptare" title="Scoate din așteptare">
                 <X size={12} />
               </button>
@@ -343,6 +354,16 @@ function Composer(p: ComposerProps) {
             otherProfileHint={p.otherProfileHint}
           />
           <ModePicker mode={p.mode} onMode={p.onMode} engine={engine} />
+          {engine !== 'hermes' && (
+            <button
+              className={`chrome-toggle ${p.mode === 'plan' ? 'on' : ''}`}
+              aria-pressed={p.mode === 'plan'}
+              onClick={() => p.onMode(p.mode === 'plan' ? DEFAULT_MODE : 'plan')}
+              title={p.mode === 'plan' ? 'Plan activ: clic ca să revii la Build, unde editează fișiere' : 'Comută în Plan: modelul doar cercetează și propune un plan, fără să modifice nimic'}
+            >
+              {p.mode === 'plan' ? 'Plan' : 'Build'}
+            </button>
+          )}
           <button
             className={`chrome-toggle ${p.browser ? 'on' : ''}`}
             disabled={engine === 'hermes'}

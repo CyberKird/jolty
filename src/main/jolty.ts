@@ -212,9 +212,10 @@ export class Jolty {
     this.send({ type: 'usage', usage: u })
   }
 
-  private recordLimits(s: RateLimitSnapshot): void {
-    store.saveLimit(s)
-    this.send({ type: 'limits', snapshot: s })
+  private recordLimits(s: RateLimitSnapshot): RateLimitSnapshot {
+    const merged = store.saveLimit(s)
+    this.send({ type: 'limits', snapshot: merged })
+    return merged
   }
 
   private transcript(sessionId: string): ChatItem[] {
@@ -567,6 +568,10 @@ export class Jolty {
     })
     meta.handoffFrom = src.id
     this.saveMeta(meta)
+    // Carry the visible conversation over so the text persists when switching models.
+    const carried = this.transcript(sessionId).map((x) => ({ ...x }))
+    this.transcripts.set(meta.id, carried)
+    store.saveTranscript(meta.id, carried)
     const display = `Preia conversația „${src.title}” din ${ENGINE_NAMES[src.engine]}${srcProfile ? ` (${srcProfile.name})` : ''} și continuă de unde a rămas.`
     await this.sendMessage(meta.id, prompt, [], display)
     return meta
@@ -634,8 +639,7 @@ export class Jolty {
   async refreshLimits(profileId: string): Promise<RateLimitSnapshot | undefined> {
     const p = this.profile(profileId)
     const snap = await this.driver(p.engine).limits(p)
-    if (snap) this.recordLimits(snap)
-    return snap
+    return snap ? this.recordLimits(snap) : undefined
   }
 
   async shutdown(): Promise<void> {

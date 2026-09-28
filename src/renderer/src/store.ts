@@ -273,6 +273,11 @@ export function resetIn(ms?: number): string {
   return `se resetează în ${Math.floor(hours / 24)} z ${hours % 24} h`
 }
 
+export function resetAt(ms?: number): string {
+  if (!ms || !Number.isFinite(ms)) return 'ora resetării indisponibilă'
+  return new Date(ms).toLocaleString('ro-RO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
 /** Status color for a usage percentage (never a series color). */
 export function levelColor(pct: number): string {
   if (pct >= 90) return 'var(--critical)'

@@ -2,7 +2,7 @@ import { KeyRound, LogIn, LogOut, Pencil, Plus, RefreshCw, Trash2 } from 'lucide
 import { useEffect, useState } from 'react'
 import type { AccountStatus, AuthKind, EngineKind, Profile, ProfileInput } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
-import { api, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } from '../store'
+import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
 
 const AUTH_LABEL: Record<AuthKind, string> = {
   subscription: 'Abonament',
@@ -30,9 +30,9 @@ export function LimitMeters({ profileId, compact }: { profileId: string; compact
         <div className="meter" key={w.label}>
           <div className="meter-head">
             <span>{w.label}</span>
-            <span className="muted">
+            <span className="muted meter-time" title={resetIn(w.resetsAt)}>
               <span className="pct" style={{ color: 'var(--white)' }}>{Math.round(w.usedPercent)}%</span>
-              {resetIn(w.resetsAt)}
+              <span>Reset: {resetAt(w.resetsAt)}</span>
             </span>
           </div>
           <div className="meter-track" role="meter" aria-valuenow={Math.round(w.usedPercent)} aria-valuemin={0} aria-valuemax={100} aria-label={w.label}>

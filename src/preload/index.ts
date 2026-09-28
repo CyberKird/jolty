@@ -89,6 +89,8 @@ const api: JoltyApi = {
     pickFolder: () => call('app:pickFolder'),
     openExternal: (url) => call('app:openExternal', url),
     openPath: (p) => call('app:openPath', p),
+    revealPath: (p) => call('app:revealPath', p),
+    contextMenu: (t) => call('app:contextMenu', t),
     version: () => call('app:version')
   }
 }

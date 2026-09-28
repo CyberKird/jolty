@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
-import { basename, useStore, type Draft } from '../store'
+import { api, basename, useStore, type Draft } from '../store'
 import { toolKind } from './Messages'
 import { DiffView, highlight, langOf } from './Rich'
 
@@ -111,7 +111,7 @@ function Signal({ phase }: { phase: Phase }) {
 }
 
 // ---------------------------------------------------------------------------
-// Files: one square per file, rows per folder
+// Files touched in this conversation
 // ---------------------------------------------------------------------------
 interface FileCell {
   path: string
@@ -161,24 +161,24 @@ function fileCells(items: ChatItem[], cwd: string, drafts: Draft[]): FileCell[] 
 
 function FileMap({ items, cwd, drafts }: { items: ChatItem[]; cwd: string; drafts: Draft[] }) {
   const cells = useMemo(() => fileCells(items, cwd, drafts), [items, cwd, drafts])
-  const rows = useMemo(() => {
-    const m = new Map<string, FileCell[]>()
-    for (const c of cells) m.set(c.dir, [...(m.get(c.dir) || []), c])
-    return [...m.entries()].sort((a, b) => Math.max(...b[1].map((c) => c.last)) - Math.max(...a[1].map((c) => c.last))).slice(0, 9)
-  }, [cells])
-  const hot = cells.find((c) => c.hot)
-  if (!cells.length) return <div className="faint small">Fișierele pe care le citește sau le modifică apar aici, grupate pe foldere.</div>
+  const ordered = useMemo(() => [...cells].sort((a, b) => b.last - a.last), [cells])
+  if (!cells.length) return <div className="faint small">Fișierele citite sau modificate apar aici.</div>
   return (
     <>
-      {rows.map(([dir, list]) => (
-        <div className="filemap-row" key={dir}>
-          <div className="filemap-dir" title={dir}>
-            {dir === '/' ? basename(cwd) : dir}
-          </div>
-          <div className="filemap-cells">
-            {list.map((c) => (
-              <span key={c.path} className={`cell ${c.hot ? 'hot' : c.created ? 'created' : c.edited ? 'edited' : ''}`} title={c.path} />
-            ))}
+      {ordered.map((c) => (
+        <div
+          className="filemap-row"
+          key={c.path}
+          title={c.path}
+          onContextMenu={(e) => {
+            e.preventDefault()
+            void api.app.contextMenu({ href: /^[a-z]:\//i.test(c.path) ? c.path : `${cwd.replace(/[\\/]+$/, '')}/${c.path}` })
+          }}
+        >
+          <span className={`cell ${c.hot ? 'hot' : c.created ? 'created' : c.edited ? 'edited' : ''}`} aria-hidden="true" />
+          <div className="filemap-info">
+            <div className="filemap-name">{basename(c.path)}</div>
+            <div className="filemap-dir">{c.dir === '/' ? basename(cwd) : c.dir}</div>
           </div>
         </div>
       ))}
@@ -193,7 +193,6 @@ function FileMap({ items, cwd, drafts }: { items: ChatItem[]; cwd: string; draft
           <i className="cell created" /> creat
         </span>
       </div>
-      {hot && <div className="filemap-now">→ {hot.path}</div>}
     </>
   )
 }

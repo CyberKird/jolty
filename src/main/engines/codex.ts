@@ -11,6 +11,7 @@ import type {
   FileDiff,
   LimitWindow,
   ModelOption,
+  PlanStep,
   PermissionDecision,
   PermissionMode,
   Profile,
@@ -22,7 +23,7 @@ import { BROWSER_BLOCKED_TOOLS, BROWSER_PROMPT, BROWSER_READ_TOOLS, BROWSER_SERV
 import { getSecret } from '../store'
 import { truncate } from './format'
 import { JsonRpcProcess, type RpcNotification, type RpcRequest } from './jsonrpc'
-import { WRITING_RULES } from './prompt'
+import { PLAN_RULES, WRITING_RULES } from './prompt'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 
 // Loose views of the app-server payloads (the full types come from `codex app-server generate-ts`).
@@ -54,6 +55,11 @@ function windowLabel(mins: number | null | undefined, fallback: string): string 
 function toMs(t: number | null | undefined): number | undefined {
   if (!t) return undefined
   return t < 1e12 ? t * 1000 : t
+}
+
+function planItemSteps(text: string): PlanStep[] {
+  const lines = text.split('\n').map((line) => line.match(/^\s*(?:\d+[.)]|[-*])\s+(.+)$/)?.[1]?.trim()).filter((line): line is string => Boolean(line))
+  return (lines.length ? lines : [text.trim()]).filter(Boolean).map((step) => ({ text: step, status: 'pending' }))
 }
 
 export function codexLimitSnapshot(profileId: string, snap: Any): RateLimitSnapshot {
@@ -283,6 +289,7 @@ class CodexServer {
 class CodexSession implements EngineSession, ThreadListener {
   private threadId?: string
   private turnId?: string
+  private hasStructuredPlan = false
   private pending = new Map<string, number | string>()
   private liveOutput = new Map<string, string>()
   private diffs = new Map<string, FileDiff[]>()
@@ -313,7 +320,7 @@ class CodexSession implements EngineSession, ThreadListener {
       model: this.meta.model || null,
       approvalPolicy: mode.approvalPolicy,
       sandbox: mode.sandbox,
-      developerInstructions: this.meta.browser ? `${WRITING_RULES} ${BROWSER_PROMPT}` : WRITING_RULES,
+      developerInstructions: this.meta.browser ? `${WRITING_RULES} ${PLAN_RULES} ${BROWSER_PROMPT}` : `${WRITING_RULES} ${PLAN_RULES}`,
       ...(this.meta.browser ? { config: { mcp_servers: { [BROWSER_SERVER]: this.browserConfig() } } } : {})
     }
     const resp = this.meta.engineSessionId
@@ -352,6 +359,7 @@ class CodexSession implements EngineSession, ThreadListener {
     switch (method) {
       case 'turn/started':
         this.turnId = p.turn?.id
+        this.hasStructuredPlan = false
         this.turnUsage = { totalTokens: 0, inputTokens: 0, cachedInputTokens: 0, cacheWriteInputTokens: 0, outputTokens: 0 }
         this.host.emit({ type: 'status', sessionId: sid, status: 'running' })
         return
@@ -394,9 +402,13 @@ class CodexSession implements EngineSession, ThreadListener {
         // an empty reasoning summary only clutters the chat
         if (item.kind === 'reasoning' && !item.text && method === 'item/completed') return
         this.host.emit({ type: 'item', sessionId: sid, item })
+        if (method === 'item/completed' && p.item?.type === 'plan' && p.item.text && !this.hasStructuredPlan) {
+          this.host.emit({ type: 'plan', sessionId: sid, steps: planItemSteps(String(p.item.text)) })
+        }
         return
       }
       case 'turn/plan/updated':
+        this.hasStructuredPlan = true
         this.host.emit({
           type: 'plan',
           sessionId: sid,

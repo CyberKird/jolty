@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { shell } from 'electron'
+import { Notification, shell } from 'electron'
 import type {
   CanUseTool,
   EffortLevel,
@@ -31,9 +31,9 @@ import type {
 import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
 import { BROWSER_BLOCKED_TOOLS, BROWSER_PROMPT, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer } from '../browser'
 import { TaskBoard } from './tasks'
-import { getSecret, profileDir } from '../store'
+import { getSecret, loadSettings, profileDir, saveSettings } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultText, truncate } from './format'
-import { WRITING_RULES } from './prompt'
+import { PLAN_RULES, WRITING_RULES } from './prompt'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 
 type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
@@ -58,11 +58,16 @@ const LIMIT_LABELS: Record<string, string> = {
   overage: 'Extra'
 }
 
-const APPEND_PROMPT = `You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead. ${WRITING_RULES}`
+const APPEND_PROMPT = `You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead. ${WRITING_RULES} ${PLAN_RULES}`
 
 function percent(u: number | null | undefined): number | undefined {
-  if (u == null || Number.isNaN(u)) return undefined
+  if (u == null || !Number.isFinite(u) || u < 0) return undefined
   return u <= 1 ? u * 100 : u
+}
+
+function usagePercent(u: number | null | undefined): number | undefined {
+  if (u == null || !Number.isFinite(u) || u < 0 || u > 100) return undefined
+  return u
 }
 
 function toMs(t: number | string | null | undefined): number | undefined {
@@ -184,6 +189,41 @@ async function withProbe<T>(profile: Profile, fn: (q: Query) => Promise<T>, time
     if (timer) clearTimeout(timer)
     input.close()
     q.close()
+  }
+}
+
+/** The usage endpoint is rate limited (429 + retry-after), so remember when we may ask again. */
+const usageCooldown = new Map<string, number>()
+/**
+ * Reads plan limits with this profile's OAuth token. The SDK usage probe can report no
+ * limits even while this endpoint has data, and probing first may consume its rate limit.
+ */
+async function oauthUsage(profile: Profile): Promise<{ limits?: Record<string, unknown>; plan?: string; cooldownMs?: number }> {
+  const until = usageCooldown.get(profile.id)
+  if (until && Date.now() < until) return { cooldownMs: until - Date.now() }
+  try {
+    const dir = profileDir(profile) ?? path.join(os.homedir(), '.claude')
+    const creds = JSON.parse(fs.readFileSync(path.join(dir, '.credentials.json'), 'utf8')).claudeAiOauth as
+      | { accessToken?: string; expiresAt?: number; subscriptionType?: string }
+      | undefined
+    // an expired token gets refreshed by Claude Code on its next run; nothing to read until then
+    if (!creds?.accessToken || (creds.expiresAt && Date.now() > creds.expiresAt - 60000)) return {}
+    const res = await fetch('https://api.anthropic.com/api/oauth/usage', {
+      headers: { authorization: `Bearer ${creds.accessToken}`, 'anthropic-beta': 'oauth-2025-04-20' },
+      signal: AbortSignal.timeout(15000)
+    })
+    if (res.status === 429) {
+      const after = (Number(res.headers.get('retry-after')) || 300) * 1000
+      usageCooldown.set(profile.id, Date.now() + after)
+      return { cooldownMs: after }
+    }
+    if (!res.ok) return {}
+    usageCooldown.delete(profile.id)
+    const limits = await res.json()
+    if (!limits || typeof limits !== 'object' || Array.isArray(limits)) return {}
+    return { limits: limits as Record<string, unknown>, plan: creds.subscriptionType }
+  } catch {
+    return {}
   }
 }
 
@@ -633,6 +673,21 @@ function openLoginWindow(exe: string, args: string[], env: Record<string, string
   child.unref()
 }
 
+/** One Windows notification per model label never seen before; the first run only records the list. */
+function announceNewModels(labels: string[]): void {
+  const seen = loadSettings().seenModels
+  if (!seen) {
+    saveSettings({ seenModels: labels })
+    return
+  }
+  const fresh = labels.filter((l) => !seen.includes(l))
+  if (!fresh.length) return
+  saveSettings({ seenModels: [...seen, ...fresh] })
+  if (Notification.isSupported() && !process.env.JOLTY_TEST) {
+    new Notification({ title: `Model nou în Jolty: ${fresh.join(', ')}`, body: 'Îl găsești în lista de modele din chat.' }).show()
+  }
+}
+
 export class ClaudeDriver implements EngineDriver {
   private modelCache = new Map<string, { at: number; models: ModelOption[] }>()
 
@@ -681,14 +736,17 @@ export class ClaudeDriver implements EngineDriver {
     const cached = this.modelCache.get(profile.id)
     if (cached && Date.now() - cached.at < 10 * 60 * 1000) return cached.models
     const list = await withProbe(profile, (q) => q.supportedModels())
+    // aliases ("sonnet") come labelled "Sonnet"; the version the alias points to today is in the description
+    const versioned = (m: (typeof list)[number]): string | undefined => /^([A-Z][a-z]+ \d+(?:\.\d+)?) ·/.exec(m.description || '')?.[1]
     const models = list.map((m) => ({
       id: m.value,
-      label: m.displayName || m.value,
+      label: (m.value !== 'default' && versioned(m)) || m.displayName || m.value,
       description: m.description,
       isDefault: m.value === 'default',
       efforts: m.supportsEffort === false ? [] : m.supportedEffortLevels
     }))
     this.modelCache.set(profile.id, { at: Date.now(), models })
+    announceNewModels(models.filter((m) => m.id !== 'default').map((m) => m.label))
     return models
   }
 
@@ -743,17 +801,34 @@ export class ClaudeDriver implements EngineDriver {
 
   async limits(profile: Profile): Promise<RateLimitSnapshot | undefined> {
     if (profile.auth !== 'subscription') return undefined
-    const usage = await withProbe(profile, (q) => q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }))
-    if (!usage.rate_limits_available || !usage.rate_limits) {
-      return { profileId: profile.id, windows: [], note: 'Claude Code nu raportează limite pentru acest cont', updatedAt: Date.now() }
+    const direct = await oauthUsage(profile)
+    const usage = direct.limits || direct.cooldownMs
+      ? undefined
+      : await withProbe(profile, (q) => q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }))
+    const raw = (direct.limits ?? usage?.rate_limits) as
+      | Record<string, { utilization?: number | null; resets_at?: string | null; limit_dollars?: number | null } | null>
+      | undefined
+    if (!raw) {
+      const mins = direct?.cooldownMs ? Math.ceil(direct.cooldownMs / 60000) : 0
+      const note = mins
+        ? `Limitele se pot citi din nou în ~${mins} min (serverul a limitat cererile)`
+        : usage?.rate_limits_available
+          ? 'Limitele nu au putut fi citite acum'
+          : 'Contul nu raportează limite (cheie API sau endpoint propriu)'
+      return { profileId: profile.id, windows: [], note, updatedAt: Date.now() }
     }
     const windows: LimitWindow[] = []
-    for (const [key, w] of Object.entries(usage.rate_limits as Record<string, { utilization: number | null; resets_at: string | null } | null>)) {
-      const used = percent(w?.utilization)
+    for (const [key, w] of Object.entries(raw)) {
+      if (!LIMIT_LABELS[key] || !w || typeof w !== 'object' || Array.isArray(w)) continue
+      const used = usagePercent(w.utilization)
       if (used === undefined) continue
-      windows.push({ label: LIMIT_LABELS[key] || key, usedPercent: used, resetsAt: toMs(w?.resets_at) })
+      windows.push({ label: LIMIT_LABELS[key], usedPercent: used, resetsAt: toMs(w.resets_at) })
     }
-    return { profileId: profile.id, windows, note: usage.subscription_type ? `Plan: ${usage.subscription_type}` : undefined, updatedAt: Date.now() }
+    if (!windows.length) {
+      return { profileId: profile.id, windows: [], note: 'Limitele nu au putut fi citite acum', updatedAt: Date.now() }
+    }
+    const plan = usage?.subscription_type ?? direct?.plan
+    return { profileId: profile.id, windows, note: plan ? `Plan: ${plan}` : undefined, updatedAt: Date.now() }
   }
 
   /** Asks a Claude model to describe images for a model that cannot see them. */

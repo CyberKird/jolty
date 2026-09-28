@@ -761,12 +761,14 @@ a {
   word-break: break-word;
   animation: rise 0.3s var(--ease);
 }
+.message-attachments { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.message-attachments:first-child { margin-top: 0; }
 .msg-user .images {
   display: flex;
-  gap: 2px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
 }
+.msg-user .images a { display: block; border: 1px solid var(--line-2); }
 .msg-user .images img {
   max-width: 220px;
   max-height: 160px;
@@ -1136,7 +1138,7 @@ a {
 .attachment-image { width: 68px; }
 .attachment-file { display: flex; align-items: center; gap: 7px; max-width: min(190px, 100%); padding: 0 25px 0 10px; color: var(--grey); box-sizing: border-box; }
 .attachment-note { padding: 6px 16px 0; color: var(--warning); font-size: 11px; }
-.message-files { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+.message-files { display: flex; flex-wrap: wrap; gap: 5px; }
 .message-files span { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 6px; border: 1px solid var(--line-2); color: var(--grey); font-size: 11px; }
 .attachment img {
   width: 100%;
@@ -1321,6 +1323,8 @@ a {
   padding: 6px 0;
   font-size: 14px;
   color: var(--grey);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .plan-step .box {
   width: 12px;
@@ -1355,32 +1359,34 @@ a {
   transition: width 0.6s var(--ease);
 }
 
-/* file grid: one square per file, grouped by folder */
+/* File list with readable names and folder paths. */
 .filemap-row {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-columns: 13px minmax(0, 1fr);
   gap: 10px;
-  align-items: start;
-  padding: 7px 0;
+  align-items: center;
+  padding: 9px 0;
   border-top: 1px solid var(--line);
 }
 .filemap-row:first-child {
   border-top: 0;
+}
+.filemap-info {
+  min-width: 0;
+}
+.filemap-name {
+  font-family: var(--code);
+  font-size: 11.5px;
+  color: var(--white);
+  overflow-wrap: anywhere;
 }
 .filemap-dir {
   font-family: var(--label);
   font-size: 10px;
   letter-spacing: 0.04em;
   color: var(--grey);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-top: 1px;
-}
-.filemap-cells {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
+  overflow-wrap: anywhere;
+  margin-top: 3px;
 }
 .cell {
   width: 13px;
@@ -2606,6 +2612,17 @@ a {
   box-sizing: border-box;
   min-width: 0;
 }
+.meter-time {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  text-align: right;
+}
+.meter-time .pct {
+  margin-right: 0;
+}
 .queue-title { display: flex; gap: 6px; align-items: center; color: var(--volt); font: 10px var(--label); text-transform: uppercase; letter-spacing: 0.08em; padding: 1px 2px; }
 .queue-title span { color: var(--grey-2); }
 .queued {
@@ -2636,6 +2653,9 @@ a {
 .attachment-name { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .queued button:hover {
   color: var(--white);
+}
+.queued .queued-send:hover {
+  color: var(--volt);
 }
 
 /* context indicator in the chat header */

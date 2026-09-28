@@ -33,6 +33,14 @@ function mdFiles(p: string): string[] {
   }
 }
 
+function names(p: string): string[] {
+  try {
+    return fs.readdirSync(p)
+  } catch {
+    return []
+  }
+}
+
 /** Skills and slash commands from ~/.claude and the project's .claude, project first. */
 export function slashItems(cwd?: string): SlashItem[] {
   const roots = [...(cwd ? [{ dir: path.join(cwd, '.claude'), scope: 'proiect' as const }] : []), { dir: path.join(os.homedir(), '.claude'), scope: 'global' as const }]
@@ -52,6 +60,18 @@ export function slashItems(cwd?: string): SlashItem[] {
       seen.add(name)
       out.push({ name, description: (frontmatter(path.join(dir, 'commands', f)).description || '').slice(0, 200), kind: 'command', scope })
     }
+  }
+  // Plugin and Codex-shared skills are mirrored under ~/.agents/skills, mostly as symlinks,
+  // so list every entry and keep only the ones with a real SKILL.md.
+  const agentsDir = path.join(os.homedir(), '.agents', 'skills')
+  for (const d of names(agentsDir)) {
+    const file = path.join(agentsDir, d, 'SKILL.md')
+    if (!fs.existsSync(file)) continue
+    const fm = frontmatter(file)
+    const name = fm.name || d
+    if (seen.has(name)) continue
+    seen.add(name)
+    out.push({ name, description: (fm.description || '').slice(0, 200), kind: 'skill', scope: 'global' })
   }
   return out.sort((a, b) => a.name.localeCompare(b.name))
 }

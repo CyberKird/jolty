@@ -1,7 +1,7 @@
 import { Paperclip } from 'lucide-react'
 import { memo, useState } from 'react'
 import type { ChatItem, PermissionDecision, PermissionRequest } from '@shared/types'
-import { DiffView, Markdown, plainDashes } from './Rich'
+import { DiffView, Markdown, messageMenu, plainDashes } from './Rich'
 
 type Tool = Extract<ChatItem, { kind: 'tool' }>
 
@@ -83,21 +83,27 @@ export const MessageItem = memo(function MessageItem({ item, live }: { item: Cha
   switch (item.kind) {
     case 'user':
       return (
-        <div className="msg-user">
-          {item.images?.length ? (
-            <div className="images">
-              {item.images.map((img, i) => (
-                <img key={i} src={img.dataUrl} alt={img.name} title={img.name} />
-              ))}
+        <div className="msg-user" onContextMenu={(e) => messageMenu(e)}>
+          {item.text && <div className="message-text">{item.text}</div>}
+          {(item.images?.length || item.files?.length) ? (
+            <div className="message-attachments">
+              {item.images?.length ? (
+                <div className="images">
+                  {item.images.map((img, i) => (
+                    <a key={i} href={img.dataUrl} download={img.name} title={img.name}>
+                      <img src={img.dataUrl} alt={img.name} />
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+              {item.files?.length ? <div className="message-files">{item.files.map((file, i) => <span key={`${file.name}-${i}`} title={file.mime}><Paperclip size={11} />{file.name}</span>)}</div> : null}
             </div>
           ) : null}
-          {item.files?.length ? <div className="message-files">{item.files.map((file, i) => <span key={`${file.name}-${i}`} title={file.mime}><Paperclip size={11} />{file.name}</span>)}</div> : null}
-          {item.text}
         </div>
       )
     case 'assistant':
       return item.text.trim() ? (
-        <div className="msg-assistant">
+        <div className="msg-assistant" onContextMenu={(e) => messageMenu(e, item.text)}>
           <Markdown text={item.text} />
         </div>
       ) : null

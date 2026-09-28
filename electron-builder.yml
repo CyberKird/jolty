@@ -24,6 +24,8 @@ asarUnpack:
   - node_modules/playwright/**
   - node_modules/playwright-core/**
 extraResources:
+  - from: build/icon.ico
+    to: icon.ico
   # Microsoft Visual C++ runtime, installed by the setup when missing (downloaded by CI, see README)
   - from: build/redist/vc_redist.x64.exe
     to: redist/vc_redist.x64.exe

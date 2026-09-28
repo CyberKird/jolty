@@ -1,7 +1,7 @@
 // "Jolty in Chrome": the user's own Chromium browser (Chrome, Vivaldi, Edge, Brave), driven through
 // Playwright MCP and its official extension (Chrome Web Store: Playwright Extension). Works with every
 // model, since both engines just see an MCP server. It runs on Jolty's own Electron binary.
-import { execFileSync } from 'child_process'
+import { execFileSync, spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import type { BrowserApp, BrowserInfo } from '@shared/types'
@@ -100,6 +100,14 @@ export function browsers(): BrowserInfo {
   const def = defaultBrowser()
   const active = (chosen && installedExe(chosen) ? chosen : undefined) || (def && installedExe(def) ? def : undefined) || list[0]?.id
   return { installed: list, active, defaultApp: def }
+}
+
+/** The browser Jolty uses (name + launcher), for "Open in Vivaldi" style menu items. */
+export function activeBrowser(): { name: string; open: (url: string) => void } | undefined {
+  const app = browsers().active
+  const exe = app && installedExe(app)
+  if (!app || !exe) return undefined
+  return { name: BROWSERS[app].name, open: (url) => spawn(exe, [url], { detached: true, stdio: 'ignore' }).unref() }
 }
 
 function cliPath(): string {

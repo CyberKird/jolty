@@ -14,7 +14,8 @@ function UsageMeter() {
   useEffect(() => {
     for (const p of profiles) refreshLimitsSoon(p)
   }, [profiles])
-  const rows = profiles.filter((p) => limits[p.id]?.windows.length || spend[p.id]?.tokens || balances[p.id])
+  // a profile with empty windows but a note (rate-limited probe) stays visible so the row does not vanish
+  const rows = profiles.filter((p) => limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id])
   return (
     <section className="meter" aria-label="Consum live">
       <div className="meter-head">
@@ -66,6 +67,7 @@ function UsageMeter() {
                 <span className="meter-pct">{Math.round(w.usedPercent)}%</span>
               </span>
             ))}
+            {!limits[p.id]?.windows.length && limits[p.id]?.note && <span className="faint small">{limits[p.id]!.note}</span>}
           </button>
         )
       })}

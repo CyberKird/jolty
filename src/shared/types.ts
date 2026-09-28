@@ -232,6 +232,8 @@ export interface AppSettings {
   visionProfileId?: string
   claudePath?: string
   codexPath?: string
+  /** model labels already announced, so a new one gets a single notification */
+  seenModels?: string[]
   hermesPath?: string
   lastCwd?: string
   lastProfileId?: string
@@ -261,6 +263,14 @@ export interface SlashItem {
 }
 
 export type BrowserApp = 'chrome' | 'vivaldi' | 'edge' | 'brave'
+
+/** What was right-clicked in a chat: a link, a message, a selection. */
+export interface MenuTarget {
+  href?: string
+  text?: string
+  markdown?: string
+  selection?: string
+}
 
 export interface BrowserInfo {
   installed: { id: BrowserApp; name: string }[]
@@ -418,6 +428,8 @@ export interface JoltyApi {
     pickFolder(): Promise<string | undefined>
     openExternal(url: string): Promise<void>
     openPath(path: string): Promise<void>
+    revealPath(path: string): Promise<void>
+    contextMenu(target: MenuTarget): Promise<void>
     version(): Promise<string>
   }
 }
