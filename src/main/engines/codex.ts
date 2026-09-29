@@ -100,6 +100,7 @@ export function codexItem(item: Any, liveOutput?: string): ChatItem | undefined 
         title: `$ ${item.command}`,
         command: item.command,
         status: toolStatus(item.status),
+        exitCode: typeof item.exitCode === 'number' ? item.exitCode : undefined,
         output: truncate(item.aggregatedOutput ?? liveOutput ?? '')
       }
     case 'fileChange': {

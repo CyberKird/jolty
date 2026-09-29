@@ -7,7 +7,7 @@ import { api, basename, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } fr
 import { MessageItem, PermissionCard } from './Messages'
 import { DEFAULT_MODE, MODES, ModelPicker, ModePicker, useAllModels, type ModelGroup } from './ModelPicker'
 import { MentionMenu, useMentions } from './Mentions'
-import { TaskStrip } from './Tasks'
+import { TaskStrip, VerificationStrip } from './Tasks'
 
 const EMPTY: ChatItem[] = []
 
@@ -93,6 +93,7 @@ function Advice({ text, images, groups, profileId, model, effort, onApply }: {
 // Composer
 // ---------------------------------------------------------------------------
 interface ComposerProps {
+  sessionId?: string
   running: boolean
   onSend: (text: string, attachments: Attachment[]) => Promise<void> | void
   onStop?: () => void
@@ -126,18 +127,39 @@ function Composer(p: ComposerProps) {
   const mentions = useMentions(text, caret, p.cwd)
   const costNote = usageRisk(text, atts.filter((a) => a.mime.startsWith('image/')).length, atts.filter((a) => a.mime.startsWith('video/')).length)
   // messages written while the model works wait here and go out, in order, when the turn ends
-  const [queue, setQueue] = useState<{ id: string; text: string; atts: Attachment[] }[]>([])
+  const [queue, setQueue] = useState<{ id: string; text: string; atts: Attachment[] }[]>(() => {
+    if (!p.sessionId) return []
+    try {
+      const saved = JSON.parse(localStorage.getItem(`jolty:queue:${p.sessionId}`) || '[]')
+      return Array.isArray(saved) ? saved.filter((item) =>
+        item && typeof item.id === 'string' && typeof item.text === 'string' && Array.isArray(item.atts)
+      ) : []
+    } catch { return [] }
+  })
+  const [restoredQueue, setRestoredQueue] = useState(queue.length > 0)
   const queuedSent = useRef(false)
+  const wasRunning = useRef(p.running)
 
   useEffect(() => {
-    if (p.running) { queuedSent.current = false; return }
-    if (!queue.length || queuedSent.current) return
+    if (!p.sessionId) return
+    try {
+      const key = `jolty:queue:${p.sessionId}`
+      if (queue.length) localStorage.setItem(key, JSON.stringify(queue))
+      else localStorage.removeItem(key)
+    } catch { toast('Nu am putut salva coada locală.', true) }
+  }, [p.sessionId, queue, toast])
+
+  useEffect(() => {
+    if (!queue.length && restoredQueue) { setRestoredQueue(false); return }
+    if (p.running) { wasRunning.current = true; queuedSent.current = false; return }
+    if (!wasRunning.current) return
+    if (!queue.length || restoredQueue || queuedSent.current) return
     queuedSent.current = true
     const [next, ...rest] = queue
     setQueue(rest)
     void p.onSend(next.text, next.atts)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p.running, queue])
+  }, [p.running, queue, restoredQueue])
 
   useEffect(() => {
     if (p.seed) {
@@ -213,7 +235,7 @@ function Composer(p: ComposerProps) {
     <div className="composer-wrap">
       {queue.length > 0 && (
         <div className="queue" aria-live="polite">
-          <div className="queue-title">În așteptare <span>{queue.length}</span></div>
+          <div className="queue-title">{restoredQueue ? 'Restaurate, trimite manual' : 'În așteptare'} <span>{queue.length}</span></div>
           {queue.map((q, i) => (
             <div className="queued" key={q.id}>
               <span className="queued-order">{i + 1}</span>
@@ -633,7 +655,9 @@ export function ChatView({ session }: { session: SessionMeta }) {
         </div>
       </div>
       <TaskStrip sessionId={session.id} />
+      <VerificationStrip session={session} />
       <Composer
+        sessionId={session.id}
         running={running}
         profiles={profiles}
         profileId={session.profileId}

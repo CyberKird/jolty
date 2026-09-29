@@ -142,6 +142,7 @@ export type ChatItem =
       name: string
       title: string
       status: 'running' | 'done' | 'error'
+      exitCode?: number
       command?: string
       input?: unknown
       output?: string
