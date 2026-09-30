@@ -46,7 +46,7 @@ export function toolTarget(name: string, title: string, input?: unknown): string
 
 const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
   const [open, setOpen] = useState(false)
-  const hasBody = Boolean(item.output || item.diffs?.length)
+  const hasBody = Boolean(item.output || item.diffs?.length || item.images?.length)
   const state = item.status === 'running' ? 'acum' : item.status === 'error' ? 'eroare' : 'gata'
   return (
     <div className={`tool ${item.status}`}>
@@ -60,6 +60,15 @@ const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
       </button>
       {open && hasBody && (
         <div className="tool-body">
+          {item.images?.length ? (
+            <div className="images tool-images">
+              {item.images.map((src, i) => (
+                <a key={i} href={src} download={`imagine-${i + 1}`} title="Descarcă imaginea">
+                  <img src={src} alt={toolTarget(item.name, item.title, item.input)} />
+                </a>
+              ))}
+            </div>
+          ) : null}
           {item.diffs?.length ? <DiffView diffs={item.diffs} /> : null}
           {item.output ? <pre className="pre">{item.output}</pre> : null}
         </div>
@@ -73,7 +82,7 @@ function Reasoning({ text, live }: { text: string; live: boolean }) {
   if (!text.trim() && !live) return null
   return (
     <details className="reasoning" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
-      <summary style={{ color: live ? 'var(--volt)' : undefined }}>{live ? 'Se gândește…' : `Raționament ${open ? '−' : '+'}`}</summary>
+      <summary style={{ color: live ? 'var(--volt)' : undefined }}>{live ? `Se gândește…${text.trim() ? ` ${open ? '−' : '+'}` : ''}` : `Raționament ${open ? '−' : '+'}`}</summary>
       {text && <div className="body">{plainDashes(text)}</div>}
     </details>
   )

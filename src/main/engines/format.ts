@@ -81,6 +81,18 @@ export function toolResultText(content: unknown): string {
   return content == null ? '' : JSON.stringify(content)
 }
 
+/** Base64 image blocks of a tool result as data: URLs, so the chat can show what the agent looked at. */
+export function toolResultImages(content: unknown): string[] | undefined {
+  if (!Array.isArray(content)) return undefined
+  const urls = content.flatMap((c) => {
+    const src = (c as { type?: string; source?: { type?: string; media_type?: string; data?: string } })?.source
+    return (c as { type?: string }).type === 'image' && src?.type === 'base64' && /^image\/(png|jpeg|gif|webp)$/.test(String(src.media_type)) && src.data
+      ? [`data:${src.media_type};base64,${src.data}`]
+      : []
+  })
+  return urls.length ? urls : undefined
+}
+
 export function truncate(text: string, max = 20000): string {
   return text.length > max ? text.slice(0, max) + `\n... (${text.length - max} caractere ascunse)` : text
 }

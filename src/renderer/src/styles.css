@@ -875,6 +875,18 @@ a {
   overflow: auto;
   background: var(--black);
 }
+.tool-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.tool-images img {
+  display: block;
+  max-width: 100%;
+  max-height: 400px;
+  border: 1px solid var(--line-2);
+}
 .pre {
   margin: 0;
   padding: 12px 14px;

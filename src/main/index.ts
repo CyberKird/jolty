@@ -33,7 +33,8 @@ function localPath(href: string): string {
 
 declare const __JOLTY_VERSION__: string
 
-const APP_ID = 'com.joltarise.jolty'
+// dev and test runs get their own id: Windows otherwise ties the real Jolty taskbar group to node_modules electron.exe
+const APP_ID = app.isPackaged ? 'com.joltarise.jolty' : 'com.joltarise.jolty.dev'
 let win: BrowserWindow | undefined
 let jolty: Jolty
 

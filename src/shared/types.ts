@@ -146,6 +146,8 @@ export type ChatItem =
       command?: string
       input?: unknown
       output?: string
+      /** data: URLs of images the tool returned, e.g. a Read of a screenshot */
+      images?: string[]
       diffs?: FileDiff[]
     }
   | { kind: 'notice'; id: string; text: string; level: 'info' | 'warn' | 'error' }

@@ -32,7 +32,7 @@ import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
 import { BROWSER_BLOCKED_TOOLS, BROWSER_PROMPT, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer } from '../browser'
 import { TaskBoard } from './tasks'
 import { getSecret, loadSettings, profileDir, saveSettings } from '../store'
-import { claudeToolDiffs, claudeToolTitle, toolResultText, truncate } from './format'
+import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 
@@ -268,6 +268,7 @@ export function claudeHistoryItems(messages: { type: string; uuid: string; messa
           if (t) {
             t.status = b.is_error ? 'error' : 'done'
             t.output = truncate(toolResultText(b.content))
+            t.images = toolResultImages(b.content)
           }
         }
       } else if (m.type === 'assistant') {
@@ -323,6 +324,8 @@ class ClaudeSession implements EngineSession {
       model: this.meta.model || undefined,
       // third-party endpoints get no effort: their models may not accept it
       ...(this.meta.effort && this.profile.auth !== 'endpoint' ? { effort: this.meta.effort as EffortLevel } : {}),
+      // newer models omit thinking text by default; a summary lets the reasoning row open onto something
+      ...(this.profile.auth !== 'endpoint' ? { extraArgs: { 'thinking-display': 'summarized' } } : {}),
       permissionMode: this.sdkMode(this.meta.permissionMode),
       // Claude Code refuses this flag when run as root, so only pass it when it is actually needed.
       allowDangerouslySkipPermissions: this.meta.permissionMode === 'full',
@@ -451,6 +454,7 @@ class ClaudeSession implements EngineSession {
           if (!t) continue
           t.status = b.is_error ? 'error' : 'done'
           t.output = truncate(toolResultText(b.content))
+          t.images = toolResultImages(b.content)
           this.host.emit({ type: 'item', sessionId: sid, item: t })
           // the new task list tools: ids only exist once TaskCreate has answered
           if (!b.is_error && (t.name === 'TaskCreate' || t.name === 'TaskList')) {
