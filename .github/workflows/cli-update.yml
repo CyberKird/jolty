@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   cli:
@@ -68,3 +69,8 @@ jobs:
           git push origin HEAD:main
           git tag "$VERSION"
           git push origin "$VERSION"
+          # a tag pushed with the Actions token starts no workflow, so ask for the installer build
+          # by hand; it is the run that publishes the release the in-app updater reads
+          gh workflow run build.yml --ref "$VERSION"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
