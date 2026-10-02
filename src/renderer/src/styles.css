@@ -768,11 +768,31 @@ a {
   gap: 6px;
   flex-wrap: wrap;
 }
-.msg-user .images a { display: block; border: 1px solid var(--line-2); }
 .msg-user .images img {
   max-width: 220px;
   max-height: 160px;
   display: block;
+  border: 1px solid var(--line-2);
+}
+.chat-image { cursor: zoom-in; }
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgba(0, 0, 0, 0.88);
+  cursor: zoom-out;
+  animation: fade 0.14s var(--ease);
+}
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: default;
+  border: 1px solid var(--line-2);
 }
 .msg-assistant {
   animation: fade 0.3s;

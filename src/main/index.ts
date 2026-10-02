@@ -1,5 +1,6 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, shell, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, Menu, nativeImage, Notification, shell, type MenuItemConstructorOptions } from 'electron'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import type { ChatEvent, MenuTarget } from '@shared/types'
@@ -166,7 +167,32 @@ function registerIpc(): void {
   handle('app:contextMenu', (t: MenuTarget) => {
     const items: MenuItemConstructorOptions[] = []
     const href = typeof t?.href === 'string' ? t.href : ''
-    if (/^https?:\/\//i.test(href)) {
+    const img = typeof t?.image === 'string' ? /^data:image\/(png|jpeg|gif|webp);base64,([A-Za-z0-9+/=]+)$/.exec(t.image) : null
+    if (img) {
+      const ext = img[1] === 'jpeg' ? 'jpg' : img[1]
+      const bytes = Buffer.from(img[2], 'base64')
+      const base = (path.parse(String(t.imageName || 'imagine')).name || 'imagine').replace(/[<>:"/\\|?*]/g, '_')
+      items.push({ label: 'Copiază imaginea', click: () => void clipboard.write([new ClipboardItem({ 'image/png': new Blob([new Uint8Array(nativeImage.createFromBuffer(bytes).toPNG())],{ type: 'image/png' }) })]) })
+      items.push({
+        label: 'Salvează imaginea...',
+        click: () => {
+          if (!win) return
+          void dialog.showSaveDialog(win, { defaultPath: `${base}.${ext}`, filters: [{ name: 'Imagine', extensions: [ext] }] }).then((r) => {
+            if (!r.canceled && r.filePath) fs.writeFileSync(r.filePath, bytes)
+          })
+        }
+      })
+      items.push({
+        label: 'Deschide imaginea',
+        click: () => {
+          const dir = path.join(os.tmpdir(), 'jolty-images')
+          fs.mkdirSync(dir, { recursive: true })
+          const file = path.join(dir, `${base}-${Date.now()}.${ext}`)
+          fs.writeFileSync(file, bytes)
+          void shell.openPath(file)
+        }
+      })
+    } else if (/^https?:\/\//i.test(href)) {
       const b = activeBrowser()
       items.push({ label: b ? `Deschide în ${b.name}` : 'Deschide în browser', click: () => (b ? b.open(href) : openWeb(href)) })
       items.push({ label: 'Copiază linkul', click: () => clipboard.writeText(href) })

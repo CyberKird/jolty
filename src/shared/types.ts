@@ -276,6 +276,9 @@ export interface MenuTarget {
   text?: string
   markdown?: string
   selection?: string
+  /** data: URL of a right-clicked image */
+  image?: string
+  imageName?: string
 }
 
 export interface BrowserInfo {

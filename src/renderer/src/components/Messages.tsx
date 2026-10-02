@@ -1,7 +1,33 @@
 import { Paperclip } from 'lucide-react'
-import { memo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { ChatItem, PermissionDecision, PermissionRequest } from '@shared/types'
-import { DiffView, Markdown, messageMenu, plainDashes } from './Rich'
+import { DiffView, imageMenu, Markdown, messageMenu, plainDashes } from './Rich'
+
+/** A chat image: click opens a large preview, right-click offers copy, save and open. */
+function ChatImage({ src, name }: { src: string; name: string }) {
+  const [big, setBig] = useState(false)
+  useEffect(() => {
+    if (!big) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setBig(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [big])
+  return (
+    <>
+      <img className="chat-image" src={src} alt={name} title={name} onClick={() => setBig(true)} onContextMenu={(e) => imageMenu(e, src, name)} />
+      {big &&
+        createPortal(
+          <div className="lightbox" role="dialog" aria-label="Previzualizare imagine" onClick={() => setBig(false)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation() }}>
+            <img src={src} alt={name} onClick={(e) => e.stopPropagation()} onContextMenu={(e) => imageMenu(e, src, name)} />
+          </div>,
+          document.body
+        )}
+    </>
+  )
+}
 
 type Tool = Extract<ChatItem, { kind: 'tool' }>
 
@@ -63,9 +89,7 @@ const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
           {item.images?.length ? (
             <div className="images tool-images">
               {item.images.map((src, i) => (
-                <a key={i} href={src} download={`imagine-${i + 1}`} title="Descarcă imaginea">
-                  <img src={src} alt={toolTarget(item.name, item.title, item.input)} />
-                </a>
+                <ChatImage key={i} src={src} name={toolTarget(item.name, item.title, item.input).split(/[\\/]/).pop() || `imagine-${i + 1}`} />
               ))}
             </div>
           ) : null}
@@ -99,9 +123,7 @@ export const MessageItem = memo(function MessageItem({ item, live }: { item: Cha
               {item.images?.length ? (
                 <div className="images">
                   {item.images.map((img, i) => (
-                    <a key={i} href={img.dataUrl} download={img.name} title={img.name}>
-                      <img src={img.dataUrl} alt={img.name} />
-                    </a>
+                    <ChatImage key={i} src={img.dataUrl} name={img.name} />
                   ))}
                 </div>
               ) : null}

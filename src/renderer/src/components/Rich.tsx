@@ -66,6 +66,12 @@ export function messageMenu(e: MouseEvent<HTMLElement>, markdown?: string): void
   void api.app.contextMenu({ href, selection, text: e.currentTarget.innerText.trim() || undefined, markdown })
 }
 
+export function imageMenu(e: MouseEvent<HTMLElement>, image: string, imageName: string): void {
+  e.preventDefault()
+  e.stopPropagation()
+  void api.app.contextMenu({ image, imageName })
+}
+
 export const Markdown = memo(function Markdown({ text }: { text: string }) {
   const html = useMemo(() => DOMPurify.sanitize(marked.parse(plainDashes(text), { async: false }) as string), [text])
   return <div className="md" onClick={onLinkClick} dangerouslySetInnerHTML={{ __html: html }} />
