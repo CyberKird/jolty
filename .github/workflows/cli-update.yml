@@ -1,11 +1,13 @@
 name: CLI update
 
-# Keeps the two bundled CLIs on their newest release: checks daily, verifies the pair on the mock
-# models, then ships it as the next Jolty version so it reaches the app through the in-app updater.
+# Keeps the two bundled CLIs on their newest release: checks every Monday (the Agent SDK ships
+# several patches a day, so a release per day would be noise), verifies the pair on the mock models,
+# then ships it as the next Jolty version so it reaches the app through the in-app updater.
 # A red run means the newest CLI broke the tests: nothing is pushed, the version stays put.
+# Run it by hand any time from the Actions tab, or edit the cron below for another rhythm.
 on:
   schedule:
-    - cron: '23 6 * * *'
+    - cron: '23 6 * * 1'
   workflow_dispatch:
 
 permissions:
