@@ -1,7 +1,7 @@
 import { ExternalLink, Eye, FolderOpen, Globe, KeyRound, Save, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AppSettings, BrowserApp, BrowserInfo } from '@shared/types'
-import { api, timeAgo, useStore } from '../store'
+import { api, errMsg, timeAgo, useStore } from '../store'
 
 export function SettingsPage() {
   const profiles = useStore((s) => s.profiles)
@@ -91,7 +91,15 @@ export function SettingsPage() {
                 </option>
               ))}
             </select>
-            <div className="hint">Merge cu orice browser construit pe Chromium: Chrome, Vivaldi, Edge, Brave. Extensia se instalează din Chrome Web Store și în Vivaldi.</div>
+            <div className="hint">
+              Merge cu orice browser construit pe Chromium: Chrome, Vivaldi, Edge, Brave. Extensia se instalează din Chrome Web Store și în Vivaldi.
+              {browserInfo?.active && (
+                <>
+                  {' '}
+                  <b>{browserInfo.extension ? 'Extensia e instalată în browserul ales.' : 'Extensia nu e instalată în browserul ales.'}</b>
+                </>
+              )}
+            </div>
           </div>
           <p className="muted small" style={{ marginTop: 0 }}>
             Cu butonul Browser din conversație, modelul lucrează în browserul tău, cu login-urile tale: deschide pagini, dă clic, completează formulare, citește și face capturi. Merge cu orice model din Jolty. Te întreabă înainte să trimită, să cumpere sau să posteze ceva.
@@ -116,10 +124,14 @@ export function SettingsPage() {
                 className="btn small"
                 disabled={!token.trim()}
                 onClick={async () => {
-                  await api.browser.setToken(token)
-                  setToken('')
-                  setHasToken(true)
-                  toast('Token salvat, criptat cu protecția Windows')
+                  try {
+                    await api.browser.setToken(token)
+                    setToken('')
+                    setHasToken(true)
+                    toast('Token salvat și aplicat. Conversațiile cu Browser pornit îl folosesc acum.')
+                  } catch (e) {
+                    toast(errMsg(e), true)
+                  }
                 }}
               >
                 Salvează
@@ -138,6 +150,19 @@ export function SettingsPage() {
               )}
             </div>
           </div>
+          <label className="row" style={{ marginBottom: 12, cursor: 'pointer', gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={s.browserOverlay !== false}
+              onChange={async (e) => setS(await api.app.saveSettings({ browserOverlay: e.target.checked }))}
+            />
+            <span>
+              <b>Arată ce face modelul în pagină</b>
+              <span className="muted small" style={{ display: 'block' }}>
+                Halou verde în jurul paginii, cursor „Jolty” care merge la element înainte de clic și un fulger pe tab cât timp lucrează.
+              </span>
+            </span>
+          </label>
           <div className="field" style={{ marginBottom: 0 }}>
             <label>Profil din browser (opțional)</label>
             <input

@@ -183,7 +183,8 @@ export function limitLoad(snap?: RateLimitSnapshot): number {
 
 /** The supported level closest to the wanted one, never above it. */
 function fitEffort(m: ModelOption, wanted: string): string | undefined {
-  const levels = m.efforts
+  // on/off switches (MiMo, local models) have no scale to fit
+  const levels = m.efforts?.filter((l) => EFFORTS.includes(l))
   if (!levels?.length) return undefined
   if (levels.includes(wanted)) return wanted
   const w = EFFORTS.indexOf(wanted)

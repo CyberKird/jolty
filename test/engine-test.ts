@@ -2,10 +2,14 @@
 // Run with: npm run test:engines   (needs the mocks from test/README.md running)
 import { app } from 'electron'
 import fs from 'fs'
+import http from 'http'
 import os from 'os'
 import path from 'path'
 import type { ChatEvent, ChatItem, Profile } from '../src/shared/types'
 import { endpointCost, fetchBalance, hasBalance } from '../src/main/balance'
+import { pageHost } from '../src/main/browser'
+import { endpointEfforts } from '../src/main/engines/thinking'
+import { noThinkingUrl } from '../src/main/thinking-proxy'
 import { assess, delegatePick, recommend } from '../src/shared/complexity'
 import { TaskBoard } from '../src/main/engines/tasks'
 import { syncSettings } from '../src/main/runtime'
@@ -250,6 +254,47 @@ app.whenReady().then(async () => {
       const res = await jolty.rewind(r.id, userItem.id).catch((e: Error) => ({ error: e.message, files: [] as string[] }))
       console.log(`   rewind: ${JSON.stringify(res)} -> ${JSON.stringify(fs.readFileSync(file, 'utf8').slice(0, 30))}`)
       check(fs.readFileSync(file, 'utf8') === 'original\n' && res.files.length === 1, 'rewind: the file is back to its content before that message')
+    }
+    check(pageHost('### Page\n- Page URL: https://Shop.Example.com:8443/cart?x=1') === 'shop.example.com', 'browser: the site comes from the tool result')
+    check(pageHost('- Page URL: chrome-extension://abc/connect.html') === undefined, 'browser: non-web pages are never a trusted site')
+    // thinking level on an endpoint: what the picker offers is what the provider documents, and it reaches the request
+    check(endpointEfforts({ baseUrl: 'https://api.deepseek.com/anthropic' } as Profile).efforts?.join() === 'off,low,high,max', 'thinking: DeepSeek offers off, low, high, max')
+    check(endpointEfforts({ baseUrl: 'https://api.xiaomimimo.com/anthropic' } as Profile).efforts?.join() === 'off,on', 'thinking: MiMo offers on/off only')
+    check(!endpointEfforts({ baseUrl: 'https://example.org/anthropic' } as Profile).efforts, 'thinking: an unknown provider gets no control')
+    {
+      // the relay: thinking disabled, output_config gone, the key and the path pass through
+      const seen: { url?: string; auth?: string; body?: Record<string, unknown> } = {}
+      const up = http.createServer((rq, rs) => {
+        const parts: Buffer[] = []
+        rq.on('data', (c: Buffer) => parts.push(c))
+        rq.on('end', () => {
+          seen.url = rq.url
+          seen.auth = String(rq.headers.authorization || '')
+          seen.body = JSON.parse(Buffer.concat(parts).toString() || '{}')
+          rs.writeHead(200, { 'content-type': 'application/json' })
+          rs.end('{"ok":true}')
+        })
+      })
+      await new Promise<void>((r) => up.listen(0, '127.0.0.1', () => r()))
+      const relay = await noThinkingUrl(`http://127.0.0.1:${(up.address() as { port: number }).port}/anthropic`)
+      const resp = await fetch(`${relay}/v1/messages`, { method: 'POST', headers: { authorization: 'Bearer k', 'content-type': 'application/json' }, body: JSON.stringify({ model: 'm', thinking: { type: 'adaptive' }, output_config: { effort: 'medium' } }) })
+      check((await resp.text()) === '{"ok":true}' && seen.url === '/anthropic/v1/messages' && seen.auth === 'Bearer k', 'relay: path under the provider URL, key and response pass through')
+      check((seen.body?.thinking as { type?: string })?.type === 'disabled' && seen.body?.output_config === undefined, 'relay: thinking disabled and output_config dropped')
+      up.close()
+    }
+    if (process.env.MOCK_ANTHROPIC_LOG) {
+      const th = jolty.createProfile({ name: 'Thinking (mock)', engine: 'claude', auth: 'endpoint', baseUrl: url, models: ['mock-model'], secret: 'sk-mock' })
+      const asked = async (effort: string): Promise<{ thinking?: { type?: string }; output_config?: { effort?: string } }> => {
+        const t = await jolty.startSession({ profileId: th.id, cwd: project, permissionMode: 'ask', model: 'mock-model', effort })
+        const before = idleCount(t.id)
+        await jolty.sendMessage(t.id, `Salut ${effort}`)
+        await waitFor(() => idleCount(t.id) > before, 120000, `thinking turn ${effort}`)
+        return fs.readFileSync(process.env.MOCK_ANTHROPIC_LOG!, 'utf8').trim().split('\n').map((l) => JSON.parse(l)).filter((r) => r.path.endsWith('/messages') && r.stream).pop()
+      }
+      check((await asked('off')).thinking?.type === 'disabled', 'thinking: off reaches the endpoint as thinking disabled')
+      const max = await asked('max')
+      console.log(`   thinking max -> ${JSON.stringify({ thinking: max.thinking, output_config: max.output_config })}`)
+      check(max.output_config?.effort === 'max', 'thinking: max reaches the endpoint as output_config.effort')
     }
     // Jolty in the browser: Playwright MCP reaches the model with the safety rule, the unsafe tool does not
     if (process.env.MOCK_ANTHROPIC_LOG) {

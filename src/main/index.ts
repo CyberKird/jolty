@@ -4,7 +4,7 @@ import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import type { ChatEvent, MenuTarget } from '@shared/types'
-import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers } from './browser'
+import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers, cleanToken } from './browser'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
 import * as updater from './updater'
@@ -127,7 +127,10 @@ function registerIpc(): void {
   handle('updates:install', () => updater.install())
   handle('composer:slash', (cwd?: string) => slashItems(typeof cwd === 'string' ? cwd : undefined))
   handle('composer:files', (cwd: string) => (typeof cwd === 'string' && fs.existsSync(cwd) ? projectFiles(cwd) : []))
-  handle('browser:setToken', (token: string) => store.setSecret(BROWSER_TOKEN_KEY, typeof token === 'string' && token.trim() ? token.trim() : undefined))
+  handle('browser:setToken', async (token: string) => {
+    store.setSecret(BROWSER_TOKEN_KEY, (typeof token === 'string' && cleanToken(token)) || undefined)
+    await jolty.reconnectBrowser()
+  })
   handle('browser:openExtensionPage', () => openWeb(BROWSER_EXTENSION_URL))
   handle('sessions:respond', (id: string, requestId: string, decision) => jolty.respond(id, requestId, decision as never))
   handle('sessions:handoff', (id: string, target: string, model?: string, effort?: string) =>
@@ -154,7 +157,11 @@ function registerIpc(): void {
   handle('codexImport:run', (id: string, cwd?: string, types?: string[]) => jolty.codex.importRun(jolty.profile(id), cwd, types))
 
   handle('app:settings', () => store.loadSettings())
-  handle('app:saveSettings', (patch) => store.saveSettings(patch as never))
+  handle('app:saveSettings', async (patch) => {
+    const saved = store.saveSettings(patch as never)
+    if (patch && typeof patch === 'object' && Object.keys(patch).some((k) => k.startsWith('browser'))) await jolty.reconnectBrowser()
+    return saved
+  })
   handle('app:pickFolder', async () => {
     const r = await dialog.showOpenDialog(win!, { properties: ['openDirectory'] })
     return r.canceled ? undefined : r.filePaths[0]

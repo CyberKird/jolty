@@ -58,7 +58,9 @@ export const EFFORT_TITLES: Record<string, string> = {
   medium: 'Gândire moderată',
   high: 'Gândire în profunzime',
   xhigh: 'Mai adânc decât high: cel mai bun pentru cod și sarcini lungi',
-  max: 'Efort maxim: cel mai lent și cel mai scump'
+  max: 'Efort maxim: cel mai lent și cel mai scump',
+  off: 'Fără gândire: răspunde direct, cel mai rapid și ieftin',
+  on: 'Cu gândire: raționează înainte să răspundă'
 }
 
 /** Closes a popover on outside click or Escape, and moves focus with the arrow keys. */
@@ -143,7 +145,7 @@ export function ModelPicker(p: {
                       role="menuitemradio"
                       aria-checked={on}
                       className={`picker-opt ${on ? 'on' : ''}`}
-                      title={[cap.compare, m.description, m.efforts?.length ? `Efort: ${m.efforts.join(', ')}` : 'Fără niveluri de efort', m.vision === false ? 'Nu vede imagini: le descrie alt profil' : ''].filter(Boolean).join('\n')}
+                      title={[cap.compare, m.description, m.efforts?.length ? `Gândire: ${m.efforts.join(', ')}` : 'Fără niveluri de gândire', m.vision === false ? 'Nu vede imagini: le descrie alt profil' : ''].filter(Boolean).join('\n')}
                       onClick={() => {
                         setOpen(false)
                         if (!on) p.onPick(g.profile.id, m.id)
@@ -169,8 +171,8 @@ export function ModelPicker(p: {
           </div>
           {efforts.length > 0 && (
             <div className="picker-foot">
-              <span className="picker-foot-label">Efort</span>
-              <div className="segmented" role="radiogroup" aria-label="Efort">
+              <span className="picker-foot-label">Gândire</span>
+              <div className="segmented" role="radiogroup" aria-label="Nivel de gândire">
                 {/* a model without a declared default (Claude) runs its own default when nothing is picked */}
                 {!current?.defaultEffort && (
                   <button data-opt role="radio" aria-checked={!p.effort} className={!p.effort ? 'on' : ''} title="Efortul implicit al modelului" onClick={() => p.onEffort('')}>

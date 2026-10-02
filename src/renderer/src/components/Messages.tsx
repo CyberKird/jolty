@@ -175,7 +175,7 @@ export function PermissionCard({ req, onDecide }: { req: PermissionRequest; onDe
         </button>
         {req.canAllowForSession && (
           <button className="btn" onClick={() => onDecide('allowSession')}>
-            Mereu în sesiune
+            {req.sessionLabel || 'Mereu în sesiune'}
           </button>
         )}
         <div className="spacer" />

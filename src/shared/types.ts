@@ -161,6 +161,8 @@ export interface PermissionRequest {
   /** markdown shown for plan approvals */
   plan?: string
   canAllowForSession: boolean
+  /** replaces "Mereu în sesiune" when the approval covers less than the whole tool (a site) */
+  sessionLabel?: string
 }
 
 export type PermissionDecision = 'allow' | 'allowSession' | 'deny'
@@ -243,12 +245,16 @@ export interface AppSettings {
   hermesPath?: string
   lastCwd?: string
   lastProfileId?: string
+  /** the model and thinking level each profile used last: a new chat opens on them, not on the default */
+  lastModels?: Record<string, { model: string; effort?: string }>
   /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
   reduceMotion?: boolean
   /** Chrome profile folder for Jolty in Chrome ("Default", "Profile 1"); the last used one when empty */
   browserProfileDir?: string
   /** which Chromium browser Jolty in Chrome drives; the Windows default when empty */
   browserApp?: BrowserApp
+  /** glow, cursor and tab marker while a model drives the browser; on unless false */
+  browserOverlay?: boolean
 }
 
 export interface UpdateStatus {
@@ -287,6 +293,8 @@ export interface BrowserInfo {
   active?: BrowserApp
   /** the Windows default, when it is a supported Chromium browser */
   defaultApp?: BrowserApp
+  /** the Playwright extension is installed in the active browser */
+  extension: boolean
 }
 
 export interface StartSessionInput {

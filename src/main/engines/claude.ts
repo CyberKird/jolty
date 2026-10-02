@@ -29,7 +29,10 @@ import type {
   SessionMeta
 } from '@shared/types'
 import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
-import { BROWSER_BLOCKED_TOOLS, BROWSER_PROMPT, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer } from '../browser'
+import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, BROWSER_PROMPT, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer, pageHost } from '../browser'
+import { modelInfo } from '../local'
+import { noThinkingUrl } from '../thinking-proxy'
+import { endpointEfforts, endpointThinking } from './thinking'
 import { TaskBoard } from './tasks'
 import { getSecret, loadSettings, profileDir, saveSettings } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
@@ -291,12 +294,17 @@ interface Pending {
   resolve: (r: PermissionResult) => void
   input: Record<string, unknown>
   suggestions?: PermissionUpdate[]
+  /** set for page actions: "always" then means this site, not the whole tool */
+  site?: string
 }
 
 class ClaudeSession implements EngineSession {
   private q?: Query
   private input = new InputQueue()
   private pending = new Map<string, Pending>()
+  /** the site the browser tab is on, and the sites where the user already allowed page actions in this chat */
+  private browserSite?: string
+  private trustedSites = new Set<string>()
   private currentMsgId = ''
   private blockN = 0
   private streamed = new Map<number, string>()
@@ -322,8 +330,8 @@ class ClaudeSession implements EngineSession {
     const options: Options = {
       ...baseOptions(this.profile, this.meta.cwd, this.meta.model),
       model: this.meta.model || undefined,
-      // third-party endpoints get no effort: their models may not accept it
-      ...(this.meta.effort && this.profile.auth !== 'endpoint' ? { effort: this.meta.effort as EffortLevel } : {}),
+      // third-party endpoints only get what their provider documents (see thinking.ts)
+      ...(this.profile.auth === 'endpoint' ? endpointThinking(this.meta.effort) : this.meta.effort ? { effort: this.meta.effort as EffortLevel } : {}),
       // newer models omit thinking text by default; a summary lets the reasoning row open onto something
       ...(this.profile.auth !== 'endpoint' ? { extraArgs: { 'thinking-display': 'summarized' } } : {}),
       permissionMode: this.sdkMode(this.meta.permissionMode),
@@ -341,6 +349,10 @@ class ClaudeSession implements EngineSession {
       stderr: (d) => {
         if (process.env.JOLTY_DEBUG) console.error('[claude]', d)
       }
+    }
+    // thinking "off" on an endpoint needs a field Claude Code does not send: go through the local relay
+    if (this.profile.auth === 'endpoint' && this.meta.effort === 'off' && this.profile.baseUrl) {
+      options.env = { ...options.env, ANTHROPIC_BASE_URL: await noThinkingUrl(this.profile.baseUrl) }
     }
     this.input = new InputQueue()
     this.q = sdk.query({ prompt: this.input, options })
@@ -455,6 +467,7 @@ class ClaudeSession implements EngineSession {
           t.status = b.is_error ? 'error' : 'done'
           t.output = truncate(toolResultText(b.content))
           t.images = toolResultImages(b.content)
+          if (t.name.startsWith(`mcp__${BROWSER_SERVER}__`) && /Page URL:/.test(t.output)) this.browserSite = pageHost(t.output)
           this.host.emit({ type: 'item', sessionId: sid, item: t })
           // the new task list tools: ids only exist once TaskCreate has answered
           if (!b.is_error && (t.name === 'TaskCreate' || t.name === 'TaskList')) {
@@ -525,6 +538,8 @@ class ClaudeSession implements EngineSession {
     if (server === BROWSER_SERVER && BROWSER_READ_TOOLS.includes(tool) && this.meta.permissionMode !== 'ask') {
       return Promise.resolve({ behavior: 'allow', updatedInput: input })
     }
+    const site = server === BROWSER_SERVER && BROWSER_ACT_TOOLS.includes(tool) && this.meta.permissionMode !== 'ask' ? this.browserSite : undefined
+    if (site && this.trustedSites.has(site)) return Promise.resolve({ behavior: 'allow', updatedInput: input })
     const id = randomUUID()
     const detail = toolName === 'Bash' ? String(input.command ?? '') : toolName === 'ExitPlanMode' ? undefined : truncate(JSON.stringify(input, null, 2), 4000)
     this.host.emit({
@@ -537,11 +552,12 @@ class ClaudeSession implements EngineSession {
         detail,
         diffs: claudeToolDiffs(toolName, input),
         plan: toolName === 'ExitPlanMode' ? String(input.plan ?? '') : undefined,
-        canAllowForSession: Boolean(opts.suggestions?.length)
+        canAllowForSession: Boolean(site || opts.suggestions?.length),
+        sessionLabel: site ? `Mereu pe ${site}` : undefined
       }
     })
     return new Promise((resolve) => {
-      this.pending.set(id, { resolve, input, suggestions: opts.suggestions })
+      this.pending.set(id, { resolve, input, suggestions: opts.suggestions, site })
       opts.signal.addEventListener('abort', () => {
         if (!this.pending.delete(id)) return
         this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId: id })
@@ -556,7 +572,10 @@ class ClaudeSession implements EngineSession {
     this.pending.delete(requestId)
     this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId })
     if (decision === 'deny') p.resolve({ behavior: 'deny', message: 'Utilizatorul a refuzat această acțiune.' })
-    else if (decision === 'allowSession') p.resolve({ behavior: 'allow', updatedInput: p.input, updatedPermissions: p.suggestions })
+    else if (decision === 'allowSession' && p.site) {
+      this.trustedSites.add(p.site)
+      p.resolve({ behavior: 'allow', updatedInput: p.input })
+    } else if (decision === 'allowSession') p.resolve({ behavior: 'allow', updatedInput: p.input, updatedPermissions: p.suggestions })
     else p.resolve({ behavior: 'allow', updatedInput: p.input })
   }
 
@@ -600,7 +619,9 @@ class ClaudeSession implements EngineSession {
   async setEffort(effort: string): Promise<void> {
     this.meta.effort = effort || undefined
     // null clears the override and goes back to the model's own default ("Auto")
-    if (this.profile.auth !== 'endpoint') await this.q?.applyFlagSettings({ effortLevel: (effort || null) as EffortLevel | null })
+    // an endpoint's level is a start option: the process restarts on the next message
+    if (this.profile.auth === 'endpoint') await this.close()
+    else await this.q?.applyFlagSettings({ effortLevel: (effort || null) as EffortLevel | null })
   }
 
   async setPermissionMode(mode: PermissionMode): Promise<void> {
@@ -735,7 +756,13 @@ export class ClaudeDriver implements EngineDriver {
 
   async models(profile: Profile): Promise<ModelOption[]> {
     if (profile.auth === 'endpoint') {
-      return (profile.models || []).map((id, i) => ({ id, label: id, isDefault: i === 0 }))
+      return Promise.all(
+        (profile.models || []).map(async (id, i) => {
+          // a local model has thinking only when Ollama lists the capability
+          const thinks = profile.local ? await modelInfo(id).then((m) => m.thinking, () => false) : true
+          return { id, label: id, isDefault: i === 0, ...endpointEfforts(profile, thinks) }
+        })
+      )
     }
     const cached = this.modelCache.get(profile.id)
     if (cached && Date.now() - cached.at < 10 * 60 * 1000) return cached.models

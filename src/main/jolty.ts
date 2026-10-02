@@ -21,6 +21,7 @@ import type {
   TurnUsage,
   UsageSummary
 } from '@shared/types'
+import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers } from './browser'
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
 import { HermesDriver } from './engines/hermes'
@@ -322,6 +323,7 @@ export class Jolty {
       }
     }
     this.saveMeta(meta)
+    if (!input.resumeEngineSessionId && input.model) this.remember(p.id, { model: input.model, effort: input.effort || '' })
     return meta
   }
 
@@ -523,6 +525,7 @@ export class Jolty {
     const meta = s?.meta || this.meta(sessionId)
     meta.model = model
     this.saveMeta(meta)
+    this.remember(meta.profileId, { model })
   }
 
   async setEffort(sessionId: string, effort: string): Promise<void> {
@@ -532,6 +535,15 @@ export class Jolty {
     const meta = s?.meta || this.meta(sessionId)
     meta.effort = effort || undefined
     this.saveMeta(meta)
+    this.remember(meta.profileId, { effort })
+  }
+
+  /** What a profile used last, for the next new chat. */
+  private remember(profileId: string, patch: { model?: string; effort?: string }): void {
+    const all = store.loadSettings().lastModels || {}
+    const prev = all[profileId]
+    all[profileId] = { model: patch.model ?? prev?.model ?? '', effort: patch.effort ?? prev?.effort }
+    store.saveSettings({ lastModels: all })
   }
 
   async setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void> {
@@ -545,11 +557,29 @@ export class Jolty {
 
   async setBrowser(sessionId: string, on: boolean): Promise<void> {
     if (on && this.meta(sessionId).engine === 'hermes') throw new Error('Conectarea la browserul Jolty nu este disponibilă pentru Hermes.')
+    if (on && !store.getSecret(BROWSER_TOKEN_KEY)) {
+      // first use: no extension yet means the page of the right browser, not a 30 s wait that ends in a timeout
+      const info = browsers()
+      if (!info.extension) {
+        const b = activeBrowser()
+        if (b) b.open(BROWSER_EXTENSION_URL)
+        throw new Error(`Instalează extensia Playwright în ${b?.name || 'browser'} (am deschis pagina), apoi apasă din nou Browser.`)
+      }
+    }
     const s = this.live.get(sessionId)
     if (s) await s.setBrowser(on)
     const meta = s?.meta || this.meta(sessionId)
     meta.browser = on || undefined
     this.saveMeta(meta)
+  }
+
+  /** New token or browser settings: chats with the browser on swap their server now, no off/on needed. */
+  async reconnectBrowser(): Promise<void> {
+    for (const s of this.live.values()) {
+      if (!s.meta.browser) continue
+      await s.setBrowser(false)
+      await s.setBrowser(true)
+    }
   }
 
   respond(sessionId: string, requestId: string, decision: PermissionDecision): void {

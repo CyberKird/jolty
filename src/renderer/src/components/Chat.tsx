@@ -2,7 +2,7 @@ import { ArrowRight, ArrowUp, FolderOpen, Globe, RotateCcw, Paperclip, PanelRigh
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, delegatePick, recommend } from '@shared/complexity'
 import { usageRisk } from '@shared/usage-risk'
-import type { Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
+import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import { api, basename, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
 import { DEFAULT_MODE, MODES, ModelPicker, ModePicker, useAllModels, type ModelGroup } from './ModelPicker'
@@ -92,12 +92,16 @@ function Advice({ text, images, groups, profileId, model, effort, onApply }: {
 // ---------------------------------------------------------------------------
 // Composer
 // ---------------------------------------------------------------------------
+const NO_PROFILES: Profile[] = []
+
 interface ComposerProps {
   sessionId?: string
   running: boolean
   onSend: (text: string, attachments: Attachment[]) => Promise<void> | void
   onStop?: () => void
   profiles: Profile[]
+  /** models already loaded by the parent; loaded here when not given */
+  groups?: ModelGroup[]
   profileId?: string
   model?: string
   /** a model from any profile; the parent decides what switching profile means */
@@ -121,7 +125,8 @@ function Composer(p: ComposerProps) {
   const [dragging, setDragging] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const groups = useAllModels(p.profiles)
+  const loaded = useAllModels(p.groups ? NO_PROFILES : p.profiles)
+  const groups = p.groups || loaded
   const toast = useStore((s) => s.toast)
   const [caret, setCaret] = useState(0)
   const mentions = useMentions(text, caret, p.cwd)
@@ -725,13 +730,30 @@ export function NewChat() {
   const [browser, setBrowser] = useState(false)
   const [cwd, setCwd] = useState<string>()
   const [seed, setSeed] = useState<string>()
+  const groups = useAllModels(profiles)
+  const [lastModels, setLastModels] = useState<AppSettings['lastModels']>()
+  // the profile whose last model and level were already put in the picker (or that the user picked by hand)
+  const restored = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     void api.app.settings().then((s) => {
       setCwd(s.lastCwd)
+      setLastModels(s.lastModels)
       setProfileId((cur) => cur || s.lastProfileId || profiles[0]?.id)
     })
   }, [profiles])
+
+  // a new chat opens on what this profile used last, not on the default
+  useEffect(() => {
+    const g = groups.find((x) => x.profile.id === profileId)
+    if (!profileId || !g || g.loading || !lastModels || restored.current === profileId) return
+    restored.current = profileId
+    const last = lastModels[profileId]
+    const m = last && g.models.find((x) => x.id === last.model)
+    if (!m) return
+    setModel(m.id)
+    setEffort(last.effort && m.efforts?.includes(last.effort) ? last.effort : undefined)
+  }, [groups, profileId, lastModels])
 
   const pickCwd = async (): Promise<void> => {
     const dir = await api.app.pickFolder()
@@ -771,9 +793,11 @@ export function NewChat() {
       <Composer
         running={false}
         profiles={profiles}
+        groups={groups}
         profileId={profileId}
         model={model}
         onPick={(id, m, e) => {
+          restored.current = id
           if (profiles.find((p) => p.id === id)?.engine === 'hermes') {
             if (mode === 'plan' || mode === 'auto') setMode('ask')
             setBrowser(false)
