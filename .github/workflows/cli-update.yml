@@ -1,0 +1,68 @@
+name: CLI update
+
+# Keeps the two bundled CLIs on their newest release: checks daily, verifies the pair on the mock
+# models, then ships it as the next Jolty version so it reaches the app through the in-app updater.
+# A red run means the newest CLI broke the tests: nothing is pushed, the version stays put.
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cli:
+    name: Newest CLIs, tested and shipped
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Take the newest packages
+        run: npm i @openai/codex@latest @anthropic-ai/claude-agent-sdk@latest
+      - name: Anything new?
+        id: new
+        run: |
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "already at the newest versions"
+            echo "changed=no" >> "$GITHUB_OUTPUT"
+          else
+            git diff -- package.json
+            echo "changed=yes" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.new.outputs.changed == 'yes'
+        run: npm run typecheck
+      - if: steps.new.outputs.changed == 'yes'
+        run: npx electron-vite build
+      - if: steps.new.outputs.changed == 'yes'
+        name: Start mock model servers
+        run: |
+          python3 test/mocks/mock_anthropic.py 8766 "$RUNNER_TEMP/mock_anthropic.log" &
+          python3 test/mocks/mock_responses.py 8767 "$RUNNER_TEMP/mock_responses.log" &
+          sleep 2
+      - if: steps.new.outputs.changed == 'yes'
+        name: Install a virtual screen
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - if: steps.new.outputs.changed == 'yes'
+        name: Engine test (Claude Code + Codex through Jolty)
+        run: xvfb-run -a npm run test:engines
+        env:
+          JOLTY_DATA_DIR: ${{ runner.temp }}/jolty-engines
+          MOCK_ANTHROPIC_LOG: ${{ runner.temp }}/mock_anthropic.log
+          MOCK_RESPONSES_LOG: ${{ runner.temp }}/mock_responses.log
+      - if: steps.new.outputs.changed == 'yes'
+        name: Ship it as the next Jolty version
+        run: |
+          npm version patch --no-git-tag-version
+          VERSION="v$(node -p "require('./package.json').version")"
+          git config user.name "CyberKird"
+          git config user.email "CyberKird@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "Jolty ${VERSION#v}: CLI-uri la zi"
+          git push origin HEAD:main
+          git tag "$VERSION"
+          git push origin "$VERSION"
