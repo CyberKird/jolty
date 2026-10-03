@@ -1,6 +1,7 @@
-import { BarChart3, Cpu, Download, KeyRound, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { BarChart3, Cpu, Download, FolderOpen, KeyRound, Link, MessageSquare, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
+import { copyItem, pathItems, showMenu } from './ContextMenu'
 
 function money(n: number, currency = 'USD'): string {
   const v = n.toFixed(2)
@@ -96,6 +97,13 @@ export function Sidebar() {
     return [...map.entries()]
   }, [sessions, q])
 
+  const removeSession = async (id: string): Promise<void> => {
+    await api.sessions.remove(id)
+    if (activeId === id) await openSession(undefined)
+    await loadSessions()
+    toast('Conversația a fost scoasă din Jolty')
+  }
+
   return (
     <nav className="sidebar" aria-label="Navigare">
       <button className="btn primary new-chat" onClick={() => void openSession(undefined)}>
@@ -120,25 +128,39 @@ export function Sidebar() {
         {groups.length === 0 && <div className="faint small" style={{ padding: '6px 12px' }}>Nicio conversație încă.</div>}
         {groups.map(([cwd, list]) => (
           <div className="session-group" key={cwd}>
-            <div className="session-group-title" title={cwd}>
+            <div className="session-group-title" title={cwd} onContextMenu={(e) => showMenu(e, pathItems(cwd))}>
               {basename(cwd)}
             </div>
             {list.map((s) => {
               const profile = profiles.find((p) => p.id === s.profileId)
               return (
-                <div key={s.id} className={`session-item ${page === 'chat' && activeId === s.id ? 'active' : ''}`} onClick={() => void openSession(s.id)} role="button" tabIndex={0}>
+                <div
+                  key={s.id}
+                  className={`session-item ${page === 'chat' && activeId === s.id ? 'active' : ''}`}
+                  onClick={() => void openSession(s.id)}
+                  onContextMenu={(e) =>
+                    showMenu(e, [
+                      { label: 'Deschide conversația', icon: MessageSquare, run: () => void openSession(s.id) },
+                      copyItem('Copiază titlul', s.title),
+                      'sep',
+                      { label: 'Arată folderul în Explorer', icon: FolderOpen, run: () => void api.app.revealPath(s.cwd) },
+                      copyItem('Copiază calea folderului', s.cwd, Link),
+                      'sep',
+                      { label: 'Scoate din Jolty', icon: Trash2, run: () => void removeSession(s.id) }
+                    ])
+                  }
+                  role="button"
+                  tabIndex={0}
+                >
                   <span className={`dot ${status[s.id] === 'running' ? 'running' : ''}`} style={{ background: profile?.color }} />
                   <span className="title">{s.title}</span>
                   <span className="when">{timeAgo(s.updatedAt)}</span>
                   <button
                     className="del"
                     title="Scoate din Jolty (sesiunea rămâne în Claude Code / Codex)"
-                    onClick={async (e) => {
+                    onClick={(e) => {
                       e.stopPropagation()
-                      await api.sessions.remove(s.id)
-                      if (activeId === s.id) await openSession(undefined)
-                      await loadSessions()
-                      toast('Conversația a fost scoasă din Jolty')
+                      void removeSession(s.id)
                     }}
                   >
                     <Trash2 size={13} />

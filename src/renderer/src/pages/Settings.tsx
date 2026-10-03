@@ -190,6 +190,19 @@ export function SettingsPage() {
             </span>
           </span>
         </label>
+        <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={s.protectSecretFiles !== false}
+            onChange={async (e) => setS(await api.app.saveSettings({ protectSecretFiles: e.target.checked }))}
+          />
+          <span>
+            <b>Întreabă înainte să atingă fișiere cu secrete</b>
+            <span className="muted small" style={{ display: 'block' }}>
+              Claude cere acordul tău înainte să citească sau să modifice .env, chei private, secrets.json și ~/.ssh, chiar și în modurile fără întrebări. Poți răspunde „da” oricând, nu e interzis. Se aplică la sesiunile pornite după schimbare.
+            </span>
+          </span>
+        </label>
         <div className="card" style={{ marginBottom: 14 }}>
           <b>Motoare</b>
           <p className="muted small">Claude Code și Codex sunt incluse. Hermes folosește instalarea de pe PC. Completează doar dacă vrei alt executabil.</p>

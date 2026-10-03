@@ -7,10 +7,12 @@ import os from 'os'
 import path from 'path'
 import type { ChatEvent, ChatItem, Profile } from '../src/shared/types'
 import { endpointCost, fetchBalance, hasBalance } from '../src/main/balance'
-import { pageHost } from '../src/main/browser'
+import { browserServer, pageHost } from '../src/main/browser'
 import { endpointEfforts } from '../src/main/engines/thinking'
 import { noThinkingUrl } from '../src/main/thinking-proxy'
 import { assess, delegatePick, recommend } from '../src/shared/complexity'
+import { modelScore } from '../src/shared/scores'
+import { secretHint } from '../src/shared/secrets'
 import { TaskBoard } from '../src/main/engines/tasks'
 import { syncSettings } from '../src/main/runtime'
 import { Jolty } from '../src/main/jolty'
@@ -182,6 +184,17 @@ app.whenReady().then(async () => {
     check(delegatePick('scrie teste pentru modulul de plată folosind cheia sk-abc123 și token-ul de auth pentru toate mediile', list, 'claude') === undefined, 'looks like it holds a secret: never routed to a third-party endpoint')
     check(delegatePick('explică-mi de ce interfața se mișcă greu când derulez lista lungă de sesiuni din bara laterală', list, 'claude') === undefined, 'no mechanical verb: no delegation')
     check(delegatePick(mechanical, [sub, local], 'claude')?.id === 'ollama', 'falls back to a local model when no endpoint key is set')
+
+    const opus = modelScore(sub, { id: 'opus', label: 'Opus 5.5' })
+    check(opus?.iq === 54 && opus.speed === 'mediu', 'Opus 5.5 scores 54 and is medium speed')
+    check(modelScore(sub, { id: 'sonnet', label: 'Sonnet 5.5' })?.speed === 'rapid', 'Sonnet 5.5 is fast')
+    check(modelScore(sub, { id: 'gpt-6.1-sol', label: 'GPT-6.1-Sol' })?.iq === 50, 'GPT-6.1 Sol is not mistaken for GPT-6 Sol')
+    check(modelScore(sub, { id: 'xiaomi:mimo-v2.5-tts', label: 'mimo-v2.5-tts' }) === undefined, 'a speech model gets no intelligence score')
+    check(secretHint('foloseste cheia sk-ant-api03-abcdefghijklmnop1234 pentru test') === 'o cheie API', 'secret hint: an API key is noticed')
+    check(secretHint('password: hunter2x') === 'o parolă', 'secret hint: a password is noticed')
+    check(secretHint('scrie teste pentru modulul de plată și refactorizează serviciul') === undefined, 'secret hint: ordinary text is left alone')
+    const gemma = modelScore(local, { id: 'gemma4-jolty', label: 'gemma4-jolty' })
+    check(gemma?.iq === 15 && gemma.speed === undefined, 'a local model has a score but no speed (that is the PC)')
   }
 
   // ---------------- Claude Code via an Anthropic-compatible endpoint ----------------
@@ -255,8 +268,34 @@ app.whenReady().then(async () => {
       console.log(`   rewind: ${JSON.stringify(res)} -> ${JSON.stringify(fs.readFileSync(file, 'utf8').slice(0, 30))}`)
       check(fs.readFileSync(file, 'utf8') === 'original\n' && res.files.length === 1, 'rewind: the file is back to its content before that message')
     }
+    // the safety nets: with every question off a few commands never run; secret files still ask in the modes that are otherwise free
+    {
+      const proj3 = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-net-'))
+      const net = jolty.createProfile({ name: 'Net (mock)', engine: 'claude', auth: 'endpoint', baseUrl: url, models: ['mock-model'], secret: 'sk-mock' })
+      const asked = (id: string): number => events.filter((e) => e.type === 'permission' && e.sessionId === id).length
+      const free = await jolty.startSession({ profileId: net.id, cwd: proj3, permissionMode: 'full' })
+      await jolty.sendMessage(free.id, 'RUN_TOOL BASH_CMD=reg delete HKCU\Software\JoltyNeverRun /f')
+      await waitFor(() => idleCount(free.id) >= 1, 120000, 'never-run turn')
+      const blocked = jolty.history(free.id).find((i) => i.kind === 'tool') as Extract<ChatItem, { kind: 'tool' }> | undefined
+      show(jolty.history(free.id))
+      check(blocked?.status === 'error' && /Permission to use Bash/i.test(blocked.output || ''), 'full mode: reg delete is refused by the never-run list')
+      const edits = await jolty.startSession({ profileId: net.id, cwd: proj3, permissionMode: 'autoEdit' })
+      await jolty.sendMessage(edits.id, `RUN_WRITE WRITE_TO=${path.join(proj3, 'notes.txt')}`)
+      await waitFor(() => idleCount(edits.id) >= 1, 120000, 'plain write turn')
+      check(asked(edits.id) === 0, 'accept-edits mode: a normal file is written without asking')
+      await jolty.sendMessage(edits.id, `Din nou RUN_WRITE WRITE_TO=${path.join(proj3, '.env')}`)
+      await waitFor(() => idleCount(edits.id) >= 2, 120000, 'secret write turn')
+      check(asked(edits.id) === 1, 'accept-edits mode: a .env file still asks first')
+    }
     check(pageHost('### Page\n- Page URL: https://Shop.Example.com:8443/cart?x=1') === 'shop.example.com', 'browser: the site comes from the tool result')
     check(pageHost('- Page URL: chrome-extension://abc/connect.html') === undefined, 'browser: non-web pages are never a trusted site')
+    // the three ways to connect: the extension opens a tab (default), the user picks one, or a separate Jolty window runs with no extension at all
+    check(browserServer().args.includes('--extension'), 'browser: the extension is used by default')
+    store.saveSettings({ browserMode: 'own' })
+    check(!browserServer().args.includes('--extension'), 'browser: the separate Jolty window needs no extension')
+    store.saveSettings({ browserMode: 'pick' })
+    check(browserServer().args.includes('--extension') && !browserServer().env.PLAYWRIGHT_MCP_EXTENSION_TOKEN, 'browser: picking a tab by hand sends no saved token')
+    store.saveSettings({ browserMode: undefined })
     // thinking level on an endpoint: what the picker offers is what the provider documents, and it reaches the request
     check(endpointEfforts({ baseUrl: 'https://api.deepseek.com/anthropic' } as Profile).efforts?.join() === 'off,low,high,max', 'thinking: DeepSeek offers off, low, high, max')
     check(endpointEfforts({ baseUrl: 'https://api.xiaomimimo.com/anthropic' } as Profile).efforts?.join() === 'off,on', 'thinking: MiMo offers on/off only')
@@ -368,6 +407,14 @@ app.whenReady().then(async () => {
       const tools = Object.keys(mine?.tools || {})
       console.log(`   codex jolty-browser: ${tools.length} tools${st?.error ? ` (${st.error})` : ''}`)
       check(tools.includes('browser_navigate') && !tools.includes('browser_run_code_unsafe'), 'codex sees the browser tools, without the unsafe one')
+    }
+    {
+      // project mode: no questions, inside the project folder (workspace-write sandbox, approval never).
+      // The mock home has no Windows sandbox set up, so only the absence of questions is checked here.
+      const q = await jolty.startSession({ profileId: p.id, cwd: project, permissionMode: 'project', model: 'mock-model' })
+      await jolty.sendMessage(q.id, 'Salut Codex RUN_TOOL')
+      await waitFor(() => idleCount(q.id) >= 1, 120000, 'codex project-mode turn')
+      check(!events.some((e) => e.type === 'permission' && e.sessionId === q.id), 'codex project mode: no approval is asked')
     }
     const ctool = items.find((i) => i.kind === 'tool') as Extract<ChatItem, { kind: 'tool' }> | undefined
     check(Boolean(ctool) && (ctool!.output || '').includes('jolty-codex-ok'), 'codex ran the shell command and captured its output')

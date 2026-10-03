@@ -90,7 +90,11 @@ const api: JoltyApi = {
     openExternal: (url) => call('app:openExternal', url),
     openPath: (p) => call('app:openPath', p),
     revealPath: (p) => call('app:revealPath', p),
-    contextMenu: (t) => call('app:contextMenu', t),
+    edit: (a) => call('app:edit', a),
+    copyText: (t) => call('app:copyText', t),
+    image: (kind, image, name) => call('app:image', kind, image, name),
+    openLocal: (p) => call('app:openLocal', p),
+    openLink: (u) => call('app:openLink', u),
     version: () => call('app:version')
   }
 }

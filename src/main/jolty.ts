@@ -21,7 +21,7 @@ import type {
   TurnUsage,
   UsageSummary
 } from '@shared/types'
-import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers } from './browser'
+import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browserMode, browsers } from './browser'
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
 import { HermesDriver } from './engines/hermes'
@@ -557,7 +557,9 @@ export class Jolty {
 
   async setBrowser(sessionId: string, on: boolean): Promise<void> {
     if (on && this.meta(sessionId).engine === 'hermes') throw new Error('Conectarea la browserul Jolty nu este disponibilă pentru Hermes.')
-    if (on && !store.getSecret(BROWSER_TOKEN_KEY)) {
+    if (on && browserMode() === 'own' && !browsers().active) throw new Error('Nu găsesc niciun browser Chromium (Chrome, Vivaldi, Edge sau Brave) pentru fereastra Jolty.')
+    // the separate Jolty window needs no extension at all
+    if (on && browserMode() !== 'own' && (browserMode() === 'pick' || !store.getSecret(BROWSER_TOKEN_KEY))) {
       // first use: no extension yet means the page of the right browser, not a 30 s wait that ends in a timeout
       const info = browsers()
       if (!info.extension) {

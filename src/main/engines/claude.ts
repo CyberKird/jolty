@@ -29,7 +29,7 @@ import type {
   SessionMeta
 } from '@shared/types'
 import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
-import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, BROWSER_PROMPT, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer, pageHost } from '../browser'
+import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer, pageHost } from '../browser'
 import { modelInfo } from '../local'
 import { noThinkingUrl } from '../thinking-proxy'
 import { endpointEfforts, endpointThinking } from './thinking'
@@ -43,11 +43,19 @@ type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
 let sdkModule: Promise<SdkModule> | undefined
 const loadSdk = (): Promise<SdkModule> => (sdkModule ??= import('@anthropic-ai/claude-agent-sdk'))
 
+/** Files that hold secrets: a model gets asked about them even in the modes that otherwise read and edit freely. */
+const SECRET_FILES = ['**/.env', '**/.env.*', '**/secrets.json', '**/.credentials.json', '**/*.pem', '**/*.key', '**/id_rsa*', '**/id_ed25519*', '~/.ssh/**']
+const SECRET_FILE_RULES = SECRET_FILES.flatMap((f) => [`Read(${f})`, `Edit(${f})`])
+
+/** Even with every question switched off, these never run: they cannot be undone by a checkpoint. */
+const NEVER_RUN = ['Bash(format:*)', 'Bash(diskpart:*)', 'Bash(reg delete:*)', 'Bash(git push --force:*)', 'Bash(git push -f:*)', 'Bash(rm -rf /:*)', 'Bash(rm -rf ~:*)', 'Bash(rm -rf C:*)', 'Bash(rm -rf $HOME:*)']
+
 const MODE_MAP: Record<PermissionMode, SdkPermissionMode> = {
   auto: 'auto',
   ask: 'default',
   autoEdit: 'acceptEdits',
   plan: 'plan',
+  project: 'acceptEdits',
   full: 'bypassPermissions'
 }
 
@@ -353,9 +361,15 @@ class ClaudeSession implements EngineSession {
       // a backup before every edit, so any message can be undone with rewind()
       enableFileCheckpointing: true,
       settingSources: ['user', 'project', 'local'],
-      systemPrompt: { type: 'preset', preset: 'claude_code', append: this.meta.browser ? `${APPEND_PROMPT} ${BROWSER_PROMPT}` : APPEND_PROMPT },
+      systemPrompt: { type: 'preset', preset: 'claude_code', append: this.meta.browser ? `${APPEND_PROMPT} ${browserPrompt()}` : APPEND_PROMPT },
       ...(this.meta.browser ? { mcpServers: { [BROWSER_SERVER]: { type: 'stdio' as const, ...browserServer() } } } : {}),
       disallowedTools: ['AskUserQuestion', ...BROWSER_BLOCKED_TOOLS.map((t) => `mcp__${BROWSER_SERVER}__${t}`)],
+      settings: {
+        permissions: {
+          ...(loadSettings().protectSecretFiles !== false ? { ask: SECRET_FILE_RULES } : {}),
+          ...(this.meta.permissionMode === 'full' ? { deny: NEVER_RUN } : {})
+        }
+      },
       canUseTool,
       stderr: (d) => {
         if (process.env.JOLTY_DEBUG) console.error('[claude]', d)
@@ -549,7 +563,10 @@ class ClaudeSession implements EngineSession {
     if (server === BROWSER_SERVER && BROWSER_READ_TOOLS.includes(tool) && this.meta.permissionMode !== 'ask') {
       return Promise.resolve({ behavior: 'allow', updatedInput: input })
     }
-    const site = server === BROWSER_SERVER && BROWSER_ACT_TOOLS.includes(tool) && this.meta.permissionMode !== 'ask' ? this.browserSite : undefined
+    const acts = server === BROWSER_SERVER && BROWSER_ACT_TOOLS.includes(tool) && this.meta.permissionMode !== 'ask'
+    const trust = loadSettings().siteTrust || 'site'
+    if (acts && trust === 'free') return Promise.resolve({ behavior: 'allow', updatedInput: input })
+    const site = acts && trust === 'site' ? this.browserSite : undefined
     if (site && this.trustedSites.has(site)) return Promise.resolve({ behavior: 'allow', updatedInput: input })
     const id = randomUUID()
     const detail = toolName === 'Bash' ? String(input.command ?? '') : toolName === 'ExitPlanMode' ? undefined : truncate(JSON.stringify(input, null, 2), 4000)
@@ -780,13 +797,19 @@ export class ClaudeDriver implements EngineDriver {
     const list = await withProbe(profile, (q) => q.supportedModels())
     // aliases ("sonnet") come labelled "Sonnet"; the version the alias points to today is in the description
     const versioned = (m: (typeof list)[number]): string | undefined => /^([A-Z][a-z]+ \d+(?:\.\d+)?) ·/.exec(m.description || '')?.[1]
-    const models = list.map((m) => ({
+    const mapped = list.map((m) => ({
       id: m.value,
-      label: (m.value !== 'default' && versioned(m)) || m.displayName || m.value,
+      label: versioned(m) || m.displayName || m.value,
       description: m.description,
       isDefault: m.value === 'default',
       efforts: m.supportsEffort === false ? [] : m.supportedEffortLevels
     }))
+    // "Default (recommended)" is only another name for one of the models below: the user picks a named model, never a default row.
+    // The named twin keeps isDefault internally, for a chat that starts before anything is picked.
+    const alias = mapped.find((m) => m.id === 'default')
+    const twin = alias && mapped.find((m) => m.id !== 'default' && m.label === alias.label)
+    if (twin) twin.isDefault = true
+    const models = twin ? mapped.filter((m) => m !== alias) : mapped
     this.modelCache.set(profile.id, { at: Date.now(), models })
     announceNewModels(models.filter((m) => m.id !== 'default').map((m) => m.label))
     return models

@@ -110,7 +110,7 @@ class H(BaseHTTPRequestHandler):
             sse(self, "content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Rulez comanda."}})
             sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})
             sse(self, "content_block_start", {"type": "content_block_start", "index": 1, "content_block": {"type": "tool_use", "id": "toolu_" + mid, "name": "Bash", "input": {}}})
-            sse(self, "content_block_delta", {"type": "content_block_delta", "index": 1, "delta": {"type": "input_json_delta", "partial_json": json.dumps({"command": "echo jolty-tool-ok > jolty-proof.txt && cat jolty-proof.txt", "description": "test"})}})
+            sse(self, "content_block_delta", {"type": "content_block_delta", "index": 1, "delta": {"type": "input_json_delta", "partial_json": json.dumps({"command": (re.search(r"BASH_CMD=(.+)", tail).group(1).strip() if "BASH_CMD=" in tail else "echo jolty-tool-ok > jolty-proof.txt && cat jolty-proof.txt"), "description": "test"})}})
             sse(self, "content_block_stop", {"type": "content_block_stop", "index": 1})
             sse(self, "message_delta", {"type": "message_delta", "delta": {"stop_reason": "tool_use", "stop_sequence": None}, "usage": {"output_tokens": 20}})
         else:

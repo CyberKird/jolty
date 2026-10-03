@@ -19,7 +19,7 @@ import type {
   SessionMeta
 } from '@shared/types'
 import { CODEX_PRIVATE_ARGS, codexEnv, codexExecutable, prepareProfileDir } from '../runtime'
-import { BROWSER_BLOCKED_TOOLS, BROWSER_PROMPT, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer } from '../browser'
+import { BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer } from '../browser'
 import { getSecret } from '../store'
 import { truncate } from './format'
 import { JsonRpcProcess, type RpcNotification, type RpcRequest } from './jsonrpc'
@@ -35,6 +35,7 @@ const MODES: Record<PermissionMode, { approvalPolicy: string; sandbox: 'read-onl
   ask: { approvalPolicy: 'untrusted', sandbox: 'workspace-write' },
   autoEdit: { approvalPolicy: 'on-request', sandbox: 'workspace-write' },
   plan: { approvalPolicy: 'on-request', sandbox: 'read-only' },
+  project: { approvalPolicy: 'never', sandbox: 'workspace-write' },
   full: { approvalPolicy: 'never', sandbox: 'danger-full-access' }
 }
 
@@ -42,7 +43,7 @@ function sandboxPolicy(mode: PermissionMode, cwd: string): Any {
   const sandbox = MODES[mode].sandbox
   if (sandbox === 'read-only') return { type: 'readOnly', networkAccess: false }
   if (sandbox === 'danger-full-access') return { type: 'dangerFullAccess' }
-  return { type: 'workspaceWrite', writableRoots: [cwd], networkAccess: false, excludeTmpdirEnvVar: false, excludeSlashTmp: false }
+  return { type: 'workspaceWrite', writableRoots: [cwd], networkAccess: mode === 'project', excludeTmpdirEnvVar: false, excludeSlashTmp: false }
 }
 
 function windowLabel(mins: number | null | undefined, fallback: string): string {
@@ -332,7 +333,7 @@ class CodexSession implements EngineSession, ThreadListener {
       model: this.meta.model || null,
       approvalPolicy: mode.approvalPolicy,
       sandbox: mode.sandbox,
-      developerInstructions: this.meta.browser ? `${WRITING_RULES} ${PLAN_RULES} ${BROWSER_PROMPT}` : `${WRITING_RULES} ${PLAN_RULES}`,
+      developerInstructions: this.meta.browser ? `${WRITING_RULES} ${PLAN_RULES} ${browserPrompt()}` : `${WRITING_RULES} ${PLAN_RULES}`,
       ...(this.meta.browser ? { config: { mcp_servers: { [BROWSER_SERVER]: this.browserConfig() } } } : {})
     }
     const resp = this.meta.engineSessionId

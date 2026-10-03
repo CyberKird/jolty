@@ -3,7 +3,8 @@
 import { Check, ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { capability } from '@shared/complexity'
-import type { EngineKind, ModelOption, PermissionMode, Profile } from '@shared/types'
+import { modelScore } from '@shared/scores'
+import type { BrowserMode, EngineKind, ModelOption, PermissionMode, Profile, SiteTrust } from '@shared/types'
 import { api, ENGINE_LABEL, errMsg } from '../store'
 
 export interface ModelGroup {
@@ -123,6 +124,7 @@ export function ModelPicker(p: {
       </button>
       {open && (
         <div className="picker-pop" role="menu" aria-label="Model și efort">
+          <div className="picker-legend">Numărul e inteligența (Artificial Analysis, mai mare e mai bine), cuvântul e viteza.</div>
           <div className="picker-list">
             {p.groups.map((g) => (
               <div className="picker-group" key={g.profile.id}>
@@ -138,6 +140,8 @@ export function ModelPicker(p: {
                   const on = g.profile.id === p.profileId && m.id === current?.id
                   const other = g.profile.id !== p.profileId
                   const cap = capability(g.profile, m)
+                  const sc = modelScore(g.profile, m)
+                  const scoreTip = sc ? `Inteligență ${sc.iq}${sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : ''} (Artificial Analysis): ${sc.note}` : cap.compare
                   return (
                     <button
                       key={m.id}
@@ -145,7 +149,7 @@ export function ModelPicker(p: {
                       role="menuitemradio"
                       aria-checked={on}
                       className={`picker-opt ${on ? 'on' : ''}`}
-                      title={[cap.compare, m.description, m.efforts?.length ? `Gândire: ${m.efforts.join(', ')}` : 'Fără niveluri de gândire', m.vision === false ? 'Nu vede imagini: le descrie alt profil' : ''].filter(Boolean).join('\n')}
+                      title={[scoreTip, m.description, m.efforts?.length ? `Gândire: ${m.efforts.join(', ')}` : 'Fără niveluri de gândire', m.vision === false ? 'Nu vede imagini: le descrie alt profil' : ''].filter(Boolean).join('\n')}
                       onClick={() => {
                         setOpen(false)
                         if (!on) p.onPick(g.profile.id, m.id)
@@ -154,9 +158,8 @@ export function ModelPicker(p: {
                       <span className="picker-opt-text">
                         <span className="picker-opt-name">
                           {m.label}
-                          <span className={`picker-tag grade-${cap.grade}`}>{cap.tag}</span>
-                          {m.isDefault && <span className="picker-tag">implicit</span>}
-                          {m.vision === false && <span className="picker-tag">fără imagini</span>}
+                          {sc && <span className={`picker-score ${sc.iq >= 45 ? 'hi' : sc.iq < 25 ? 'lo' : ''}`}>{sc.iq}</span>}
+                          {sc?.speed && <span className="picker-speed">{sc.speed}</span>}
                         </span>
                         {(m.description || (other && p.otherProfileHint)) && (
                           <span className="picker-opt-desc">{other && p.otherProfileHint ? p.otherProfileHint : m.description}</span>
@@ -195,7 +198,7 @@ export function ModelPicker(p: {
 
 export const DEFAULT_MODE: PermissionMode = 'autoEdit'
 
-export const MODES: { id: PermissionMode; label: string; desc: string; title: string }[] = [
+export const MODES: { id: PermissionMode; label: string; desc: string; title: string; only?: EngineKind }[] = [
   {
     id: 'auto',
     label: 'Auto',
@@ -221,10 +224,17 @@ export const MODES: { id: PermissionMode; label: string; desc: string; title: st
     title: 'Doar citește și cercetează, apoi îți arată planul. Nu modifică nimic până nu aprobi.'
   },
   {
+    id: 'project',
+    label: 'Liber în proiect',
+    desc: 'Fără întrebări, doar în folderul proiectului',
+    title: 'Codex lucrează fără să întrebe, dar sandbox-ul lui nu îl lasă să scrie în afara folderului proiectului. Rețeaua e pornită, ca să poată instala pachete.',
+    only: 'codex'
+  },
+  {
     id: 'full',
     label: 'Fără permisiuni',
-    desc: 'Acceptă toate permisiunile',
-    title: 'Rulează orice comandă și modifică orice fără să întrebe. Doar în proiecte în care ai încredere totală.'
+    desc: 'Acceptă toate permisiunile, pe tot discul',
+    title: 'Rulează orice comandă și modifică orice fără să întrebe, oriunde pe disc. Doar în proiecte în care ai încredere totală.'
   }
 ]
 
@@ -234,9 +244,21 @@ const HERMES_MODES = [
   { id: 'full' as const, label: 'Editări extinse', desc: 'Aprobă editările din afara proiectului', title: 'Hermes aprobă editările în această sesiune, cu excepția căilor sensibile. Comenzile periculoase cer în continuare acordul.' }
 ]
 
+/** The modes this engine offers. */
+export function modesFor(engine?: EngineKind): { id: PermissionMode; label: string; desc: string; title: string }[] {
+  return engine === 'hermes' ? HERMES_MODES : MODES.filter((m) => !m.only || m.only === engine)
+}
+
+/** Whole-disk access is never one slip away: it needs a yes, and Shift+Tab does not pass through it. */
+export const OPEN_MODES: PermissionMode[] = ['project', 'full']
+
 export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onMode: (m: PermissionMode) => void; engine?: EngineKind }) {
   const { open, setOpen, ref } = usePopover()
-  const choices = engine === 'hermes' ? HERMES_MODES : MODES
+  const choices = modesFor(engine)
+  const pick = (m: PermissionMode): void => {
+    if (m === 'full' && mode !== 'full' && engine !== 'hermes' && !window.confirm('Fără permisiuni: modelul rulează orice comandă și modifică orice fișier de pe tot discul, fără să întrebe. Câteva comenzi ireversibile (format, reg delete, git push --force) rămân blocate. Continui?')) return
+    onMode(m)
+  }
   const current = choices.find((m) => m.id === mode) || choices[0]
   // 1-5 pick a mode while the menu is open, like the Claude app
   useEffect(() => {
@@ -246,10 +268,11 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
       if (!m || e.ctrlKey || e.altKey || e.metaKey) return
       e.preventDefault()
       setOpen(false)
-      onMode(m.id)
+      pick(m.id)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, onMode, setOpen, choices])
   return (
     <div className="picker" ref={ref}>
@@ -271,7 +294,7 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
                 title={m.title}
                 onClick={() => {
                   setOpen(false)
-                  onMode(m.id)
+                  pick(m.id)
                 }}
               >
                 <span className="picker-opt-text">
@@ -283,6 +306,85 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
                 </span>
                 {m.id === mode && <Check size={14} />}
                 <kbd className="picker-key">{i + 1}</kbd>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const TRUST: { id: SiteTrust; label: string; desc: string }[] = [
+  { id: 'ask', label: 'Întreabă la fiecare acțiune', desc: 'Clicul, tastarea și formularele cer acordul de fiecare dată' },
+  { id: 'site', label: 'O dată pe site', desc: 'Recomandat: întreabă prima dată pe un site, apoi lucrează liber pe el în conversația asta' },
+  { id: 'free', label: 'Liber', desc: 'Fără întrebări pentru clic și tastare. Cod în pagină, încărcarea de fișiere și închiderea tabului tot cer acordul' }
+]
+
+const CONNECT: { id: BrowserMode; label: string; desc: string }[] = [
+  { id: 'auto', label: 'Tab propriu, automat', desc: 'Browserul tău: se conectează singur și lucrează într-un tab deschis de el' },
+  { id: 'pick', label: 'Aleg eu tabul', desc: 'Browserul tău: extensia îți arată tab-urile deschise și modelul lucrează în cel pe care îl alegi' },
+  { id: 'own', label: 'Fereastră Jolty, profil separat', desc: 'Un browser aparte, cu profilul lui: vede toate tab-urile din fereastra aceea și nu atinge conturile tale. Te loghezi o dată pe site-urile de care are nevoie' }
+]
+
+/** What a model may do in the browser without asking, and how it attaches to a tab. */
+export function BrowserMenu() {
+  const { open, setOpen, ref } = usePopover()
+  const [trust, setTrust] = useState<SiteTrust>('site')
+  const [mode, setMode] = useState<BrowserMode>('auto')
+  useEffect(() => {
+    if (open)
+      void api.app.settings().then((s) => {
+        setTrust(s.siteTrust || 'site')
+        setMode(s.browserMode || 'auto')
+      })
+  }, [open])
+  return (
+    <div className="picker" ref={ref}>
+      <button className="chrome-toggle chevron" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title="Permisiunile și conectarea browserului" aria-label="Permisiunile browserului">
+        <ChevronDown size={13} />
+      </button>
+      {open && (
+        <div className="picker-pop" role="menu" aria-label="Permisiunile browserului">
+          <div className="picker-list">
+            <div className="picker-group-head">Cât de liber lucrează modelul</div>
+            {TRUST.map((t) => (
+              <button
+                key={t.id}
+                data-opt
+                role="menuitemradio"
+                aria-checked={trust === t.id}
+                className={`picker-opt ${trust === t.id ? 'on' : ''}`}
+                onClick={() => {
+                  setTrust(t.id)
+                  void api.app.saveSettings({ siteTrust: t.id })
+                }}
+              >
+                <span className="picker-opt-text">
+                  <span className="picker-opt-name">{t.label}</span>
+                  <span className="picker-opt-desc">{t.desc}</span>
+                </span>
+                {trust === t.id && <Check size={14} />}
+              </button>
+            ))}
+            <div className="picker-group-head" style={{ marginTop: 8 }}>Conectare</div>
+            {CONNECT.map((c) => (
+              <button
+                key={c.id}
+                data-opt
+                role="menuitemradio"
+                aria-checked={mode === c.id}
+                className={`picker-opt ${mode === c.id ? 'on' : ''}`}
+                onClick={() => {
+                  setMode(c.id)
+                  void api.app.saveSettings({ browserMode: c.id })
+                }}
+              >
+                <span className="picker-opt-text">
+                  <span className="picker-opt-name">{c.label}</span>
+                  <span className="picker-opt-desc">{c.desc}</span>
+                </span>
+                {mode === c.id && <Check size={14} />}
               </button>
             ))}
           </div>

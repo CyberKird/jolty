@@ -1,11 +1,12 @@
 import { ArrowRight, ArrowUp, FolderOpen, Globe, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, delegatePick, recommend } from '@shared/complexity'
+import { secretHint } from '@shared/secrets'
 import { usageRisk } from '@shared/usage-risk'
 import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import { api, basename, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
-import { DEFAULT_MODE, MODES, ModelPicker, ModePicker, useAllModels, type ModelGroup } from './ModelPicker'
+import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODES, useAllModels, type ModelGroup } from './ModelPicker'
 import { MentionMenu, useMentions } from './Mentions'
 import { TaskStrip, VerificationStrip } from './Tasks'
 
@@ -130,6 +131,9 @@ function Composer(p: ComposerProps) {
   const toast = useStore((s) => s.toast)
   const [caret, setCaret] = useState(0)
   const mentions = useMentions(text, caret, p.cwd)
+  // a hint, not a block: what is typed here goes to the provider of the chosen profile, unless that profile is local
+  const sendProfile = p.profiles.find((x) => x.id === p.profileId)
+  const secret = sendProfile && !sendProfile.local ? secretHint(text) : undefined
   const costNote = usageRisk(text, atts.filter((a) => a.mime.startsWith('image/')).length, atts.filter((a) => a.mime.startsWith('video/')).length)
   // messages written while the model works wait here and go out, in order, when the turn ends
   const [queue, setQueue] = useState<{ id: string; text: string; atts: Attachment[] }[]>(() => {
@@ -337,7 +341,7 @@ function Composer(p: ComposerProps) {
             // Shift+Tab cycles the permission mode, like Claude Code
             if (e.key === 'Tab' && e.shiftKey) {
               e.preventDefault()
-              const modes = engine === 'hermes' ? (['ask', 'autoEdit', 'full'] as const) : MODES.map((m) => m.id)
+              const modes = modesFor(engine).map((m) => m.id).filter((id) => engine === 'hermes' || !OPEN_MODES.includes(id))
               const i = modes.findIndex((mode) => mode === p.mode)
               p.onMode(modes[(i + 1) % modes.length])
               return
@@ -362,6 +366,11 @@ function Composer(p: ComposerProps) {
           }}
         />
         {costNote && <div className="attachment-note" role="status">{costNote}</div>}
+        {secret && (
+          <div className="attachment-note" role="status">
+            Mesajul pare să conțină {secret}. Nu l-am blocat, dar se trimite către {sendProfile?.name}. Pentru ceva sensibil, un model local nu trimite nimic în afara PC-ului.
+          </div>
+        )}
         <div className="composer-bar">
           <button className="btn ghost small icon" title="Atașează imagini, videouri sau fișiere" onClick={() => fileRef.current?.click()}>
             <Paperclip size={15} />
@@ -410,6 +419,7 @@ function Composer(p: ComposerProps) {
           >
             <Globe size={14} strokeWidth={1.8} /> Browser
           </button>
+          {engine !== 'hermes' && <BrowserMenu />}
           <div className="spacer" />
           {p.running && (
             <button className="btn send-btn" onClick={p.onStop} title="Oprește (Esc)">

@@ -1,9 +1,11 @@
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js/lib/common'
 import { Marked } from 'marked'
+import { FileText } from 'lucide-react'
 import { memo, useMemo, type MouseEvent } from 'react'
 import type { FileDiff } from '@shared/types'
 import { api } from '../store'
+import { copyItem, imageItems, itemsAt, showMenu } from './ContextMenu'
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -60,16 +62,13 @@ function onLinkClick(e: MouseEvent<HTMLDivElement>): void {
 
 /** Right-click on a chat message: link actions when on a link, then copy actions. */
 export function messageMenu(e: MouseEvent<HTMLElement>, markdown?: string): void {
-  e.preventDefault()
-  const href = (e.target as HTMLElement).closest('a')?.getAttribute('href') || undefined
-  const selection = window.getSelection()?.toString() || undefined
-  void api.app.contextMenu({ href, selection, text: e.currentTarget.innerText.trim() || undefined, markdown })
+  const text = e.currentTarget.innerText.trim()
+  showMenu(e, [...itemsAt(e.target as Element), 'sep', ...(text ? [copyItem('Copiază mesajul', text)] : []), ...(markdown ? [copyItem('Copiază ca Markdown', markdown, FileText)] : [])])
 }
 
 export function imageMenu(e: MouseEvent<HTMLElement>, image: string, imageName: string): void {
-  e.preventDefault()
   e.stopPropagation()
-  void api.app.contextMenu({ image, imageName })
+  showMenu(e, imageItems(image, imageName))
 }
 
 export const Markdown = memo(function Markdown({ text }: { text: string }) {

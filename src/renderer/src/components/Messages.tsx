@@ -70,12 +70,19 @@ export function toolTarget(name: string, title: string, input?: unknown): string
   return title.replace(/^\$ /, '').replace(/^(Citește|Editează|Scrie|Caută fișiere|Caută pe web:|Caută|Deschide|Subagent:)\s*/, '')
 }
 
+/** The file a tool works on, when it is a full path (the right-click menu can then open it or show it in Explorer). */
+function toolFile(t: Tool): string | undefined {
+  const i = (t.input || {}) as Record<string, unknown>
+  const p = i.file_path || i.notebook_path
+  return typeof p === 'string' && /^([a-z]:[\/]|\/)/i.test(p) ? p : undefined
+}
+
 const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
   const [open, setOpen] = useState(false)
   const hasBody = Boolean(item.output || item.diffs?.length || item.images?.length)
   const state = item.status === 'running' ? 'acum' : item.status === 'error' ? 'eroare' : 'gata'
   return (
-    <div className={`tool ${item.status}`}>
+    <div className={`tool ${item.status}`} data-path={toolFile(item)}>
       <button className="tool-head" onClick={() => hasBody && setOpen(!open)} aria-expanded={open}>
         <span className="tool-verb">{toolVerb(item.name)}</span>
         <span className="tool-target">{toolTarget(item.name, item.title, item.input)}</span>

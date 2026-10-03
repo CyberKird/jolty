@@ -2253,13 +2253,35 @@ a {
 .meter-balance b.low {
   color: var(--serious);
 }
-.picker-tag.grade-5 {
+.picker-score {
+  font-family: var(--label);
+  font-size: 11px;
+  min-width: 24px;
+  text-align: center;
+  color: var(--white);
+  border: 1px solid var(--line-2);
+  padding: 0 5px;
+}
+.picker-score.hi {
   color: var(--volt);
   border-color: var(--volt-line);
 }
-.picker-tag.grade-3 {
-  color: var(--warning);
-  border-color: rgba(250, 178, 25, 0.3);
+.picker-score.lo {
+  color: var(--grey-2);
+}
+.picker-speed {
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-2);
+}
+.picker-legend {
+  padding: 8px 12px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--grey-2);
+  border-bottom: 1px solid var(--line);
 }
 .advice.weak .advice-why,
 .advice.limit .advice-why {
@@ -2467,6 +2489,10 @@ a {
 .chrome-toggle:hover {
   color: var(--white);
   border-color: var(--line-2);
+}
+.chrome-toggle.chevron {
+  padding: 0 5px;
+  margin-left: -6px;
 }
 .chrome-toggle.on {
   color: var(--volt);
@@ -2814,4 +2840,65 @@ a {
   background: transparent;
   color: var(--grey-2);
   cursor: default;
+}
+
+/* right-click menu */
+.ctx {
+  position: fixed;
+  z-index: 200;
+  min-width: 210px;
+  max-width: 320px;
+  padding: 5px;
+  border: 1px solid var(--line-2);
+  background: var(--s2);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  animation: fade 0.12s var(--ease);
+}
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.ctx-item svg {
+  flex: none;
+  color: var(--grey-2);
+}
+.ctx-item:hover:not(:disabled),
+.ctx-item.on {
+  background: var(--volt-dim);
+  color: var(--white);
+}
+.ctx-item:hover:not(:disabled) svg,
+.ctx-item.on svg {
+  color: var(--volt);
+}
+.ctx-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ctx-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ctx-item kbd {
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--grey-2);
+}
+.ctx-sep {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--line);
 }

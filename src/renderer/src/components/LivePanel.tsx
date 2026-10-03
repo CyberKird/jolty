@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
-import { api, basename, useStore, type Draft } from '../store'
+import { basename, useStore, type Draft } from '../store'
 import { toolKind } from './Messages'
 import { DiffView, highlight, langOf } from './Rich'
 
@@ -129,6 +129,11 @@ function relPath(p: string, cwd: string): string {
   return a.toLowerCase().startsWith(b.toLowerCase() + '/') ? a.slice(b.length + 1) : a.replace(/^\/+/, '')
 }
 
+/** A path shown relative to the project, back to the full path the menu actions need. */
+function absPath(p: string, cwd: string): string {
+  return /^[a-z]:[\\/]/i.test(p) ? p : `${cwd.replace(/[\\/]+$/, '')}/${p}`
+}
+
 function toolPaths(t: Tool): string[] {
   const input = (t.input || {}) as Record<string, unknown>
   const p = (input.file_path || input.notebook_path) as string | undefined
@@ -170,10 +175,7 @@ function FileMap({ items, cwd, drafts }: { items: ChatItem[]; cwd: string; draft
           className="filemap-row"
           key={c.path}
           title={c.path}
-          onContextMenu={(e) => {
-            e.preventDefault()
-            void api.app.contextMenu({ href: /^[a-z]:\//i.test(c.path) ? c.path : `${cwd.replace(/[\\/]+$/, '')}/${c.path}` })
-          }}
+          data-path={absPath(c.path, cwd)}
         >
           <span className={`cell ${c.hot ? 'hot' : c.created ? 'created' : c.edited ? 'edited' : ''}`} aria-hidden="true" />
           <div className="filemap-info">
@@ -303,7 +305,7 @@ function changesOf(items: ChatItem[], cwd: string): Change[] {
   return [...m.values()].reverse()
 }
 
-function ChangesView({ changes }: { changes: Change[] }) {
+function ChangesView({ changes, cwd }: { changes: Change[]; cwd: string }) {
   const [open, setOpen] = useState<string>()
   if (!changes.length) return <div className="faint small">Fișierele modificate apar aici, cu diferențele linie cu linie.</div>
   const add = changes.reduce((a, c) => a + c.add, 0)
@@ -316,7 +318,7 @@ function ChangesView({ changes }: { changes: Change[] }) {
       {changes.map((c) => {
         const dir = c.path.includes('/') ? c.path.slice(0, c.path.lastIndexOf('/') + 1) : ''
         return (
-          <div className="change" key={c.path}>
+          <div className="change" key={c.path} data-path={absPath(c.path, cwd)}>
             <button className="change-row" aria-expanded={open === c.path} onClick={() => setOpen(open === c.path ? undefined : c.path)} title={c.path}>
               <span className={`change-kind ${c.kind}`}>{c.kind === 'add' ? 'A' : c.kind === 'delete' ? 'D' : 'M'}</span>
               <span className="ellipsis change-path">
@@ -475,7 +477,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
         ))}
       </div>
       <div className="live-pane" role="tabpanel">
-        {tab === 'changes' && <ChangesView changes={changes} />}
+        {tab === 'changes' && <ChangesView changes={changes} cwd={cwd} />}
         {tab === 'plan' &&
           (plan?.length ? <PlanView steps={plan} /> : <div className="faint small">Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.</div>)}
         {tab === 'terminal' && <TerminalView items={items} />}

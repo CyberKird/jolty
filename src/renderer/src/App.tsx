@@ -2,6 +2,7 @@ import { ArrowDownToLine, PanelLeftClose, PanelLeftOpen, RefreshCw } from 'lucid
 import { lazy, Suspense, useEffect } from 'react'
 import wordmark from './assets/joltarise-wordmark-volt.svg'
 import { ChatView, NewChat } from './components/Chat'
+import { ContextMenu } from './components/ContextMenu'
 import { LivePanel } from './components/LivePanel'
 import { Sidebar } from './components/Sidebar'
 import { api, useStore } from './store'
@@ -113,6 +114,7 @@ export function App() {
         </Suspense>
       </main>
       {isChat ? <LivePanel session={session} /> : <div />}
+      <ContextMenu />
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.error ? 'error' : ''}`}>

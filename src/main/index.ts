@@ -1,9 +1,9 @@
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, Menu, nativeImage, Notification, shell, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, Notification, shell } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import type { ChatEvent, MenuTarget } from '@shared/types'
+import type { ChatEvent } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers, cleanToken } from './browser'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
@@ -19,6 +19,18 @@ function openWeb(url: unknown): void {
   } catch {
     // not a valid URL: ignore
   }
+}
+
+const RUNNABLE = /\.(exe|com|bat|cmd|scr|msi|msp|ps1|psm1|vbs|vbe|js|jse|wsf|wsh|hta|cpl|reg|lnk|url|jar|dll|appref-ms)$/i
+
+/** Opens a file or folder like a double click would, except programs and scripts: those are only shown in Explorer. */
+function openLocal(p: string): void {
+  try {
+    if (!fs.statSync(p).isDirectory() && RUNNABLE.test(p)) return shell.showItemInFolder(p)
+  } catch {
+    return
+  }
+  void shell.openPath(p)
 }
 
 /** A link target from chat text as a Windows path: file:// URLs and /E:/... forms included. */
@@ -75,7 +87,7 @@ function createWindow(): void {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   })
   if (process.platform === 'win32' && app.isPackaged) {
@@ -85,20 +97,11 @@ function createWindow(): void {
     openWeb(url)
     return { action: 'deny' }
   })
-  win.webContents.on('context-menu', (event, params) => {
-    if (!params.isEditable || !win || win.isDestroyed()) return
+  // the window only ever shows the app itself: anything else goes to the browser, never into this window
+  win.webContents.on('will-navigate', (event, url) => {
+    if (url === win?.webContents.getURL()) return
     event.preventDefault()
-    const { editFlags } = params
-    const items: MenuItemConstructorOptions[] = [
-      { role: 'undo', enabled: editFlags.canUndo },
-      { role: 'redo', enabled: editFlags.canRedo },
-      { type: 'separator' },
-      { role: 'cut', enabled: editFlags.canCut },
-      { role: 'copy', enabled: editFlags.canCopy },
-      { role: 'paste', enabled: editFlags.canPaste },
-      { role: 'selectAll', enabled: editFlags.canSelectAll }
-    ]
-    Menu.buildFromTemplate(items).popup({ window: win })
+    openWeb(url)
   })
   // shown once the first frame is painted: no white flash, no half-drawn layout
   // automated screenshot runs (JOLTY_TEST=1) open without taking focus from whatever the user is doing
@@ -182,58 +185,47 @@ function registerIpc(): void {
     return r.canceled ? undefined : r.filePaths[0]
   })
   handle('app:openExternal', (url: string) => openWeb(url))
+  // the renderer only ever opens Jolty's own data folder; any other path would let a compromised page launch files
   handle('app:openPath', async (p: string) => {
-    await shell.openPath(p)
+    if (typeof p === 'string' && path.resolve(p) === path.resolve(store.dataDir())) await shell.openPath(p)
   })
   handle('app:revealPath', (p: string) => shell.showItemInFolder(localPath(p)))
-  handle('app:contextMenu', (t: MenuTarget) => {
-    const items: MenuItemConstructorOptions[] = []
-    const href = typeof t?.href === 'string' ? t.href : ''
-    const img = typeof t?.image === 'string' ? /^data:image\/(png|jpeg|gif|webp);base64,([A-Za-z0-9+/=]+)$/.exec(t.image) : null
-    if (img) {
-      const ext = img[1] === 'jpeg' ? 'jpg' : img[1]
-      const bytes = Buffer.from(img[2], 'base64')
-      const base = (path.parse(String(t.imageName || 'imagine')).name || 'imagine').replace(/[<>:"/\\|?*]/g, '_')
-      items.push({ label: 'Copiază imaginea', click: () => void clipboard.write([new ClipboardItem({ 'image/png': new Blob([new Uint8Array(nativeImage.createFromBuffer(bytes).toPNG())],{ type: 'image/png' }) })]) })
-      items.push({
-        label: 'Salvează imaginea...',
-        click: () => {
-          if (!win) return
-          void dialog.showSaveDialog(win, { defaultPath: `${base}.${ext}`, filters: [{ name: 'Imagine', extensions: [ext] }] }).then((r) => {
-            if (!r.canceled && r.filePath) fs.writeFileSync(r.filePath, bytes)
-          })
-        }
+  // right-click menu actions: the menu is drawn by the renderer in Jolty's theme, these only do what a page cannot
+  const EDITS = ['undo', 'redo', 'cut', 'copy', 'paste', 'selectAll'] as const
+  handle('app:edit', (action: string) => {
+    if (win && !win.isDestroyed() && (EDITS as readonly string[]).includes(action)) win.webContents[action as (typeof EDITS)[number]]()
+  })
+  handle('app:copyText', (text: string) => {
+    if (typeof text === 'string') clipboard.writeText(text)
+  })
+  handle('app:openLocal', (p: string) => {
+    if (typeof p === 'string') openLocal(localPath(p))
+  })
+  handle('app:openLink', (url: string) => {
+    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return
+    const b = activeBrowser()
+    if (b) b.open(url)
+    else openWeb(url)
+  })
+  handle('app:image', (kind: string, image: string, name: string) => {
+    const img = typeof image === 'string' ? /^data:image\/(png|jpeg|gif|webp);base64,([A-Za-z0-9+/=]+)$/.exec(image) : null
+    if (!img) return
+    const ext = img[1] === 'jpeg' ? 'jpg' : img[1]
+    const bytes = Buffer.from(img[2], 'base64')
+    const base = (path.parse(String(name || 'imagine')).name || 'imagine').replace(/[<>:"/\|?*]/g, '_')
+    if (kind === 'copy') {
+      clipboard.write([new ClipboardItem({ 'image/png': new Blob([new Uint8Array(nativeImage.createFromBuffer(bytes).toPNG())], { type: 'image/png' }) })])
+    } else if (kind === 'save' && win) {
+      void dialog.showSaveDialog(win, { defaultPath: `${base}.${ext}`, filters: [{ name: 'Imagine', extensions: [ext] }] }).then((r) => {
+        if (!r.canceled && r.filePath) fs.writeFileSync(r.filePath, bytes)
       })
-      items.push({
-        label: 'Deschide imaginea',
-        click: () => {
-          const dir = path.join(os.tmpdir(), 'jolty-images')
-          fs.mkdirSync(dir, { recursive: true })
-          const file = path.join(dir, `${base}-${Date.now()}.${ext}`)
-          fs.writeFileSync(file, bytes)
-          void shell.openPath(file)
-        }
-      })
-    } else if (/^https?:\/\//i.test(href)) {
-      const b = activeBrowser()
-      items.push({ label: b ? `Deschide în ${b.name}` : 'Deschide în browser', click: () => (b ? b.open(href) : openWeb(href)) })
-      items.push({ label: 'Copiază linkul', click: () => clipboard.writeText(href) })
-    } else if (href && !href.startsWith('#')) {
-      const p = localPath(href)
-      items.push({ label: 'Deschide', click: () => void shell.openPath(p) })
-      items.push({ label: 'Arată în Explorer', click: () => shell.showItemInFolder(p) })
-      items.push({ label: 'Copiază calea', click: () => clipboard.writeText(p) })
+    } else if (kind === 'open') {
+      const dir = path.join(os.tmpdir(), 'jolty-images')
+      fs.mkdirSync(dir, { recursive: true })
+      const file = path.join(dir, `${base}-${Date.now()}.${ext}`)
+      fs.writeFileSync(file, bytes)
+      void shell.openPath(file)
     }
-    if (t?.selection) {
-      if (items.length) items.push({ type: 'separator' })
-      items.push({ label: 'Copiază selecția', click: () => clipboard.writeText(t.selection!) })
-    }
-    if (t?.text || t?.markdown) {
-      if (items.length) items.push({ type: 'separator' })
-      if (t.text) items.push({ label: 'Copiază mesajul', click: () => clipboard.writeText(t.text!) })
-      if (t.markdown) items.push({ label: 'Copiază mesajul ca Markdown', click: () => clipboard.writeText(t.markdown!) })
-    }
-    if (items.length && win) Menu.buildFromTemplate(items).popup({ window: win })
   })
   handle('app:version', () => __JOLTY_VERSION__)
 }

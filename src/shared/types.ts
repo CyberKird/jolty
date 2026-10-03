@@ -72,7 +72,8 @@ export interface AccountStatus {
 
 /** Jolty's permission modes, mapped onto each engine's own settings. */
 /** auto: the engine decides which actions need approval (Claude's classifier, Codex on-request) */
-export type PermissionMode = 'auto' | 'ask' | 'autoEdit' | 'plan' | 'full'
+/** `project` is Codex only: no questions, but the sandbox keeps it inside the project folder. `full` is the whole disk. */
+export type PermissionMode = 'auto' | 'ask' | 'autoEdit' | 'plan' | 'project' | 'full'
 
 export interface ModelOption {
   id: string
@@ -255,7 +256,16 @@ export interface AppSettings {
   browserApp?: BrowserApp
   /** glow, cursor and tab marker while a model drives the browser; on unless false */
   browserOverlay?: boolean
+  /** auto: the extension opens a tab of its own; pick: the user chooses one of their open tabs; own: a separate Jolty window with its own profile (no extension) */
+  browserMode?: BrowserMode
+  /** page actions of a model in the browser: ask every time, once per site (default), or never */
+  siteTrust?: SiteTrust
+  /** ask before a model reads or edits .env files, keys and similar; on unless false */
+  protectSecretFiles?: boolean
 }
+
+export type SiteTrust = 'ask' | 'site' | 'free'
+export type BrowserMode = 'auto' | 'pick' | 'own'
 
 export interface UpdateStatus {
   /** dev: a development build, nothing to compare; latest: checked, nothing newer */
@@ -276,16 +286,7 @@ export interface SlashItem {
 
 export type BrowserApp = 'chrome' | 'vivaldi' | 'edge' | 'brave'
 
-/** What was right-clicked in a chat: a link, a message, a selection. */
-export interface MenuTarget {
-  href?: string
-  text?: string
-  markdown?: string
-  selection?: string
-  /** data: URL of a right-clicked image */
-  image?: string
-  imageName?: string
-}
+export type EditAction = 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'selectAll'
 
 export interface BrowserInfo {
   installed: { id: BrowserApp; name: string }[]
@@ -446,7 +447,15 @@ export interface JoltyApi {
     openExternal(url: string): Promise<void>
     openPath(path: string): Promise<void>
     revealPath(path: string): Promise<void>
-    contextMenu(target: MenuTarget): Promise<void>
+    /** right-click menu actions: the menu itself is drawn by the renderer in Jolty's theme */
+    edit(action: EditAction): Promise<void>
+    copyText(text: string): Promise<void>
+    /** a data: URL image from the chat */
+    image(kind: 'copy' | 'save' | 'open', image: string, name: string): Promise<void>
+    /** a file or folder like a double click, except programs and scripts, which are only shown in Explorer */
+    openLocal(path: string): Promise<void>
+    /** an http(s) link in the browser Jolty uses for its own browsing */
+    openLink(url: string): Promise<void>
     version(): Promise<string>
   }
 }
