@@ -2,10 +2,8 @@
 // in the background, then "restart to update" in the title bar plus a Windows notification.
 // Anything left pending installs when the app quits.
 //
-// Releases live in the private repo, so nobody else can download them. The app carries no credential:
-// on each check it borrows the GitHub CLI login already on this PC (`gh auth token`), keeps it in
-// memory only and sends it only to GitHub over https. electron-updater checks the SHA-512 in latest.yml.
-import { execFile } from 'child_process'
+// Releases are public on GitHub, so the app reads them anonymously: no credential is stored or sent.
+// electron-updater checks the SHA-512 in latest.yml.
 import { app, Notification } from 'electron'
 import electronUpdater from 'electron-updater'
 import type { UpdateStatus } from '@shared/types'
@@ -13,20 +11,7 @@ import type { UpdateStatus } from '@shared/types'
 const { autoUpdater } = electronUpdater
 
 const EVERY = 4 * 3600e3
-const OWNER = 'CyberKird'
-const REPO = 'jolty'
-
-/** The local GitHub CLI token, or undefined when gh is missing or logged out. Never stored or logged. */
-function ghToken(): Promise<string | undefined> {
-  return new Promise((resolve) =>
-    execFile('gh', ['auth', 'token', '--hostname', 'github.com'], { timeout: 8000, windowsHide: true }, (err, out) => {
-      const t = String(out || '').trim()
-      resolve(!err && /^[A-Za-z0-9_]{20,255}$/.test(t) ? t : undefined)
-    })
-  )
-}
-
-/** Error text shown in the app, with any token-looking string removed. */
+/** Error text shown in the app, capped in length. */
 function clean(msg?: string): string | undefined {
   return msg?.replace(/\b(gh[opsu]_|github_pat_)[A-Za-z0-9_]+/g, '[token]').slice(0, 300)
 }
@@ -47,7 +32,7 @@ export function current(): UpdateStatus {
 export function init(onChange: (s: UpdateStatus) => void, onFocus: () => void): void {
   emit = onChange
   focus = onFocus
-  // no updater log: nothing about the feed (or its credential) is written anywhere
+  // no updater log: nothing about the feed is written anywhere
   autoUpdater.logger = null
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
@@ -76,13 +61,7 @@ export async function check(): Promise<UpdateStatus> {
     return status
   }
   if (status.state === 'downloading' || status.state === 'ready') return status
-  const token = await ghToken()
-  if (!token) {
-    set({ state: 'error', error: 'Actualizările vin din repo-ul privat: conectează-te o dată cu GitHub CLI (gh auth login).', checkedAt: Date.now() })
-    return status
-  }
   try {
-    autoUpdater.setFeedURL({ provider: 'github', owner: OWNER, repo: REPO, private: true, token, releaseType: 'release' })
     await autoUpdater.checkForUpdates()
   } catch (err) {
     set({ state: 'error', error: clean(err instanceof Error ? err.message : String(err)), checkedAt: Date.now() })

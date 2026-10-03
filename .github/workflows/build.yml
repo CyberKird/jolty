@@ -92,7 +92,7 @@ jobs:
         run: node test/packaged-smoke.mjs
         env:
           MOCK_ANTHROPIC: http://127.0.0.1:8766
-      # release in this private repo: installer, blockmap and latest.yml for the in-app updater
+      # release: installer, blockmap and latest.yml for the in-app updater
       - name: Ensure the release exists before parallel uploads
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
