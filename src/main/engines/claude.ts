@@ -300,6 +300,7 @@ interface Pending {
 
 class ClaudeSession implements EngineSession {
   private q?: Query
+  private starting?: Promise<void>
   private input = new InputQueue()
   private pending = new Map<string, Pending>()
   /** the site the browser tab is on, and the sites where the user already allowed page actions in this chat */
@@ -324,6 +325,16 @@ class ClaudeSession implements EngineSession {
 
   private async ensureStarted(): Promise<void> {
     if (this.q) return
+    if (this.starting) return this.starting
+    this.starting = this.startQuery()
+    try {
+      await this.starting
+    } finally {
+      this.starting = undefined
+    }
+  }
+
+  private async startQuery(): Promise<void> {
     const sdk = await loadSdk()
     prepareProfileDir(this.profile)
     const canUseTool: CanUseTool = (toolName, input, opts) => this.ask(toolName, input, opts)

@@ -289,6 +289,7 @@ class CodexServer {
 // ---------------------------------------------------------------------------
 class CodexSession implements EngineSession, ThreadListener {
   private threadId?: string
+  private threadStarting?: Promise<JsonRpcProcess>
   private turnId?: string
   private hasStructuredPlan = false
   private pending = new Map<string, number | string>()
@@ -313,6 +314,16 @@ class CodexSession implements EngineSession, ThreadListener {
   }
 
   private async ensureThread(): Promise<JsonRpcProcess> {
+    if (this.threadStarting) return this.threadStarting
+    this.threadStarting = this.startThread()
+    try {
+      return await this.threadStarting
+    } finally {
+      this.threadStarting = undefined
+    }
+  }
+
+  private async startThread(): Promise<JsonRpcProcess> {
     const rpc = await this.server.get()
     if (this.threadId) return rpc
     const mode = MODES[this.meta.permissionMode]

@@ -66,6 +66,7 @@ interface State {
   loadSessions(): Promise<void>
   loadUsage(): Promise<void>
   openSession(id: string | undefined): Promise<void>
+  activateSession(meta: SessionMeta): void
   onEvent(e: ChatEvent): void
   setLiveOpen(v: boolean): void
   setSidebarOpen(v: boolean): void
@@ -138,6 +139,14 @@ export const useStore = create<State>((set, get) => ({
       set((s) => ({ transcripts: { ...s.transcripts, [id]: items } }))
     }
   },
+
+  activateSession: (meta) => set((s) => ({
+    sessions: [meta, ...s.sessions.filter((session) => session.id !== meta.id)],
+    activeId: meta.id,
+    page: 'chat',
+    status: { ...s.status, [meta.id]: 'running' },
+    transcripts: { ...s.transcripts, [meta.id]: s.transcripts[meta.id] || [] }
+  })),
 
   onEvent: (e) => {
     switch (e.type) {

@@ -62,6 +62,27 @@ const shot = async (name) => {
 }
 
 await win.waitForSelector('.brand-name')
+await win.waitForFunction(() => document.querySelectorAll('.meter-row').length >= 2)
+const fixedMeterHeader = await win.locator('.meter-list').evaluate((list) => {
+  const header = list.parentElement?.querySelector('.meter-head')
+  if (!(list instanceof HTMLElement) || !(header instanceof HTMLElement)) return false
+  const meter = list.parentElement
+  const style = list.getAttribute('style')
+  const meterStyle = meter.getAttribute('style')
+  const top = header.getBoundingClientRect().top
+  // keep the meter as tall as it is, make the list short enough to scroll
+  meter.style.height = `${meter.getBoundingClientRect().height}px`
+  list.style.height = '36px'
+  list.style.flex = '0 0 36px'
+  list.scrollTop = list.scrollHeight
+  const staysFixed = list.scrollTop > 0 && Math.abs(header.getBoundingClientRect().top - top) < 1
+  for (const [el, s] of [[list, style], [meter, meterStyle]]) {
+    if (s === null) el.removeAttribute('style')
+    else el.setAttribute('style', s)
+  }
+  return staysFixed
+})
+if (!fixedMeterHeader) errors.push('Antetul consumului live se derulează cu lista de conturi')
 await shot('01-welcome')
 
 // the complexity advice while typing, on a Claude profile (real model list with effort levels)

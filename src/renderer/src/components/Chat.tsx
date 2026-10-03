@@ -141,9 +141,15 @@ function Composer(p: ComposerProps) {
       ) : []
     } catch { return [] }
   })
-  const [restoredQueue, setRestoredQueue] = useState(queue.length > 0)
+  const [restoredQueue, setRestoredQueue] = useState(() => {
+    if (!queue.length || !p.sessionId) return queue.length > 0
+    const immediateKey = `jolty:queue:immediate:${p.sessionId}`
+    const immediate = sessionStorage.getItem(immediateKey) === '1'
+    if (immediate) sessionStorage.removeItem(immediateKey)
+    return !immediate
+  })
   const queuedSent = useRef(false)
-  const wasRunning = useRef(p.running)
+  const wasRunning = useRef(p.running || (queue.length > 0 && !restoredQueue))
 
   useEffect(() => {
     if (!p.sessionId) return
@@ -697,9 +703,11 @@ export function ChatView({ session }: { session: SessionMeta }) {
         onBrowser={(on) => void api.sessions.setBrowser(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         onStop={() => void api.sessions.interrupt(session.id)}
         onSend={async (text, atts) => {
+          useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'running' })
           try {
             await api.sessions.send(session.id, text, atts)
           } catch (err) {
+            useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'error', error: errMsg(err) })
             toast(errMsg(err), true)
           }
         }}
@@ -722,7 +730,7 @@ const STARTS = [
 
 export function NewChat() {
   const profiles = useStore((s) => s.profiles)
-  const { openSession, loadSessions, toast } = useStore()
+  const { loadSessions, toast } = useStore()
   const [profileId, setProfileId] = useState<string>()
   const [model, setModel] = useState('')
   const [effort, setEffort] = useState<string>()
@@ -734,6 +742,8 @@ export function NewChat() {
   const [lastModels, setLastModels] = useState<AppSettings['lastModels']>()
   // the profile whose last model and level were already put in the picker (or that the user picked by hand)
   const restored = useRef<string | undefined>(undefined)
+  const launching = useRef(false)
+  const launchQueue = useRef<{ id: string; text: string; atts: Attachment[] }[]>([])
 
   useEffect(() => {
     void api.app.settings().then((s) => {
@@ -819,16 +829,23 @@ export function NewChat() {
         onCwd={() => void pickCwd()}
         seed={seed}
         onSend={async (text, atts) => {
+          if (launching.current) {
+            launchQueue.current.push({ id: crypto.randomUUID(), text, atts })
+            toast('Mesajul a intrat în așteptare până pornește conversația.')
+            return
+          }
           if (!cwd) {
             toast('Alege întâi folderul proiectului.', true)
             await pickCwd()
             return
           }
           if (!profileId) return
+          launching.current = true
+          let meta: SessionMeta | undefined
           try {
             const cheap = delegatePick(text, profiles, profileId)
             if (cheap) toast(`Delegat către ${cheap.name}: sarcină mecanică`)
-            const meta = await api.sessions.start({
+            meta = await api.sessions.start({
               profileId: cheap?.id || profileId,
               cwd,
               model: cheap ? undefined : model || undefined,
@@ -836,11 +853,24 @@ export function NewChat() {
               permissionMode: mode,
               browser
             })
-            await loadSessions()
-            await openSession(meta.id)
+            const queued = launchQueue.current.splice(0)
+            if (queued.length) {
+              try {
+                localStorage.setItem(`jolty:queue:${meta.id}`, JSON.stringify(queued))
+                sessionStorage.setItem(`jolty:queue:immediate:${meta.id}`, '1')
+              } catch {
+                toast('Nu am putut salva mesajele puse în așteptare.', true)
+              }
+            }
+            useStore.getState().activateSession(meta)
+            void loadSessions().catch((err) => toast(errMsg(err), true))
             await api.sessions.send(meta.id, text, atts)
           } catch (err) {
+            if (meta) useStore.getState().onEvent({ type: 'status', sessionId: meta.id, status: 'error', error: errMsg(err) })
             toast(errMsg(err), true)
+          } finally {
+            launching.current = false
+            launchQueue.current = []
           }
         }}
       />

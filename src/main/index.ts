@@ -85,6 +85,21 @@ function createWindow(): void {
     openWeb(url)
     return { action: 'deny' }
   })
+  win.webContents.on('context-menu', (event, params) => {
+    if (!params.isEditable || !win || win.isDestroyed()) return
+    event.preventDefault()
+    const { editFlags } = params
+    const items: MenuItemConstructorOptions[] = [
+      { role: 'undo', enabled: editFlags.canUndo },
+      { role: 'redo', enabled: editFlags.canRedo },
+      { type: 'separator' },
+      { role: 'cut', enabled: editFlags.canCut },
+      { role: 'copy', enabled: editFlags.canCopy },
+      { role: 'paste', enabled: editFlags.canPaste },
+      { role: 'selectAll', enabled: editFlags.canSelectAll }
+    ]
+    Menu.buildFromTemplate(items).popup({ window: win })
+  })
   // shown once the first frame is painted: no white flash, no half-drawn layout
   // automated screenshot runs (JOLTY_TEST=1) open without taking focus from whatever the user is doing
   win.once('ready-to-show', () => (process.env.JOLTY_TEST ? win?.showInactive() : win?.show()))

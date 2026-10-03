@@ -32,11 +32,12 @@ function UsageMeter() {
           <RefreshCw size={12} />
         </button>
       </div>
-      {rows.length === 0 && <div className="faint small meter-empty">Nimic folosit în ultimele 24 h.</div>}
-      {rows.map((p) => {
-        const s = spend[p.id]
-        return (
-          <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title="Deschide Consum">
+      <div className="meter-list">
+        {rows.length === 0 && <div className="faint small meter-empty">Nimic folosit în ultimele 24 h.</div>}
+        {rows.map((p) => {
+          const s = spend[p.id]
+          return (
+            <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title="Deschide Consum">
             <span className="meter-name">
               <span className="dot" style={{ width: 6, height: 6, background: p.color }} />
               <span className="ellipsis">{p.name}</span>
@@ -68,9 +69,10 @@ function UsageMeter() {
               </span>
             ))}
             {!limits[p.id]?.windows.length && limits[p.id]?.note && <span className="faint small">{limits[p.id]!.note}</span>}
-          </button>
-        )
-      })}
+            </button>
+          )
+        })}
+      </div>
     </section>
   )
 }
