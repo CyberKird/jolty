@@ -255,8 +255,18 @@ export const OPEN_MODES: PermissionMode[] = ['project', 'full']
 export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onMode: (m: PermissionMode) => void; engine?: EngineKind }) {
   const { open, setOpen, ref } = usePopover()
   const choices = modesFor(engine)
+  // a native confirm() leaves Electron without keyboard focus (the chatbox stops taking input), so the yes is asked inline
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!open) setArmed(false)
+  }, [open])
   const pick = (m: PermissionMode): void => {
-    if (m === 'full' && mode !== 'full' && engine !== 'hermes' && !window.confirm('Fără permisiuni: modelul rulează orice comandă și modifică orice fișier de pe tot discul, fără să întrebe. Câteva comenzi ireversibile (format, reg delete, git push --force) rămân blocate. Continui?')) return
+    if (m === 'full' && mode !== 'full' && engine !== 'hermes' && !armed) {
+      setArmed(true)
+      setOpen(true)
+      return
+    }
+    setOpen(false)
     onMode(m)
   }
   const current = choices.find((m) => m.id === mode) || choices[0]
@@ -267,13 +277,12 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
       const m = choices[Number(e.key) - 1]
       if (!m || e.ctrlKey || e.altKey || e.metaKey) return
       e.preventDefault()
-      setOpen(false)
       pick(m.id)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, onMode, setOpen, choices])
+  }, [open, onMode, setOpen, choices, armed])
   return (
     <div className="picker" ref={ref}>
       <button className={`picker-btn mode-${mode}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title={current.title}>
@@ -292,17 +301,16 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
                 aria-checked={m.id === mode}
                 className={`picker-opt ${m.id === mode ? 'on' : ''}`}
                 title={m.title}
-                onClick={() => {
-                  setOpen(false)
-                  pick(m.id)
-                }}
+                onClick={() => pick(m.id)}
               >
                 <span className="picker-opt-text">
                   <span className="picker-opt-name">
-                    {m.label}
+                    {armed && m.id === 'full' ? 'Confirmă: fără permisiuni' : m.label}
                     {m.id === DEFAULT_MODE && <span className="picker-tag">implicit</span>}
                   </span>
-                  <span className="picker-opt-desc">{m.desc}</span>
+                  <span className="picker-opt-desc">
+                    {armed && m.id === 'full' ? 'Rulează orice comandă și modifică orice fișier de pe disc. Doar câteva comenzi ireversibile rămân blocate. Apasă din nou ca să continui.' : m.desc}
+                  </span>
                 </span>
                 {m.id === mode && <Check size={14} />}
                 <kbd className="picker-key">{i + 1}</kbd>

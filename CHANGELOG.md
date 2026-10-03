@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3
+
+- Fara permisiuni: confirmarea se face in meniu, nu intr-un dialog nativ, asa ca caseta de mesaj nu mai ramane blocata dupa ce schimbi modul.
+
 ## 0.3.2
 
 - Fereastra ruleaza cu sandbox, iar din interfata nu se mai poate porni un fisier de pe disc; programele si scripturile se arata doar in Explorer.
