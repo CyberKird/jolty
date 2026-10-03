@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.5
+
+- Actualizarile se citesc anonim din release-urile publice: nu mai ai nevoie de GitHub CLI.
+
 ## 0.3.4
 
 - Modelul ales ramane afisat dupa ce trimiti mesajul; nu mai sare pe Opus.
