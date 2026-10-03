@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4
+
+- Modelul ales ramane afisat dupa ce trimiti mesajul; nu mai sare pe Opus.
+
 ## 0.3.3
 
 - Fara permisiuni: confirmarea se face in meniu, nu intr-un dialog nativ, asa ca caseta de mesaj nu mai ramane blocata dupa ce schimbi modul.

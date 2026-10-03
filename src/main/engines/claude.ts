@@ -407,7 +407,8 @@ class ClaudeSession implements EngineSession {
       case 'system': {
         if (m.subtype === 'init') {
           this.meta.engineSessionId = m.session_id
-          this.meta.model = m.model
+          // keep the id the picker offered (an alias like "sonnet"); the resolved name matches no picker row and shows as the first model
+          this.meta.model = this.meta.model || m.model
           this.host.emit({ type: 'meta', sessionId: sid, meta: this.meta })
         } else if (m.subtype === 'api_retry') {
           this.notice('Serverul nu răspunde, reîncerc...', 'warn')
