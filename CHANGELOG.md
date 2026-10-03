@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.2
+
+- Fereastra ruleaza cu sandbox, iar din interfata nu se mai poate porni un fisier de pe disc; programele si scripturile se arata doar in Explorer.
+- Meniu de click dreapta in tema Jolty: campuri de text, linkuri, fisiere (cu Arata in Explorer), cod, imagini, mesaje si conversatii.
+- Selectorul de modele nu mai are randul Default; fiecare model are scor de inteligenta si viteza.
+- Moduri noi: Liber in proiect (Codex, fara intrebari dar numai in folderul proiectului), confirmare la Fara permisiuni si comenzi ireversibile blocate la Claude.
+- Fisierele cu secrete (.env, chei, ~/.ssh) cer acordul inainte de citire sau modificare, cu comutator in Setari.
+- Nota discreta cand mesajul pare sa contina o cheie sau o parola.
+- Browser: permisiuni (la fiecare actiune, o data pe site, liber) si trei moduri de conectare, inclusiv fereastra Jolty cu profil separat.
+
 ## 0.3.1
 
 - Click dreapta in caseta de mesaj: Paste, Copy, Cut, Undo, Redo si Select all.

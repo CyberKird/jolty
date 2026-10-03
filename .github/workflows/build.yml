@@ -41,12 +41,15 @@ jobs:
         env:
           JOLTY_DATA_DIR: ${{ runner.temp }}/jolty-ui
           SHOTS: ${{ runner.temp }}/shots
+      # a full artifact quota must not fail a build whose tests passed
       - uses: actions/upload-artifact@v6
         if: always()
+        continue-on-error: true
         with:
           name: screenshots
           path: ${{ runner.temp }}/shots
           if-no-files-found: ignore
+          retention-days: 3
 
   windows:
     name: Windows installer
@@ -74,11 +77,14 @@ jobs:
             "$res/redist/vc_redist.x64.exe"
           )
           foreach ($f in $need) { if (-not (Test-Path $f)) { throw "Missing from the build: $f" } else { "ok  $f" } }
+      # the release holds the installer; this copy is only for builds without a tag, and it must not block the release when the quota is full
       - uses: actions/upload-artifact@v6
+        continue-on-error: true
         with:
           name: Jolty-Setup
           path: dist/Jolty-Setup-*.exe
           if-no-files-found: error
+          retention-days: 1
       - name: Start the Anthropic mock
         shell: pwsh
         run: Start-Process python -ArgumentList "test/mocks/mock_anthropic.py","8766" -WindowStyle Hidden; Start-Sleep 2
