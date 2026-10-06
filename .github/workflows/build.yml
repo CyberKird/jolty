@@ -69,6 +69,9 @@ jobs:
         run: npm run dist:win
       - name: Local file links in chat
         run: node test/links-test.mjs
+        env:
+          JOLTY_LINK_TEST_EXECUTABLE: dist/win-unpacked/Jolty.exe
+          DEBUG: pw:browser
       - name: Check that the engines are bundled
         shell: pwsh
         run: |

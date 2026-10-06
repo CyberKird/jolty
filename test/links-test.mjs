@@ -49,9 +49,13 @@ fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ lastCwd: pro
 
 const env = { ...process.env, JOLTY_DATA_DIR: data, JOLTY_TEST: '1' }
 delete env.ELECTRON_RUN_AS_NODE
+const packaged = process.env.JOLTY_LINK_TEST_EXECUTABLE
+const executablePath = path.resolve(packaged || 'node_modules/electron/dist/electron.exe')
+assert.ok(fs.existsSync(executablePath), `Missing Electron executable: ${executablePath}`)
 const app = await electron.launch({
-  executablePath: path.resolve('node_modules/electron/dist/electron.exe'),
-  args: ['--no-sandbox', path.resolve('out/main/index.js'), '--user-data-dir=' + path.join(data, 'electron')],
+  executablePath,
+  timeout: 60000,
+  args: ['--no-sandbox', ...(packaged ? [] : [path.resolve('out/main/index.js')]), '--user-data-dir=' + path.join(data, 'electron')],
   env
 })
 try {

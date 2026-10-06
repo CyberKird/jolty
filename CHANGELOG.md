@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.8
+## 0.3.9
 
 - Linkurile catre imagini, PDF-uri si alte fisiere locale se deschid direct din conversatie, inclusiv cele din mesajele vechi.
 - Caile Windows cu spatii, diacritice si numere de linie functioneaza corect. Erorile de deschidere sunt afisate in interfata.
