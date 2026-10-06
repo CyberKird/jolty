@@ -76,4 +76,3 @@ export function saveImages(images: Attachment[]): string[] {
     return file
   })
 }
-
