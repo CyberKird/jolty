@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.7
+
+- Stergerea unui cont nu mai da eroare: conversatiile contului se inchid si sunt asteptate inainte, iar folderul lui de configurare se curata cu reincercari; daca fereastra de autentificare e inca deschisa, spune clar ce sa inchizi.
+
+## 0.3.6
+
+- CLI-urile incluse (Claude Code si Codex) sunt la zi.
+
 ## 0.3.5
 
 - Actualizarile se citesc anonim din release-urile publice: nu mai ai nevoie de GitHub CLI.

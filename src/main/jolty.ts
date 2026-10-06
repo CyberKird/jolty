@@ -163,15 +163,35 @@ export class Jolty {
     return p
   }
 
-  removeProfile(id: string): void {
+  async removeProfile(id: string): Promise<void> {
     if (DEFAULT_PROFILES.some((d) => d.id === id)) throw new Error('Profilurile principale nu se pot șterge')
     const p = this.profile(id)
-    for (const s of store.loadSessions().filter((x) => x.profileId === id)) this.removeSession(s.id)
+    // Close the chats first and wait: the engine process keeps files open in the config folder until it exits.
+    for (const s of store.loadSessions().filter((x) => x.profileId === id)) await this.removeSession(s.id)
+    const dir = store.profileDir(p)
+    if (dir) {
+      // Windows keeps the folder locked while the engine process still has files open in it:
+      // close() only ends the stream, the process exits a moment later. Hand-rolled retry because
+      // Node's maxRetries does not retry EPERM (measured, Node 25).
+      for (let i = 0; ; i++) {
+        try {
+          fs.rmSync(dir, { recursive: true, force: true })
+          break
+        } catch (e) {
+          const code = (e as NodeJS.ErrnoException).code
+          if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'ENOTEMPTY') throw e
+          if (i >= 15) {
+            throw new Error(
+              'Contul nu a putut fi șters: folderul lui de configurare este încă folosit (fereastra de autentificare deschisă sau o conversație care încă rulează pe acest cont). Închide-le și încearcă din nou.'
+            )
+          }
+          await new Promise((r) => setTimeout(r, 250))
+        }
+      }
+    }
     if (p.engine === 'codex') this.codex.reset(id)
     store.setSecret(id, undefined)
     store.setSecret(id + ':cookie', undefined)
-    const dir = store.profileDir(p)
-    if (dir) fs.rmSync(dir, { recursive: true, force: true })
     store.saveProfiles(store.loadProfiles().filter((x) => x.id !== id))
   }
 
