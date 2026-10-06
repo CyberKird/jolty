@@ -4,7 +4,7 @@ import { Marked } from 'marked'
 import { FileText } from 'lucide-react'
 import { memo, useMemo, type MouseEvent } from 'react'
 import type { FileDiff } from '@shared/types'
-import { api } from '../store'
+import { api, errMsg, useStore } from '../store'
 import { copyItem, imageItems, itemsAt, showMenu } from './ContextMenu'
 
 function escapeHtml(s: string): string {
@@ -24,6 +24,19 @@ export function highlight(code: string, lang?: string): string {
 const marked = new Marked({
   gfm: true,
   breaks: false,
+  walkTokens(token) {
+    if (token.type !== 'link') return
+    // A leading slash keeps Windows paths valid under the sanitizer's normal URL rules.
+    if (/^[a-z]:[\\/]/i.test(token.href)) token.href = `/${token.href}`
+    else if (/^file:\/\//i.test(token.href)) {
+      try {
+        const url = new URL(token.href)
+        if (!url.hostname) token.href = url.pathname
+      } catch {
+        // Invalid file URLs stay subject to the sanitizer's default checks.
+      }
+    }
+  },
   renderer: {
     code({ text, lang }) {
       return `<pre><code class="hljs">${highlight(text, lang || undefined)}</code></pre>`
@@ -55,9 +68,9 @@ function onLinkClick(e: MouseEvent<HTMLDivElement>): void {
   const href = a?.getAttribute('href')
   if (!href || href.startsWith('#')) return
   e.preventDefault()
-  // a local path is revealed, not run: a link in model output must not launch an .exe on one click
-  if (/^https?:\/\//i.test(href)) void api.app.openExternal(href)
-  else void api.app.revealPath(href)
+  // The main process opens documents and reveals executable files without running them.
+  const opened = /^https?:\/\//i.test(href) ? api.app.openExternal(href) : api.app.openLocal(href)
+  void opened.catch((err) => useStore.getState().toast(errMsg(err), true))
 }
 
 /** Right-click on a chat message: link actions when on a link, then copy actions. */

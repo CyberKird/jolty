@@ -24,24 +24,27 @@ function openWeb(url: unknown): void {
 const RUNNABLE = /\.(exe|com|bat|cmd|scr|msi|msp|ps1|psm1|vbs|vbe|js|jse|wsf|wsh|hta|cpl|reg|lnk|url|jar|dll|appref-ms)$/i
 
 /** Opens a file or folder like a double click would, except programs and scripts: those are only shown in Explorer. */
-function openLocal(p: string): void {
+async function openLocal(p: string): Promise<void> {
   try {
-    if (!fs.statSync(p).isDirectory() && RUNNABLE.test(p)) return shell.showItemInFolder(p)
+    if (!fs.statSync(p).isDirectory() && RUNNABLE.test(p.replace(/[. ]+$/, ''))) return shell.showItemInFolder(p)
   } catch {
-    return
+    throw new Error(`Nu pot accesa fișierul sau folderul: ${p}`)
   }
-  void shell.openPath(p)
+  const error = await shell.openPath(p)
+  if (error) throw new Error(error)
 }
 
 /** A link target from chat text as a Windows path: file:// URLs and /E:/... forms included. */
 function localPath(href: string): string {
   try {
-    if (/^file:/i.test(href)) return fileURLToPath(href)
-    href = decodeURI(href)
+    if (/^file:/i.test(href)) href = fileURLToPath(href)
+    else href = decodeURIComponent(href)
   } catch {
     // malformed URL or escape: use the text as written
   }
-  return path.normalize(href.replace(/^\/(?=[a-z]:)/i, ''))
+  const p = path.normalize(href.replace(/^\/(?=[a-z]:)/i, '').replace(/:\d+(?::\d+)?$/, ''))
+  if (!path.isAbsolute(p) || p.replace(/^[a-z]:/i, '').includes(':')) throw new Error('Cale locală invalidă')
+  return p
 }
 
 declare const __JOLTY_VERSION__: string
@@ -199,7 +202,7 @@ function registerIpc(): void {
     if (typeof text === 'string') clipboard.writeText(text)
   })
   handle('app:openLocal', (p: string) => {
-    if (typeof p === 'string') openLocal(localPath(p))
+    if (typeof p === 'string') return openLocal(localPath(p))
   })
   handle('app:openLink', (url: string) => {
     if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return

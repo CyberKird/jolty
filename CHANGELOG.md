@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.8
+
+- Linkurile catre imagini, PDF-uri si alte fisiere locale se deschid direct din conversatie, inclusiv cele din mesajele vechi.
+- Caile Windows cu spatii, diacritice si numere de linie functioneaza corect. Erorile de deschidere sunt afisate in interfata.
+- Programele si scripturile raman afisate doar in Explorer, iar linkurile periculoase raman blocate.
+
 ## 0.3.7
 
 - Stergerea unui cont nu mai da eroare: conversatiile contului se inchid si sunt asteptate inainte, iar folderul lui de configurare se curata cu reincercari; daca fereastra de autentificare e inca deschisa, spune clar ce sa inchizi.

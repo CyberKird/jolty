@@ -4,7 +4,7 @@ import { ClipboardPaste, Copy, Download, ExternalLink, FileCode, FolderOpen, Ima
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { create } from 'zustand'
 import type { EditAction } from '@shared/types'
-import { api } from '../store'
+import { api, errMsg, useStore } from '../store'
 
 export interface MenuItem {
   label: string
@@ -50,7 +50,7 @@ const editItem = (label: string, action: EditAction, icon: LucideIcon, hint: str
 /** Items for a file or folder on disk. */
 export function pathItems(p: string): Entry[] {
   return [
-    { label: 'Deschide', icon: FileCode, run: () => void api.app.openLocal(p) },
+    { label: 'Deschide', icon: FileCode, run: () => void api.app.openLocal(p).catch((err) => useStore.getState().toast(errMsg(err), true)) },
     { label: 'Arată în Explorer', icon: FolderOpen, run: () => void api.app.revealPath(p) },
     copyItem('Copiază calea', p, Link)
   ]
@@ -89,7 +89,9 @@ export function itemsAt(el: Element | null): Entry[] {
   if (/^https?:\/\//i.test(href)) {
     group({ label: 'Deschide linkul', icon: ExternalLink, run: () => void api.app.openLink(href) }, copyItem('Copiază linkul', href, Link))
   } else if (href && !href.startsWith('#')) {
-    group(...pathItems(href))
+    let p = href.replace(/^\/(?=[a-z]:[\\/])/i, '')
+    try { p = decodeURIComponent(p) } catch { /* Keep literal percent signs. */ }
+    group(...pathItems(p))
   }
   const path = el?.closest<HTMLElement>('[data-path]')?.dataset.path
   if (path) group(...pathItems(path))

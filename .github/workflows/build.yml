@@ -67,6 +67,8 @@ jobs:
       - run: npm run typecheck
       - name: Build the installer
         run: npm run dist:win
+      - name: Local file links in chat
+        run: node test/links-test.mjs
       - name: Check that the engines are bundled
         shell: pwsh
         run: |
