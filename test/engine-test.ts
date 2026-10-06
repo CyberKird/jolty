@@ -427,6 +427,17 @@ app.whenReady().then(async () => {
     console.log(`   external codex threads: ${ext.length}`)
     const hist = await jolty.codex.history(jolty.profile(p.id), meta!.engineSessionId!)
     check(hist.some((i) => i.kind === 'assistant'), 'codex thread history can be read back')
+    {
+      const before = idleCount(s.id)
+      await jolty.compact(s.id)
+      await waitFor(() => idleCount(s.id) > before, 120000, 'codex compaction')
+      check(jolty.history(s.id).some((i) => i.kind === 'notice' && i.text.includes('a fost compactată')), 'codex compaction completes')
+      const afterCompact = idleCount(s.id)
+      const answers = jolty.history(s.id).filter((i) => i.kind === 'assistant').length
+      await jolty.sendMessage(s.id, 'Continue after compaction')
+      await waitFor(() => idleCount(s.id) > afterCompact, 120000, 'codex after compaction')
+      check(jolty.history(s.id).filter((i) => i.kind === 'assistant').length > answers, 'codex answers on the same thread after compaction')
+    }
     if (process.env.MOCK_RESPONSES_LOG) {
       const rlog = fs.readFileSync(process.env.MOCK_RESPONSES_LOG, 'utf8').trim().split('\n').map((l) => JSON.parse(l))
       check(rlog.some((r) => r.dash_rule), 'codex conversations carry the no-dash writing rule')

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.10
+
+- Compactarea pastreaza starea conversatiei sincronizata, iar mesajele in asteptare continua dupa terminarea ei.
+- Notificarile intarziate nu mai blocheaza conversatia si nu mai afiseaza un tur activ ca fiind oprit.
+- Stop functioneaza si in timpul pornirii. Comenzile intrerupte si aprobarile ramase sunt inchise corect.
+
 ## 0.3.9
 
 - Linkurile catre imagini, PDF-uri si alte fisiere locale se deschid direct din conversatie, inclusiv cele din mesajele vechi.

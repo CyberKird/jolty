@@ -1,7 +1,7 @@
 {
   "name": "jolty",
   "productName": "Jolty",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "Desktop app for Claude Code and Codex: multiple profiles, API keys, model picker, usage dashboard",
   "author": "CyberKird",
   "license": "UNLICENSED",
@@ -14,6 +14,9 @@
     "start": "electron-vite preview",
     "dist:win": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish never",
     "dist:release": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish always",
+    "test": "npm run test:codex-lifecycle",
+    "test:codex-lifecycle": "esbuild test/codex-lifecycle-test.ts --bundle --platform=node --format=cjs --external:electron --external:@playwright/mcp --alias:@shared=./src/shared --outfile=out-test/codex-lifecycle-test.cjs --log-level=warning && node --test out-test/codex-lifecycle-test.cjs",
+    "test:codex-ui": "electron-vite build && node test/codex-ui-test.mjs",
     "test:engines": "esbuild test/engine-test.ts --bundle --platform=node --format=cjs --external:electron --external:@anthropic-ai/claude-agent-sdk --external:@playwright/mcp --alias:@shared=./src/shared --outfile=out-test/engine-test.js --log-level=warning && electron --no-sandbox out-test/engine-test.js",
     "test:hermes": "esbuild test/hermes-test.ts --bundle --platform=node --format=cjs --external:electron --alias:@shared=./src/shared --outfile=out-test/hermes-test.cjs --log-level=warning && node --test out-test/hermes-test.cjs",
     "test:ui": "electron-vite build && node test/ui-test.mjs",

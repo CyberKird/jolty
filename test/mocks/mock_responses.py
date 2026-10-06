@@ -4,6 +4,7 @@ When the input contains RUN_TOOL and no function_call_output yet, the model call
 with `echo jolty-codex-ok`; otherwise it answers with text.
 """
 import json
+import os
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,6 +34,7 @@ class H(BaseHTTPRequestHandler):
         n = int(self.headers.get("content-length", 0))
         raw = self.rfile.read(n) or b"{}"
         req = json.loads(raw)
+        time.sleep(float(os.environ.get("MOCK_RESPONSE_DELAY", "0")))
         inp = req.get("input") or []
         text = json.dumps(inp)
         tools = req.get("tools") or []

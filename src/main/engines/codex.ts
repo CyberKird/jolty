@@ -1,50 +1,28 @@
-import { randomUUID } from 'crypto'
-import fs from 'fs'
 import os from 'os'
-import path from 'path'
 import { shell } from 'electron'
 import type {
   AccountStatus,
   Attachment,
   ChatItem,
   ExternalSession,
-  FileDiff,
   LimitWindow,
   ModelOption,
-  PlanStep,
-  PermissionDecision,
-  PermissionMode,
   Profile,
   RateLimitSnapshot,
   SessionMeta
 } from '@shared/types'
 import { CODEX_PRIVATE_ARGS, codexEnv, codexExecutable, prepareProfileDir } from '../runtime'
-import { BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer } from '../browser'
 import { getSecret } from '../store'
-import { truncate } from './format'
 import { JsonRpcProcess, type RpcNotification, type RpcRequest } from './jsonrpc'
-import { PLAN_RULES, WRITING_RULES } from './prompt'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
+import { codexItem, saveImages } from './codex-items'
+import { CodexSession, type ThreadListener } from './codex-session'
+
+export { codexItem } from './codex-items'
 
 // Loose views of the app-server payloads (the full types come from `codex app-server generate-ts`).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any
-
-const MODES: Record<PermissionMode, { approvalPolicy: string; sandbox: 'read-only' | 'workspace-write' | 'danger-full-access' }> = {
-  auto: { approvalPolicy: 'on-request', sandbox: 'workspace-write' },
-  ask: { approvalPolicy: 'untrusted', sandbox: 'workspace-write' },
-  autoEdit: { approvalPolicy: 'on-request', sandbox: 'workspace-write' },
-  plan: { approvalPolicy: 'on-request', sandbox: 'read-only' },
-  project: { approvalPolicy: 'never', sandbox: 'workspace-write' },
-  full: { approvalPolicy: 'never', sandbox: 'danger-full-access' }
-}
-
-function sandboxPolicy(mode: PermissionMode, cwd: string): Any {
-  const sandbox = MODES[mode].sandbox
-  if (sandbox === 'read-only') return { type: 'readOnly', networkAccess: false }
-  if (sandbox === 'danger-full-access') return { type: 'dangerFullAccess' }
-  return { type: 'workspaceWrite', writableRoots: [cwd], networkAccess: mode === 'project', excludeTmpdirEnvVar: false, excludeSlashTmp: false }
-}
 
 function windowLabel(mins: number | null | undefined, fallback: string): string {
   if (!mins) return fallback
@@ -58,11 +36,6 @@ function toMs(t: number | null | undefined): number | undefined {
   return t < 1e12 ? t * 1000 : t
 }
 
-function planItemSteps(text: string): PlanStep[] {
-  const lines = text.split('\n').map((line) => line.match(/^\s*(?:\d+[.)]|[-*])\s+(.+)$/)?.[1]?.trim()).filter((line): line is string => Boolean(line))
-  return (lines.length ? lines : [text.trim()]).filter(Boolean).map((step) => ({ text: step, status: 'pending' }))
-}
-
 export function codexLimitSnapshot(profileId: string, snap: Any): RateLimitSnapshot {
   const windows: LimitWindow[] = []
   if (snap?.primary) windows.push({ label: windowLabel(snap.primary.windowDurationMins, 'Principală'), usedPercent: snap.primary.usedPercent, resetsAt: toMs(snap.primary.resetsAt) })
@@ -72,85 +45,6 @@ export function codexLimitSnapshot(profileId: string, snap: Any): RateLimitSnaps
   if (snap?.credits?.balance != null) notes.push(`Credite: ${snap.credits.balance}`)
   if (snap?.rateLimitReachedType) notes.push('Limita a fost atinsă')
   return { profileId, windows, note: notes.join(' · ') || undefined, updatedAt: Date.now() }
-}
-
-function toolStatus(s: string | undefined): 'running' | 'done' | 'error' {
-  if (s === 'completed') return 'done'
-  if (s === 'failed' || s === 'declined') return 'error'
-  return 'running'
-}
-
-/** Converts one app-server thread item into a Jolty chat item (undefined = not shown). */
-export function codexItem(item: Any, liveOutput?: string): ChatItem | undefined {
-  switch (item?.type) {
-    case 'userMessage': {
-      const text = (item.content || []).filter((c: Any) => c.type === 'text').map((c: Any) => c.text).join('\n')
-      return text ? { kind: 'user', id: item.id, text } : undefined
-    }
-    case 'agentMessage':
-      return { kind: 'assistant', id: item.id, text: item.text || '' }
-    case 'reasoning':
-      return { kind: 'reasoning', id: item.id, text: (item.summary || []).join('\n\n') }
-    case 'plan':
-      return { kind: 'reasoning', id: item.id, text: item.text || '' }
-    case 'commandExecution':
-      return {
-        kind: 'tool',
-        id: item.id,
-        name: 'Shell',
-        title: `$ ${item.command}`,
-        command: item.command,
-        status: toolStatus(item.status),
-        exitCode: typeof item.exitCode === 'number' ? item.exitCode : undefined,
-        output: truncate(item.aggregatedOutput ?? liveOutput ?? '')
-      }
-    case 'fileChange': {
-      const diffs: FileDiff[] = (item.changes || []).map((c: Any) => ({ path: c.path, kind: c.kind?.type || 'update', diff: truncate(c.diff || '', 30000) }))
-      return { kind: 'tool', id: item.id, name: 'Edit', title: `Editează ${diffs.map((d) => d.path).join(', ')}`, status: toolStatus(item.status), diffs }
-    }
-    case 'mcpToolCall':
-      return {
-        kind: 'tool',
-        id: item.id,
-        name: `${item.server}/${item.tool}`,
-        title: `${item.server} / ${item.tool}`,
-        status: toolStatus(item.status),
-        input: item.arguments,
-        output: item.error ? String(item.error.message ?? JSON.stringify(item.error)) : item.result ? truncate(JSON.stringify(item.result.content ?? item.result, null, 2)) : undefined
-      }
-    case 'webSearch':
-      return { kind: 'tool', id: item.id, name: 'WebSearch', title: `Caută pe web: ${item.query ?? ''}`, status: 'done' }
-    case 'contextCompaction':
-      return { kind: 'notice', id: item.id, text: 'Conversația a fost compactată ca să încapă în context.', level: 'info' }
-    default:
-      return undefined
-  }
-}
-
-interface Usage {
-  totalTokens: number
-  inputTokens: number
-  cachedInputTokens: number
-  cacheWriteInputTokens: number
-  outputTokens: number
-}
-
-interface ThreadListener {
-  onNotification(method: string, p: Any): void
-  onRequest(r: RpcRequest): boolean
-  onServerExit(reason: string): void
-}
-
-/** Writes pasted images to temp files: app-server takes images by path. */
-function saveImages(images: Attachment[]): string[] {
-  const dir = path.join(os.tmpdir(), 'jolty-images')
-  fs.mkdirSync(dir, { recursive: true })
-  return images.map((img) => {
-    const ext = img.mime.split('/')[1]?.replace('jpeg', 'jpg') || 'png'
-    const file = path.join(dir, `${randomUUID()}.${ext}`)
-    fs.writeFileSync(file, Buffer.from(img.data!, 'base64'))
-    return file
-  })
 }
 
 /** Collects the answer of a one-off, tool-less thread (used to describe images). */
@@ -282,314 +176,6 @@ class CodexServer {
 
   kill(): void {
     this.rpc?.kill()
-  }
-}
-
-// ---------------------------------------------------------------------------
-// One Codex thread shown as a Jolty session
-// ---------------------------------------------------------------------------
-class CodexSession implements EngineSession, ThreadListener {
-  private threadId?: string
-  private threadStarting?: Promise<JsonRpcProcess>
-  private turnId?: string
-  private hasStructuredPlan = false
-  private pending = new Map<string, number | string>()
-  private liveOutput = new Map<string, string>()
-  private diffs = new Map<string, FileDiff[]>()
-  private running = new Map<string, Any>()
-  private lastTotal?: Usage
-  private turnUsage: Usage = { totalTokens: 0, inputTokens: 0, cachedInputTokens: 0, cacheWriteInputTokens: 0, outputTokens: 0 }
-  private overrides: Record<string, unknown> = {}
-  private effortSent = false
-  private flushTimer?: NodeJS.Timeout
-
-  constructor(
-    readonly meta: SessionMeta,
-    private profile: Profile,
-    private host: EngineHost,
-    private server: CodexServer
-  ) {}
-
-  private notice(text: string, level: 'info' | 'warn' | 'error'): void {
-    this.host.emit({ type: 'item', sessionId: this.meta.id, item: { kind: 'notice', id: randomUUID(), text, level } })
-  }
-
-  private async ensureThread(): Promise<JsonRpcProcess> {
-    if (this.threadStarting) return this.threadStarting
-    this.threadStarting = this.startThread()
-    try {
-      return await this.threadStarting
-    } finally {
-      this.threadStarting = undefined
-    }
-  }
-
-  private async startThread(): Promise<JsonRpcProcess> {
-    const rpc = await this.server.get()
-    if (this.threadId) return rpc
-    const mode = MODES[this.meta.permissionMode]
-    const common = {
-      cwd: this.meta.cwd,
-      model: this.meta.model || null,
-      approvalPolicy: mode.approvalPolicy,
-      sandbox: mode.sandbox,
-      developerInstructions: this.meta.browser ? `${WRITING_RULES} ${PLAN_RULES} ${browserPrompt()}` : `${WRITING_RULES} ${PLAN_RULES}`,
-      ...(this.meta.browser ? { config: { mcp_servers: { [BROWSER_SERVER]: this.browserConfig() } } } : {})
-    }
-    const resp = this.meta.engineSessionId
-      ? await rpc.request<Any>('thread/resume', { threadId: this.meta.engineSessionId, ...common })
-      : await rpc.request<Any>('thread/start', common)
-    this.threadId = resp.thread.id as string
-    this.server.sessions.set(this.threadId, this)
-    this.meta.engineSessionId = this.threadId
-    this.meta.model = resp.model
-    this.host.emit({ type: 'meta', sessionId: this.meta.id, meta: this.meta })
-    return rpc
-  }
-
-  async send(text: string, images: Attachment[] = []): Promise<void> {
-    this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'running' })
-    try {
-      const rpc = await this.ensureThread()
-      const input = [...saveImages(images).map((p) => ({ type: 'localImage', path: p })), { type: 'text', text, text_elements: [] }]
-      if (this.meta.effort && !this.effortSent) {
-        this.overrides.effort = this.meta.effort
-        this.effortSent = true
-      }
-      const params = { threadId: this.threadId, input, ...this.overrides }
-      this.overrides = {}
-      const r = await rpc.request<Any>('turn/start', params)
-      this.turnId = r?.turn?.id
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      this.notice(message, 'error')
-      this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'error', error: message })
-    }
-  }
-
-  onNotification(method: string, p: Any): void {
-    const sid = this.meta.id
-    switch (method) {
-      case 'turn/started':
-        this.turnId = p.turn?.id
-        this.hasStructuredPlan = false
-        this.turnUsage = { totalTokens: 0, inputTokens: 0, cachedInputTokens: 0, cacheWriteInputTokens: 0, outputTokens: 0 }
-        this.host.emit({ type: 'status', sessionId: sid, status: 'running' })
-        return
-      case 'turn/completed': {
-        const t = p.turn
-        if (t?.status === 'failed' && t.error) this.notice(t.error.message, 'error')
-        if (t?.status === 'interrupted') this.notice('Oprit.', 'info')
-        if (this.turnUsage.totalTokens > 0) {
-          this.host.recordUsage({
-            profileId: this.profile.id,
-            engine: 'codex',
-            model: this.meta.model || 'necunoscut',
-            inputTokens: this.turnUsage.inputTokens,
-            outputTokens: this.turnUsage.outputTokens,
-            cacheReadTokens: this.turnUsage.cachedInputTokens,
-            cacheWriteTokens: this.turnUsage.cacheWriteInputTokens,
-            ts: Date.now()
-          })
-        }
-        this.turnId = undefined
-        this.host.emit({ type: 'status', sessionId: sid, status: 'idle' })
-        return
-      }
-      case 'item/started':
-      case 'item/completed': {
-        const item = codexItem(p.item, this.liveOutput.get(p.item?.id))
-        if (!item || p.item?.type === 'userMessage') return
-        if (item.kind === 'tool' && item.diffs) this.diffs.set(item.id, item.diffs)
-        if (method === 'item/completed') {
-          this.liveOutput.delete(item.id)
-          this.running.delete(item.id)
-          if (p.item?.type === 'fileChange') {
-            for (const c of p.item.changes || []) {
-              this.host.emit({ type: 'draft', sessionId: sid, toolId: `${item.id}:${c.path}`, name: 'Edit', path: c.path, content: c.diff || '', done: true })
-            }
-          }
-        } else if (p.item?.type === 'commandExecution') {
-          this.running.set(item.id, p.item)
-        }
-        // an empty reasoning summary only clutters the chat
-        if (item.kind === 'reasoning' && !item.text && method === 'item/completed') return
-        this.host.emit({ type: 'item', sessionId: sid, item })
-        if (method === 'item/completed' && p.item?.type === 'plan' && p.item.text && !this.hasStructuredPlan) {
-          this.host.emit({ type: 'plan', sessionId: sid, steps: planItemSteps(String(p.item.text)) })
-        }
-        return
-      }
-      case 'turn/plan/updated':
-        this.hasStructuredPlan = true
-        this.host.emit({
-          type: 'plan',
-          sessionId: sid,
-          steps: (p.plan || []).map((st: Any) => ({ text: st.step, status: st.status === 'completed' ? 'done' : st.status === 'inProgress' ? 'active' : 'pending' }))
-        })
-        return
-      case 'item/fileChange/patchUpdated':
-        for (const c of p.changes || []) {
-          this.host.emit({ type: 'draft', sessionId: sid, toolId: `${p.itemId}:${c.path}`, name: 'Edit', path: c.path, content: c.diff || '', done: false })
-        }
-        return
-      case 'item/agentMessage/delta':
-        this.host.emit({ type: 'delta', sessionId: sid, itemId: p.itemId, kind: 'assistant', delta: p.delta })
-        return
-      case 'item/reasoning/summaryTextDelta':
-        this.host.emit({ type: 'delta', sessionId: sid, itemId: p.itemId, kind: 'reasoning', delta: p.delta })
-        return
-      case 'item/commandExecution/outputDelta': {
-        this.liveOutput.set(p.itemId, (this.liveOutput.get(p.itemId) || '') + p.delta)
-        if (!this.flushTimer) this.flushTimer = setTimeout(() => this.flushOutput(), 300)
-        return
-      }
-      case 'thread/tokenUsage/updated': {
-        const last = p.tokenUsage?.last as Record<string, number> | undefined
-        if (last) {
-          const used = last.totalTokens || (last.inputTokens || 0) + (last.outputTokens || 0)
-          this.host.emit({ type: 'context', sessionId: sid, used, window: p.tokenUsage?.modelContextWindow || undefined })
-        }
-        const total = p.tokenUsage?.total as Usage | undefined
-        if (!total) return
-        const prev = this.lastTotal
-        for (const k of Object.keys(this.turnUsage) as (keyof Usage)[]) {
-          const delta = prev && total[k] >= prev[k] ? total[k] - prev[k] : prev ? total[k] : (p.tokenUsage?.last?.[k] ?? 0)
-          this.turnUsage[k] += delta
-        }
-        this.lastTotal = total
-        return
-      }
-      case 'serverRequest/resolved': {
-        for (const [id, rpcId] of this.pending) {
-          if (String(rpcId) === String(p.requestId)) {
-            this.pending.delete(id)
-            this.host.emit({ type: 'permissionResolved', sessionId: sid, requestId: id })
-          }
-        }
-        return
-      }
-      case 'error':
-        this.notice(p.willRetry ? `Reîncerc: ${p.error?.message}` : p.error?.message || 'Eroare Codex', p.willRetry ? 'warn' : 'error')
-        return
-      default:
-        return
-    }
-  }
-
-  /** Streams running command output to the chat a few times per second. */
-  private flushOutput(): void {
-    this.flushTimer = undefined
-    for (const [id, raw] of this.running) {
-      const item = codexItem(raw, this.liveOutput.get(id))
-      if (item) this.host.emit({ type: 'item', sessionId: this.meta.id, item })
-    }
-  }
-
-  onRequest(r: RpcRequest): boolean {
-    const p = r.params as Any
-    if (r.method === 'item/commandExecution/requestApproval') {
-      const id = randomUUID()
-      this.pending.set(id, r.id)
-      this.host.emit({
-        type: 'permission',
-        sessionId: this.meta.id,
-        request: { id, toolName: 'Shell', title: `$ ${p.command ?? ''}`, detail: p.reason || undefined, canAllowForSession: true }
-      })
-      return true
-    }
-    if (r.method === 'item/fileChange/requestApproval') {
-      const id = randomUUID()
-      this.pending.set(id, r.id)
-      this.host.emit({
-        type: 'permission',
-        sessionId: this.meta.id,
-        request: { id, toolName: 'Edit', title: 'Modificări de fișiere', detail: p.reason || undefined, diffs: this.diffs.get(p.itemId), canAllowForSession: true }
-      })
-      return true
-    }
-    return false
-  }
-
-  respond(requestId: string, decision: PermissionDecision): void {
-    const rpcId = this.pending.get(requestId)
-    if (rpcId === undefined) return
-    this.pending.delete(requestId)
-    const value = decision === 'allow' ? 'accept' : decision === 'allowSession' ? 'acceptForSession' : 'decline'
-    this.server.rpc?.respond(rpcId, { decision: value })
-    this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId })
-  }
-
-  async rewind(_id: string, _dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }> {
-    throw new Error('Codex nu păstrează copii ale fișierelor pe mesaj. Folosește git pentru a reveni.')
-  }
-
-  async compact(): Promise<void> {
-    const rpc = await this.ensureThread()
-    await rpc.request('thread/compact/start', { threadId: this.threadId })
-  }
-
-  async interrupt(): Promise<void> {
-    if (!this.threadId || !this.turnId) return
-    const rpc = await this.server.get()
-    await rpc.request('turn/interrupt', { threadId: this.threadId, turnId: this.turnId })
-  }
-
-  async setModel(model: string): Promise<void> {
-    this.meta.model = model
-    this.overrides.model = model
-  }
-
-  async setEffort(effort: string): Promise<void> {
-    this.meta.effort = effort
-    this.overrides.effort = effort
-    this.effortSent = true
-  }
-
-  /** The Playwright server for this thread; reading pages runs on its own outside Manual mode. */
-  private browserConfig(): Record<string, unknown> {
-    const tools = this.meta.permissionMode === 'ask' ? {} : Object.fromEntries(BROWSER_READ_TOOLS.map((t) => [t, { approval_mode: 'approve' }]))
-    return { ...browserServer(), disabled_tools: BROWSER_BLOCKED_TOOLS, tools }
-  }
-
-  async setBrowser(on: boolean): Promise<void> {
-    if (Boolean(this.meta.browser) === on) return
-    this.meta.browser = on
-    // thread config is fixed at start: the next message resumes the same thread with the new servers
-    if (!this.turnId) this.threadId = undefined
-  }
-
-  async setPermissionMode(mode: PermissionMode): Promise<void> {
-    this.meta.permissionMode = mode
-    this.overrides.approvalPolicy = MODES[mode].approvalPolicy
-    this.overrides.sandboxPolicy = sandboxPolicy(mode, this.meta.cwd)
-  }
-
-  onServerExit(reason: string): void {
-    this.effortSent = false
-    this.threadId = undefined
-    this.turnId = undefined
-    for (const id of this.pending.keys()) this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId: id })
-    this.pending.clear()
-    this.notice(reason, 'error')
-    this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'error', error: reason })
-  }
-
-  async close(): Promise<void> {
-    if (this.flushTimer) clearTimeout(this.flushTimer)
-    for (const [id, rpcId] of this.pending) {
-      this.server.rpc?.respond(rpcId, { decision: 'cancel' })
-      this.pending.delete(id)
-    }
-    if (this.threadId) {
-      this.server.sessions.delete(this.threadId)
-      try {
-        await this.server.rpc?.request('thread/unsubscribe', { threadId: this.threadId }, 5000)
-      } catch {
-        // the thread stays on disk either way
-      }
-    }
-    this.threadId = undefined
   }
 }
 
