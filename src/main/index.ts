@@ -5,6 +5,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import type { ChatEvent } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers, cleanToken } from './browser'
+import { BrowserLive } from './browser-live'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
 import * as updater from './updater'
@@ -53,6 +54,7 @@ declare const __JOLTY_VERSION__: string
 const APP_ID = app.isPackaged ? 'com.joltarise.jolty' : 'com.joltarise.jolty.dev'
 let win: BrowserWindow | undefined
 let jolty: Jolty
+const browserLive = new BrowserLive(send)
 
 function send(e: ChatEvent): void {
   if (!win || win.isDestroyed()) return
@@ -153,11 +155,13 @@ function registerIpc(): void {
     await jolty.reconnectBrowser()
   })
   handle('browser:openExtensionPage', () => openWeb(BROWSER_EXTENSION_URL))
+  handle('browser:live', (on: boolean) => (on === true ? browserLive.start() : browserLive.stop()))
   handle('sessions:respond', (id: string, requestId: string, decision) => jolty.respond(id, requestId, decision as never))
   handle('sessions:handoff', (id: string, target: string, model?: string, effort?: string) =>
     jolty.handoff(id, target, typeof model === 'string' ? model : undefined, typeof effort === 'string' ? effort : undefined)
   )
   handle('sessions:remove', (id: string) => jolty.removeSession(id))
+  handle('sessions:review', (id: string) => jolty.review(String(id)))
 
   handle('usage:summary', () => jolty.usageSummary())
   handle('usage:balance', (id: string) => jolty.balance(id))

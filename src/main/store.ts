@@ -126,6 +126,13 @@ export function loadLimits(): Record<string, RateLimitSnapshot> {
  * live stream event (only the window it hit) must not wipe the other windows. A window whose
  * reset time has passed is dropped, since its old percentage no longer applies.
  */
+/** "5 ore" -> 5, "7 zile" -> 168: how long a limit window lasts, for ordering them. */
+export function windowHours(label: string): number {
+  const n = Number(/\d+/.exec(label)?.[0] || 1)
+  if (/săpt|week/i.test(label)) return n * 168
+  return /zi|day/i.test(label) ? n * 24 : n
+}
+
 export function saveLimit(snapshot: RateLimitSnapshot): RateLimitSnapshot {
   const all = loadLimits()
   const prev = all[snapshot.profileId]
@@ -134,7 +141,8 @@ export function saveLimit(snapshot: RateLimitSnapshot): RateLimitSnapshot {
   for (const w of snapshot.windows) byLabel.set(w.label, w)
   const merged: RateLimitSnapshot = {
     ...snapshot,
-    windows: [...byLabel.values()],
+    // every account in the same order, shortest window first (5 ore above 7 zile), whatever order the engine reports
+    windows: [...byLabel.values()].sort((a, b) => windowHours(a.label) - windowHours(b.label)),
     // keep the plan note when a failed read only says "could not read"
     note: snapshot.windows.length || !prev?.note ? snapshot.note : snapshot.note && byLabel.size ? prev.note : snapshot.note
   }

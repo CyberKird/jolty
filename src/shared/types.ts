@@ -115,6 +115,8 @@ export interface SessionMeta {
   updatedAt: number
   /** set when this session was started as a handoff from another one */
   handoffFrom?: string
+  /** moved here but not sent yet: the history goes out with the user's first message */
+  handoffPending?: boolean
 }
 
 export interface ExternalSession {
@@ -211,6 +213,8 @@ export type ChatEvent =
   /** a file being written right now: content grows as the model generates it */
   | { type: 'draft'; sessionId: string; toolId: string; name: string; path?: string; content: string; done: boolean }
   | { type: 'pull'; tag: string; status: string; completed?: number; total?: number; done?: boolean; error?: string }
+  /** the Jolty browser page as the agent sees it (a JPEG frame), or why there is no picture */
+  | { type: 'browserLive'; frame?: string; url?: string; title?: string; note?: string }
 
 export interface PlanStep {
   text: string
@@ -397,6 +401,8 @@ export interface JoltyApi {
     rewind(sessionId: string, itemId: string, dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }>
     respond(sessionId: string, requestId: string, decision: PermissionDecision): Promise<void>
     handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string): Promise<SessionMeta>
+    /** a read-only review of the current changes by a model from the other family */
+    review(sessionId: string): Promise<void>
     remove(sessionId: string): Promise<void>
     onEvent(cb: (e: ChatEvent) => void): () => void
   }
@@ -439,6 +445,8 @@ export interface JoltyApi {
     info(): Promise<BrowserInfo>
     setToken(token: string): Promise<void>
     openExtensionPage(): Promise<void>
+    /** start or stop streaming the Jolty browser page to the Live panel */
+    live(on: boolean): Promise<void>
   }
   app: {
     settings(): Promise<AppSettings>

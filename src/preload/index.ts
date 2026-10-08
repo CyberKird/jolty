@@ -40,6 +40,7 @@ const api: JoltyApi = {
     respond: (id, requestId, decision) => call('sessions:respond', id, requestId, decision),
     handoff: (id, target, model, effort) => call('sessions:handoff', id, target, model, effort),
     remove: (id) => call('sessions:remove', id),
+    review: (id) => call('sessions:review', id),
     onEvent: (cb) => {
       const listener = (_e: unknown, ev: ChatEvent): void => cb(ev)
       ipcRenderer.on('jolty:event', listener)
@@ -81,7 +82,8 @@ const api: JoltyApi = {
     hasToken: () => call('browser:hasToken'),
     info: () => call('browser:info'),
     setToken: (token) => call('browser:setToken', token),
-    openExtensionPage: () => call('browser:openExtensionPage')
+    openExtensionPage: () => call('browser:openExtensionPage'),
+    live: (on) => call('browser:live', on)
   },
   app: {
     settings: () => call('app:settings'),

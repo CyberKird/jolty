@@ -33,6 +33,7 @@ import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_T
 import { modelInfo } from '../local'
 import { noThinkingUrl } from '../thinking-proxy'
 import { endpointEfforts, endpointThinking } from './thinking'
+import { editDiff, partialJsonString } from './partial-json'
 import { TaskBoard } from './tasks'
 import { getSecret, loadSettings, profileDir, saveSettings } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
@@ -99,32 +100,6 @@ function userMessage(text: string, images: Attachment[], uuid?: string): SDKUser
     { type: 'text' as const, text }
   ]
   return { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, ...id }
-}
-
-/** Pulls a (possibly still incomplete) string field out of streamed tool-input JSON. */
-export function partialJsonString(json: string, key: string): string | undefined {
-  const m = new RegExp(`"${key}"\\s*:\\s*"`).exec(json)
-  if (!m) return undefined
-  let i = m.index + m[0].length
-  let raw = ''
-  while (i < json.length) {
-    const c = json[i]
-    if (c === '\\') {
-      if (i + 1 >= json.length) break
-      if (json[i + 1] === 'u' && i + 5 >= json.length) break
-      raw += json.slice(i, json[i + 1] === 'u' ? i + 6 : i + 2)
-      i += json[i + 1] === 'u' ? 6 : 2
-      continue
-    }
-    if (c === '"') break
-    raw += c
-    i++
-  }
-  try {
-    return JSON.parse(`"${raw}"`) as string
-  } catch {
-    return raw
-  }
 }
 
 const DRAFT_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
@@ -323,6 +298,8 @@ class ClaudeSession implements EngineSession {
   private contextWindow?: number
   private contextUsed = 0
   private lastCost = 0
+  /** a turn is under way: a message sent now lands mid-turn */
+  private turn = false
   private limitWindows = new Map<string, LimitWindow>()
 
   constructor(
@@ -394,6 +371,7 @@ class ClaudeSession implements EngineSession {
       this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'error', error: message })
     } finally {
       if (this.q === q) this.q = undefined
+      this.turn = false
     }
   }
 
@@ -529,6 +507,7 @@ class ClaudeSession implements EngineSession {
           ts: Date.now()
         })
         if (m.subtype !== 'success') this.notice(`Claude s-a oprit: ${m.subtype}`, 'warn')
+        this.turn = false
         this.host.emit({ type: 'status', sessionId: sid, status: 'idle' })
         return
       }
@@ -554,7 +533,7 @@ class ClaudeSession implements EngineSession {
   private emitDraft(d: { id: string; name: string; json: string }, done: boolean): void {
     const path = partialJsonString(d.json, 'file_path') || partialJsonString(d.json, 'notebook_path')
     const content =
-      d.name === 'Write' ? partialJsonString(d.json, 'content') : d.name === 'NotebookEdit' ? partialJsonString(d.json, 'new_source') : partialJsonString(d.json, 'new_string')
+      d.name === 'Write' ? partialJsonString(d.json, 'content') : d.name === 'NotebookEdit' ? partialJsonString(d.json, 'new_source') : editDiff(d.json)
     this.host.emit({ type: 'draft', sessionId: this.meta.id, toolId: d.id, name: d.name, path, content: content ?? '', done })
   }
 
@@ -610,8 +589,15 @@ class ClaudeSession implements EngineSession {
 
   async send(text: string, images: Attachment[] = [], clientId?: string): Promise<void> {
     await this.ensureStarted()
+    const mid = this.turn
+    this.turn = true
     this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'running' })
     this.input.push(text, images, clientId)
+    // sent during a turn: a long command would hold the message until it ends, so it moves to the
+    // background (Ctrl+B in Claude Code) and keeps running while the model reads the message
+    if (mid && (await this.q?.backgroundTasks().catch(() => false))) {
+      this.notice('Comanda care rula continuă în fundal; mesajul tău intră acum.', 'info')
+    }
   }
 
   /** `cliId`: Claude Code's own id for the message (it does not keep the one Jolty sends) */
@@ -898,10 +884,10 @@ export class ClaudeDriver implements EngineDriver {
   }
 
   /** Asks a Claude model to describe images for a model that cannot see them. */
-  async describe(profile: Profile, images: Attachment[], prompt = DESCRIBE_PROMPT): Promise<string> {
+  async describe(profile: Profile, images: Attachment[], prompt = DESCRIBE_PROMPT, pick?: string): Promise<string> {
     const sdk = await loadSdk()
     prepareProfileDir(profile)
-    const model = profile.auth === 'endpoint' ? profile.models?.[0] : 'haiku'
+    const model = pick || (profile.auth === 'endpoint' ? profile.models?.[0] : 'haiku')
     async function* one(): AsyncGenerator<SDKUserMessage> {
       yield userMessage(prompt, images)
     }

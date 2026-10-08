@@ -1,5 +1,6 @@
-// Updates like the Claude and Codex desktop apps: checked on start and every few hours, downloaded
-// in the background, then "restart to update" in the title bar plus a Windows notification.
+// Updates like the Claude and Codex desktop apps: checked on start, every hour and when the user
+// comes back to Jolty, downloaded in the background, then "restart to update" in the title bar and
+// above the composer, plus a Windows notification.
 // Anything left pending installs when the app quits.
 //
 // Releases are public on GitHub, so the app reads them anonymously: no credential is stored or sent.
@@ -10,7 +11,10 @@ import type { UpdateStatus } from '@shared/types'
 
 const { autoUpdater } = electronUpdater
 
-const EVERY = 4 * 3600e3
+const EVERY = 3600e3
+/** coming back to Jolty checks again, at most this often */
+const ON_FOCUS = 30 * 60e3
+let lastCheck = 0
 /** Error text shown in the app, capped in length. */
 function clean(msg?: string): string | undefined {
   return msg?.replace(/\b(gh[opsu]_|github_pat_)[A-Za-z0-9_]+/g, '[token]').slice(0, 300)
@@ -52,6 +56,9 @@ export function init(onChange: (s: UpdateStatus) => void, onFocus: () => void): 
   if (!app.isPackaged || process.env.JOLTY_TEST) return
   setTimeout(() => void check(), 15000)
   setInterval(() => void check(), EVERY)
+  app.on('browser-window-focus', () => {
+    if (Date.now() - lastCheck > ON_FOCUS) void check()
+  })
 }
 
 /** Development builds have no release to compare against, so they only say so. */
@@ -61,6 +68,7 @@ export async function check(): Promise<UpdateStatus> {
     return status
   }
   if (status.state === 'downloading' || status.state === 'ready') return status
+  lastCheck = Date.now()
   try {
     await autoUpdater.checkForUpdates()
   } catch (err) {

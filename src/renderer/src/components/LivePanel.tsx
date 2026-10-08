@@ -1,9 +1,11 @@
 import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
-import { basename, useStore, type Draft } from '../store'
+import { clock, etaLabel, timeLeft, type Clock } from '@shared/eta'
+import { api, basename, useStore, type Draft } from '../store'
 import { toolKind } from './Messages'
 import { DiffView, highlight, langOf } from './Rich'
+import { useNow } from './Tasks'
 
 type Tool = Extract<ChatItem, { kind: 'tool' }>
 
@@ -256,10 +258,16 @@ function LiveCode({ drafts }: { drafts: Draft[] }) {
   )
 }
 
-function PlanView({ steps }: { steps: PlanStep[] }) {
+function PlanView({ steps, timer, running, now }: { steps: PlanStep[]; timer?: Clock; running: boolean; now: number }) {
   const done = steps.filter((s) => s.status === 'done').length
   return (
     <>
+      <div className="plan-eta">
+        <span>
+          {done}/{steps.length} gata
+        </span>
+        {running && done < steps.length && <span className="volt">{etaLabel(timeLeft(timer, steps, now))}</span>}
+      </div>
       <div className="plan-progress">
         <div style={{ width: `${(done / Math.max(steps.length, 1)) * 100}%` }} />
       </div>
@@ -359,7 +367,29 @@ function TerminalView({ items }: { items: ChatItem[] }) {
   )
 }
 
-type Tab = 'changes' | 'plan' | 'terminal' | 'code' | 'files'
+/** Playwright MCP's tools, whatever prefix the engine gives them (mcp__jolty-browser__browser_click). */
+const isBrowserTool = (name: string): boolean => /(^|__)browser_/.test(name)
+
+function BrowserView() {
+  const live = useStore((s) => s.browserLive)
+  // the stream runs only while this tab is on screen
+  useEffect(() => {
+    void api.browser.live(true)
+    return () => void api.browser.live(false)
+  }, [])
+  if (live.note) return <div className="faint small">{live.note}</div>
+  if (!live.frame) return <div className="faint small">Se conectează la browserul Jolty…</div>
+  return (
+    <div className="browser-live">
+      <div className="browser-live-url ellipsis" title={live.url}>
+        {live.url}
+      </div>
+      <img src={`data:image/jpeg;base64,${live.frame}`} alt={live.title ? `Pagina ${live.title}` : 'Pagina din browserul Jolty'} />
+    </div>
+  )
+}
+
+type Tab = 'changes' | 'plan' | 'terminal' | 'code' | 'browser' | 'files'
 
 const WIDTH_KEY = 'jolty.liveWidth'
 function savedWidth(): number {
@@ -389,6 +419,11 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   const planDone = plan ? plan.filter((s) => s.status === 'done').length : 0
   const changes = useMemo(() => changesOf(items, cwd), [items, cwd])
   const fileCount = useMemo(() => fileCells(items, cwd, drafts).length, [items, cwd, drafts])
+  const timer = useStore((s) => s.clocks[id])
+  const running = status === 'running'
+  const now = useNow(running)
+  const lastTool = tools[tools.length - 1]
+  const browsing = running && lastTool?.status === 'running' && isBrowserTool(lastTool.name)
 
   // The tab follows what the agent does until the user picks one; each conversation starts following again.
   const [picked, setPicked] = useState<Tab>()
@@ -399,6 +434,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   }, [id])
   if (phase.key === 'write' || phase.key === 'edit') auto.current = 'code'
   else if (phase.key === 'run') auto.current = 'terminal'
+  else if (browsing) auto.current = 'browser'
   else if (phase.key === 'plan' && plan?.length) auto.current = 'plan'
   else if (phase.key === 'idle' && changes.length) auto.current = 'changes'
   const tab = picked || auto.current
@@ -433,6 +469,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
     { id: 'plan', label: 'Plan', count: plan?.length ? `${planDone}/${plan.length}` : undefined },
     { id: 'terminal', label: 'Terminal', count: runs ? String(runs) : undefined },
     { id: 'code', label: 'Cod live', count: drafts.some((d) => !d.done) ? '●' : undefined },
+    { id: 'browser', label: 'Browser', count: browsing ? '●' : undefined },
     { id: 'files', label: 'Fișiere', count: fileCount ? String(fileCount) : undefined }
   ]
 
@@ -466,6 +503,10 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
             <div className="v">{runs}</div>
             <div className="k">comenzi</div>
           </div>
+          <div className="counter" title="Cât lucrează la mesajul curent">
+            <div className="v">{running && timer?.turn ? clock(now - timer.turn) : '0:00'}</div>
+            <div className="k">timp</div>
+          </div>
         </div>
       </div>
       <div className="live-tabs" role="tablist" aria-label="Panouri">
@@ -479,9 +520,10 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
       <div className="live-pane" role="tabpanel">
         {tab === 'changes' && <ChangesView changes={changes} cwd={cwd} />}
         {tab === 'plan' &&
-          (plan?.length ? <PlanView steps={plan} /> : <div className="faint small">Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.</div>)}
+          (plan?.length ? <PlanView steps={plan} timer={timer} running={running} now={now} /> :<div className="faint small">Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.</div>)}
         {tab === 'terminal' && <TerminalView items={items} />}
         {tab === 'code' && <LiveCode drafts={drafts} />}
+        {tab === 'browser' && <BrowserView />}
         {tab === 'files' && <FileMap items={items} cwd={cwd} drafts={drafts} />}
       </div>
     </aside>

@@ -2,6 +2,8 @@ import { Paperclip } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ChatItem, PermissionDecision, PermissionRequest } from '@shared/types'
+import { splitQuote } from '@shared/quote'
+import { ReplyButton } from './Quote'
 import { DiffView, imageMenu, Markdown, messageMenu, plainDashes } from './Rich'
 
 /** A chat image: click opens a large preview, right-click offers copy, save and open. */
@@ -111,6 +113,14 @@ const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
 function Reasoning({ text, live }: { text: string; live: boolean }) {
   const [open, setOpen] = useState(false)
   if (!text.trim() && !live) return null
+  // while it thinks, the thinking is on screen as it arrives (its latest part); afterwards it folds away
+  if (live)
+    return (
+      <div className="reasoning reasoning-live" aria-live="polite">
+        <div className="reasoning-head">Se gândește…</div>
+        {text.trim() && <div className="body">{plainDashes(text.length > 1500 ? `…${text.slice(-1500)}` : text)}</div>}
+      </div>
+    )
   return (
     <details className="reasoning" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
       <summary style={{ color: live ? 'var(--volt)' : undefined }}>{live ? `Se gândește…${text.trim() ? ` ${open ? '−' : '+'}` : ''}` : `Raționament ${open ? '−' : '+'}`}</summary>
@@ -121,10 +131,13 @@ function Reasoning({ text, live }: { text: string; live: boolean }) {
 
 export const MessageItem = memo(function MessageItem({ item, live }: { item: ChatItem; live: boolean }) {
   switch (item.kind) {
-    case 'user':
+    case 'user': {
+      const { quote, body } = splitQuote(item.text)
       return (
         <div className="msg-user" onContextMenu={(e) => messageMenu(e)}>
-          {item.text && <div className="message-text">{item.text}</div>}
+          <ReplyButton text={body} />
+          {quote && <div className="msg-quote">{quote}</div>}
+          {body && <div className="message-text">{body}</div>}
           {(item.images?.length || item.files?.length) ? (
             <div className="message-attachments">
               {item.images?.length ? (
@@ -139,9 +152,11 @@ export const MessageItem = memo(function MessageItem({ item, live }: { item: Cha
           ) : null}
         </div>
       )
+    }
     case 'assistant':
       return item.text.trim() ? (
         <div className="msg-assistant" onContextMenu={(e) => messageMenu(e, item.text)}>
+          <ReplyButton text={item.text} />
           <Markdown text={item.text} />
         </div>
       ) : null

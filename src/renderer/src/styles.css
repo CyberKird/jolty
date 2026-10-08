@@ -794,6 +794,105 @@ a {
   cursor: default;
   border: 1px solid var(--line-2);
 }
+/* reply: a button on the message, the quote above the composer and inside the sent bubble */
+.msg-user,
+.msg-assistant {
+  position: relative;
+}
+.reply-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line-2);
+  background: var(--s1);
+  color: var(--grey);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.msg-user .reply-btn {
+  right: auto;
+  left: -32px;
+}
+.msg-user:hover .reply-btn,
+.msg-assistant:hover .reply-btn,
+.reply-btn:focus-visible {
+  opacity: 1;
+}
+.reply-btn:hover {
+  color: var(--volt);
+  border-color: var(--volt-line);
+}
+.msg-quote {
+  margin-bottom: 8px;
+  padding: 4px 0 4px 10px;
+  border-left: 2px solid var(--volt);
+  color: var(--grey);
+  font-size: 13px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.quote-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  border-left: 2px solid var(--volt);
+  color: var(--grey);
+  font-size: 12.5px;
+}
+.quote-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.quote-bar button {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  cursor: pointer;
+}
+.quote-bar button:hover {
+  color: var(--white);
+}
+.sel-popup {
+  position: fixed;
+  z-index: 150;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  transform: translate(-50%, calc(-100% - 8px));
+  border: 1px solid var(--line-2);
+  background: var(--s2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  animation: fade 0.12s;
+}
+.sel-popup button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--white);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sel-popup button:hover {
+  background: var(--volt);
+  color: var(--black);
+}
 .msg-assistant {
   animation: fade 0.3s;
   word-break: break-word;
@@ -836,6 +935,23 @@ a {
   padding-left: 14px;
   border-left: 1px solid var(--line-2);
   white-space: pre-wrap;
+}
+.reasoning-head {
+  font-family: var(--label);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--volt);
+}
+/* the live thought keeps its newest lines in view and fades the older ones out at the top */
+.reasoning-live .body {
+  max-height: 180px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-left-color: var(--volt-line);
+  mask-image: linear-gradient(to bottom, transparent, #000 40px);
 }
 
 /* tool calls read like a log: verb, target, state */
@@ -1326,7 +1442,7 @@ a {
 }
 .counters {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 2px;
   margin-top: 18px;
 }
@@ -1379,6 +1495,29 @@ a {
   border-color: var(--volt);
   background: var(--volt);
   animation: blink-soft 1.2s steps(2) infinite;
+}
+.plan-eta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+.browser-live img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+}
+.browser-live-url {
+  margin-bottom: 8px;
+  font-family: var(--code);
+  font-size: 11.5px;
+  color: var(--grey);
 }
 .plan-progress {
   height: 2px;
@@ -2581,6 +2720,15 @@ a {
   font-size: 13px;
   color: var(--white);
 }
+.tasks-eta {
+  flex: none;
+  font-family: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--volt);
+  font-variant-numeric: tabular-nums;
+}
 .tasks-now.live::before {
   content: '';
   display: inline-block;
@@ -2609,6 +2757,7 @@ a {
 .verification-cost { color: var(--grey-2); white-space: nowrap; }
 .verification-strip button { flex: none; border: 1px solid var(--line-2); background: transparent; color: var(--white); cursor: pointer; padding: 5px 7px; }
 .verification-strip button:disabled { opacity: 0.5; cursor: default; }
+.update-strip { color: var(--volt); border-color: var(--volt-line); }
 @media (max-width: 1080px) {
   .tasks, .verification-strip { width: calc(100% - 40px); }
 }

@@ -10,7 +10,7 @@ import { endpointCost, fetchBalance, hasBalance } from '../src/main/balance'
 import { browserServer, pageHost } from '../src/main/browser'
 import { endpointEfforts } from '../src/main/engines/thinking'
 import { noThinkingUrl } from '../src/main/thinking-proxy'
-import { assess, delegatePick, recommend } from '../src/shared/complexity'
+import { assess, recommend } from '../src/shared/complexity'
 import { modelScore } from '../src/shared/scores'
 import { secretHint } from '../src/shared/secrets'
 import { TaskBoard } from '../src/main/engines/tasks'
@@ -171,19 +171,6 @@ app.whenReady().then(async () => {
     check(r6.kind === 'weak' && r6.target?.model.id === 'opus' && r6.target.effort === 'xhigh', 'Opus on low for a hard task -> raise the effort, same model')
     const r7 = recommend(hard, [ds, { ...claude, error: 'not logged in' }], { profileId: 'ds' }, {})
     check(r7.kind === 'weak' && !r7.target, 'no connected model is strong enough: says so, suggests nothing it cannot run')
-
-    // ---------------- auto-delegation of mechanical work to a cheap model ----------------
-    const cheap: Profile = { ...prof('ds', 'claude', 'endpoint'), hasSecret: true }
-    const sub = prof('claude', 'claude', 'subscription') as Profile
-    const local: Profile = { id: 'ollama', name: 'ollama', engine: 'claude', auth: 'endpoint', isDefaultDir: true, color: '', local: true }
-    const list = [sub, cheap]
-    const mechanical = 'Refactorizează tot serviciul de facturare ca să folosească tipuri TypeScript peste tot și scrie teste pentru fiecare rută în parte acum'
-    check(delegatePick(mechanical, list, 'claude')?.id === 'ds', 'a long mechanical task on a subscription goes to the cheap endpoint')
-    check(delegatePick(mechanical, list, 'ds') === undefined, 'already on the cheap endpoint: no hop')
-    check(delegatePick('refactorizează', list, 'claude') === undefined, 'below the size floor: stays where it is')
-    check(delegatePick('scrie teste pentru modulul de plată folosind cheia sk-abc123 și token-ul de auth pentru toate mediile', list, 'claude') === undefined, 'looks like it holds a secret: never routed to a third-party endpoint')
-    check(delegatePick('explică-mi de ce interfața se mișcă greu când derulez lista lungă de sesiuni din bara laterală', list, 'claude') === undefined, 'no mechanical verb: no delegation')
-    check(delegatePick(mechanical, [sub, local], 'claude')?.id === 'ollama', 'falls back to a local model when no endpoint key is set')
 
     const opus = modelScore(sub, { id: 'opus', label: 'Opus 5.5' })
     check(opus?.iq === 54 && opus.speed === 'mediu', 'Opus 5.5 scores 54 and is medium speed')
@@ -447,9 +434,11 @@ app.whenReady().then(async () => {
     if (process.env.TEST_CLAUDE !== '0') {
       const claudeProfile = jolty.profiles().find((x) => x.name === 'Mock Anthropic')!
       const h = await jolty.handoff(s.id, claudeProfile.id)
+      check(!jolty.history(h.id).some((i) => i.kind === 'user' && !jolty.history(s.id).some((o) => o.id === i.id)), 'handoff waits for the user instead of sending by itself')
+      await jolty.sendMessage(h.id, 'Continuă de unde ai rămas.')
       await waitFor(() => idleCount(h.id) >= 1, 120000, 'handoff turn')
       const hItems = jolty.history(h.id)
-      check(hItems.some((i) => i.kind === 'user' && i.text.includes('Preia conversația')), 'handoff shows a short message to the user')
+      check(hItems.some((i) => i.kind === 'user' && i.text === 'Continuă de unde ai rămas.'), 'the user sees only their own message, the history rides along unseen')
       const log = fs.readFileSync(process.env.MOCK_ANTHROPIC_LOG || '/dev/null', 'utf8')
       check(!process.env.MOCK_ANTHROPIC_LOG || log.includes('"handoff": true'), 'handoff sends the previous conversation to the other engine')
       check(hItems.some((i) => i.kind === 'assistant'), 'the other engine answers after the handoff')

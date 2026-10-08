@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.11
+
+- Panoul Live are tab Browser: vezi in timp real pagina pe care o controleaza modelul (cu fereastra proprie Jolty).
+- Bara de sarcini arata timpul ramas estimat, iar panoul Live cat lucreaza modelul la mesajul curent.
+- Gandirea apare in chat in timp ce modelul gandeste, iar editarile se vad live linie cu linie, inclusiv toate modificarile dintr-un MultiEdit.
+- Un mesaj trimis in timpul unei comenzi lungi intra imediat: comanda continua in fundal in loc sa blocheze raspunsul.
+- Citeaza textul selectat sau raspunde la orice mesaj, ca intr-o aplicatie de chat.
+- Continua in alt cont nu mai trimite nimic singur. La acelasi furnizor ramai in acelasi chat, cu tot contextul; la alt furnizor pleaca un rezumat compact (cativa mii de tokeni in loc de tot istoricul).
+- Cand un cont Claude atinge limita, un clic muta chatul pe alt cont liber si continua.
+- Butonul Verifica cere unui model din alta familie (Codex pentru Claude) un review doar in citire al modificarilor.
+- Chatul arata modelul si efortul. Jolty nu mai muta singur mesajele pe un model ieftin.
+- Actualizarile se verifica din ora in ora si apar si deasupra campului de mesaj.
+- Limitele apar in aceeasi ordine la toate conturile (5 ore, apoi 7 zile), iar un sold care nu poate fi citit (de exemplu cookie MiMo expirat) apare cu motivul in loc sa dispara.
+
 ## 0.3.10
 
 - Compactarea pastreaza starea conversatiei sincronizata, iar mesajele in asteptare continua dupa terminarea ei.

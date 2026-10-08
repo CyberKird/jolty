@@ -1,21 +1,37 @@
 // The agent's own task list above the composer, like the Claude app: one quiet line with the
 // progress and the current step, opening into the full checklist.
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { capability } from '@shared/complexity'
+import { clock, etaLabel, timeLeft } from '@shared/eta'
+import { sameProvider } from '@shared/provider'
 import type { ChatItem, PlanStep, SessionMeta } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
 import { useAllModels } from './ModelPicker'
 
 const NONE: PlanStep[] = []
 
+/** The current time, re-read every second while `on`, for clocks that count. */
+export function useNow(on: boolean): number {
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    if (!on) return
+    setNow(Date.now())
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [on])
+  return now
+}
+
 export function TaskStrip({ sessionId }: { sessionId: string }) {
   const steps = useStore((s) => s.plans[sessionId]) || NONE
   const running = useStore((s) => s.status[sessionId] === 'running')
+  const timer = useStore((s) => s.clocks[sessionId])
   const [open, setOpen] = useState(false)
-  if (!steps.length) return null
   const done = steps.filter((s) => s.status === 'done').length
   const all = done === steps.length
+  const now = useNow(running && !all && steps.length > 0)
+  if (!steps.length) return null
   const current = steps.find((s) => s.status === 'active') || steps.find((s) => s.status === 'pending')
   return (
     <div className={`tasks ${open ? 'open' : ''}`}>
@@ -38,8 +54,87 @@ export function TaskStrip({ sessionId }: { sessionId: string }) {
           <span style={{ transform: `scaleX(${done / steps.length})` }} />
         </span>
         <span className={`tasks-now ${running && !all ? 'live' : ''}`}>{all ? 'Toate gata' : current?.text}</span>
+        {running && !all && (
+          <span className="tasks-eta" title={timer?.turn ? `Lucrează de ${clock(now - timer.turn)}` : undefined}>
+            {etaLabel(timeLeft(timer, steps, now))}
+          </span>
+        )}
         {open ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
       </button>
+    </div>
+  )
+}
+
+const LIMIT_HIT = /limita abonamentului/i
+
+/**
+ * The account ran out mid-task: one click carries the same chat to another account of the same
+ * provider (same files, full context) and lets it pick up where it stopped.
+ */
+export function LimitStrip({ session }: { session: SessionMeta }) {
+  const items = useStore((s) => s.transcripts[session.id]) || NONE_ITEMS
+  const running = useStore((s) => s.status[session.id] === 'running')
+  const profiles = useStore((s) => s.profiles)
+  const limits = useStore((s) => s.limits)
+  const { loadSessions, toast } = useStore()
+  const [busy, setBusy] = useState(false)
+  if (running) return null
+  let hit = false
+  for (let i = items.length - 1; i >= 0 && !hit; i--) {
+    const it = items[i]
+    if (it.kind === 'user') break
+    hit = it.kind === 'notice' && LIMIT_HIT.test(it.text)
+  }
+  const me = profiles.find((p) => p.id === session.profileId)
+  if (!hit || !me) return null
+  const worst = (id: string): number => Math.max(0, ...(limits[id]?.windows || []).map((w) => w.usedPercent))
+  const next = profiles.filter((p) => sameProvider(me, p) && worst(p.id) < 100).sort((a, b) => worst(a.id) - worst(b.id))[0]
+  const go = async (): Promise<void> => {
+    if (!next) return
+    setBusy(true)
+    try {
+      await api.sessions.handoff(session.id, next.id, session.model, session.effort)
+      await loadSessions()
+      await api.sessions.send(session.id, `Continuă de unde ai rămas: contul ${me.name} a atins limita, acum lucrezi pe ${next.name}.`)
+    } catch (err) {
+      toast(errMsg(err), true)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="verification-strip" role="status">
+      <span className="verification-text">Limita contului {me.name} e atinsă</span>
+      {next ? (
+        <>
+          <span className="verification-cost">Același chat, cu tot contextul</span>
+          <button disabled={busy} onClick={() => void go()}>
+            Continuă pe {next.name} · {Math.round(worst(next.id))}% folosit
+          </button>
+        </>
+      ) : (
+        <span className="verification-cost">Niciun alt cont liber la același furnizor: folosește Continuă în</span>
+      )}
+    </div>
+  )
+}
+
+/** A downloaded update, next to the composer where it is seen; × hides it until the next version. */
+export function UpdateStrip() {
+  const update = useStore((s) => s.update)
+  const busy = useStore((s) => Object.values(s.status).includes('running'))
+  const [hidden, setHidden] = useState(() => sessionStorage.getItem('jolty:update-hidden'))
+  if (update?.state !== 'ready' || hidden === update.version) return null
+  const hide = (): void => {
+    sessionStorage.setItem('jolty:update-hidden', update.version || '')
+    setHidden(update.version || '')
+  }
+  return (
+    <div className="verification-strip update-strip" role="status">
+      <span className="verification-text">Jolty {update.version} e gata de instalat</span>
+      <span className="verification-cost">{busy ? 'Așteaptă să termine conversațiile care lucrează' : 'Câteva secunde, conversațiile rămân'}</span>
+      <button disabled={busy} onClick={() => void api.updates.install()}>Repornește acum</button>
+      <button onClick={hide} aria-label="Mai târziu" title="Mai târziu (rămâne butonul din bara de sus)">×</button>
     </div>
   )
 }

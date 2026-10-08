@@ -43,7 +43,8 @@ export interface EngineDriver {
   logout(profile: Profile): Promise<AccountStatus>
   models(profile: Profile): Promise<ModelOption[]>
   externalSessions(profile: Profile, cwd?: string): Promise<ExternalSession[]>
-  describe(profile: Profile, images: Attachment[], prompt: string): Promise<string>
+  /** one question, one answer, no tools: image descriptions, reviews. `model` overrides the engine's light default */
+  describe(profile: Profile, images: Attachment[], prompt: string, model?: string): Promise<string>
   history(profile: Profile, engineSessionId: string, cwd: string): Promise<ChatItem[]>
   limits(profile: Profile): Promise<RateLimitSnapshot | undefined>
   shutdown(): Promise<void>

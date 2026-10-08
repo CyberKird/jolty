@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { tick, type Clock } from '@shared/eta'
 import type {
   ChatEvent,
   ChatItem,
@@ -49,6 +50,12 @@ interface State {
   permissions: Record<string, PermissionRequest[]>
   drafts: Record<string, Record<string, Draft>>
   plans: Record<string, PlanStep[]>
+  /** when the current turn started, and when its task list started and last ticked a step off */
+  clocks: Record<string, Clock>
+  browserLive: { frame?: string; url?: string; title?: string; note?: string }
+  /** text the next message replies to, per conversation */
+  quotes: Record<string, string>
+  setQuote(sessionId: string, text: string | undefined): void
   limits: Record<string, RateLimitSnapshot>
   /** tokens and cost per profile over the last 24 h, kept live from usage events */
   spend: Record<string, { tokens: number; costUsd: number }>
@@ -96,6 +103,10 @@ export const useStore = create<State>((set, get) => ({
   permissions: {},
   drafts: {},
   plans: {},
+  clocks: {},
+  browserLive: {},
+  quotes: {},
+  setQuote: (sessionId, text) => set((s) => ({ quotes: { ...s.quotes, [sessionId]: text?.trim() || '' } })),
   limits: {},
   spend: {},
   balances: {},
@@ -168,7 +179,10 @@ export const useStore = create<State>((set, get) => ({
         })
         return
       case 'status':
-        set((s) => ({ status: { ...s.status, [e.sessionId]: e.status } }))
+        set((s) => ({
+          status: { ...s.status, [e.sessionId]: e.status },
+          clocks: e.status === 'running' && s.status[e.sessionId] !== 'running' ? { ...s.clocks, [e.sessionId]: { ...s.clocks[e.sessionId], turn: Date.now() } } : s.clocks
+        }))
         if (e.status !== 'running') {
           // a finished turn has no pending approvals left
           set((s) => ({ permissions: { ...s.permissions, [e.sessionId]: [] } }))
@@ -190,7 +204,10 @@ export const useStore = create<State>((set, get) => ({
         set((s) => ({ permissions: { ...s.permissions, [e.sessionId]: (s.permissions[e.sessionId] || []).filter((r) => r.id !== e.requestId) } }))
         return
       case 'plan':
-        set((s) => ({ plans: { ...s.plans, [e.sessionId]: e.steps } }))
+        set((s) => ({ plans: { ...s.plans, [e.sessionId]: e.steps }, clocks: { ...s.clocks, [e.sessionId]: tick(s.clocks[e.sessionId], s.plans[e.sessionId], e.steps) } }))
+        return
+      case 'browserLive':
+        set((s) => ({ browserLive: e.note ? { note: e.note } : { frame: e.frame ?? s.browserLive.frame, url: e.url, title: e.title } }))
         return
       case 'draft':
         set((s) => ({
@@ -228,6 +245,11 @@ export const useStore = create<State>((set, get) => ({
 // After a turn, ask the account for its current 5 h / 7 d limits so the sidebar stays live.
 // ponytail: one probe per profile per minute at most; Codex also pushes limits by itself
 const lastProbe = new Map<string, number>()
+
+function balanceNote(p: Profile, err: unknown): string {
+  if (p.hasCookie && /HTTP 40[13]/.test(errMsg(err))) return 'Cookie expirat: pune-l din nou în Conturi'
+  return `Sold indisponibil (${errMsg(err)})`
+}
 export function refreshLimitsSoon(p: Profile, force = false): void {
   if (p.local || (!force && Date.now() - (lastProbe.get(p.id) || 0) < 60e3)) return
   if (p.auth === 'endpoint') {
@@ -237,7 +259,10 @@ export function refreshLimitsSoon(p: Profile, force = false): void {
     api.usage
       .balance(p.id)
       .then((b) => b && useStore.setState((s) => ({ balances: { ...s.balances, [p.id]: b } })))
-      .catch(() => undefined)
+      // a failed read keeps the row and says why (an expired MiMo cookie, for example) instead of hiding it
+      .catch((err) =>
+        useStore.setState((s) => ({ balances: { ...s.balances, [p.id]: { ...s.balances[p.id], profileId: p.id, note: balanceNote(p, err), updatedAt: Date.now() } } }))
+      )
     return
   }
   if (p.auth !== 'subscription') return

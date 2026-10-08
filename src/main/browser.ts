@@ -209,7 +209,9 @@ async function main() {
     } catch {
       // no stale file
     }
-    cp.spawn(exe, ['--user-data-dir=' + dir, '--remote-debugging-port=0', '--no-first-run', '--no-default-browser-check', 'about:blank'], { detached: true, stdio: 'ignore' }).unref()
+    // keeps painting while covered by Jolty, so the Live panel's picture does not freeze
+    const awake = ['--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding']
+    cp.spawn(exe, ['--user-data-dir=' + dir, '--remote-debugging-port=0', '--no-first-run', '--no-default-browser-check', ...awake, 'about:blank'], { detached: true, stdio: 'ignore' }).unref()
     port = 0
     const end = Date.now() + 30000
     while (!port && Date.now() < end) {

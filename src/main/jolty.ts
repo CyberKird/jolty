@@ -2,6 +2,7 @@ import { execFile } from 'child_process'
 import { randomUUID } from 'crypto'
 import fs from 'fs'
 import os from 'os'
+import path from 'path'
 import type {
   AccountStatus,
   Attachment,
@@ -33,6 +34,8 @@ import { endpointCost, fetchBalance } from './balance'
 import * as local from './local'
 import { claudeSettingsOverride } from './runtime'
 import { prepareAttachments, filePrompt } from './attachments'
+import { handoffPrompt, roughTokens, sameProvider } from './handoff'
+import { gitDiff, reviewerFor, reviewPrompt, transcriptDiff } from './review'
 import * as store from './store'
 
 const COLORS = ['#d97757', '#10a37f', '#6c8cff', '#e0a23b', '#c060d0', '#3bb3c3', '#e05a7a', '#8fb339']
@@ -52,31 +55,30 @@ function gitState(cwd: string): Promise<string> {
   )
 }
 
-/** The text a new engine receives when a conversation moves to it. */
-export function handoffPrompt(src: SessionMeta, srcProfile: Profile | undefined, items: ChatItem[], git: string): string {
-  const parts: string[] = []
-  for (const it of items) {
-    if (it.kind === 'user') parts.push(`[Utilizator]\n${it.text}`)
-    else if (it.kind === 'assistant' && it.text.trim()) parts.push(`[Asistent]\n${it.text}`)
-    else if (it.kind === 'tool') parts.push(`[Unealtă] ${it.title} (${it.status})`)
+const claudeHome = (p: Profile): string => store.profileDir(p) || path.join(os.homedir(), '.claude')
+
+/** Copies a Claude Code conversation (transcript, subagents, file checkpoints) into another profile's folder so it resumes there. */
+function copyClaudeSession(from: Profile, to: Profile, id: string): void {
+  const src = claudeHome(from)
+  const dst = claudeHome(to)
+  if (path.resolve(src).toLowerCase() === path.resolve(dst).toLowerCase()) return
+  const projects = path.join(src, 'projects')
+  for (const dir of fs.existsSync(projects) ? fs.readdirSync(projects) : []) {
+    const file = path.join(projects, dir, `${id}.jsonl`)
+    if (!fs.existsSync(file)) continue
+    fs.mkdirSync(path.join(dst, 'projects', dir), { recursive: true })
+    fs.copyFileSync(file, path.join(dst, 'projects', dir, `${id}.jsonl`))
+    const sub = path.join(projects, dir, id)
+    if (fs.existsSync(sub)) fs.cpSync(sub, path.join(dst, 'projects', dir, id), { recursive: true })
   }
-  let transcript = parts.join('\n\n')
-  if (transcript.length > 40000) transcript = '...(începutul a fost scurtat)\n' + transcript.slice(-40000)
-  return [
-    `Preiei o conversație începută în ${ENGINE_NAMES[src.engine]}${srcProfile ? ` (profilul „${srcProfile.name}”)` : ''}, în același proiect: ${src.cwd}`,
-    '',
-    'Istoricul conversației:',
-    '<conversatie>',
-    transcript || '(gol)',
-    '</conversatie>',
-    '',
-    'Starea curentă din git:',
-    '<git>',
-    git || '(nu e un repository git sau nu există modificări)',
-    '</git>',
-    '',
-    'Citește contextul, verifică fișierele dacă e nevoie și continuă de unde a rămas conversația, fără să repeți munca deja făcută. Răspunde întâi pe scurt cu ce ai înțeles că urmează.'
-  ].join('\n')
+  const history = path.join(src, 'file-history', id)
+  if (fs.existsSync(history)) fs.cpSync(history, path.join(dst, 'file-history', id), { recursive: true })
+}
+
+/** The brief for a conversation moving to another provider (see handoff.ts). */
+function brief(src: SessionMeta, srcProfile: Profile | undefined, items: ChatItem[], git: string, next?: string): string {
+  const graph = fs.existsSync(path.join(src.cwd, 'graphify-out', 'GRAPH_REPORT.md'))
+  return handoffPrompt({ engine: ENGINE_NAMES[src.engine], profile: srcProfile?.name, cwd: src.cwd }, items, git, { next, graph })
 }
 
 export class Jolty {
@@ -84,6 +86,8 @@ export class Jolty {
   readonly codex = new CodexDriver()
   readonly hermes = new HermesDriver()
   private live = new Map<string, EngineSession>()
+  /** conversations with a turn under way */
+  private busy = new Set<string>()
   private transcripts = new Map<string, ChatItem[]>()
   private saveTimers = new Map<string, NodeJS.Timeout>()
 
@@ -265,6 +269,10 @@ export class Jolty {
   }
 
   private onEngineEvent(e: ChatEvent): void {
+    if (e.type === 'status') {
+      if (e.status === 'running') this.busy.add(e.sessionId)
+      else this.busy.delete(e.sessionId)
+    }
     if (e.type === 'item') {
       const t = this.transcript(e.sessionId)
       const i = t.findIndex((x) => x.id === e.item.id)
@@ -460,6 +468,15 @@ export class Jolty {
 
   async sendMessage(sessionId: string, text: string, attachments: Attachment[] = [], display?: string): Promise<void> {
     const s = this.liveSession(sessionId)
+    if (s.meta.handoffPending) {
+      // a moved chat's first message carries the history it came with
+      const from = store.loadSessions().find((x) => x.id === s.meta.handoffFrom) || s.meta
+      const fromProfile = store.loadProfiles().find((p) => p.id === from.profileId)
+      display ??= text
+      text = brief(from, fromProfile, this.transcript(sessionId), await gitState(s.meta.cwd), text)
+      s.meta.handoffPending = undefined
+      this.saveMeta(s.meta)
+    }
     const prepared = prepareAttachments(attachments)
     if (s.meta.title === 'Conversație nouă') {
       s.meta.title = text.replace(/\s+/g, ' ').trim().slice(0, 60) || attachments[0]?.name || s.meta.title
@@ -608,11 +625,22 @@ export class Jolty {
     this.live.get(sessionId)?.respond(requestId, decision)
   }
 
+  /**
+   * Moves a conversation to another profile. Nothing is sent: the history rides along with the
+   * user's next message, so there is time to pick another model first.
+   * - same provider on Claude Code (two Anthropic accounts, two profiles on one endpoint): the same
+   *   chat continues on the other account with its full context
+   * - a moved chat that has not sent anything yet: simply points at the new profile
+   * - anything else: a new chat that carries the visible history over
+   */
   async handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string): Promise<SessionMeta> {
     const src = this.meta(sessionId)
     const srcProfile = store.loadProfiles().find((p) => p.id === src.profileId)
-    const targetHermes = this.profile(targetProfileId).engine === 'hermes'
-    const prompt = handoffPrompt(src, srcProfile, this.transcript(sessionId), await gitState(src.cwd))
+    const target = this.profile(targetProfileId)
+    if ((src.handoffPending && !src.engineSessionId) || (srcProfile && sameProvider(srcProfile, target))) {
+      return this.retarget(src, srcProfile, target, model, effort)
+    }
+    const targetHermes = target.engine === 'hermes'
     const meta = await this.startSession({
       profileId: targetProfileId,
       cwd: src.cwd,
@@ -624,13 +652,57 @@ export class Jolty {
       title: `${src.title} (continuare)`
     })
     meta.handoffFrom = src.id
+    meta.handoffPending = true
     this.saveMeta(meta)
     // Carry the visible conversation over so the text persists when switching models.
     const carried = this.transcript(sessionId).map((x) => ({ ...x }))
+    const cost = roughTokens(brief(src, srcProfile, carried, ''))
+    carried.push({
+      kind: 'notice',
+      id: randomUUID(),
+      level: 'info',
+      text: `Conversația continuă în ${target.name}. Poți schimba modelul acum; un rezumat compact al istoricului (~${Math.round(cost / 100) / 10}k tokeni) pleacă odată cu primul tău mesaj.`
+    })
     this.transcripts.set(meta.id, carried)
     store.saveTranscript(meta.id, carried)
-    const display = `Preia conversația „${src.title}” din ${ENGINE_NAMES[src.engine]}${srcProfile ? ` (${srcProfile.name})` : ''} și continuă de unde a rămas.`
-    await this.sendMessage(meta.id, prompt, [], display)
+    return meta
+  }
+
+  /** A read-only review of the current changes by a model from the other family; the verdict lands in the chat. */
+  async review(sessionId: string): Promise<void> {
+    const meta = this.meta(sessionId)
+    const reviewer = reviewerFor(meta.engine, store.loadProfiles())
+    if (!reviewer) throw new Error('Pentru o a doua părere ai nevoie de un profil din altă familie (Codex pentru Claude sau invers).')
+    const diff = (await gitDiff(meta.cwd)) || transcriptDiff(this.transcript(sessionId))
+    if (!diff.trim()) throw new Error('Nu există modificări de verificat.')
+    const note = (text: string, level: 'info' | 'error'): void =>
+      this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text, level } })
+    note(`${reviewer.name} verifică modificările (doar citire)…`, 'info')
+    try {
+      const verdict = await this.driver(reviewer.engine).describe(reviewer, [], reviewPrompt(diff), reviewer.engine === 'claude' ? 'sonnet' : undefined)
+      this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'assistant', id: randomUUID(), text: `**Review de la ${reviewer.name}**\n\n${verdict}` } })
+    } catch (err) {
+      note(`Review-ul nu a mers: ${err instanceof Error ? err.message : err}`, 'error')
+    }
+  }
+
+  /** The same chat, on another profile: the engine picks the conversation up from its own files. */
+  private async retarget(meta: SessionMeta, from: Profile | undefined, to: Profile, model?: string, effort?: string): Promise<SessionMeta> {
+    if (this.busy.has(meta.id)) throw new Error('Oprește răspunsul curent înainte să schimbi contul.')
+    if (meta.engineSessionId && from && to.engine === 'claude') copyClaudeSession(from, to, meta.engineSessionId)
+    await this.live.get(meta.id)?.close()
+    this.live.delete(meta.id)
+    meta.profileId = to.id
+    meta.engine = to.engine
+    meta.model = model
+    meta.effort = to.engine === 'hermes' ? undefined : model ? effort : meta.effort
+    if (to.engine === 'hermes') {
+      if (meta.permissionMode === 'plan' || meta.permissionMode === 'auto') meta.permissionMode = 'ask'
+      meta.browser = undefined
+    }
+    this.saveMeta(meta)
+    this.onEngineEvent({ type: 'item', sessionId: meta.id, item: { kind: 'notice', id: randomUUID(), level: 'info', text: `Continuă în ${to.name}.` } })
+    this.send({ type: 'meta', sessionId: meta.id, meta })
     return meta
   }
 

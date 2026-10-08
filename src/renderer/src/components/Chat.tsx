@@ -1,6 +1,6 @@
 import { ArrowRight, ArrowUp, FolderOpen, Globe, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { assess, delegatePick, recommend } from '@shared/complexity'
+import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
 import { usageRisk } from '@shared/usage-risk'
 import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
@@ -8,7 +8,9 @@ import { api, basename, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } fr
 import { MessageItem, PermissionCard } from './Messages'
 import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODES, useAllModels, type ModelGroup } from './ModelPicker'
 import { MentionMenu, useMentions } from './Mentions'
-import { TaskStrip, VerificationStrip } from './Tasks'
+import { withQuote } from '@shared/quote'
+import { QuoteBar, SelectionPopup } from './Quote'
+import { LimitStrip, TaskStrip, UpdateStrip, VerificationStrip } from './Tasks'
 
 const EMPTY: ChatItem[] = []
 
@@ -224,8 +226,12 @@ function Composer(p: ComposerProps) {
   )
 
   const submit = async (): Promise<void> => {
-    const t = text.trim()
-    if (!t && !atts.length) return
+    const own = text.trim()
+    if (!own && !atts.length) return
+    const store = useStore.getState()
+    const quote = p.sessionId ? store.quotes[p.sessionId] : undefined
+    const t = own ? withQuote(quote, own) : own
+    if (quote && own && p.sessionId) store.setQuote(p.sessionId, undefined)
     setText('')
     const a = atts
     setAtts([])
@@ -306,6 +312,7 @@ function Composer(p: ComposerProps) {
         )}
         {atts.some((a) => a.mime.startsWith('image/')) && engine === 'claude' && p.profiles.find((profile) => profile.id === p.profileId)?.vision === false && <div className="attachment-note">Modelul ales nu vede imagini. Jolty va folosi încă un profil ca să le descrie, cu consum suplimentar.</div>}
         {mentions.open && <MentionMenu items={mentions.items} index={mentions.index} onPick={pickMention} onHover={(i) => mentions.move(i - mentions.index)} />}
+        <QuoteBar sessionId={p.sessionId} />
         <textarea
           ref={taRef}
           value={text}
@@ -529,6 +536,30 @@ function MiniLimits({ profileId }: { profileId: string }) {
   )
 }
 
+/** A second opinion on the changes from the other model family, read-only. */
+function ReviewButton({ session, running, items }: { session: SessionMeta; running: boolean; items: ChatItem[] }) {
+  const [busy, setBusy] = useState(false)
+  const toast = useStore((s) => s.toast)
+  const changed = useMemo(() => items.some((i) => i.kind === 'tool' && i.diffs?.length), [items])
+  if (!changed) return null
+  return (
+    <button
+      className="btn small"
+      disabled={busy || running}
+      title="Un model din altă familie (Codex pentru Claude sau invers) citește modificările și spune ce s-ar putea strica. Doar citire."
+      onClick={() => {
+        setBusy(true)
+        void api.sessions
+          .review(session.id)
+          .catch((e) => toast(errMsg(e), true))
+          .finally(() => setBusy(false))
+      }}
+    >
+      {busy ? 'Se verifică…' : 'Verifică'}
+    </button>
+  )
+}
+
 function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Profile[] }) {
   const [open, setOpen] = useState(false)
   const { openSession, toast, loadSessions } = useStore()
@@ -625,7 +656,8 @@ export function ChatView({ session }: { session: SessionMeta }) {
     for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'reasoning') return items[i].id
     return undefined
   }, [items])
-  const who = `${profile?.name || ENGINE_LABEL[session.engine]}${session.model ? ` · ${session.model}` : ''}`
+  const how = `${session.model || 'model implicit'} · efort ${session.effort || 'implicit'}`
+  const who = `${profile?.name || ENGINE_LABEL[session.engine]} · ${how}`
 
   return (
     <>
@@ -639,6 +671,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
         <div className="spacer" />
         <ContextMeter sessionId={session.id} running={running} />
         <MiniLimits profileId={session.profileId} />
+        <ReviewButton session={session} running={running} items={items} />
         <HandoffMenu session={session} profiles={profiles} />
         <button className="btn ghost small icon" onClick={() => setLiveOpen(!liveOpen)} title={liveOpen ? 'Ascunde panoul Live' : 'Arată panoul Live'}>
           {liveOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
@@ -660,14 +693,14 @@ export function ChatView({ session }: { session: SessionMeta }) {
                     <MessageItem item={it} live={false} />
                   </UserTurn>
                 ) : (
-                  <MessageItem item={it} live={running && it.id === lastReasoning} />
+                  <MessageItem item={it} live={running && it.id === lastReasoning && i === items.length - 1} />
                 )}
               </Fragment>
             )
           })}
           {running && items[items.length - 1]?.kind === 'user' && (
             <div className="turn-head">
-              <span className="dot running" /> {ENGINE_LABEL[session.engine]} pornește…
+              <span className="dot running" /> Jolty pornește · {how}
             </div>
           )}
           {perms?.map((r) => (
@@ -675,6 +708,9 @@ export function ChatView({ session }: { session: SessionMeta }) {
           ))}
         </div>
       </div>
+      <SelectionPopup root={scrollRef} />
+      <UpdateStrip />
+      <LimitStrip session={session} />
       <TaskStrip sessionId={session.id} />
       <VerificationStrip session={session} />
       <Composer
@@ -685,6 +721,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
         cwd={session.cwd}
         model={session.model}
         otherProfileHint="Continuă conversația în acest cont"
+        seed={session.handoffPending ? 'Continuă de unde ai rămas.' : undefined}
         onPick={(profileId, m, effort) => {
           if (profileId === session.profileId) {
             void api.sessions
@@ -810,6 +847,7 @@ export function NewChat() {
           ))}
         </div>
       </div>
+      <UpdateStrip />
       <Composer
         running={false}
         profiles={profiles}
@@ -853,13 +891,11 @@ export function NewChat() {
           launching.current = true
           let meta: SessionMeta | undefined
           try {
-            const cheap = delegatePick(text, profiles, profileId)
-            if (cheap) toast(`Delegat către ${cheap.name}: sarcină mecanică`)
             meta = await api.sessions.start({
-              profileId: cheap?.id || profileId,
+              profileId,
               cwd,
-              model: cheap ? undefined : model || undefined,
-              effort: cheap ? undefined : effort || undefined,
+              model: model || undefined,
+              effort: effort || undefined,
               permissionMode: mode,
               browser
             })
