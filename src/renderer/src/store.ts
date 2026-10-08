@@ -12,6 +12,7 @@ import type {
   UpdateStatus,
   SessionMeta
 } from '@shared/types'
+import { dateLocale, tr } from '@shared/i18n'
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
@@ -247,7 +248,7 @@ export const useStore = create<State>((set, get) => ({
 const lastProbe = new Map<string, number>()
 
 function balanceNote(p: Profile, err: unknown): string {
-  if (p.hasCookie && /HTTP 40[13]/.test(errMsg(err))) return 'Cookie expirat: pune-l din nou în Conturi'
+  if (p.hasCookie && /HTTP 40[13]/.test(errMsg(err))) return tr("Cookie expirat: pune-l din nou în Conturi")
   return `Sold indisponibil (${errMsg(err)})`
 }
 export function refreshLimitsSoon(p: Profile, force = false): void {
@@ -279,8 +280,8 @@ export function refreshLimitsSoon(p: Profile, force = false): void {
 export const ENGINE_LABEL = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes' } as const
 
 export function fmtTokens(n: number): string {
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + ' mld'
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + ' mil'
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + tr(' mld')
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + tr(' mil')
   if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k'
   return String(Math.round(n))
 }
@@ -291,25 +292,25 @@ export function fmtUsd(n: number): string {
 
 export function timeAgo(ms: number): string {
   const s = Math.round((Date.now() - ms) / 1000)
-  if (s < 60) return 'acum'
+  if (s < 60) return tr('acum')
   if (s < 3600) return `${Math.floor(s / 60)} min`
   if (s < 86400) return `${Math.floor(s / 3600)} h`
-  return `${Math.floor(s / 86400)} z`
+  return tr("{n} z", { n: Math.floor(s / 86400) })
 }
 
 export function resetIn(ms?: number): string {
   if (!ms) return ''
   const min = Math.ceil((ms - Date.now()) / 60000)
-  if (min <= 0) return 'se resetează acum'
-  if (min < 60) return `se resetează în ${min} min`
-  if (min < 24 * 60) return `se resetează în ${Math.floor(min / 60)} h ${min % 60} min`
+  if (min <= 0) return tr("se resetează acum")
+  if (min < 60) return tr("se resetează în {min} min", { min })
+  if (min < 24 * 60) return tr("se resetează în {floor} h {v1} min", { floor: Math.floor(min / 60), v1: min % 60 })
   const hours = Math.round(min / 60)
-  return `se resetează în ${Math.floor(hours / 24)} z ${hours % 24} h`
+  return tr("se resetează în {floor} z {v1} h", { floor: Math.floor(hours / 24), v1: hours % 24 })
 }
 
 export function resetAt(ms?: number): string {
-  if (!ms || !Number.isFinite(ms)) return 'ora resetării indisponibilă'
-  return new Date(ms).toLocaleString('ro-RO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  if (!ms || !Number.isFinite(ms)) return tr("ora resetării indisponibilă")
+  return new Date(ms).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 /** Status color for a usage percentage (never a series color). */

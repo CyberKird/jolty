@@ -4,6 +4,7 @@
 import { execFile } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+import { getLang, LANG_ENGLISH_NAME } from '@shared/i18n'
 import type { ChatItem, EngineKind, Profile } from '@shared/types'
 
 /** the diff a reviewer reads, in characters (about 15k tokens) */
@@ -26,7 +27,7 @@ export async function gitDiff(cwd: string): Promise<string> {
     try {
       const file = path.join(cwd, rel)
       if (fs.statSync(file).size > 200_000) continue
-      added.push(`--- /dev/null\n+++ ${rel} (fișier nou)\n${fs.readFileSync(file, 'utf8').split('\n').map((l) => `+${l}`).join('\n')}`)
+      added.push(`--- /dev/null\n+++ ${rel} (new file)\n${fs.readFileSync(file, 'utf8').split('\n').map((l) => `+${l}`).join('\n')}`)
     } catch {
       // unreadable or gone: the reviewer simply does not see it
     }
@@ -43,13 +44,13 @@ export function transcriptDiff(items: ChatItem[]): string {
 }
 
 export function reviewPrompt(diff: string): string {
-  const cut = diff.length > DIFF_BUDGET ? `${diff.slice(0, DIFF_BUDGET)}\n...(diff scurtat)` : diff
+  const cut = diff.length > DIFF_BUDGET ? `${diff.slice(0, DIFF_BUDGET)}\n...(diff truncated)` : diff
   return [
-    'Fă code review pe modificările de mai jos, scrise de alt model.',
-    'Caută doar probleme reale: bug-uri, cazuri limită netratate, securitate, date pierdute, regresii. Fără stil, fără laude, fără sugestii de gust.',
-    'Pentru fiecare: fișier:linie, ce se strică și în ce situație concretă, apoi reparația în una-două fraze. Cel mult 8, cele mai grave primele.',
-    'Dacă nu găsești nimic serios, spune asta într-o singură propoziție.',
-    'Scrie în română. Nu folosi linia lungă (em dash) ca punctuație.',
+    'Review the changes below, written by another model.',
+    'Look only for real problems: bugs, unhandled edge cases, security, lost data, regressions. No style notes, no praise, no matters of taste.',
+    'For each one: file:line, what breaks and in which concrete situation, then the fix in one or two sentences. At most 8, worst first.',
+    'If you find nothing serious, say so in one sentence.',
+    `Write in ${LANG_ENGLISH_NAME[getLang()]}. Do not use em dashes or en dashes as punctuation.`,
     '',
     '<diff>',
     cut,

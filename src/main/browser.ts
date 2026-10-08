@@ -7,6 +7,7 @@ import path from 'path'
 import type { BrowserApp, BrowserInfo, BrowserMode } from '@shared/types'
 import { overlayFile } from './browser-overlay'
 import { dataDir, getSecret, loadSettings } from './store'
+import { tr } from '@shared/i18n'
 
 export const BROWSER_SERVER = 'jolty-browser'
 export const BROWSER_EXTENSION_URL = 'https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm'
@@ -274,6 +275,6 @@ export function browserServer(): StdioServer {
 /** The extension's copy button puts `PLAYWRIGHT_MCP_EXTENSION_TOKEN=<token>` on the clipboard: keep only the token. */
 export function cleanToken(raw: string): string {
   const t = raw.replace(/^[\s"']*(?:PLAYWRIGHT_MCP_EXTENSION_TOKEN\s*=)?[\s"']*/i, '').replace(/[\s"']+$/, '')
-  if (t && !/^[A-Za-z0-9_-]{16,}$/.test(t)) throw new Error('Tokenul nu arată bine. Copiază-l din pagina extensiei Playwright (e un șir de litere și cifre, fără spații).')
+  if (t && !/^[A-Za-z0-9_-]{16,}$/.test(t)) throw new Error(tr("Tokenul nu arată bine. Copiază-l din pagina extensiei Playwright (e un șir de litere și cifre, fără spații)."))
   return t
 }

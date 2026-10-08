@@ -5,6 +5,7 @@ import { Copy, Quote as QuoteIcon, Reply, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { clipQuote as clip } from '@shared/quote'
 import { api, useStore } from '../store'
+import { tr } from '@shared/i18n'
 
 const quoteActive = (text: string): void => {
   const id = useStore.getState().activeId
@@ -17,7 +18,7 @@ const quoteActive = (text: string): void => {
 export function ReplyButton({ text }: { text: string }) {
   if (!text.trim()) return null
   return (
-    <button className="reply-btn" onClick={() => quoteActive(text)} title="Răspunde la acest mesaj" aria-label="Răspunde la acest mesaj">
+    <button className="reply-btn" onClick={() => quoteActive(text)} title={tr("Răspunde la acest mesaj")} aria-label={tr("Răspunde la acest mesaj")}>
       <Reply size={13} />
     </button>
   )
@@ -58,14 +59,14 @@ export function SelectionPopup({ root }: { root: React.RefObject<HTMLElement | n
   }
   return (
     // mousedown is held back so clicking the popup does not clear the selection first
-    <div className="sel-popup" role="toolbar" aria-label="Text selectat" style={{ left: at.x, top: at.y }} onMouseDown={(e) => e.preventDefault()}>
+    <div className="sel-popup" role="toolbar" aria-label={tr("Text selectat")} style={{ left: at.x, top: at.y }} onMouseDown={(e) => e.preventDefault()}>
       <button
         onClick={() => {
           quoteActive(at.text)
           done()
         }}
       >
-        <QuoteIcon size={12} /> Citează
+        <QuoteIcon size={12} /> {tr("Citează")}
       </button>
       <button
         onClick={() => {
@@ -73,7 +74,7 @@ export function SelectionPopup({ root }: { root: React.RefObject<HTMLElement | n
           done()
         }}
       >
-        <Copy size={12} /> Copiază
+        <Copy size={12} /> {tr("Copiază")}
       </button>
     </div>
   )
@@ -90,7 +91,7 @@ export function QuoteBar({ sessionId }: { sessionId?: string }) {
       <span className="quote-text" title={quote}>
         {quote}
       </span>
-      <button onClick={() => setQuote(sessionId, undefined)} aria-label="Renunță la citat" title="Renunță la citat">
+      <button onClick={() => setQuote(sessionId, undefined)} aria-label={tr("Renunță la citat")} title={tr("Renunță la citat")}>
         <X size={12} />
       </button>
     </div>

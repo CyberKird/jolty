@@ -1,7 +1,7 @@
 {
   "name": "jolty",
   "productName": "Jolty",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "description": "Desktop app for Claude Code and Codex: multiple profiles, API keys, model picker, usage dashboard",
   "author": "CyberKird",
   "license": "UNLICENSED",
@@ -14,16 +14,17 @@
     "start": "electron-vite preview",
     "dist:win": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish never",
     "dist:release": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish always",
-    "test": "npm run test:codex-lifecycle && npm run test:eta && npm run test:handoff",
+    "test": "npm run test:codex-lifecycle && npm run test:eta && npm run test:handoff && npm run test:i18n",
     "test:handoff": "esbuild test/handoff-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/handoff-test.cjs --log-level=warning && node --test out-test/handoff-test.cjs",
-    "test:eta": "esbuild test/eta-test.ts --bundle --platform=node --format=cjs --outfile=out-test/eta-test.cjs --log-level=warning && node --test out-test/eta-test.cjs",
+    "test:eta": "esbuild test/eta-test.ts --bundle --platform=node --alias:@shared=./src/shared --format=cjs --outfile=out-test/eta-test.cjs --log-level=warning && node --test out-test/eta-test.cjs",
     "test:codex-lifecycle": "esbuild test/codex-lifecycle-test.ts --bundle --platform=node --format=cjs --external:electron --external:@playwright/mcp --alias:@shared=./src/shared --outfile=out-test/codex-lifecycle-test.cjs --log-level=warning && node --test out-test/codex-lifecycle-test.cjs",
     "test:codex-ui": "electron-vite build && node test/codex-ui-test.mjs",
     "test:engines": "esbuild test/engine-test.ts --bundle --platform=node --format=cjs --external:electron --external:@anthropic-ai/claude-agent-sdk --external:@playwright/mcp --alias:@shared=./src/shared --outfile=out-test/engine-test.js --log-level=warning && electron --no-sandbox out-test/engine-test.js",
     "test:hermes": "esbuild test/hermes-test.ts --bundle --platform=node --format=cjs --external:electron --alias:@shared=./src/shared --outfile=out-test/hermes-test.cjs --log-level=warning && node --test out-test/hermes-test.cjs",
     "test:ui": "electron-vite build && node test/ui-test.mjs",
     "test:links": "electron-vite build && node test/links-test.mjs",
-    "icon": "electron scripts/make-icon.cjs"
+    "icon": "electron scripts/make-icon.cjs",
+    "test:i18n": "node scripts/i18n-check.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.289",

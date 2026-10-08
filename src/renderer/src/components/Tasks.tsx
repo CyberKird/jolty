@@ -8,6 +8,7 @@ import { sameProvider } from '@shared/provider'
 import type { ChatItem, PlanStep, SessionMeta } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
 import { useAllModels } from './ModelPicker'
+import { tr } from '@shared/i18n'
 
 const NONE: PlanStep[] = []
 
@@ -36,26 +37,26 @@ export function TaskStrip({ sessionId }: { sessionId: string }) {
   return (
     <div className={`tasks ${open ? 'open' : ''}`}>
       {open && (
-        <ol className="tasks-list" aria-label="Sarcinile modelului">
+        <ol className="tasks-list" aria-label={tr("Sarcinile modelului")}>
           {steps.map((s, i) => (
             <li key={i} className={`plan-step ${s.status}`}>
               <span className="box" aria-hidden />
               <span>{s.text}</span>
-              <span className="sr-only">{s.status === 'done' ? ' (gata)' : s.status === 'active' ? ' (în lucru)' : ''}</span>
+              <span className="sr-only">{s.status === 'done' ? tr(" (gata)") : s.status === 'active' ? tr(" (în lucru)") : ''}</span>
             </li>
           ))}
         </ol>
       )}
-      <button className="tasks-bar" aria-expanded={open} onClick={() => setOpen(!open)} title={open ? 'Ascunde sarcinile' : 'Arată toate sarcinile'}>
+      <button className="tasks-bar" aria-expanded={open} onClick={() => setOpen(!open)} title={open ? 'Ascunde sarcinile' : tr("Arată toate sarcinile")}>
         <span className="tasks-count">
-          Sarcini {done}/{steps.length}
+          {tr("Sarcini")} {done}/{steps.length}
         </span>
         <span className="tasks-track" aria-hidden>
           <span style={{ transform: `scaleX(${done / steps.length})` }} />
         </span>
-        <span className={`tasks-now ${running && !all ? 'live' : ''}`}>{all ? 'Toate gata' : current?.text}</span>
+        <span className={`tasks-now ${running && !all ? 'live' : ''}`}>{all ? tr("Toate gata") : current?.text}</span>
         {running && !all && (
-          <span className="tasks-eta" title={timer?.turn ? `Lucrează de ${clock(now - timer.turn)}` : undefined}>
+          <span className="tasks-eta" title={timer?.turn ? tr("Lucrează de {clock}", { clock: clock(now - timer.turn) }) : undefined}>
             {etaLabel(timeLeft(timer, steps, now))}
           </span>
         )}
@@ -95,7 +96,9 @@ export function LimitStrip({ session }: { session: SessionMeta }) {
     try {
       await api.sessions.handoff(session.id, next.id, session.model, session.effort)
       await loadSessions()
-      await api.sessions.send(session.id, `Continuă de unde ai rămas: contul ${me.name} a atins limita, acum lucrezi pe ${next.name}.`)
+      // shown as working at once, like a message sent from the composer
+      useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'running' })
+      await api.sessions.send(session.id, tr("Continuă de unde ai rămas: contul {me} a atins limita, acum lucrezi pe {next}.", { me: me.name, next: next.name }))
     } catch (err) {
       toast(errMsg(err), true)
     } finally {
@@ -104,16 +107,16 @@ export function LimitStrip({ session }: { session: SessionMeta }) {
   }
   return (
     <div className="verification-strip" role="status">
-      <span className="verification-text">Limita contului {me.name} e atinsă</span>
+      <span className="verification-text">{tr("Limita contului {name} e atinsă", { name: me.name })}</span>
       {next ? (
         <>
-          <span className="verification-cost">Același chat, cu tot contextul</span>
+          <span className="verification-cost">{tr("Același chat, cu tot contextul")}</span>
           <button disabled={busy} onClick={() => void go()}>
-            Continuă pe {next.name} · {Math.round(worst(next.id))}% folosit
+            {tr("Continuă pe {name} · {pct}% folosit", { name: next.name, pct: Math.round(worst(next.id)) })}
           </button>
         </>
       ) : (
-        <span className="verification-cost">Niciun alt cont liber la același furnizor: folosește Continuă în</span>
+        <span className="verification-cost">{tr("Niciun alt cont liber la același furnizor: folosește Continuă în")}</span>
       )}
     </div>
   )
@@ -131,10 +134,10 @@ export function UpdateStrip() {
   }
   return (
     <div className="verification-strip update-strip" role="status">
-      <span className="verification-text">Jolty {update.version} e gata de instalat</span>
-      <span className="verification-cost">{busy ? 'Așteaptă să termine conversațiile care lucrează' : 'Câteva secunde, conversațiile rămân'}</span>
-      <button disabled={busy} onClick={() => void api.updates.install()}>Repornește acum</button>
-      <button onClick={hide} aria-label="Mai târziu" title="Mai târziu (rămâne butonul din bara de sus)">×</button>
+      <span className="verification-text">{tr("Jolty {version} e gata de instalat", { version: update.version })}</span>
+      <span className="verification-cost">{busy ? tr("Așteaptă să termine conversațiile care lucrează") : tr("Câteva secunde, conversațiile rămân")}</span>
+      <button disabled={busy} onClick={() => void api.updates.install()}>{tr("Repornește acum")}</button>
+      <button onClick={hide} aria-label={tr("Mai târziu")} title={tr("Mai târziu (rămâne butonul din bara de sus)")}>×</button>
     </div>
   )
 }
@@ -181,7 +184,7 @@ export function VerificationStrip({ session }: { session: SessionMeta }) {
         await api.sessions.setModel(session.id, model)
         await loadSessions()
       }
-      await api.sessions.send(session.id, 'Ultima verificare a eșuat. Citește rezultatul ei, repară cauza și rulează verificarea din nou. Limitează schimbările la problema găsită.')
+      await api.sessions.send(session.id, tr("Ultima verificare a eșuat. Citește rezultatul ei, repară cauza și rulează verificarea din nou. Limitează schimbările la problema găsită."))
       setDismissed(failed.id)
     } catch (err) { toast(errMsg(err), true) }
     finally { setBusy(false) }
@@ -189,11 +192,11 @@ export function VerificationStrip({ session }: { session: SessionMeta }) {
 
   return (
     <div className="verification-strip" role="status">
-      <span className="verification-text" title={failed.title}>Verificare eșuată: {failed.title}</span>
-      <span className="verification-cost">{group?.profile.local ? 'Fără cost API' : group?.profile.auth === 'apiKey' || group?.profile.auth === 'endpoint' ? 'Răspuns nou, tarifat de furnizor' : 'Consumă un răspuns doar dacă alegi'}</span>
-      <button disabled={busy} onClick={() => void retry()}>Repară cu modelul actual</button>
-      {stronger && <button disabled={busy} onClick={() => void retry(stronger.id)} title="Schimbă modelul în același cont și consumă încă un răspuns">Încearcă {stronger.label}</button>}
-      <button disabled={busy} onClick={() => setDismissed(failed.id)} aria-label="Ascunde sugestia">×</button>
+      <span className="verification-text" title={failed.title}>{tr("Verificare eșuată:")} {failed.title}</span>
+      <span className="verification-cost">{group?.profile.local ? tr("Fără cost API") : group?.profile.auth === 'apiKey' || group?.profile.auth === 'endpoint' ? tr("Răspuns nou, tarifat de furnizor") : tr("Consumă un răspuns doar dacă alegi")}</span>
+      <button disabled={busy} onClick={() => void retry()}>{tr("Repară cu modelul actual")}</button>
+      {stronger && <button disabled={busy} onClick={() => void retry(stronger.id)} title={tr("Schimbă modelul în același cont și consumă încă un răspuns")}>{tr("Încearcă")} {stronger.label}</button>}
+      <button disabled={busy} onClick={() => setDismissed(failed.id)} aria-label={tr("Ascunde sugestia")}>×</button>
     </div>
   )
 }

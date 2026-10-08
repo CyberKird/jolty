@@ -6,6 +6,7 @@ import { api, basename, useStore, type Draft } from '../store'
 import { toolKind } from './Messages'
 import { DiffView, highlight, langOf } from './Rich'
 import { useNow } from './Tasks'
+import { tr } from '@shared/i18n'
 
 type Tool = Extract<ChatItem, { kind: 'tool' }>
 
@@ -30,26 +31,26 @@ interface Phase {
 }
 
 const PHASES: Record<string, Omit<Phase, 'key' | 'detail' | 'code'>> = {
-  idle: { name: 'În așteptare', wave: 'flat', amp: 0, period: 60, speed: 6, color: 'rgba(255,255,255,.22)', on: false },
-  think: { name: 'Se gândește', wave: 'sine', amp: 9, period: 110, speed: 3.2, color: 'var(--volt)', on: true },
-  answer: { name: 'Scrie răspunsul', wave: 'sine', amp: 14, period: 62, speed: 1.6, color: 'var(--volt)', on: true },
-  run: { name: 'Rulează', wave: 'spike', amp: 24, period: 96, speed: 1.1, color: 'var(--volt)', on: true },
-  read: { name: 'Citește', wave: 'pulse', amp: 12, period: 44, speed: 1.4, color: 'var(--volt)', on: true },
-  edit: { name: 'Editează', wave: 'square', amp: 13, period: 52, speed: 1.3, color: 'var(--volt)', on: true },
-  write: { name: 'Creează', wave: 'square', amp: 16, period: 40, speed: 1.1, color: 'var(--volt)', on: true },
-  search: { name: 'Caută', wave: 'saw', amp: 13, period: 48, speed: 1.2, color: 'var(--volt)', on: true },
-  web: { name: 'Pe internet', wave: 'saw', amp: 10, period: 70, speed: 2, color: 'var(--volt)', on: true },
-  agent: { name: 'Subagenți', wave: 'pulse', amp: 18, period: 36, speed: 0.9, color: 'var(--volt)', on: true },
-  plan: { name: 'Planifică', wave: 'sine', amp: 7, period: 140, speed: 3.6, color: 'var(--volt)', on: true },
-  approval: { name: 'Așteaptă acordul', wave: 'pulse', amp: 16, period: 150, speed: 2.4, color: 'var(--warning)', on: true },
-  error: { name: 'S-a oprit', wave: 'flat', amp: 0, period: 60, speed: 6, color: 'var(--critical)', on: false }
+  idle: { name: tr("În repaus"), wave: 'flat', amp: 0, period: 60, speed: 6, color: 'rgba(255,255,255,.22)', on: false },
+  think: { name: tr("Se gândește"), wave: 'sine', amp: 9, period: 110, speed: 3.2, color: 'var(--volt)', on: true },
+  answer: { name: tr("Scrie răspunsul"), wave: 'sine', amp: 14, period: 62, speed: 1.6, color: 'var(--volt)', on: true },
+  run: { name: tr("Rulează"), wave: 'spike', amp: 24, period: 96, speed: 1.1, color: 'var(--volt)', on: true },
+  read: { name: tr("Citește"), wave: 'pulse', amp: 12, period: 44, speed: 1.4, color: 'var(--volt)', on: true },
+  edit: { name: tr("Editează"), wave: 'square', amp: 13, period: 52, speed: 1.3, color: 'var(--volt)', on: true },
+  write: { name: tr("Creează"), wave: 'square', amp: 16, period: 40, speed: 1.1, color: 'var(--volt)', on: true },
+  search: { name: tr("Caută"), wave: 'saw', amp: 13, period: 48, speed: 1.2, color: 'var(--volt)', on: true },
+  web: { name: tr("Pe internet"), wave: 'saw', amp: 10, period: 70, speed: 2, color: 'var(--volt)', on: true },
+  agent: { name: tr("Subagenți"), wave: 'pulse', amp: 18, period: 36, speed: 0.9, color: 'var(--volt)', on: true },
+  plan: { name: tr("Planifică"), wave: 'sine', amp: 7, period: 140, speed: 3.6, color: 'var(--volt)', on: true },
+  approval: { name: tr("Așteaptă acordul"), wave: 'pulse', amp: 16, period: 150, speed: 2.4, color: 'var(--warning)', on: true },
+  error: { name: tr("S-a oprit"), wave: 'flat', amp: 0, period: 60, speed: 6, color: 'var(--critical)', on: false }
 }
 
 function phaseOf(items: ChatItem[], status: string | undefined, perms: PermissionRequest[], drafts: Draft[]): Phase {
   const make = (key: string, detail?: string, code = false): Phase => ({ key, detail, code, ...PHASES[key] })
   if (perms.length) return make('approval', perms[0].title, true)
-  if (status === 'error') return make('error', 'Vezi mesajul din conversație.')
-  if (status !== 'running') return make('idle', 'Trimite un mesaj și urmărești aici fiecare pas.')
+  if (status === 'error') return make('error', tr("Vezi mesajul din conversație."))
+  if (status !== 'running') return make('idle', tr("Trimite un mesaj și urmărești aici fiecare pas."))
   const writing = drafts[drafts.length - 1]
   if (writing && !writing.done && Date.now() - writing.at < 5000) return make(writing.name === 'Write' ? 'write' : 'edit', writing.path, true)
   for (let i = items.length - 1; i >= 0; i--) {
@@ -169,7 +170,7 @@ function fileCells(items: ChatItem[], cwd: string, drafts: Draft[]): FileCell[] 
 function FileMap({ items, cwd, drafts }: { items: ChatItem[]; cwd: string; drafts: Draft[] }) {
   const cells = useMemo(() => fileCells(items, cwd, drafts), [items, cwd, drafts])
   const ordered = useMemo(() => [...cells].sort((a, b) => b.last - a.last), [cells])
-  if (!cells.length) return <div className="faint small">Fișierele citite sau modificate apar aici.</div>
+  if (!cells.length) return <div className="faint small">{tr("Fișierele citite sau modificate apar aici.")}</div>
   return (
     <>
       {ordered.map((c) => (
@@ -188,13 +189,13 @@ function FileMap({ items, cwd, drafts }: { items: ChatItem[]; cwd: string; draft
       ))}
       <div className="filemap-legend">
         <span>
-          <i className="cell" /> citit
+          <i className="cell" /> {tr("citit")}
         </span>
         <span>
-          <i className="cell edited" /> modificat
+          <i className="cell edited" /> {tr("modificat")}
         </span>
         <span>
-          <i className="cell created" /> creat
+          <i className="cell created" /> {tr("creat")}
         </span>
       </div>
     </>
@@ -229,7 +230,7 @@ function LiveCode({ drafts }: { drafts: Draft[] }) {
   useEffect(() => {
     if (preRef.current && current && !current.done) preRef.current.scrollTop = preRef.current.scrollHeight
   }, [html, current])
-  if (!current) return <div className="faint small">Codul apare aici caracter cu caracter, cât timp modelul îl scrie.</div>
+  if (!current) return <div className="faint small">{tr("Codul apare aici caracter cu caracter, cât timp modelul îl scrie.")}</div>
   const files = drafts.slice(-5)
   return (
     <>
@@ -247,7 +248,7 @@ function LiveCode({ drafts }: { drafts: Draft[] }) {
           <span className="ellipsis" style={{ flex: 1 }}>
             {current.path || current.name}
           </span>
-          <span className={`tag ${current.done ? '' : 'volt'}`}>{current.done ? 'scris' : current.name === 'Write' ? 'scrie' : 'editează'}</span>
+          <span className={`tag ${current.done ? '' : 'volt'}`}>{current.done ? 'scris' : current.name === 'Write' ? 'scrie' : tr("editează")}</span>
         </div>
         <pre ref={preRef}>
           <code dangerouslySetInnerHTML={{ __html: html }} />
@@ -264,7 +265,7 @@ function PlanView({ steps, timer, running, now }: { steps: PlanStep[]; timer?: C
     <>
       <div className="plan-eta">
         <span>
-          {done}/{steps.length} gata
+          {done}/{steps.length} {tr("gata")}
         </span>
         {running && done < steps.length && <span className="volt">{etaLabel(timeLeft(timer, steps, now))}</span>}
       </div>
@@ -315,13 +316,13 @@ function changesOf(items: ChatItem[], cwd: string): Change[] {
 
 function ChangesView({ changes, cwd }: { changes: Change[]; cwd: string }) {
   const [open, setOpen] = useState<string>()
-  if (!changes.length) return <div className="faint small">Fișierele modificate apar aici, cu diferențele linie cu linie.</div>
+  if (!changes.length) return <div className="faint small">{tr("Fișierele modificate apar aici, cu diferențele linie cu linie.")}</div>
   const add = changes.reduce((a, c) => a + c.add, 0)
   const del = changes.reduce((a, c) => a + c.del, 0)
   return (
     <>
       <div className="changes-sum">
-        {changes.length} {changes.length === 1 ? 'fișier' : 'fișiere'} <b className="plus">+{add}</b> <b className="minus">-{del}</b>
+        {changes.length} {changes.length === 1 ? tr("fișier") : tr("fișiere")} <b className="plus">+{add}</b> <b className="minus">-{del}</b>
       </div>
       {changes.map((c) => {
         const dir = c.path.includes('/') ? c.path.slice(0, c.path.lastIndexOf('/') + 1) : ''
@@ -354,7 +355,7 @@ function TerminalView({ items }: { items: ChatItem[] }) {
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
   })
-  if (!runs.length) return <div className="faint small">Comenzile și tot ce afișează ele apar aici.</div>
+  if (!runs.length) return <div className="faint small">{tr("Comenzile și tot ce afișează ele apar aici.")}</div>
   return (
     <div className="terminal" ref={ref}>
       {runs.map((r) => (
@@ -378,13 +379,13 @@ function BrowserView() {
     return () => void api.browser.live(false)
   }, [])
   if (live.note) return <div className="faint small">{live.note}</div>
-  if (!live.frame) return <div className="faint small">Se conectează la browserul Jolty…</div>
+  if (!live.frame) return <div className="faint small">{tr("Se conectează la browserul Jolty…")}</div>
   return (
     <div className="browser-live">
       <div className="browser-live-url ellipsis" title={live.url}>
         {live.url}
       </div>
-      <img src={`data:image/jpeg;base64,${live.frame}`} alt={live.title ? `Pagina ${live.title}` : 'Pagina din browserul Jolty'} />
+      <img src={`data:image/jpeg;base64,${live.frame}`} alt={live.title ? `Pagina ${live.title}` : tr("Pagina din browserul Jolty")} />
     </div>
   )
 }
@@ -447,7 +448,9 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
     const w0 = width
     let w = w0
     const move = (ev: PointerEvent): void => {
-      w = Math.max(300, Math.min(window.innerWidth * 0.55, w0 + x0 - ev.clientX))
+      // the panel sits on the left in right-to-left layouts, so dragging right widens it there
+      const pull = document.documentElement.dir === 'rtl' ? ev.clientX - x0 : x0 - ev.clientX
+      w = Math.max(300, Math.min(window.innerWidth * 0.55, w0 + pull))
       setWidth(w)
     }
     const up = (): void => {
@@ -465,23 +468,23 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   }
 
   const TABS: { id: Tab; label: string; count?: string }[] = [
-    { id: 'changes', label: 'Modificări', count: changes.length ? String(changes.length) : undefined },
-    { id: 'plan', label: 'Plan', count: plan?.length ? `${planDone}/${plan.length}` : undefined },
-    { id: 'terminal', label: 'Terminal', count: runs ? String(runs) : undefined },
-    { id: 'code', label: 'Cod live', count: drafts.some((d) => !d.done) ? '●' : undefined },
-    { id: 'browser', label: 'Browser', count: browsing ? '●' : undefined },
-    { id: 'files', label: 'Fișiere', count: fileCount ? String(fileCount) : undefined }
+    { id: 'changes', label: tr("Modificări"), count: changes.length ? String(changes.length) : undefined },
+    { id: 'plan', label: tr("Plan"), count: plan?.length ? `${planDone}/${plan.length}` : undefined },
+    { id: 'terminal', label: tr("Terminal"), count: runs ? String(runs) : undefined },
+    { id: 'code', label: tr("Cod live"), count: drafts.some((d) => !d.done) ? '●' : undefined },
+    { id: 'browser', label: tr("Browser"), count: browsing ? '●' : undefined },
+    { id: 'files', label: tr("Fișiere"), count: fileCount ? String(fileCount) : undefined }
   ]
 
   return (
-    <aside className={`live ${open ? '' : 'closed'} ${resizing ? 'resizing' : ''}`} style={open ? { width } : undefined} aria-label="Ce face modelul acum">
-      {open && <div className="live-resize" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label="Lățimea panoului" />}
+    <aside className={`live ${open ? '' : 'closed'} ${resizing ? 'resizing' : ''}`} style={open ? { width } : undefined} aria-label={tr("Ce face modelul acum")}>
+      {open && <div className="live-resize" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label={tr("Lățimea panoului")} />}
       <div className="live-section live-status">
         <div className="live-label">
-          <span>Live</span>
-          {phase.on && <span className="volt">● activ</span>}
+          <span>{tr("Live")}</span>
+          {phase.on && <span className="volt">{tr("● activ")}</span>}
           {/* only shown when the panel floats over the chat and covers the header toggle */}
-          <button className="live-close" onClick={() => setLiveOpen(false)} aria-label="Închide panoul Live" title="Închide panoul Live">
+          <button className="live-close" onClick={() => setLiveOpen(false)} aria-label={tr("Închide panoul Live")} title={tr("Închide panoul Live")}>
             <X size={14} />
           </button>
         </div>
@@ -493,23 +496,23 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
         <div className="counters">
           <div className="counter">
             <div className="v">{reads}</div>
-            <div className="k">citite</div>
+            <div className="k">{tr("citite")}</div>
           </div>
           <div className="counter">
             <div className="v">{edits}</div>
-            <div className="k">modificate</div>
+            <div className="k">{tr("modificate")}</div>
           </div>
           <div className="counter">
             <div className="v">{runs}</div>
-            <div className="k">comenzi</div>
+            <div className="k">{tr("comenzi")}</div>
           </div>
-          <div className="counter" title="Cât lucrează la mesajul curent">
+          <div className="counter" title={tr("Cât lucrează la mesajul curent")}>
             <div className="v">{running && timer?.turn ? clock(now - timer.turn) : '0:00'}</div>
-            <div className="k">timp</div>
+            <div className="k">{tr("timp")}</div>
           </div>
         </div>
       </div>
-      <div className="live-tabs" role="tablist" aria-label="Panouri">
+      <div className="live-tabs" role="tablist" aria-label={tr("Panouri")}>
         {TABS.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={`live-tab ${tab === t.id ? 'on' : ''}`} onClick={() => setPicked(t.id)}>
             {t.label}
@@ -520,7 +523,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
       <div className="live-pane" role="tabpanel">
         {tab === 'changes' && <ChangesView changes={changes} cwd={cwd} />}
         {tab === 'plan' &&
-          (plan?.length ? <PlanView steps={plan} timer={timer} running={running} now={now} /> :<div className="faint small">Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.</div>)}
+          (plan?.length ? <PlanView steps={plan} timer={timer} running={running} now={now} /> :<div className="faint small">{tr("Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.")}</div>)}
         {tab === 'terminal' && <TerminalView items={items} />}
         {tab === 'code' && <LiveCode drafts={drafts} />}
         {tab === 'browser' && <BrowserView />}

@@ -1,6 +1,7 @@
 import { execFile, spawn } from 'child_process'
 import os from 'os'
 import type { CatalogModel, ChatEvent, Fit, GpuInfo, HardwareInfo, LocalModel, OllamaStatus } from '@shared/types'
+import { tr } from '@shared/i18n'
 
 export const OLLAMA_URL = 'http://127.0.0.1:11434'
 /** Claude Code needs a large context; Ollama defaults to 4k on smaller GPUs. */
@@ -63,37 +64,37 @@ export async function hardware(): Promise<HardwareInfo> {
 // default quantization plus room for a 64k context.
 // ---------------------------------------------------------------------------
 const CATALOG: Omit<CatalogModel, 'fit' | 'installed'>[] = [
-  { tag: 'qwen3:4b', title: 'Qwen3 4B', vramGb: 4, vision: false, tier: 1, equivalent: 'Mult sub Haiku 4.5', notes: 'Merge și pe laptopuri modeste. Bun pentru întrebări scurte, slab la sarcini lungi.' },
-  { tag: 'qwen3-vl:8b', title: 'Qwen3-VL 8B', vramGb: 7, vision: true, tier: 1, equivalent: 'Sub Haiku 4.5', notes: 'Vede imagini. Util ca „ochi” local pentru modelele care nu văd.' },
-  { tag: 'qwen3.5', title: 'Qwen3.5', vramGb: 11, vision: true, tier: 2, equivalent: 'Aproape de Haiku 4.5 la sarcini simple', notes: 'Recomandat de Ollama pentru agenți: raționament, cod și imagini (~11 GB VRAM).' },
-  { tag: 'gemma4', title: 'Gemma 4', vramGb: 16, vision: false, tier: 2, equivalent: 'Aproape de Haiku 4.5', notes: 'Raționament și cod local (~16 GB VRAM).' },
-  { tag: 'qwen3.5:27b', title: 'Qwen3.5 27B', vramGb: 18, vision: true, tier: 3, equivalent: 'În jurul lui Haiku 4.5', notes: 'Mai rapid și mai capabil decât varianta mică (~18 GB VRAM).' },
-  { tag: 'qwen3-coder:30b', title: 'Qwen3-Coder 30B', vramGb: 20, vision: false, tier: 3, equivalent: 'În jurul lui Haiku 4.5, la cod', notes: 'Specializat pe programare și unelte.' },
-  { tag: 'nemotron-3-nano:30b', title: 'Nemotron 3 Nano 30B', vramGb: 24, vision: false, tier: 3, equivalent: 'În jurul lui Haiku 4.5', notes: 'Recomandat de Ollama pentru agenți; încape în 24 GB VRAM.' },
-  { tag: 'qwen3.6', title: 'Qwen3.6', vramGb: 24, vision: true, tier: 3, equivalent: 'Între Haiku 4.5 și Sonnet 5, pe sarcini ușoare', notes: 'Raționament, cod și imagini (~24 GB VRAM).' },
-  { tag: 'glm-4.7-flash', title: 'GLM-4.7 Flash', vramGb: 25, vision: false, tier: 3, equivalent: 'În jurul lui Haiku 4.5', notes: 'Raționament și generare de cod (~25 GB VRAM).' },
+  { tag: 'qwen3:4b', title: 'Qwen3 4B', vramGb: 4, vision: false, tier: 1, equivalent: 'Mult sub Haiku 4.5', notes: tr("Merge și pe laptopuri modeste. Bun pentru întrebări scurte, slab la sarcini lungi.") },
+  { tag: 'qwen3-vl:8b', title: 'Qwen3-VL 8B', vramGb: 7, vision: true, tier: 1, equivalent: 'Sub Haiku 4.5', notes: tr("Vede imagini. Util ca „ochi” local pentru modelele care nu văd.") },
+  { tag: 'qwen3.5', title: 'Qwen3.5', vramGb: 11, vision: true, tier: 2, equivalent: tr("Aproape de Haiku 4.5 la sarcini simple"), notes: tr("Recomandat de Ollama pentru agenți: raționament, cod și imagini (~11 GB VRAM).") },
+  { tag: 'gemma4', title: 'Gemma 4', vramGb: 16, vision: false, tier: 2, equivalent: tr("Aproape de Haiku 4.5"), notes: tr("Raționament și cod local (~16 GB VRAM).") },
+  { tag: 'qwen3.5:27b', title: 'Qwen3.5 27B', vramGb: 18, vision: true, tier: 3, equivalent: tr("În jurul lui Haiku 4.5"), notes: tr("Mai rapid și mai capabil decât varianta mică (~18 GB VRAM).") },
+  { tag: 'qwen3-coder:30b', title: 'Qwen3-Coder 30B', vramGb: 20, vision: false, tier: 3, equivalent: tr("În jurul lui Haiku 4.5, la cod"), notes: tr("Specializat pe programare și unelte.") },
+  { tag: 'nemotron-3-nano:30b', title: 'Nemotron 3 Nano 30B', vramGb: 24, vision: false, tier: 3, equivalent: tr("În jurul lui Haiku 4.5"), notes: tr("Recomandat de Ollama pentru agenți; încape în 24 GB VRAM.") },
+  { tag: 'qwen3.6', title: 'Qwen3.6', vramGb: 24, vision: true, tier: 3, equivalent: tr("Între Haiku 4.5 și Sonnet 5, pe sarcini ușoare"), notes: tr("Raționament, cod și imagini (~24 GB VRAM).") },
+  { tag: 'glm-4.7-flash', title: 'GLM-4.7 Flash', vramGb: 25, vision: false, tier: 3, equivalent: tr("În jurul lui Haiku 4.5"), notes: tr("Raționament și generare de cod (~25 GB VRAM).") },
   // Refusals removed by abliteration (community builds, pages on ollama.com show the tools badge).
   {
     tag: 'huihui_ai/gemma-4-abliterated:12b',
-    title: 'Gemma 4 12B fără restricții',
+    title: tr("Gemma 4 12B fără restricții"),
     vramGb: 10,
     vision: true,
     tier: 2,
     unrestricted: true,
     equivalent: 'Sub Haiku 4.5',
-    notes: 'Gemma 4 fără refuzuri, vede imagini. Pentru texte creative sau pentru adulți. Pentru cod rămâne mult sub Claude.'
+    notes: tr("Gemma 4 fără refuzuri, vede imagini. Pentru texte creative sau pentru adulți. Pentru cod rămâne mult sub Claude.")
   },
   {
     tag: 'huihui_ai/qwen3-abliterated:14b',
-    title: 'Qwen3 14B fără restricții',
+    title: tr("Qwen3 14B fără restricții"),
     vramGb: 11,
     vision: false,
     tier: 2,
     unrestricted: true,
     equivalent: 'Sub Haiku 4.5',
-    notes: 'Qwen3 fără refuzuri, cu gândire. Versiune comunitară: calitatea poate varia față de modelul original.'
+    notes: tr("Qwen3 fără refuzuri, cu gândire. Versiune comunitară: calitatea poate varia față de modelul original.")
   },
-  { tag: 'gpt-oss:120b', title: 'gpt-oss 120B', vramGb: 70, vision: false, tier: 4, equivalent: 'Între Haiku 4.5 și Sonnet 5', notes: 'Cere hardware de stație de lucru (80 GB VRAM sau foarte multă memorie).' }
+  { tag: 'gpt-oss:120b', title: 'gpt-oss 120B', vramGb: 70, vision: false, tier: 4, equivalent: tr("Între Haiku 4.5 și Sonnet 5"), notes: tr("Cere hardware de stație de lucru (80 GB VRAM sau foarte multă memorie).") }
 ]
 
 function fitFor(vramGb: number, hw: HardwareInfo): Fit {
@@ -177,7 +178,7 @@ export async function catalog(): Promise<CatalogModel[]> {
 /** Downloads a model, reporting progress through `emit`. */
 export async function pull(tag: string, emit: (e: ChatEvent) => void): Promise<void> {
   const r = await fetch(OLLAMA_URL + '/api/pull', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: tag, stream: true }) })
-  if (!r.ok || !r.body) throw new Error(`Descărcarea a eșuat: ${r.status}`)
+  if (!r.ok || !r.body) throw new Error(tr("Descărcarea a eșuat: {status}", { status: r.status }))
   const reader = r.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
@@ -203,7 +204,7 @@ export async function pull(tag: string, emit: (e: ChatEvent) => void): Promise<v
 
 export async function remove(tag: string): Promise<void> {
   const r = await fetch(OLLAMA_URL + '/api/delete', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: tag }) })
-  if (!r.ok) throw new Error(`Nu am putut șterge ${tag}: ${r.status}`)
+  if (!r.ok) throw new Error(tr("Nu am putut șterge {tag}: {status}", { tag, status: r.status }))
 }
 
 /**
@@ -219,7 +220,7 @@ export async function ensureLargeContext(tag: string): Promise<string> {
 
 /** Installs Ollama with winget in a visible console window (Windows). */
 export function installOllama(): void {
-  if (process.platform !== 'win32') throw new Error('Instalarea automată e disponibilă doar pe Windows; descarcă Ollama de pe ollama.com')
+  if (process.platform !== 'win32') throw new Error(tr("Instalarea automată e disponibilă doar pe Windows; descarcă Ollama de pe ollama.com"))
   spawn('cmd.exe', ['/d', '/s', '/c', '"start "Jolty - instalare Ollama" winget install -e --id Ollama.Ollama --accept-source-agreements --accept-package-agreements"'], {
     detached: true,
     stdio: 'ignore',

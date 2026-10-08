@@ -4,6 +4,7 @@ import type { UsageDay, UsageSummary } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, fmtTokens, fmtUsd, useStore } from '../store'
 import { LimitMeters } from './Accounts'
+import { dateLocale, tr } from '@shared/i18n'
 
 function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
   const ref = useRef<HTMLDivElement>(null)
@@ -38,9 +39,9 @@ function DailyBars({ days }: { days: UsageDay[] }) {
   return (
     <div className="chart" ref={ref}>
       <div className="label" style={{ marginBottom: 10 }}>
-        Tokeni pe zi · ultimele 14 zile
+       {tr("Tokeni pe zi · ultimele 14 zile")}
       </div>
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Tokeni pe zi, ultimele 14 zile">
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={tr("Tokeni pe zi, ultimele 14 zile")}>
         {[0, niceMax / 2, niceMax].map((t) => (
           <g key={t}>
             <line className="grid-line" x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} />
@@ -67,12 +68,12 @@ function DailyBars({ days }: { days: UsageDay[] }) {
       </svg>
       {h && hover !== undefined && (
         <div className="tooltip" style={{ left: pad.l + hover * slot + slot / 2, top: Math.max(56, y(totals[hover]) + 26) }}>
-          <b>{new Date(h.day).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })}</b>
-          <div>{fmtTokens(h.inputTokens + h.outputTokens)} tokeni</div>
+          <b>{new Date(h.day).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })}</b>
+          <div>{fmtTokens(h.inputTokens + h.outputTokens)} {tr("tokeni")}</div>
           <div className="faint">
-            {fmtTokens(h.inputTokens)} trimiși · {fmtTokens(h.outputTokens)} generați
+            {fmtTokens(h.inputTokens)} {tr("trimiși ·")} {fmtTokens(h.outputTokens)} {tr("generați")}
           </div>
-          {h.costUsd > 0 && <div className="faint">≈ {fmtUsd(h.costUsd)} la prețuri API</div>}
+          {h.costUsd > 0 && <div className="faint">≈ {fmtUsd(h.costUsd)} {tr("la prețuri API")}</div>}
         </div>
       )}
     </div>
@@ -112,26 +113,26 @@ export function UsagePage() {
     <div className="page">
       <div className="page-inner">
         <div className="row">
-          <h1 className="page-title">Consum</h1>
+          <h1 className="page-title">{tr("Consum")}</h1>
           <div className="spacer" />
           <button className="btn small" onClick={() => void refreshAll()}>
-            <RefreshCw size={14} /> Actualizează limitele
+            <RefreshCw size={14} /> {tr("Actualizează limitele")}
           </button>
         </div>
         <p className="lead">
-          Limitele abonamentelor vin direct de la Claude Code și Codex. Tokenii și costul sunt ce a trecut prin Jolty; la abonamente costul e doar o estimare la prețuri API, nu o plată în plus.
+         {tr("Limitele abonamentelor vin direct de la Claude Code și Codex. Tokenii și costul sunt ce a trecut prin Jolty; la abonamente costul e doar o estimare la prețuri API, nu o plată în plus.")}
         </p>
         <div className="stat-strip" style={{ marginTop: 0 }}>
           <div className="stat">
-            <div className="k">Tokeni în 30 de zile</div>
+            <div className="k">{tr("Tokeni în 30 de zile")}</div>
             <div className="v">{fmtTokens(total.tokens)}</div>
           </div>
           <div className="stat">
-            <div className="k">Echivalent la prețuri API</div>
+            <div className="k">{tr("Echivalent la prețuri API")}</div>
             <div className="v">{fmtUsd(total.cost)}</div>
           </div>
           <div className="stat">
-            <div className="k">Răspunsuri</div>
+            <div className="k">{tr("Răspunsuri")}</div>
             <div className="v">{total.turns}</div>
           </div>
         </div>
@@ -152,15 +153,15 @@ export function UsagePage() {
                   {(
                     [
                       ['Ultimele 24 h', u.last24h],
-                      ['Ultimele 7 zile', u.last7d],
-                      ['Ultimele 30 de zile', u.last30d]
+                      [tr("Ultimele 7 zile"), u.last7d],
+                      [tr("Ultimele 30 de zile"), u.last30d]
                     ] as const
                   ).map(([k, w]) => (
                     <div className="stat" key={k}>
                       <div className="k">{k}</div>
                       <div className="v">{fmtTokens(w.tokens)}</div>
                       <div className="sub">
-                        {w.turns} răspunsuri{w.costUsd > 0 ? ` · ≈ ${fmtUsd(w.costUsd)}` : ''}
+                        {w.turns} {tr("răspunsuri")}{w.costUsd > 0 ? ` · ≈ ${fmtUsd(w.costUsd)}` : ''}
                       </div>
                     </div>
                   ))}
@@ -172,9 +173,9 @@ export function UsagePage() {
                       <table className="table" style={{ marginTop: 12 }}>
                         <thead>
                           <tr>
-                            <th>Model</th>
-                            <th className="num">Tokeni (30 zile)</th>
-                            <th className="num">≈ la prețuri API</th>
+                            <th>{tr("Model")}</th>
+                            <th className="num">{tr("Tokeni (30 zile)")}</th>
+                            <th className="num">{tr("≈ la prețuri API")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -190,7 +191,7 @@ export function UsagePage() {
                     )}
                   </>
                 ) : (
-                  <div className="faint small">Nicio activitate prin Jolty în ultimele 30 de zile.</div>
+                  <div className="faint small">{tr("Nicio activitate prin Jolty în ultimele 30 de zile.")}</div>
                 )}
               </div>
             )

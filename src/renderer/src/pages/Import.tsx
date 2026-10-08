@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ExternalSession } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
 import { api, basename, ENGINE_LABEL, errMsg, timeAgo, useStore } from '../store'
+import { tr } from '@shared/i18n'
 
 function CodexImporter({ profileId }: { profileId: string }) {
   const { toast } = useStore()
@@ -25,16 +26,16 @@ function CodexImporter({ profileId }: { profileId: string }) {
     <div className="card" style={{ marginTop: 14 }}>
       <div className="row" style={{ marginBottom: 8 }}>
         <ArrowRightLeft size={16} color="var(--volt)" />
-        <b>Aduce în Codex ce ai configurat în Claude Code</b>
+        <b>{tr("Aduce în Codex ce ai configurat în Claude Code")}</b>
         <div className="spacer" />
         <button className="btn small" disabled={busy} onClick={() => void detect()}>
-          {busy ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={14} />} Caută
+          {busy ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={14} />} {tr("Caută acum")}
         </button>
       </div>
       <div className="muted small" style={{ marginBottom: 10 }}>
-        Folosește importul oficial din Codex: instrucțiuni (CLAUDE.md), skills, servere MCP, subagenți, comenzi, hooks și sesiuni.
+        {tr("Folosește importul oficial din Codex: instrucțiuni (CLAUDE.md), skills, servere MCP, subagenți, comenzi, hooks și sesiuni.")}
       </div>
-      {items && items.length === 0 && <div className="faint small">Nu am găsit nimic nou de importat.</div>}
+      {items && items.length === 0 && <div className="faint small">{tr("Nu am găsit nimic nou de importat.")}</div>}
       {items?.map((i, k) => (
         <label key={k} className="row small" style={{ padding: '5px 0', cursor: 'pointer' }}>
           <input
@@ -60,7 +61,7 @@ function CodexImporter({ profileId }: { profileId: string }) {
             setBusy(true)
             try {
               await api.codexImport.run(profileId, undefined, [...chosen])
-              toast('Import terminat')
+              toast(tr("Import terminat"))
               setItems(undefined)
             } catch (err) {
               toast(errMsg(err), true)
@@ -69,7 +70,7 @@ function CodexImporter({ profileId }: { profileId: string }) {
             }
           }}
         >
-          Importă selecția
+          {tr("Importă selecția")}
         </button>
       )}
     </div>
@@ -90,8 +91,8 @@ export function ImportPage() {
     try {
       const r = await api.sessions.importAll()
       await loadSessions()
-      toast(r.imported ? `Am importat ${r.imported} conversații. Cele deja existente au rămas neatinse.` : 'Totul era deja importat.')
-      if (r.failed.length) toast(`Nu am putut citi: ${r.failed.join(', ')} (verifică login-ul în Conturi și chei)`, true)
+      toast(r.imported ? tr("Am importat {imported} conversații. Cele deja existente au rămas neatinse.", { imported: r.imported }) : tr("Totul era deja importat."))
+      if (r.failed.length) toast(tr("Nu am putut citi: {join} (verifică login-ul în Conturi și chei)", { join: r.failed.join(', ') }), true)
       await load()
     } catch (err) {
       toast(errMsg(err), true)
@@ -131,21 +132,21 @@ export function ImportPage() {
   return (
     <div className="page">
       <div className="page-inner">
-        <h1 className="page-title">Importă sesiuni</h1>
+        <h1 className="page-title">{tr("Importă sesiuni")}</h1>
         <p className="lead">
-          Jolty folosește aceleași fișiere ca aplicațiile oficiale, așa că tot ce ai în Claude Code pe PC (CLAUDE.md, skills, servere MCP, subagenți, comenzi, setări) funcționează direct. Aici deschizi orice conversație existentă și o continui din Jolty.
+          {tr("Jolty folosește aceleași fișiere ca aplicațiile oficiale, așa că tot ce ai în Claude Code pe PC (CLAUDE.md, skills, servere MCP, subagenți, comenzi, setări) funcționează direct. Aici deschizi orice conversație existentă și o continui din Jolty.")}
         </p>
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="row">
             <DownloadCloud size={16} color="var(--volt)" />
-            <b>Importă tot</b>
+            <b>{tr("Importă tot")}</b>
             <div className="spacer" />
             <button className="btn primary small" disabled={importing} onClick={() => void importAll()}>
-              {importing ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <DownloadCloud size={14} />} Importă tot
+              {importing ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <DownloadCloud size={14} />} {tr("Importă tot")}
             </button>
           </div>
           <div className="muted small" style={{ marginTop: 8 }}>
-            Aduce conversațiile din toate conturile Claude și Codex conectate. Ce e deja în Jolty nu se importă a doua oară, iar istoricul se încarcă abia când deschizi conversația.
+            {tr("Aduce conversațiile din toate conturile Claude și Codex conectate. Ce e deja în Jolty nu se importă a doua oară, iar istoricul se încarcă abia când deschizi conversația.")}
           </div>
         </div>
         <div className="row" style={{ marginBottom: 16 }}>
@@ -162,16 +163,16 @@ export function ImportPage() {
             </select>
           </div>
           <button className="btn small" onClick={() => void load()}>
-            <RefreshCw size={14} /> Reîncarcă
+            <RefreshCw size={14} /> {tr("Reîncarcă")}
           </button>
-          <span className="faint small">{list ? `${list.length} sesiuni ${profile ? ENGINE_LABEL[profile.engine] : ''} încă neimportate` : ''}</span>
+          <span className="faint small">{list ? tr("{length} sesiuni {v1} încă neimportate", { length: list.length, v1: profile ? ENGINE_LABEL[profile.engine] : '' }) : ''}</span>
         </div>
         {loading && (
           <div className="empty">
             <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
           </div>
         )}
-        {list && list.length === 0 && <div className="card empty">Nu am găsit sesiuni noi pentru acest profil.</div>}
+        {list && list.length === 0 && <div className="card empty">{tr("Nu am găsit sesiuni noi pentru acest profil.")}</div>}
         {groups.map(([cwd, sessions]) => (
           <div className="card" key={cwd} style={{ marginBottom: 12 }}>
             <div className="row" style={{ marginBottom: 6 }}>
@@ -208,7 +209,7 @@ export function ImportPage() {
                           }
                         }}
                       >
-                        <PlayCircle size={14} /> Continuă aici
+                        <PlayCircle size={14} /> {tr("Continuă aici")}
                       </button>
                     </td>
                   </tr>

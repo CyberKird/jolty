@@ -254,6 +254,8 @@ export interface AppSettings {
   lastModels?: Record<string, { model: string; effort?: string }>
   /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
   reduceMotion?: boolean
+  /** interface language code (see shared/i18n.ts); unset follows the system */
+  language?: string
   /** Chrome profile folder for Jolty in Chrome ("Default", "Profile 1"); the last used one when empty */
   browserProfileDir?: string
   /** which Chromium browser Jolty in Chrome drives; the Windows default when empty */

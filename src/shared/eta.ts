@@ -1,5 +1,6 @@
 // How long the agent has worked and how long its task list still needs, from when steps get done.
 import type { PlanStep } from './types'
+import { tr } from './i18n'
 
 export interface Clock {
   /** the turn started */
@@ -38,9 +39,9 @@ export function timeLeft(c: Clock | undefined, steps: PlanStep[], now: number): 
 
 /** "~4 min rămase", or "se estimează" until the first step is done. */
 export function etaLabel(ms: number | undefined): string {
-  if (ms === undefined) return 'se estimează'
-  if (ms < 60e3) return 'sub 1 min rămas'
-  return `~${Math.round(ms / 60e3)} min rămase`
+  if (ms === undefined) return tr("se estimează")
+  if (ms < 60e3) return tr("sub 1 min rămas")
+  return tr("~{round} min rămase", { round: Math.round(ms / 60e3) })
 }
 
 /** 75 000 ms -> "1:15" */

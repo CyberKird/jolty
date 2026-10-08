@@ -6,6 +6,7 @@ import { capability } from '@shared/complexity'
 import { modelScore } from '@shared/scores'
 import type { BrowserMode, EngineKind, ModelOption, PermissionMode, Profile, SiteTrust } from '@shared/types'
 import { api, ENGINE_LABEL, errMsg } from '../store'
+import { tr } from '@shared/i18n'
 
 export interface ModelGroup {
   profile: Profile
@@ -55,13 +56,13 @@ export function useAllModels(profiles: Profile[]): ModelGroup[] {
 }
 
 export const EFFORT_TITLES: Record<string, string> = {
-  low: 'Răspunsuri rapide, gândire minimă',
-  medium: 'Gândire moderată',
-  high: 'Gândire în profunzime',
-  xhigh: 'Mai adânc decât high: cel mai bun pentru cod și sarcini lungi',
-  max: 'Efort maxim: cel mai lent și cel mai scump',
-  off: 'Fără gândire: răspunde direct, cel mai rapid și ieftin',
-  on: 'Cu gândire: raționează înainte să răspundă'
+  low: tr("Răspunsuri rapide, gândire minimă"),
+  medium: tr("Gândire moderată"),
+  high: tr("Gândire în profunzime"),
+  xhigh: tr("Mai adânc decât high: cel mai bun pentru cod și sarcini lungi"),
+  max: tr("Efort maxim: cel mai lent și cel mai scump"),
+  off: tr("Fără gândire: răspunde direct, cel mai rapid și ieftin"),
+  on: tr("Cu gândire: raționează înainte să răspundă")
 }
 
 /** Closes a popover on outside click or Escape, and moves focus with the arrow keys. */
@@ -112,7 +113,7 @@ export function ModelPicker(p: {
   const current = group?.models.find((m) => m.id === p.model) || group?.models.find((m) => m.isDefault)
   const efforts = current?.efforts || []
   const effort = p.effort || current?.defaultEffort
-  const label = current?.label || p.model || (group?.loading ? 'Se încarcă…' : 'Alege modelul')
+  const label = current?.label || p.model || (group?.loading ? tr("Se încarcă…") : tr("Alege modelul"))
 
   return (
     <div className="picker" ref={ref}>
@@ -123,8 +124,8 @@ export function ModelPicker(p: {
         <ChevronDown size={13} />
       </button>
       {open && (
-        <div className="picker-pop" role="menu" aria-label="Model și efort">
-          <div className="picker-legend">Numărul e inteligența (Artificial Analysis, mai mare e mai bine), cuvântul e viteza.</div>
+        <div className="picker-pop" role="menu" aria-label={tr("Model și efort")}>
+          <div className="picker-legend">{tr("Numărul e inteligența (Artificial Analysis, mai mare e mai bine), cuvântul e viteza.")}</div>
           <div className="picker-list">
             {p.groups.map((g) => (
               <div className="picker-group" key={g.profile.id}>
@@ -133,15 +134,15 @@ export function ModelPicker(p: {
                   <span className="ellipsis">{g.profile.name}</span>
                   <span className="picker-engine">{g.profile.local ? 'Local' : ENGINE_LABEL[g.profile.engine]}</span>
                 </div>
-                {g.loading && <div className="picker-empty">Se încarcă…</div>}
-                {g.error && <div className="picker-empty">Neconectat. Intră în Conturi și chei.</div>}
-                {!g.loading && !g.error && !g.models.length && <div className="picker-empty">Niciun model</div>}
+                {g.loading && <div className="picker-empty">{tr("Se încarcă…")}</div>}
+                {g.error && <div className="picker-empty">{tr("Neconectat. Intră în Conturi și chei.")}</div>}
+                {!g.loading && !g.error && !g.models.length && <div className="picker-empty">{tr("Niciun model")}</div>}
                 {g.models.map((m) => {
                   const on = g.profile.id === p.profileId && m.id === current?.id
                   const other = g.profile.id !== p.profileId
                   const cap = capability(g.profile, m)
                   const sc = modelScore(g.profile, m)
-                  const scoreTip = sc ? `Inteligență ${sc.iq}${sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : ''} (Artificial Analysis): ${sc.note}` : cap.compare
+                  const scoreTip = sc ? tr("Inteligență {iq}{v1} (Artificial Analysis): {note}", { iq: sc.iq, v1: sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : '', note: sc.note }) : cap.compare
                   return (
                     <button
                       key={m.id}
@@ -149,7 +150,7 @@ export function ModelPicker(p: {
                       role="menuitemradio"
                       aria-checked={on}
                       className={`picker-opt ${on ? 'on' : ''}`}
-                      title={[scoreTip, m.description, m.efforts?.length ? `Gândire: ${m.efforts.join(', ')}` : 'Fără niveluri de gândire', m.vision === false ? 'Nu vede imagini: le descrie alt profil' : ''].filter(Boolean).join('\n')}
+                      title={[scoreTip, m.description, m.efforts?.length ? tr("Gândire: {join}", { join: m.efforts.join(', ') }) : tr("Fără niveluri de gândire"), m.vision === false ? tr("Nu vede imagini: le descrie alt profil") : ''].filter(Boolean).join('\n')}
                       onClick={() => {
                         setOpen(false)
                         if (!on) p.onPick(g.profile.id, m.id)
@@ -174,12 +175,12 @@ export function ModelPicker(p: {
           </div>
           {efforts.length > 0 && (
             <div className="picker-foot">
-              <span className="picker-foot-label">Gândire</span>
-              <div className="segmented" role="radiogroup" aria-label="Nivel de gândire">
+              <span className="picker-foot-label">{tr("Gândire")}</span>
+              <div className="segmented" role="radiogroup" aria-label={tr("Nivel de gândire")}>
                 {/* a model without a declared default (Claude) runs its own default when nothing is picked */}
                 {!current?.defaultEffort && (
-                  <button data-opt role="radio" aria-checked={!p.effort} className={!p.effort ? 'on' : ''} title="Efortul implicit al modelului" onClick={() => p.onEffort('')}>
-                    auto
+                  <button data-opt role="radio" aria-checked={!p.effort} className={!p.effort ? 'on' : ''} title={tr("Efortul implicit al modelului")} onClick={() => p.onEffort('')}>
+                   {tr("auto")}
                   </button>
                 )}
                 {efforts.map((e) => (
@@ -201,47 +202,47 @@ export const DEFAULT_MODE: PermissionMode = 'autoEdit'
 export const MODES: { id: PermissionMode; label: string; desc: string; title: string; only?: EngineKind }[] = [
   {
     id: 'auto',
-    label: 'Auto',
-    desc: 'Modelul decide singur ce aprobări îți cere',
-    title: 'Claude folosește un clasificator care aprobă acțiunile sigure și te întreabă doar la cele riscante. Codex cere voie doar când consideră necesar.'
+    label: tr("Auto"),
+    desc: tr("Modelul decide singur ce aprobări îți cere"),
+    title: tr("Claude folosește un clasificator care aprobă acțiunile sigure și te întreabă doar la cele riscante. Codex cere voie doar când consideră necesar.")
   },
   {
     id: 'ask',
-    label: 'Manual',
-    desc: 'Întreabă mereu înainte de modificări',
-    title: 'Fiecare fișier modificat și fiecare comandă așteaptă acordul tău. Cel mai sigur, cel mai lent.'
+    label: tr("Manual"),
+    desc: tr("Întreabă mereu înainte de modificări"),
+    title: tr("Fiecare fișier modificat și fiecare comandă așteaptă acordul tău. Cel mai sigur, cel mai lent.")
   },
   {
     id: 'autoEdit',
-    label: 'Acceptă editările',
-    desc: 'Acceptă automat modificările de fișiere',
-    title: 'Editează fișierele din proiect fără să întrebe, dar cere voie pentru comenzi în terminal.'
+    label: tr("Acceptă editările"),
+    desc: tr("Acceptă automat modificările de fișiere"),
+    title: tr("Editează fișierele din proiect fără să întrebe, dar cere voie pentru comenzi în terminal.")
   },
   {
     id: 'plan',
-    label: 'Plan',
-    desc: 'Face un plan înainte de modificări',
-    title: 'Doar citește și cercetează, apoi îți arată planul. Nu modifică nimic până nu aprobi.'
+    label: tr("Plan"),
+    desc: tr("Face un plan înainte de modificări"),
+    title: tr("Doar citește și cercetează, apoi îți arată planul. Nu modifică nimic până nu aprobi.")
   },
   {
     id: 'project',
-    label: 'Liber în proiect',
-    desc: 'Fără întrebări, doar în folderul proiectului',
-    title: 'Codex lucrează fără să întrebe, dar sandbox-ul lui nu îl lasă să scrie în afara folderului proiectului. Rețeaua e pornită, ca să poată instala pachete.',
+    label: tr("Liber în proiect"),
+    desc: tr("Fără întrebări, doar în folderul proiectului"),
+    title: tr("Codex lucrează fără să întrebe, dar sandbox-ul lui nu îl lasă să scrie în afara folderului proiectului. Rețeaua e pornită, ca să poată instala pachete."),
     only: 'codex'
   },
   {
     id: 'full',
-    label: 'Fără permisiuni',
-    desc: 'Acceptă toate permisiunile, pe tot discul',
-    title: 'Rulează orice comandă și modifică orice fără să întrebe, oriunde pe disc. Doar în proiecte în care ai încredere totală.'
+    label: tr("Fără permisiuni"),
+    desc: tr("Acceptă toate permisiunile, pe tot discul"),
+    title: tr("Rulează orice comandă și modifică orice fără să întrebe, oriunde pe disc. Doar în proiecte în care ai încredere totală.")
   }
 ]
 
 const HERMES_MODES = [
-  { id: 'ask' as const, label: 'Aprobă editările', desc: 'Cere acordul pentru fișiere și comenzi periculoase', title: 'Hermes cere acordul înainte de editări și comenzi periculoase. Alte comenzi pot rula automat.' },
-  { id: 'autoEdit' as const, label: 'Acceptă editările', desc: 'Editează automat în proiect și în folderul temporar', title: 'Hermes aprobă editările în proiect și în folderul temporar. Cere acordul pentru căi sensibile și comenzi periculoase.' },
-  { id: 'full' as const, label: 'Editări extinse', desc: 'Aprobă editările din afara proiectului', title: 'Hermes aprobă editările în această sesiune, cu excepția căilor sensibile. Comenzile periculoase cer în continuare acordul.' }
+  { id: 'ask' as const, label: tr("Aprobă editările"), desc: tr("Cere acordul pentru fișiere și comenzi periculoase"), title: tr("Hermes cere acordul înainte de editări și comenzi periculoase. Alte comenzi pot rula automat.") },
+  { id: 'autoEdit' as const, label: tr("Acceptă editările"), desc: tr("Editează automat în proiect și în folderul temporar"), title: tr("Hermes aprobă editările în proiect și în folderul temporar. Cere acordul pentru căi sensibile și comenzi periculoase.") },
+  { id: 'full' as const, label: tr("Editări extinse"), desc: tr("Aprobă editările din afara proiectului"), title: tr("Hermes aprobă editările în această sesiune, cu excepția căilor sensibile. Comenzile periculoase cer în continuare acordul.") }
 ]
 
 /** The modes this engine offers. */
@@ -290,9 +291,9 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
         <ChevronDown size={13} />
       </button>
       {open && (
-        <div className="picker-pop small" role="menu" aria-label="Permisiuni">
+        <div className="picker-pop small" role="menu" aria-label={tr("Permisiuni")}>
           <div className="picker-list">
-            <div className="picker-group-head">Mod</div>
+            <div className="picker-group-head">{tr("Mod")}</div>
             {choices.map((m, i) => (
               <button
                 key={m.id}
@@ -305,11 +306,11 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
               >
                 <span className="picker-opt-text">
                   <span className="picker-opt-name">
-                    {armed && m.id === 'full' ? 'Confirmă: fără permisiuni' : m.label}
-                    {m.id === DEFAULT_MODE && <span className="picker-tag">implicit</span>}
+                    {armed && m.id === 'full' ? tr("Confirmă: fără permisiuni") : m.label}
+                    {m.id === DEFAULT_MODE && <span className="picker-tag">{tr("implicit")}</span>}
                   </span>
                   <span className="picker-opt-desc">
-                    {armed && m.id === 'full' ? 'Rulează orice comandă și modifică orice fișier de pe disc. Doar câteva comenzi ireversibile rămân blocate. Apasă din nou ca să continui.' : m.desc}
+                    {armed && m.id === 'full' ? tr("Rulează orice comandă și modifică orice fișier de pe disc. Doar câteva comenzi ireversibile rămân blocate. Apasă din nou ca să continui.") : m.desc}
                   </span>
                 </span>
                 {m.id === mode && <Check size={14} />}
@@ -324,15 +325,15 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
 }
 
 const TRUST: { id: SiteTrust; label: string; desc: string }[] = [
-  { id: 'ask', label: 'Întreabă la fiecare acțiune', desc: 'Clicul, tastarea și formularele cer acordul de fiecare dată' },
-  { id: 'site', label: 'O dată pe site', desc: 'Recomandat: întreabă prima dată pe un site, apoi lucrează liber pe el în conversația asta' },
-  { id: 'free', label: 'Liber', desc: 'Fără întrebări pentru clic și tastare. Cod în pagină, încărcarea de fișiere și închiderea tabului tot cer acordul' }
+  { id: 'ask', label: tr("Întreabă la fiecare acțiune"), desc: tr("Clicul, tastarea și formularele cer acordul de fiecare dată") },
+  { id: 'site', label: tr("O dată pe site"), desc: tr("Recomandat: întreabă prima dată pe un site, apoi lucrează liber pe el în conversația asta") },
+  { id: 'free', label: tr("Liber"), desc: tr("Fără întrebări pentru clic și tastare. Cod în pagină, încărcarea de fișiere și închiderea tabului tot cer acordul") }
 ]
 
 const CONNECT: { id: BrowserMode; label: string; desc: string }[] = [
-  { id: 'auto', label: 'Tab propriu, automat', desc: 'Browserul tău: se conectează singur și lucrează într-un tab deschis de el' },
-  { id: 'pick', label: 'Aleg eu tabul', desc: 'Browserul tău: extensia îți arată tab-urile deschise și modelul lucrează în cel pe care îl alegi' },
-  { id: 'own', label: 'Fereastră Jolty, profil separat', desc: 'Un browser aparte, cu profilul lui: vede toate tab-urile din fereastra aceea și nu atinge conturile tale. Te loghezi o dată pe site-urile de care are nevoie' }
+  { id: 'auto', label: tr("Tab propriu, automat"), desc: tr("Browserul tău: se conectează singur și lucrează într-un tab deschis de el") },
+  { id: 'pick', label: tr("Aleg eu tabul"), desc: tr("Browserul tău: extensia îți arată tab-urile deschise și modelul lucrează în cel pe care îl alegi") },
+  { id: 'own', label: tr("Fereastră Jolty, profil separat"), desc: tr("Un browser aparte, cu profilul lui: vede toate tab-urile din fereastra aceea și nu atinge conturile tale. Te loghezi o dată pe site-urile de care are nevoie") }
 ]
 
 /** What a model may do in the browser without asking, and how it attaches to a tab. */
@@ -349,13 +350,13 @@ export function BrowserMenu() {
   }, [open])
   return (
     <div className="picker" ref={ref}>
-      <button className="chrome-toggle chevron" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title="Permisiunile și conectarea browserului" aria-label="Permisiunile browserului">
+      <button className="chrome-toggle chevron" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title={tr("Permisiunile și conectarea browserului")} aria-label={tr("Permisiunile browserului")}>
         <ChevronDown size={13} />
       </button>
       {open && (
-        <div className="picker-pop" role="menu" aria-label="Permisiunile browserului">
+        <div className="picker-pop" role="menu" aria-label={tr("Permisiunile browserului")}>
           <div className="picker-list">
-            <div className="picker-group-head">Cât de liber lucrează modelul</div>
+            <div className="picker-group-head">{tr("Cât de liber lucrează modelul")}</div>
             {TRUST.map((t) => (
               <button
                 key={t.id}
@@ -375,7 +376,7 @@ export function BrowserMenu() {
                 {trust === t.id && <Check size={14} />}
               </button>
             ))}
-            <div className="picker-group-head" style={{ marginTop: 8 }}>Conectare</div>
+            <div className="picker-group-head" style={{ marginTop: 8 }}>{tr("Conectare")}</div>
             {CONNECT.map((c) => (
               <button
                 key={c.id}

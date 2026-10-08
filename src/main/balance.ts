@@ -1,6 +1,7 @@
 // Remaining balance for Anthropic-compatible providers that document a balance endpoint.
 // Only official endpoints, and the key only goes back to the host the profile already uses.
 import type { Profile, ProviderBalance, TurnUsage } from '@shared/types'
+import { tr } from '@shared/i18n'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Parsed = Omit<ProviderBalance, 'profileId' | 'updatedAt'> | undefined
@@ -46,7 +47,7 @@ const PROVIDERS: Provider[] = [
     parse: (j) => {
       if (!j?.data) return undefined
       const amount = num(j.data.limit_remaining)
-      return amount === undefined ? { note: 'Cheia nu are limită. Soldul contului îl vezi pe openrouter.ai.' } : { amount, currency: 'USD' }
+      return amount === undefined ? { note: tr("Cheia nu are limită. Soldul contului îl vezi pe openrouter.ai.") } : { amount, currency: 'USD' }
     }
   },
   // https://platform.xiaomimimo.com console: balance is cookie-only, not the API key
@@ -97,7 +98,7 @@ export async function fetchBalance(profile: Profile, secret: string | undefined,
     headers,
     signal: AbortSignal.timeout(10000)
   })
-  if (!res.ok) throw new Error(`Soldul nu a putut fi citit (HTTP ${res.status})`)
+  if (!res.ok) throw new Error(tr("Soldul nu a putut fi citit (HTTP {status})", { status: res.status }))
   const parsed = found.provider.parse(await res.json(), found.base)
   return parsed && { profileId: profile.id, ...parsed, updatedAt: Date.now() }
 }

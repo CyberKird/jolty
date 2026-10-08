@@ -6,6 +6,7 @@ import { ContextMenu } from './components/ContextMenu'
 import { LivePanel } from './components/LivePanel'
 import { Sidebar } from './components/Sidebar'
 import { api, useStore } from './store'
+import { getLang, isRtl, tr } from '@shared/i18n'
 
 // secondary pages load when first opened: the chat is on screen sooner
 const AccountsPage = lazy(() => import('./pages/Accounts').then((m) => ({ default: m.AccountsPage })))
@@ -29,14 +30,14 @@ function UpdatePill() {
   const update = useStore((s) => s.update)
   if (update?.state === 'downloading')
     return (
-      <span className="update-pill quiet" title={`Descarc Jolty ${update.version || ''} în fundal`}>
-        <ArrowDownToLine size={12} /> Actualizare {update.percent ?? 0}%
+      <span className="update-pill quiet" title={tr("Descarc Jolty {v0} în fundal", { v0: update.version || '' })}>
+        <ArrowDownToLine size={12} /> {tr("Actualizare")} {update.percent ?? 0}%
       </span>
     )
   if (update?.state !== 'ready') return null
   return (
-    <button className="update-pill" onClick={() => void api.updates.install()} title="Închide Jolty, instalează noua versiune și îl pornește din nou. Conversațiile rămân.">
-      <RefreshCw size={12} /> Jolty {update.version} e gata · Repornește
+    <button className="update-pill" onClick={() => void api.updates.install()} title={tr("Închide Jolty, instalează noua versiune și îl pornește din nou. Conversațiile rămân.")}>
+      <RefreshCw size={12} /> {tr("Jolty {version} e gata · Repornește", { version: update.version })}
     </button>
   )
 }
@@ -46,13 +47,13 @@ function TitleBar() {
   const { sidebarOpen, setSidebarOpen } = useStore()
   return (
     <header className="titlebar">
-      <button className="titlebar-btn" onClick={() => setSidebarOpen(!sidebarOpen)} title={`${sidebarOpen ? 'Ascunde' : 'Arată'} bara laterală (Ctrl+B)`} aria-label={sidebarOpen ? 'Ascunde bara laterală' : 'Arată bara laterală'}>
+      <button className="titlebar-btn" onClick={() => setSidebarOpen(!sidebarOpen)} title={sidebarOpen ? tr("Ascunde bara laterală (Ctrl+B)") : tr("Arată bara laterală (Ctrl+B)")} aria-label={sidebarOpen ? tr("Ascunde bara laterală") : tr("Arată bara laterală")}>
         {sidebarOpen ? <PanelLeftClose size={15} strokeWidth={1.6} /> : <PanelLeftOpen size={15} strokeWidth={1.6} />}
       </button>
       <div className="titlebar-brand">
         <Bolt size={17} />
         <span className="brand-name">
-          JOLT<b>Y</b>
+         JOLT<b>Y</b>
         </span>
         <span className="titlebar-by">by</span>
         <img className="titlebar-wordmark" src={wordmark} alt="Joltarise" draggable={false} />
@@ -73,6 +74,8 @@ export function App() {
     // limits and 24 h spend for the sidebar meter; events keep them live afterwards
     void loadUsage()
     void api.app.settings().then((s) => document.documentElement.classList.toggle('reduce-motion', Boolean(s.reduceMotion)))
+    document.documentElement.lang = getLang()
+    document.documentElement.dir = isRtl() ? 'rtl' : 'ltr'
     void api.updates.status().then((status) => onEvent({ type: 'update', status }))
     return off
   }, [loadProfiles, loadSessions, loadUsage, onEvent])

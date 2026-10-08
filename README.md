@@ -1,67 +1,74 @@
 # Jolty
 
-Aplicație desktop pentru Windows care rulează **Claude Code** și **Codex** într-un singur loc, cu mai multe conturi, chei API și modele locale. Face parte din familia [Joltarise](https://joltarise.com).
+A Windows desktop app that runs **Claude Code** and **Codex** in one place, with several accounts, API keys and local models. Part of the [Joltarise](https://joltarise.com) family.
 
-Jolty nu înlocuiește motoarele oficiale: le include și le pornește exact cum ar face-o aplicațiile Anthropic și OpenAI. Tu te conectezi cu propriile conturi, iar Jolty îți arată totul într-o singură interfață.
+Jolty does not replace the official engines: it bundles them and starts them exactly the way the Anthropic and OpenAI apps do. You sign in with your own accounts, and Jolty shows everything in one interface.
 
-## Ce face
+## What it does
 
-- **Mai multe profiluri**: două (sau oricâte) abonamente Claude, contul Codex, chei API Anthropic sau OpenAI, plus orice furnizor compatibil (DeepSeek, Xiaomi MiMo, Kimi, GLM, OpenRouter, LiteLLM).
-- **Aceeași experiență ca în Claude Code**: aprobări pentru comenzi și modificări, moduri de lucru (Întreabă, Editează, Plan, Total), reluarea conversațiilor.
-- **Alegi modelul și efortul** (auto, low, medium, high, xhigh, max), exact ca în Claude Code.
-- **Sugestie pe măsură ce scrii**: Jolty estimează cât de complexă e cererea și propune modelul și efortul potrivite (de exemplu Haiku pentru o redenumire, Opus xhigh pentru o refactorizare mare). Nu propune niciodată singur modele care consumă credite extra peste abonament.
-- **Continui conversația pe alt motor**: „Continuă în” mută conversația de pe Claude pe Codex sau pe alt cont, cu tot contextul.
-- **Imagini pentru orice model**: dacă modelul ales nu vede imagini (DeepSeek, un model local), un profil Claude le descrie în detaliu și modelul primește descrierea.
-- **Live**: vezi ce face modelul în timp real, ce fișiere citește și modifică, codul pe măsură ce îl scrie și comenzile din terminal.
-- **Consum**: limitele de 5 ore și 7 zile ale fiecărui abonament, tokenii pe zi și pe model.
-- **Import**: deschizi în Jolty conversațiile existente din Claude Code și Codex. CLAUDE.md, skills, subagenții, comenzile și serverele MCP de pe PC funcționează direct.
-- **Modele locale** prin Ollama, cu recomandări pentru placa ta video și o comparație orientativă cu modelele Claude.
+- **Several profiles**: two (or any number of) Claude subscriptions, the Codex account, Anthropic or OpenAI API keys, plus any compatible provider (DeepSeek, Xiaomi MiMo, Kimi, GLM, OpenRouter, LiteLLM).
+- **The Claude Code experience**: approvals for commands and changes, working modes (Ask, Edit, Plan, Full), resuming conversations.
+- **Pick the model and the effort** (auto, low, medium, high, xhigh, max), just like in Claude Code. The chat shows the model and effort of every reply.
+- **A suggestion while you type**: Jolty estimates how demanding the request is and suggests a fitting model and effort. It only suggests; it never switches the model by itself.
+- **Move a conversation**: "Continue in" moves a chat to another account or engine. On the same provider it stays the same chat with its full context; on another provider a compact brief goes along with your next message, so the switch costs a few thousand tokens instead of the whole history.
+- **When a limit runs out**: one click carries the chat to another free account of the same provider and picks up where it stopped.
+- **A second opinion**: Review sends the current changes to a model from the other family (Codex for Claude, or the other way round) for a read-only review.
+- **Images for any model**: if the chosen model cannot see images (DeepSeek, a local model), a Claude profile describes them in detail and the model gets the description.
+- **Live**: what the model does right now, the files it reads and changes, its thinking as it arrives, every edit line by line while it is written, the terminal, the task list with the time left, and the page in the Jolty browser.
+- **Reply and quote**: select text in the chat to quote it, or reply to any message, like in a chat app.
+- **Usage**: the 5 hour and 7 day limits of every subscription, tokens per day and per model.
+- **Import**: open your existing Claude Code and Codex conversations in Jolty. CLAUDE.md, skills, subagents, commands and MCP servers on your PC work as they are.
+- **Local models** through Ollama, with recommendations for your graphics card and a rough comparison with the Claude models.
+- **12 languages**: English, Română, Français, Deutsch, Español, Italiano, Português (Brasil), 日本語, 한국어, हिन्दी, Bahasa Indonesia and العربية (right to left). Pick one in Settings; by default Jolty follows the system language.
 
-## Instalare
+## Install
 
-1. Descarcă `Jolty-Setup-x.y.z.exe` din pagina **Releases** a repo-ului sau din ultima rulare **Actions → Build → Jolty-Setup**.
-2. Rulează instalatorul. Jolty nu are încă o semnătură digitală, așa că Windows poate afișa „Windows a protejat PC-ul”. Apasă **Mai multe informații → Rulează oricum**.
-3. Instalatorul pune și Microsoft Visual C++ Runtime, dacă lipsește. Claude Code și Codex sunt deja incluse.
-4. Deschide Jolty și intră în **Verificare sistem**. Dacă îți lipsește Git for Windows (Claude Code îl folosește pentru comenzi), îl instalezi de acolo cu un clic.
+1. Download `Jolty-Setup-x.y.z.exe` from the **Releases** page of this repository.
+2. Run the installer. Jolty is not code signed yet, so Windows may show "Windows protected your PC". Click **More info → Run anyway**.
+3. The installer also adds the Microsoft Visual C++ Runtime if it is missing. Claude Code and Codex are already bundled.
+4. Open Jolty and go to **System check**. If Git for Windows is missing (Claude Code uses it for commands), install it from there with one click.
 
-## Primii pași
+Updates install by themselves: Jolty checks at startup, every hour and when you come back to it, downloads in the background and asks you to restart.
 
-1. **Conturi și chei → Claude (contul principal) → Conectează contul.** Se deschide login-ul oficial Claude.
-2. Pentru al doilea cont Claude: **Adaugă profil → Claude Code → Abonament**, apoi **Conectează contul** și te loghezi cu celălalt cont. Fiecare profil își păstrează login-ul separat.
-3. **Codex (contul principal) → Conectează contul** pentru ChatGPT.
-4. Pentru DeepSeek sau MiMo: **Adaugă profil → Claude Code → Endpoint compatibil**, alegi furnizorul, pui numele modelului și cheia.
-5. **Conversație nouă**: alegi proiectul, profilul, modelul și efortul, apoi scrii.
+## First steps
 
-Când un abonament ajunge la limită, alegi alt profil din conversație sau folosești **Continuă în**. Jolty nu schimbă singur conturile: fiecare abonament se folosește doar cu login-ul lui, pentru uz personal, conform condițiilor Anthropic și OpenAI.
+1. **Accounts and keys → Claude (main account) → Connect the account.** The official Claude sign-in opens.
+2. For a second Claude account: **Add profile → Claude Code → Subscription**, then **Connect the account** and sign in with the other account. Each profile keeps its own login.
+3. **Codex (main account) → Connect the account** for ChatGPT.
+4. For DeepSeek or MiMo: **Add profile → Claude Code → Compatible endpoint**, choose the provider, enter the model name and the key.
+5. **New conversation**: choose the project, the profile, the model and the effort, then write.
 
-## Unde se păstrează datele
+Jolty never rotates accounts on its own: each subscription is used only with its own login, for personal use, under the Anthropic and OpenAI terms. Switching accounts at a limit happens only when you click.
 
-În `%APPDATA%\Jolty`: profilurile, conversațiile, consumul și setările. Cheile API sunt criptate cu protecția Windows a contului tău. Dezinstalarea nu le șterge. Din **Setări → Deschide datele Jolty** ajungi direct în acest folder.
+## Where the data lives
 
-Conversațiile făcute cu profilul principal Claude apar și în Claude Code, pentru că folosesc același folder `~/.claude`.
+In `%APPDATA%\Jolty`: profiles, conversations, usage and settings. API keys are encrypted with your Windows account protection. Uninstalling does not delete them. **Settings → Open the Jolty data** takes you straight to this folder.
 
-## Din codul sursă
+Conversations made with the main Claude profile also show up in Claude Code, because they share the same `~/.claude` folder.
 
-Ai nevoie de Node.js 22.
+## From source
+
+You need Node.js 22.
 
 ```bash
 npm ci
-npm run dev        # pornește aplicația în modul de dezvoltare
+npm run dev        # starts the app in development mode
 npm run typecheck
-npm run dist:win   # creează instalatorul în dist/ (pe Windows)
+npm test           # unit tests, including a check that every language has every text
+npm run dist:win   # builds the installer into dist/ (on Windows)
 ```
 
-Instalatorul se construiește automat pe GitHub la fiecare push pe `main`. La un tag `v*` (de exemplu `v0.1.0`), instalatorul se atașează la un Release.
+The end to end and interface tests are described in [test/README.md](test/README.md). They run on mock models, with no real accounts and no cost.
 
-Testele sunt descrise în [test/README.md](test/README.md). Rulează pe modele mock, fără conturi reale și fără costuri.
+Interface texts go through `tr()` from `src/shared/i18n.ts`, with the dictionaries in `src/shared/locales`. `npm run test:i18n` fails when a text is missing in any language or its `{placeholders}` differ.
 
-## Structură
+## Layout
 
-| Folder | Ce conține |
+| Folder | What is inside |
 |---|---|
-| `src/main` | procesul principal: profiluri, motoarele Claude Code și Codex, consum, modele locale, verificarea sistemului |
-| `src/main/engines` | legătura cu Claude Agent SDK și cu `codex app-server` |
-| `src/renderer` | interfața (React) |
-| `src/shared` | tipurile comune și estimarea complexității cererilor |
-| `build` | pictograma și scriptul instalatorului |
-| `test` | testele end-to-end, de interfață și ale aplicației împachetate |
+| `src/main` | the main process: profiles, the Claude Code and Codex engines, usage, local models, system check |
+| `src/main/engines` | the link to the Claude Agent SDK and to `codex app-server` |
+| `src/renderer` | the interface (React) |
+| `src/shared` | shared types, translations, request complexity estimates |
+| `build` | the icon and the installer script |
+| `test` | end to end, interface and packaged app tests |

@@ -1,3 +1,5 @@
+// first: every module after this one builds its texts in the chosen language
+import './lang'
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, Notification, shell } from 'electron'
 import fs from 'fs'
 import os from 'os'
@@ -12,6 +14,7 @@ import * as updater from './updater'
 import * as local from './local'
 import * as store from './store'
 import * as system from './system'
+import { getLang, setLang, tr } from '@shared/i18n'
 
 /** Links from chats and pages open in the browser only when they are plain web links. */
 function openWeb(url: unknown): void {
@@ -29,7 +32,7 @@ async function openLocal(p: string): Promise<void> {
   try {
     if (!fs.statSync(p).isDirectory() && RUNNABLE.test(p.replace(/[. ]+$/, ''))) return shell.showItemInFolder(p)
   } catch {
-    throw new Error(`Nu pot accesa fișierul sau folderul: ${p}`)
+    throw new Error(tr("Nu pot accesa fișierul sau folderul: {p}", { p }))
   }
   const error = await shell.openPath(p)
   if (error) throw new Error(error)
@@ -44,7 +47,7 @@ function localPath(href: string): string {
     // malformed URL or escape: use the text as written
   }
   const p = path.normalize(href.replace(/^\/(?=[a-z]:)/i, '').replace(/:\d+(?::\d+)?$/, ''))
-  if (!path.isAbsolute(p) || p.replace(/^[a-z]:/i, '').includes(':')) throw new Error('Cale locală invalidă')
+  if (!path.isAbsolute(p) || p.replace(/^[a-z]:/i, '').includes(':')) throw new Error(tr("Cale locală invalidă"))
   return p
 }
 
@@ -61,8 +64,8 @@ function send(e: ChatEvent): void {
   win.webContents.send('jolty:event', e)
   // a finished turn while the user is elsewhere: a Windows notification that brings Jolty back
   if (e.type === 'status' && e.status !== 'running' && !win.isFocused() && Notification.isSupported() && !process.env.JOLTY_TEST) {
-    const title = jolty.sessions().find((s) => s.id === e.sessionId)?.title || 'Conversație'
-    const n = new Notification({ title: e.status === 'error' ? 'Jolty: s-a oprit cu o eroare' : 'Jolty: gata', body: title, silent: false })
+    const title = jolty.sessions().find((s) => s.id === e.sessionId)?.title || tr("Conversație")
+    const n = new Notification({ title: e.status === 'error' ? tr("Jolty: s-a oprit cu o eroare") : tr("Jolty: gata"), body: title, silent: false })
     n.on('click', () => {
       win?.show()
       win?.focus()
@@ -182,8 +185,11 @@ function registerIpc(): void {
   handle('codexImport:run', (id: string, cwd?: string, types?: string[]) => jolty.codex.importRun(jolty.profile(id), cwd, types))
 
   handle('app:settings', () => store.loadSettings())
+  // read synchronously by the preload, before the interface builds any text
+  ipcMain.on('app:lang', (e) => (e.returnValue = getLang()))
   handle('app:saveSettings', async (patch) => {
     const saved = store.saveSettings(patch as never)
+    if (patch && typeof patch === 'object' && 'language' in patch) setLang(saved.language)
     if (patch && typeof patch === 'object' && Object.keys(patch).some((k) => k.startsWith('browser'))) await jolty.reconnectBrowser()
     return saved
   })
@@ -223,7 +229,7 @@ function registerIpc(): void {
     if (kind === 'copy') {
       clipboard.write([new ClipboardItem({ 'image/png': new Blob([new Uint8Array(nativeImage.createFromBuffer(bytes).toPNG())], { type: 'image/png' }) })])
     } else if (kind === 'save' && win) {
-      void dialog.showSaveDialog(win, { defaultPath: `${base}.${ext}`, filters: [{ name: 'Imagine', extensions: [ext] }] }).then((r) => {
+      void dialog.showSaveDialog(win, { defaultPath: `${base}.${ext}`, filters: [{ name: tr("Imagine"), extensions: [ext] }] }).then((r) => {
         if (!r.canceled && r.filePath) fs.writeFileSync(r.filePath, bytes)
       })
     } else if (kind === 'open') {

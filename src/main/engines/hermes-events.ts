@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import type { ChatEvent, ChatItem, FileDiff } from '@shared/types'
+import { tr } from '@shared/i18n'
 
 export type AcpObject = Record<string, any>
 export const object = (value: unknown): AcpObject => value && typeof value === 'object' && !Array.isArray(value) ? value as AcpObject : {}
@@ -55,7 +56,7 @@ export class HermesEvents {
       const output = contentText(merged.content) || (typeof merged.rawOutput === 'string' ? merged.rawOutput : merged.rawOutput == null ? '' : JSON.stringify(merged.rawOutput))
       const input = object(merged.rawInput)
       const item: ChatItem = {
-        kind: 'tool', id, name: str(merged.kind) || 'Hermes', title: str(merged.title) || 'Unealtă Hermes',
+        kind: 'tool', id, name: str(merged.kind) || 'Hermes', title: str(merged.title) || tr("Unealtă Hermes"),
         status: merged.status === 'completed' ? 'done' : merged.status === 'failed' ? 'error' : 'running',
         input: merged.rawInput, output, diffs,
         command: merged.kind === 'execute' ? str(input.command) || output.match(/(?:^|\n)\$ (.+)/)?.[1] || merged.savedCommand : undefined

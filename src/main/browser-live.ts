@@ -6,6 +6,7 @@ import path from 'path'
 import type { ChatEvent } from '@shared/types'
 import { browserMode } from './browser'
 import { dataDir } from './store'
+import { tr } from '@shared/i18n'
 
 interface Target {
   id: string
@@ -73,10 +74,10 @@ export class BrowserLive {
   }
 
   private async poll(): Promise<void> {
-    if (browserMode() !== 'own') return this.say('Imaginea live merge cu fereastra proprie Jolty. Alege-o în Setări, la Browser.')
+    if (browserMode() !== 'own') return this.say(tr("Imaginea live merge cu fereastra proprie Jolty. Alege-o în Setări, la Browser."))
     const port = debugPort()
     const page = port ? (await pages(port))[0] : undefined
-    if (!page) return this.say('Browserul Jolty e închis. Se deschide când modelul folosește browserul.')
+    if (!page) return this.say(tr("Browserul Jolty e închis. Se deschide când modelul folosește browserul."))
     this.note = undefined
     if (page.url !== this.url || page.title !== this.title) {
       this.url = page.url

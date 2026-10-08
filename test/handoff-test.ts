@@ -41,7 +41,7 @@ test('tool calls are left out, the files they changed are listed once', () => {
   assert.ok(!p.includes('[Unealtă]'))
   assert.equal(p.split('- src/a.ts').length - 1, 1)
   assert.ok(p.includes('GRAPH_REPORT.md'))
-  assert.ok(p.trimEnd().endsWith('și acum testele\n</mesaj>'))
+  assert.ok(p.trimEnd().endsWith('și acum testele\n</message>'))
 })
 
 test('a short conversation goes over whole, without a separate first request', () => {

@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
 import { EventEmitter } from 'events'
+import { tr } from '@shared/i18n'
 
 export interface RpcRequest {
   id: number | string
@@ -80,7 +81,7 @@ export class JsonRpcProcess extends EventEmitter {
   }
 
   private write(obj: unknown): void {
-    if (this.exited) throw new Error('Codex nu mai rulează')
+    if (this.exited) throw new Error(tr("Codex nu mai rulează"))
     this.proc.stdin.write(JSON.stringify(obj) + '\n')
   }
 
@@ -88,7 +89,7 @@ export class JsonRpcProcess extends EventEmitter {
     const id = this.nextId++
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
-        if (this.pending.delete(id)) reject(new Error(`${method}: fără răspuns de la Codex`))
+        if (this.pending.delete(id)) reject(new Error(tr("{method}: fără răspuns de la Codex", { method })))
       }, timeoutMs)
       this.pending.set(id, {
         method,

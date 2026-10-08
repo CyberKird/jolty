@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 import { loadSettings } from '../store'
 import { JsonRpcProcess } from './jsonrpc'
+import { tr } from '@shared/i18n'
 
 export function hermesHome(): string {
   return process.env.HERMES_HOME || (process.platform === 'win32'
@@ -23,7 +24,7 @@ export function hermesExecutable(): string | undefined {
 
 export function launchHermes(): JsonRpcProcess {
   const exe = hermesExecutable()
-  if (!exe) throw new Error('Hermes ACP nu este instalat. Instalează Hermes sau alege hermes-acp în Setări.')
+  if (!exe) throw new Error(tr("Hermes ACP nu este instalat. Instalează Hermes sau alege hermes-acp în Setări."))
   const env: Record<string, string> = {}
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined && !/^(CLAUDECODE|CLAUDE_.*|ANTHROPIC_.*|CODEX_.*|OPENAI_.*|ELECTRON_RUN_AS_NODE)$/i.test(key)) env[key] = value

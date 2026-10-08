@@ -6,6 +6,7 @@ import { memo, useMemo, type MouseEvent } from 'react'
 import type { FileDiff } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
 import { copyItem, imageItems, itemsAt, showMenu } from './ContextMenu'
+import { tr } from '@shared/i18n'
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -76,7 +77,7 @@ function onLinkClick(e: MouseEvent<HTMLDivElement>): void {
 /** Right-click on a chat message: link actions when on a link, then copy actions. */
 export function messageMenu(e: MouseEvent<HTMLElement>, markdown?: string): void {
   const text = e.currentTarget.innerText.trim()
-  showMenu(e, [...itemsAt(e.target as Element), 'sep', ...(text ? [copyItem('Copiază mesajul', text)] : []), ...(markdown ? [copyItem('Copiază ca Markdown', markdown, FileText)] : [])])
+  showMenu(e, [...itemsAt(e.target as Element), 'sep', ...(text ? [copyItem(tr("Copiază mesajul"), text)] : []), ...(markdown ? [copyItem(tr("Copiază ca Markdown"), markdown, FileText)] : [])])
 }
 
 export function imageMenu(e: MouseEvent<HTMLElement>, image: string, imageName: string): void {
@@ -133,7 +134,7 @@ export function DiffView({ diffs }: { diffs: FileDiff[] }) {
       {diffs.map((d, i) => (
         <div key={i}>
           <div className="diff-file">
-            {d.kind === 'add' ? 'fișier nou · ' : d.kind === 'delete' ? 'șters · ' : ''}
+            {d.kind === 'add' ? tr("fișier nou · ") : d.kind === 'delete' ? tr("șters · ") : ''}
             {d.path}
           </div>
           {d.diff.split('\n').map((line, j) => {

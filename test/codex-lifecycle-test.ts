@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { CodexDriver } from '../src/main/engines/codex'
+import { setLang } from '../src/shared/i18n'
 import type { ChatEvent, SessionMeta } from '../src/shared/types'
+
+// the assertions below read the Romanian messages
+setLang('ro')
 
 function fixture() {
   const events: ChatEvent[] = []

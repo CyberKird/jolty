@@ -1,6 +1,7 @@
 // Estimates how demanding a request is while the user types, and suggests a model tier and an
 // effort level for it. Runs locally on every keystroke, so it is a fast heuristic, not a model call.
 import type { ModelOption, Profile, RateLimitSnapshot } from './types'
+import { tr } from './i18n'
 
 export type Level = 1 | 2 | 3 | 4
 export type Tier = 'fast' | 'balanced' | 'deep'
@@ -13,44 +14,44 @@ export interface Assessment {
   effort: 'low' | 'medium' | 'high' | 'xhigh'
 }
 
-const LABELS: Record<Level, string> = { 1: 'Simplu', 2: 'Mediu', 3: 'Complex', 4: 'Foarte complex' }
+const LABELS: Record<Level, string> = { 1: tr("Simplu"), 2: 'Mediu', 3: 'Complex', 4: 'Foarte complex' }
 
 const HARD: [RegExp, string][] = [
-  [/arhitectur|architect/i, 'arhitectură'],
+  [/arhitectur|architect/i, tr("arhitectură")],
   [/refactor/i, 'refactorizare'],
   [/migr(ea|are|ează|ate|ation)/i, 'migrare'],
-  [/de la zero|from scratch|aplicați[ea] (întreag|complet)|whole app|full app/i, 'construit de la zero'],
-  [/(tot|întreg)(ul)? (proiect|codul|repo)|entire (codebase|project|repo)|all files|toate fișierele/i, 'tot proiectul'],
+  [/de la zero|from scratch|aplicați[ea] (întreag|complet)|whole app|full app/i, tr("construit de la zero")],
+  [/(tot|întreg)(ul)? (proiect|codul|repo)|entire (codebase|project|repo)|all files|toate fișierele/i, tr("tot proiectul")],
   [/securitate|security|vulnerab|exploit|criptare|encrypt/i, 'securitate'],
-  [/performan|optimiz|\blent|\bslow|\blag\b|\bfps\b|memory leak|scurgere de memorie/i, 'performanță'],
-  [/concuren|race condition|deadlock|thread|paralel|async.*bug/i, 'concurență'],
+  [/performan|optimiz|\blent|\bslow|\blag\b|\bfps\b|memory leak|scurgere de memorie/i, tr("performanță")],
+  [/concuren|race condition|deadlock|thread|paralel|async.*bug/i, tr("concurență")],
   [/algoritm|algorithm|matematic|physics|fizic/i, 'algoritmi'],
-  [/multiplayer|netcode|sincroniz|websocket|real-?time|timp real/i, 'timp real / rețea'],
-  [/bază de date|baza de date|database|schema|sql|migration/i, 'bază de date'],
-  [/autentific|authentic|oauth|login|plăți|payment|stripe/i, 'autentificare / plăți'],
-  [/debug|nu (mai )?merge|crash|se blochează|eroare (ciudat|aleator)|intermitent|flaky|heisenbug/i, 'depanare dificilă'],
-  [/design system|sistem de design|animați.{0,20}(complex|3d)|three\.js|shader|webgl/i, 'grafică avansată'],
-  [/test(e|s)? (complet|pentru tot)|coverage|acoperire/i, 'teste extinse'],
-  [/(mai multe|multiple) (fișiere|pagini|module|servicii)|across (files|modules)/i, 'mai multe module'],
-  [/impecabil|fără (nicio )?greșeal|production[- ]ready|gata de producție|enterprise/i, 'calitate de producție']
+  [/multiplayer|netcode|sincroniz|websocket|real-?time|timp real/i, tr("timp real / rețea")],
+  [/bază de date|baza de date|database|schema|sql|migration/i, tr("bază de date")],
+  [/autentific|authentic|oauth|login|plăți|payment|stripe/i, tr("autentificare / plăți")],
+  [/debug|nu (mai )?merge|crash|se blochează|eroare (ciudat|aleator)|intermitent|flaky|heisenbug/i, tr("depanare dificilă")],
+  [/design system|sistem de design|animați.{0,20}(complex|3d)|three\.js|shader|webgl/i, tr("grafică avansată")],
+  [/test(e|s)? (complet|pentru tot)|coverage|acoperire/i, tr("teste extinse")],
+  [/(mai multe|multiple) (fișiere|pagini|module|servicii)|across (files|modules)/i, tr("mai multe module")],
+  [/impecabil|fără (nicio )?greșeal|production[- ]ready|gata de producție|enterprise/i, tr("calitate de producție")]
 ]
 
 const MEDIUM: [RegExp, string][] = [
-  [/adaugă|implementează|creează|construiește|fă (o|un)|scrie (o|un)|\badd\b|implement|create|build/i, 'funcționalitate nouă'],
-  [/\bbug\b|repar|fix|nu funcționează|doesn.t work/i, 'reparație'],
+  [/adaugă|implementează|creează|construiește|fă (o|un)|scrie (o|un)|\badd\b|implement|create|build/i, tr("funcționalitate nouă")],
+  [/\bbug\b|repar|fix|nu funcționează|doesn.t work/i, tr("reparație")],
   [/test/i, 'teste'],
   [/componen|pagin|endpoint|funcți|clas[aă]|modul/i, 'cod nou'],
-  [/stil|design|\bui\b|interfaț|responsive|css/i, 'interfață'],
+  [/stil|design|\bui\b|interfaț|responsive|css/i, tr("interfață")],
   [/integr|conect|\bapi\b/i, 'integrare']
 ]
 
 const EASY: [RegExp, string][] = [
-  [/^\s*(explică|ce face|ce înseamnă|ce e |cum funcționează|what does|explain|what is)/i, 'întrebare'],
-  [/redenume|rename|typo|greșeal[aă] de scriere|comentari|\bcomment/i, 'modificare mică'],
+  [/^\s*(explică|ce face|ce înseamnă|ce e |cum funcționează|what does|explain|what is)/i, tr("întrebare")],
+  [/redenume|rename|typo|greșeal[aă] de scriere|comentari|\bcomment/i, tr("modificare mică")],
   [/formatea|\bformat\b|indent|lint/i, 'formatare'],
   [/tradu|translate/i, 'traducere'],
-  [/o (singură )?linie|one line|rapid|quick|simplu|mică|small/i, 'cerere mică'],
-  [/^\s*(salut|bună|hi|hello|mersi|mulțumesc|thanks|ok)\b/i, 'mesaj scurt']
+  [/o (singură )?linie|one line|rapid|quick|simplu|mică|small/i, tr("cerere mică")],
+  [/^\s*(salut|bună|hi|hello|mersi|mulțumesc|thanks|ok)\b/i, tr("mesaj scurt")]
 ]
 
 export function assess(text: string, images = 0): Assessment | undefined {
@@ -62,7 +63,7 @@ export function assess(text: string, images = 0): Assessment | undefined {
   const words = t.split(/\s+/).filter(Boolean).length
   if (words > 60) {
     score += 1
-    reasons.push('cerere lungă')
+    reasons.push(tr("cerere lungă"))
   }
   if (words > 160) score += 1
 
@@ -96,12 +97,12 @@ export function assess(text: string, images = 0): Assessment | undefined {
   const bullets = t.split('\n').filter((l) => /^\s*([-*•]|\d+[.)])\s+/.test(l)).length
   if (bullets > 3) {
     score += bullets > 7 ? 4 : 3
-    reasons.push(`${bullets} cerințe`)
+    reasons.push(tr("{bullets} cerințe", { bullets }))
   }
   const files = new Set(t.match(/[\w/-]+\.(tsx?|jsx?|py|rs|go|cs|cpp|java|kt|rb|php|css|html|json|md|lua|gd)\b/gi) || []).size
   if (files >= 3) {
     score += 1
-    reasons.push(`${files} fișiere`)
+    reasons.push(tr("{files} fișiere", { files }))
   }
   if (/```/.test(t)) score += 1
   if (/\b(toate|fiecare|complet|totul|everything|every)\b/i.test(t)) score += 1
@@ -137,19 +138,19 @@ const text = (m: ModelOption): string => `${m.id} ${m.label} ${m.description || 
 
 export function capability(profile: Profile, m: ModelOption): Capability {
   const t = text(m)
-  if (profile.local) return { grade: 2, tag: 'local', compare: 'Model local: cel mult la nivelul lui Haiku 4.5 (estimare din catalogul Jolty, nu test propriu).' }
+  if (profile.local) return { grade: 2, tag: 'local', compare: tr("Model local: cel mult la nivelul lui Haiku 4.5 (estimare din catalogul Jolty, nu test propriu).") }
   if (profile.auth === 'endpoint' || profile.engine === 'hermes')
-    return { grade: 3, tag: 'nevalidat', compare: 'API extern: nu există o comparație verificată cu Claude. Bun pentru sarcini medii; la cele grele un model de top e mai sigur.' }
+    return { grade: 3, tag: 'nevalidat', compare: tr("API extern: nu există o comparație verificată cu Claude. Bun pentru sarcini medii; la cele grele un model de top e mai sigur.") }
   if (profile.engine === 'claude') {
-    if (/fable/i.test(t)) return { grade: 5, tag: 'top', compare: 'Cel mai capabil model Claude, pentru sarcinile cele mai grele și lungi.' }
-    if (/opus/i.test(t)) return { grade: 5, tag: 'top', compare: 'Opus: nivel de top pentru cod și sarcini complexe.' }
-    if (/sonnet/i.test(t)) return { grade: 4, tag: 'echilibrat', compare: 'Sonnet: rapid și solid pentru munca de zi cu zi.' }
-    if (/haiku/i.test(t)) return { grade: 2, tag: 'rapid', compare: 'Haiku: cel mai rapid, pentru cereri mici.' }
-    return { grade: 4, tag: 'Claude', compare: 'Model Claude.' }
+    if (/fable/i.test(t)) return { grade: 5, tag: 'top', compare: tr("Cel mai capabil model Claude, pentru sarcinile cele mai grele și lungi.") }
+    if (/opus/i.test(t)) return { grade: 5, tag: 'top', compare: tr("Opus: nivel de top pentru cod și sarcini complexe.") }
+    if (/sonnet/i.test(t)) return { grade: 4, tag: 'echilibrat', compare: tr("Sonnet: rapid și solid pentru munca de zi cu zi.") }
+    if (/haiku/i.test(t)) return { grade: 2, tag: 'rapid', compare: tr("Haiku: cel mai rapid, pentru cereri mici.") }
+    return { grade: 4, tag: 'Claude', compare: tr("Model Claude.") }
   }
-  if (/astra|frontier|most demanding|most capable/i.test(t)) return { grade: 5, tag: 'top', compare: 'Modelul de top Codex: aceeași clasă cu Opus la sarcini grele (după descrierea OpenAI).' }
-  if (/luna|mini|nano|lite|fast|quick/i.test(t)) return { grade: 2, tag: 'rapid', compare: 'Model Codex rapid, pentru cereri mici.' }
-  return { grade: 4, tag: 'echilibrat', compare: 'Model Codex echilibrat, bun pentru cod de zi cu zi.' }
+  if (/astra|frontier|most demanding|most capable/i.test(t)) return { grade: 5, tag: 'top', compare: tr("Modelul de top Codex: aceeași clasă cu Opus la sarcini grele (după descrierea OpenAI).") }
+  if (/luna|mini|nano|lite|fast|quick/i.test(t)) return { grade: 2, tag: 'rapid', compare: tr("Model Codex rapid, pentru cereri mici.") }
+  return { grade: 4, tag: 'echilibrat', compare: tr("Model Codex echilibrat, bun pentru cod de zi cu zi.") }
 }
 
 // ---------------------------------------------------------------------------
@@ -226,21 +227,21 @@ export function recommend(a: Assessment, groups: ModelGroupLite[], current: Pick
   const target = best && { profileId: best.g.profile.id, model: best.m, effort: fitEffort(best.m, a.effort), profileName: best.g.profile.name }
 
   if (cur.grade < need) {
-    if (!target) return { kind: 'weak', text: `Sarcină ${a.label.toLowerCase()}: niciun model conectat nu e la nivelul ideal. Merge, dar verifică atent rezultatul.` }
-    return { kind: 'weak', text: `${cm.label} e prea slab pentru o sarcină ${a.label.toLowerCase()}.`, target }
+    if (!target) return { kind: 'weak', text: tr("Sarcină {toLowerCase}: niciun model conectat nu e la nivelul ideal. Merge, dar verifică atent rezultatul.", { toLowerCase: a.label.toLowerCase() }) }
+    return { kind: 'weak', text: tr("{label} e prea slab pentru o sarcină {toLowerCase}.", { label: cm.label, toLowerCase: a.label.toLowerCase() }), target }
   }
   // the model fits, but an explicitly low effort would hold it back on hard work
   const chosen = current.effort
   if (a.level >= 3 && chosen && cm.efforts?.length && EFFORTS.indexOf(chosen) < EFFORTS.indexOf(a.effort)) {
     const e = fitEffort(cm, a.effort)
-    if (e && e !== chosen) return { kind: 'weak', text: `Efortul ${chosen} e mic pentru o sarcină ${a.label.toLowerCase()}.`, target: { profileId: cg.profile.id, model: cm, effort: e, profileName: cg.profile.name } }
+    if (e && e !== chosen) return { kind: 'weak', text: tr("Efortul {chosen} e mic pentru o sarcină {toLowerCase}.", { chosen, toLowerCase: a.label.toLowerCase() }), target: { profileId: cg.profile.id, model: cm, effort: e, profileName: cg.profile.name } }
   }
   if (curLoad >= 90 && target && target.profileId !== cg.profile.id) {
-    return { kind: 'limit', text: `${cg.profile.name} e la ${Math.round(curLoad)}% din limită.`, target }
+    return { kind: 'limit', text: tr("{name} e la {round}% din limită.", { name: cg.profile.name, round: Math.round(curLoad) }), target }
   }
   // clear overkill on a small request: say it once, quietly
   if (a.level === 1 && (cur.grade === 5 || (chosen && EFFORTS.indexOf(chosen) >= EFFORTS.indexOf('xhigh'))) && target && target.profileId === cg.profile.id) {
-    if (target.model.id !== cm.id || (target.effort && target.effort !== chosen)) return { kind: 'overkill', text: 'Cerere mică: ajunge un model mai ușor și îți cruță limita.', target }
+    if (target.model.id !== cm.id || (target.effort && target.effort !== chosen)) return { kind: 'overkill', text: tr("Cerere mică: ajunge un model mai ușor și îți cruță limita."), target }
   }
   return none
 }

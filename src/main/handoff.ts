@@ -21,8 +21,8 @@ export function digest(items: ChatItem[]): { first?: string; recent: string; dro
   const files = new Set<string>()
   const turns: string[] = []
   for (const it of items) {
-    if (it.kind === 'user' && it.text.trim()) turns.push(`[Utilizator]\n${head(it.text.trim(), PER_REQUEST)}`)
-    else if (it.kind === 'assistant' && it.text.trim()) turns.push(`[Asistent]\n${tail(it.text.trim(), PER_ANSWER)}`)
+    if (it.kind === 'user' && it.text.trim()) turns.push(`[User]\n${head(it.text.trim(), PER_REQUEST)}`)
+    else if (it.kind === 'assistant' && it.text.trim()) turns.push(`[Assistant]\n${tail(it.text.trim(), PER_ANSWER)}`)
     else if (it.kind === 'tool' && it.status !== 'error') for (const d of it.diffs || []) files.add(d.path)
   }
   const kept: string[] = []
@@ -49,26 +49,26 @@ export interface HandoffSource {
 export function handoffPrompt(src: HandoffSource, items: ChatItem[], git: string, opts: { next?: string; graph?: boolean } = {}): string {
   const d = digest(items)
   return [
-    `Preiei o conversație începută în ${src.engine}${src.profile ? ` (profilul „${src.profile}”)` : ''}, în același proiect: ${src.cwd}`,
-    'Ai mai jos un rezumat compact, nu tot istoricul: cererea inițială, ultimele mesaje, fișierele deja modificate și starea din git.',
+    `You are taking over a conversation started in ${src.engine}${src.profile ? ` (profile "${src.profile}")` : ''}, in the same project: ${src.cwd}`,
+    'Below is a compact brief, not the whole history: the original request, the latest messages, the files already changed and the git state.',
     '',
-    ...(d.first ? ['Cererea inițială:', '<cerere>', d.first, '</cerere>', ''] : []),
-    `Ultimele mesaje${d.dropped ? ` (${d.dropped} mai vechi lăsate deoparte)` : ''}:`,
-    '<conversatie>',
-    d.recent || '(gol)',
-    '</conversatie>',
+    ...(d.first ? ['Original request:', '<request>', d.first, '</request>', ''] : []),
+    `Latest messages${d.dropped ? ` (${d.dropped} older ones left out)` : ''}:`,
+    '<conversation>',
+    d.recent || '(empty)',
+    '</conversation>',
     '',
-    ...(d.files.length ? ['Fișiere modificate în conversație:', ...d.files.slice(0, 40).map((f) => `- ${f}`), ''] : []),
-    'Starea curentă din git:',
+    ...(d.files.length ? ['Files changed in the conversation:', ...d.files.slice(0, 40).map((f) => `- ${f}`), ''] : []),
+    'Current git state:',
     '<git>',
-    head(git, GIT_BUDGET) || '(nu e un repository git sau nu există modificări)',
+    head(git, GIT_BUDGET) || '(not a git repository, or no changes)',
     '</git>',
     '',
-    ...(opts.graph ? ['Proiectul are o hartă a codului în graphify-out/GRAPH_REPORT.md: când ai nevoie de structură, citește-o pe ea în loc să cauți prin tot codul.', ''] : []),
-    'Nu reciti fișierele doar ca să te orientezi: deschide-le numai când ai nevoie de ele pentru ce urmează. Nu repeta munca deja făcută.',
+    ...(opts.graph ? ['The project has a code map in graphify-out/GRAPH_REPORT.md: when you need its structure, read that instead of searching the whole codebase.', ''] : []),
+    'Do not re-read files just to get oriented: open them only when you need them for what comes next. Do not redo work already done.',
     ...(opts.next
-      ? ['Răspunde la mesajul de mai jos.', '', '<mesaj>', opts.next, '</mesaj>']
-      : ['Continuă de unde a rămas conversația. Răspunde întâi pe scurt cu ce ai înțeles că urmează.'])
+      ? ['Answer the message below, in the language it is written in.', '', '<message>', opts.next, '</message>']
+      : ['Continue where the conversation left off. First say briefly what you understand comes next.'])
   ].join('\n')
 }
 

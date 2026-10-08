@@ -8,6 +8,7 @@
 import { app, Notification } from 'electron'
 import electronUpdater from 'electron-updater'
 import type { UpdateStatus } from '@shared/types'
+import { tr } from '@shared/i18n'
 
 const { autoUpdater } = electronUpdater
 
@@ -47,12 +48,12 @@ export function init(onChange: (s: UpdateStatus) => void, onFocus: () => void): 
   autoUpdater.on('update-downloaded', (i) => {
     set({ state: 'ready', version: i.version, percent: 100, checkedAt: Date.now() })
     if (Notification.isSupported()) {
-      const n = new Notification({ title: `Jolty ${i.version} e gata`, body: 'Repornește ca să actualizezi. Altfel se instalează când închizi aplicația.' })
+      const n = new Notification({ title: tr("Jolty {version} e gata", { version: i.version }), body: tr("Repornește ca să actualizezi. Altfel se instalează când închizi aplicația.") })
       n.on('click', () => focus())
       n.show()
     }
   })
-  autoUpdater.on('error', (err) => set({ state: 'error', error: clean(err?.message) || 'verificarea a eșuat', checkedAt: Date.now() }))
+  autoUpdater.on('error', (err) => set({ state: 'error', error: clean(err?.message) || tr("verificarea a eșuat"), checkedAt: Date.now() }))
   if (!app.isPackaged || process.env.JOLTY_TEST) return
   setTimeout(() => void check(), 15000)
   setInterval(() => void check(), EVERY)

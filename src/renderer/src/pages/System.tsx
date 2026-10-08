@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, XCircle } from 'lucide
 import { useCallback, useEffect, useState } from 'react'
 import type { SystemCheck } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
+import { tr } from '@shared/i18n'
 
 export function SystemPage() {
   const { toast } = useStore()
@@ -18,14 +19,14 @@ export function SystemPage() {
     <div className="page">
       <div className="page-inner narrow">
         <div className="row">
-          <h1 className="page-title">Verificare sistem</h1>
+          <h1 className="page-title">{tr("Verificare sistem")}</h1>
           <div className="spacer" />
           <button className="btn small" onClick={() => void load()}>
-            <RefreshCw size={14} /> Verifică din nou
+            <RefreshCw size={14} /> {tr("Verifică din nou")}
           </button>
         </div>
         <p className="lead">
-          Jolty vine cu Claude Code și Codex incluse. Aici vezi dacă PC-ul are tot ce le mai trebuie și instalezi ce lipsește cu un clic.
+         {tr("Jolty vine cu Claude Code și Codex incluse. Aici vezi dacă PC-ul are tot ce le mai trebuie și instalezi ce lipsește cu un clic.")}
         </p>
         <div className="panel">
           {!checks && (
@@ -35,7 +36,7 @@ export function SystemPage() {
           )}
           {checks && (
             <div className="row" style={{ marginBottom: 6 }}>
-              {bad === 0 ? <span className="tag good">Totul e pregătit</span> : <span className="tag warn">{bad} lucruri de rezolvat</span>}
+              {bad === 0 ? <span className="tag good">{tr("Totul e pregătit")}</span> : <span className="tag warn">{bad} {tr("lucruri de rezolvat")}</span>}
             </div>
           )}
           {checks?.map((c) => (
@@ -55,7 +56,7 @@ export function SystemPage() {
                   onClick={async () => {
                     try {
                       await api.system.fix(c.id)
-                      toast('Pornit. Apasă „Verifică din nou” după ce termină.')
+                      toast(tr("Pornit. Apasă „Verifică din nou” după ce termină."))
                     } catch (err) {
                       toast(errMsg(err), true)
                     }

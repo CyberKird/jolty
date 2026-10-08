@@ -5,6 +5,7 @@ import type { ChatItem, PermissionDecision, PermissionRequest } from '@shared/ty
 import { splitQuote } from '@shared/quote'
 import { ReplyButton } from './Quote'
 import { DiffView, imageMenu, Markdown, messageMenu, plainDashes } from './Rich'
+import { tr } from '@shared/i18n'
 
 /** A chat image: click opens a large preview, right-click offers copy, save and open. */
 function ChatImage({ src, name }: { src: string; name: string }) {
@@ -22,7 +23,7 @@ function ChatImage({ src, name }: { src: string; name: string }) {
       <img className="chat-image" src={src} alt={name} title={name} onClick={() => setBig(true)} onContextMenu={(e) => imageMenu(e, src, name)} />
       {big &&
         createPortal(
-          <div className="lightbox" role="dialog" aria-label="Previzualizare imagine" onClick={() => setBig(false)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation() }}>
+          <div className="lightbox" role="dialog" aria-label={tr("Previzualizare imagine")} onClick={() => setBig(false)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation() }}>
             <img src={src} alt={name} onClick={(e) => e.stopPropagation()} onContextMenu={(e) => imageMenu(e, src, name)} />
           </div>,
           document.body
@@ -48,15 +49,15 @@ export function toolKind(name: string): ToolKind {
 }
 
 const VERB: Record<ToolKind, string> = {
-  run: 'Rulează',
-  read: 'Citește',
-  edit: 'Editează',
-  write: 'Creează',
-  search: 'Caută',
+  run: tr("Rulează"),
+  read: tr("Citește"),
+  edit: tr("Editează"),
+  write: tr("Creează"),
+  search: tr("Caută"),
   web: 'Web',
   agent: 'Subagent',
   plan: 'Plan',
-  other: 'Unealtă'
+  other: tr("Unealtă")
 }
 
 export function toolVerb(name: string): string {
@@ -117,13 +118,13 @@ function Reasoning({ text, live }: { text: string; live: boolean }) {
   if (live)
     return (
       <div className="reasoning reasoning-live" aria-live="polite">
-        <div className="reasoning-head">Se gândește…</div>
+        <div className="reasoning-head">{tr("Se gândește…")}</div>
         {text.trim() && <div className="body">{plainDashes(text.length > 1500 ? `…${text.slice(-1500)}` : text)}</div>}
       </div>
     )
   return (
     <details className="reasoning" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
-      <summary style={{ color: live ? 'var(--volt)' : undefined }}>{live ? `Se gândește…${text.trim() ? ` ${open ? '−' : '+'}` : ''}` : `Raționament ${open ? '−' : '+'}`}</summary>
+      <summary style={{ color: live ? 'var(--volt)' : undefined }}>{live ? tr("Se gândește…{v0}", { v0: text.trim() ? ` ${open ? '−' : '+'}` : '' }) : tr("Raționament {v0}", { v0: open ? '−' : '+' })}</summary>
       {text && <div className="body">{plainDashes(text)}</div>}
     </details>
   )
@@ -172,9 +173,9 @@ export const MessageItem = memo(function MessageItem({ item, live }: { item: Cha
 export function PermissionCard({ req, onDecide }: { req: PermissionRequest; onDecide: (d: PermissionDecision) => void }) {
   const isPlan = Boolean(req.plan)
   return (
-    <div className="permission" role="alertdialog" aria-label="Cerere de aprobare">
+    <div className="permission" role="alertdialog" aria-label={tr("Cerere de aprobare")}>
       <div className="row" style={{ alignItems: 'baseline', marginBottom: 6 }}>
-        <div className="permission-title">{isPlan ? 'Aprobi planul?' : 'Permiți?'}</div>
+        <div className="permission-title">{isPlan ? 'Aprobi planul?' : tr("Permiți?")}</div>
         <span className="tag volt">{toolVerb(req.toolName)}</span>
       </div>
       <div className="target">{req.title.replace(/^\$ /, '$ ')}</div>
@@ -193,16 +194,16 @@ export function PermissionCard({ req, onDecide }: { req: PermissionRequest; onDe
       )}
       <div className="row">
         <button className="btn primary" onClick={() => onDecide('allow')}>
-          {isPlan ? 'Aprobă planul' : 'Permite'}
+          {isPlan ? tr("Aprobă planul") : 'Permite'}
         </button>
         {req.canAllowForSession && (
           <button className="btn" onClick={() => onDecide('allowSession')}>
-            {req.sessionLabel || 'Mereu în sesiune'}
+            {req.sessionLabel || tr("Mereu în sesiune")}
           </button>
         )}
         <div className="spacer" />
         <button className="btn ghost danger" onClick={() => onDecide('deny')}>
-          Refuză
+         {tr("Refuză")}
         </button>
       </div>
     </div>

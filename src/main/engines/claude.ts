@@ -39,6 +39,7 @@ import { getSecret, loadSettings, profileDir, saveSettings } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
+import { tr } from '@shared/i18n'
 
 type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
 let sdkModule: Promise<SdkModule> | undefined
@@ -168,7 +169,7 @@ async function withProbe<T>(profile: Profile, fn: (q: Query) => Promise<T>, time
     return await Promise.race([
       fn(q),
       new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error('Claude Code nu a răspuns la timp')), timeoutMs)
+        timer = setTimeout(() => reject(new Error(tr("Claude Code nu a răspuns la timp"))), timeoutMs)
       })
     ])
   } finally {
@@ -389,7 +390,7 @@ class ClaudeSession implements EngineSession {
           this.meta.model = this.meta.model || m.model
           this.host.emit({ type: 'meta', sessionId: sid, meta: this.meta })
         } else if (m.subtype === 'api_retry') {
-          this.notice('Serverul nu răspunde, reîncerc...', 'warn')
+          this.notice(tr("Serverul nu răspunde, reîncerc..."), 'warn')
         }
         return
       }
@@ -459,7 +460,7 @@ class ClaudeSession implements EngineSession {
           }
         })
         if (inStream) this.blockN += blocks.length
-        if (m.error) this.notice(`Eroare Claude: ${m.error}`, 'error')
+        if (m.error) this.notice(tr("Eroare Claude: {error}", { error: m.error }), 'error')
         return
       }
       case 'user': {
@@ -519,10 +520,10 @@ class ClaudeSession implements EngineSession {
         this.host.recordLimits({
           profileId: this.profile.id,
           windows: [...this.limitWindows.values()],
-          note: info.status === 'rejected' ? 'Limita abonamentului a fost atinsă' : undefined,
+          note: info.status === 'rejected' ? tr("Limita abonamentului a fost atinsă") : undefined,
           updatedAt: Date.now()
         })
-        if (info.status === 'rejected') this.notice('Ai atins limita abonamentului Claude pentru acest profil.', 'error')
+        if (info.status === 'rejected') this.notice(tr("Ai atins limita abonamentului Claude pentru acest profil."), 'error')
         return
       }
       default:
@@ -561,7 +562,7 @@ class ClaudeSession implements EngineSession {
         diffs: claudeToolDiffs(toolName, input),
         plan: toolName === 'ExitPlanMode' ? String(input.plan ?? '') : undefined,
         canAllowForSession: Boolean(site || opts.suggestions?.length),
-        sessionLabel: site ? `Mereu pe ${site}` : undefined
+        sessionLabel: site ? tr("Mereu pe {site}", { site }) : undefined
       }
     })
     return new Promise((resolve) => {
@@ -569,7 +570,7 @@ class ClaudeSession implements EngineSession {
       opts.signal.addEventListener('abort', () => {
         if (!this.pending.delete(id)) return
         this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId: id })
-        resolve({ behavior: 'deny', message: 'Cererea a fost anulată.' })
+        resolve({ behavior: 'deny', message: tr("Cererea a fost anulată.") })
       })
     })
   }
@@ -579,7 +580,7 @@ class ClaudeSession implements EngineSession {
     if (!p) return
     this.pending.delete(requestId)
     this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId })
-    if (decision === 'deny') p.resolve({ behavior: 'deny', message: 'Utilizatorul a refuzat această acțiune.' })
+    if (decision === 'deny') p.resolve({ behavior: 'deny', message: tr("Utilizatorul a refuzat această acțiune.") })
     else if (decision === 'allowSession' && p.site) {
       this.trustedSites.add(p.site)
       p.resolve({ behavior: 'allow', updatedInput: p.input })
@@ -596,7 +597,7 @@ class ClaudeSession implements EngineSession {
     // sent during a turn: a long command would hold the message until it ends, so it moves to the
     // background (Ctrl+B in Claude Code) and keeps running while the model reads the message
     if (mid && (await this.q?.backgroundTasks().catch(() => false))) {
-      this.notice('Comanda care rula continuă în fundal; mesajul tău intră acum.', 'info')
+      this.notice(tr("Comanda care rula continuă în fundal; mesajul tău intră acum."), 'info')
     }
   }
 
@@ -605,10 +606,10 @@ class ClaudeSession implements EngineSession {
     await this.ensureStarted()
     // only a dry run reports what changes, so the real rewind returns the preview's numbers
     const preview = await this.q!.rewindFiles(cliId, { dryRun: true })
-    if (!preview.canRewind) throw new Error(preview.error || 'Nu există o copie a fișierelor pentru acest mesaj (de exemplu, a fost trimis înainte de actualizarea Jolty).')
+    if (!preview.canRewind) throw new Error(preview.error || tr("Nu există o copie a fișierelor pentru acest mesaj (de exemplu, a fost trimis înainte de actualizarea Jolty)."))
     if (!dryRun) {
       const r = await this.q!.rewindFiles(cliId)
-      if (!r.canRewind) throw new Error(r.error || 'Claude Code nu a putut readuce fișierele.')
+      if (!r.canRewind) throw new Error(r.error || tr("Claude Code nu a putut readuce fișierele."))
     }
     return { files: preview.filesChanged || [], insertions: preview.insertions || 0, deletions: preview.deletions || 0 }
   }
@@ -661,7 +662,7 @@ class ClaudeSession implements EngineSession {
 
   async close(): Promise<void> {
     for (const [id, p] of this.pending) {
-      p.resolve({ behavior: 'deny', message: 'Sesiunea a fost închisă.' })
+      p.resolve({ behavior: 'deny', message: tr("Sesiunea a fost închisă.") })
       this.pending.delete(id)
     }
     this.input.close()
@@ -675,7 +676,7 @@ class ClaudeSession implements EngineSession {
 // ---------------------------------------------------------------------------
 function runCli(profile: Profile, args: string[], timeoutMs = 30000): Promise<{ code: number; stdout: string; stderr: string }> {
   const exe = claudeExecutable()
-  if (!exe) return Promise.reject(new Error('Nu găsesc Claude Code (binarul inclus lipsește)'))
+  if (!exe) return Promise.reject(new Error(tr("Nu găsesc Claude Code (binarul inclus lipsește)")))
   prepareProfileDir(profile)
   return new Promise((resolve) => {
     execFile(exe, args, { env: claudeEnv(profile), timeout: timeoutMs, windowsHide: true }, (err, stdout, stderr) => {
@@ -724,7 +725,7 @@ function announceNewModels(labels: string[]): void {
   if (!fresh.length) return
   saveSettings({ seenModels: [...seen, ...fresh] })
   if (Notification.isSupported() && !process.env.JOLTY_TEST) {
-    new Notification({ title: `Model nou în Jolty: ${fresh.join(', ')}`, body: 'Îl găsești în lista de modele din chat.' }).show()
+    new Notification({ title: tr("Model nou în Jolty: {join}", { join: fresh.join(', ') }), body: tr("Îl găsești în lista de modele din chat.") }).show()
   }
 }
 
@@ -738,7 +739,7 @@ export class ClaudeDriver implements EngineDriver {
   async status(profile: Profile): Promise<AccountStatus> {
     if (profile.auth !== 'subscription') {
       const has = Boolean(getSecret(profile.id))
-      return { profileId: profile.id, loggedIn: has, detail: profile.auth === 'endpoint' ? profile.baseUrl : 'Cheie API Anthropic', error: has ? undefined : 'Lipsește cheia' }
+      return { profileId: profile.id, loggedIn: has, detail: profile.auth === 'endpoint' ? profile.baseUrl : tr("Cheie API Anthropic"), error: has ? undefined : tr("Lipsește cheia") }
     }
     try {
       const r = await runCli(profile, ['auth', 'status', '--json'])
@@ -758,7 +759,7 @@ export class ClaudeDriver implements EngineDriver {
   async login(profile: Profile): Promise<AccountStatus> {
     if (profile.auth !== 'subscription') return this.status(profile)
     const exe = claudeExecutable()
-    if (!exe) throw new Error('Nu găsesc Claude Code (binarul inclus lipsește)')
+    if (!exe) throw new Error(tr("Nu găsesc Claude Code (binarul inclus lipsește)"))
     prepareProfileDir(profile)
     openLoginWindow(exe, ['auth', 'login', '--claudeai'], claudeEnv(profile))
     return this.status(profile)
@@ -863,10 +864,10 @@ export class ClaudeDriver implements EngineDriver {
     if (!raw) {
       const mins = direct?.cooldownMs ? Math.ceil(direct.cooldownMs / 60000) : 0
       const note = mins
-        ? `Limitele se pot citi din nou în ~${mins} min (serverul a limitat cererile)`
+        ? tr("Limitele se pot citi din nou în ~{mins} min (serverul a limitat cererile)", { mins })
         : usage?.rate_limits_available
-          ? 'Limitele nu au putut fi citite acum'
-          : 'Contul nu raportează limite (cheie API sau endpoint propriu)'
+          ? tr("Limitele nu au putut fi citite acum")
+          : tr("Contul nu raportează limite (cheie API sau endpoint propriu)")
       return { profileId: profile.id, windows: [], note, updatedAt: Date.now() }
     }
     const windows: LimitWindow[] = []
@@ -877,7 +878,7 @@ export class ClaudeDriver implements EngineDriver {
       windows.push({ label: LIMIT_LABELS[key], usedPercent: used, resetsAt: toMs(w.resets_at) })
     }
     if (!windows.length) {
-      return { profileId: profile.id, windows: [], note: 'Limitele nu au putut fi citite acum', updatedAt: Date.now() }
+      return { profileId: profile.id, windows: [], note: tr("Limitele nu au putut fi citite acum"), updatedAt: Date.now() }
     }
     const plan = usage?.subscription_type ?? direct?.plan
     return { profileId: profile.id, windows, note: plan ? `Plan: ${plan}` : undefined, updatedAt: Date.now() }
@@ -897,10 +898,10 @@ export class ClaudeDriver implements EngineDriver {
       for await (const m of q) {
         if (m.type === 'result') {
           if (m.subtype === 'success' && m.result.trim()) return m.result.trim()
-          throw new Error(`descrierea a eșuat (${m.subtype})`)
+          throw new Error(tr("descrierea a eșuat ({subtype})", { subtype: m.subtype }))
         }
       }
-      throw new Error('descrierea nu a primit răspuns')
+      throw new Error(tr("descrierea nu a primit răspuns"))
     } finally {
       clearTimeout(timer)
       q.close()

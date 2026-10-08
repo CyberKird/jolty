@@ -162,7 +162,7 @@ a {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  border-right: 1px solid var(--line);
+  border-inline-end: 1px solid var(--line);
   background: var(--s1);
 }
 .brand-name {
@@ -194,7 +194,7 @@ a {
   background: transparent;
   color: var(--grey);
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   font-size: 14px;
   transition: color 0.15s, background 0.15s;
 }
@@ -210,7 +210,7 @@ a {
   color: var(--volt);
 }
 .nav-item .count {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--label);
   font-size: 10px;
   color: var(--grey-2);
@@ -228,14 +228,14 @@ a {
 }
 .search svg {
   position: absolute;
-  left: 10px;
+  inset-inline-start: 10px;
   top: 9px;
   color: var(--grey-2);
 }
 .search input {
   width: 100%;
   height: 32px;
-  padding: 0 10px 0 30px;
+  padding-block: 0 0; padding-inline: 30px 10px;
   border: 1px solid var(--line);
   background: var(--black);
   outline: none;
@@ -276,7 +276,7 @@ a {
   background: transparent;
   color: var(--grey);
   cursor: pointer;
-  text-align: left;
+  text-align: start;
 }
 .session-item:hover {
   background: rgba(255, 255, 255, 0.03);
@@ -552,7 +552,7 @@ a {
   height: 28px;
   padding: 0 11px;
   border: 0;
-  border-right: 1px solid var(--line);
+  border-inline-end: 1px solid var(--line);
   background: transparent;
   color: var(--grey);
   cursor: pointer;
@@ -564,7 +564,7 @@ a {
   transition: color 0.15s, background 0.15s;
 }
 .segmented button:last-child {
-  border-right: 0;
+  border-inline-end: 0;
 }
 .segmented button:hover {
   color: var(--white);
@@ -580,7 +580,7 @@ a {
   align-items: center;
   gap: 7px;
   height: 30px;
-  padding: 0 26px 0 10px;
+  padding-block: 0 0; padding-inline: 10px 26px;
   border: 1px solid var(--line-2);
   color: var(--grey);
   font-size: 13px;
@@ -606,11 +606,11 @@ a {
 .pill-select::after {
   content: '';
   position: absolute;
-  right: 11px;
+  inset-inline-end: 11px;
   top: 11px;
   width: 5px;
   height: 5px;
-  border-right: 1px solid var(--grey);
+  border-inline-end: 1px solid var(--grey);
   border-bottom: 1px solid var(--grey);
   transform: rotate(45deg);
   pointer-events: none;
@@ -626,7 +626,7 @@ a {
 
 .toast-stack {
   position: fixed;
-  right: 20px;
+  inset-inline-end: 20px;
   bottom: 20px;
   z-index: 60;
   display: flex;
@@ -637,7 +637,7 @@ a {
   max-width: 440px;
   padding: 14px 16px;
   border: 1px solid var(--line-2);
-  border-left: 0;
+  border-inline-start: 0;
   background: var(--s3);
   box-shadow: inset 2px 0 0 var(--volt), 0 20px 40px rgba(0, 0, 0, 0.5);
   animation: slide-in 0.3s var(--ease);
@@ -802,7 +802,7 @@ a {
 .reply-btn {
   position: absolute;
   top: 4px;
-  right: 4px;
+  inset-inline-end: 4px;
   display: grid;
   place-items: center;
   width: 24px;
@@ -815,8 +815,8 @@ a {
   transition: opacity 0.15s;
 }
 .msg-user .reply-btn {
-  right: auto;
-  left: -32px;
+  inset-inline-end: auto;
+  inset-inline-start: -32px;
 }
 .msg-user:hover .reply-btn,
 .msg-assistant:hover .reply-btn,
@@ -829,8 +829,8 @@ a {
 }
 .msg-quote {
   margin-bottom: 8px;
-  padding: 4px 0 4px 10px;
-  border-left: 2px solid var(--volt);
+  padding-block: 4px 4px; padding-inline: 10px 0;
+  border-inline-start: 2px solid var(--volt);
   color: var(--grey);
   font-size: 13px;
   display: -webkit-box;
@@ -844,7 +844,7 @@ a {
   gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
-  border-left: 2px solid var(--volt);
+  border-inline-start: 2px solid var(--volt);
   color: var(--grey);
   font-size: 12.5px;
 }
@@ -932,8 +932,8 @@ a {
 }
 .reasoning .body {
   margin-top: 8px;
-  padding-left: 14px;
-  border-left: 1px solid var(--line-2);
+  padding-inline-start: 14px;
+  border-inline-start: 1px solid var(--line-2);
   white-space: pre-wrap;
 }
 .reasoning-head {
@@ -950,7 +950,7 @@ a {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  border-left-color: var(--volt-line);
+  border-inline-start-color: var(--volt-line);
   mask-image: linear-gradient(to bottom, transparent, #000 40px);
 }
 
@@ -976,7 +976,7 @@ a {
   background: transparent;
   color: var(--grey);
   cursor: pointer;
-  text-align: left;
+  text-align: start;
 }
 .tool-head:hover {
   background: rgba(255, 255, 255, 0.025);
@@ -1102,7 +1102,7 @@ a {
 }
 .md ul,
 .md ol {
-  padding-left: 20px;
+  padding-inline-start: 20px;
   margin: 0 0 12px;
 }
 .md li {
@@ -1151,8 +1151,8 @@ a {
 }
 .md blockquote {
   margin: 12px 0;
-  padding: 2px 0 2px 14px;
-  border-left: 1px solid var(--volt);
+  padding-block: 2px 2px; padding-inline: 14px 0;
+  border-inline-start: 1px solid var(--volt);
   color: var(--grey);
 }
 .md a {
@@ -1268,7 +1268,7 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 10px 10px 14px;
+  padding-block: 10px 10px; padding-inline: 14px 10px;
   border-top: 1px solid var(--line);
   flex-wrap: wrap;
 }
@@ -1284,7 +1284,7 @@ a {
   border: 1px solid var(--line-2);
 }
 .attachment-image { width: 68px; }
-.attachment-file { display: flex; align-items: center; gap: 7px; max-width: min(190px, 100%); padding: 0 25px 0 10px; color: var(--grey); box-sizing: border-box; }
+.attachment-file { display: flex; align-items: center; gap: 7px; max-width: min(190px, 100%); padding-block: 0 0; padding-inline: 10px 25px; color: var(--grey); box-sizing: border-box; }
 .attachment-note { padding: 6px 16px 0; color: var(--warning); font-size: 11px; }
 .message-files { display: flex; flex-wrap: wrap; gap: 5px; }
 .message-files span { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 6px; border: 1px solid var(--line-2); color: var(--grey); font-size: 11px; }
@@ -1297,7 +1297,7 @@ a {
 .attachment button {
   position: absolute;
   top: 2px;
-  right: 2px;
+  inset-inline-end: 2px;
   width: 18px;
   height: 18px;
   border: 0;
@@ -1359,7 +1359,7 @@ a {
   background: rgba(255, 255, 255, 0.015);
   color: var(--grey);
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   font-size: 14.5px;
   transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
@@ -1375,13 +1375,13 @@ a {
 }
 .start:hover svg {
   color: var(--volt);
-  transform: translateX(3px);
+  transform: translateX(calc(3px * var(--dir)));
 }
 
 /* ------------------------------------------------------------------ live panel */
 .live {
   width: 372px;
-  border-left: 1px solid var(--line);
+  border-inline-start: 1px solid var(--line);
   background: var(--s1);
   display: flex;
   flex-direction: column;
@@ -1648,7 +1648,7 @@ a {
   height: 26px;
   padding: 0 10px;
   border: 1px solid var(--line);
-  border-right: 0;
+  border-inline-end: 0;
   background: transparent;
   color: var(--grey-2);
   font-family: var(--code);
@@ -1656,7 +1656,7 @@ a {
   cursor: pointer;
 }
 .file-tab:last-child {
-  border-right: 1px solid var(--line);
+  border-inline-end: 1px solid var(--line);
 }
 .file-tab.on {
   color: var(--white);
@@ -1728,7 +1728,7 @@ a {
   font-family: var(--display);
   font-size: 24px;
   line-height: 1;
-  margin-right: 6px;
+  margin-inline-end: 6px;
 }
 .meter-track {
   height: 3px;
@@ -1786,7 +1786,7 @@ a {
   font-size: 14px;
 }
 .table th {
-  text-align: left;
+  text-align: start;
   font-family: var(--label);
   font-size: 9.5px;
   letter-spacing: 0.14em;
@@ -1805,7 +1805,7 @@ a {
   border-bottom: 0;
 }
 .num {
-  text-align: right;
+  text-align: end;
 }
 
 .progress {
@@ -1853,7 +1853,7 @@ a {
 @keyframes slide-in {
   from {
     opacity: 0;
-    transform: translateX(16px);
+    transform: translateX(calc(16px * var(--dir)));
   }
   to {
     opacity: 1;
@@ -1888,7 +1888,7 @@ a {
   align-items: center;
   gap: 10px;
   min-height: 34px;
-  padding: 6px 12px 6px 16px;
+  padding-block: 6px 6px; padding-inline: 16px 12px;
   border-top: 1px solid var(--line);
   font-size: 12.5px;
   color: var(--grey);
@@ -1937,7 +1937,7 @@ a {
 .advice-note {
   color: var(--warning);
   max-width: 50%;
-  text-align: right;
+  text-align: end;
 }
 .advice-apply {
   display: inline-flex;
@@ -1973,7 +1973,7 @@ a {
   gap: 7px;
   height: 30px;
   max-width: 280px;
-  padding: 0 9px 0 10px;
+  padding-block: 0 0; padding-inline: 10px 9px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--white);
@@ -2009,7 +2009,7 @@ a {
 }
 .picker-pop {
   position: absolute;
-  left: 0;
+  inset-inline-start: 0;
   bottom: calc(100% + 8px);
   z-index: 40;
   width: 340px;
@@ -2044,7 +2044,7 @@ a {
   color: var(--grey-2);
 }
 .picker-engine {
-  margin-left: auto;
+  margin-inline-start: auto;
   flex: none;
 }
 .picker-empty {
@@ -2061,7 +2061,7 @@ a {
   border: 0;
   background: transparent;
   color: var(--grey);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 .picker-opt:hover,
@@ -2075,7 +2075,7 @@ a {
 }
 .picker-opt > svg {
   flex: none;
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--volt);
 }
 .picker-opt-text {
@@ -2144,7 +2144,7 @@ a {
   padding: 0 12px 6px;
 }
 .meter-refresh {
-  margin-left: auto;
+  margin-inline-start: auto;
   display: grid;
   place-items: center;
   width: 22px;
@@ -2174,7 +2174,7 @@ a {
   border: 0;
   background: transparent;
   color: var(--grey);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 .meter-row:hover {
@@ -2189,15 +2189,21 @@ a {
   font-size: 12.5px;
 }
 .meter-24h {
-  margin-left: auto;
+  margin-inline-start: auto;
   flex: none;
   font-family: var(--label);
   font-size: 9.5px;
   color: var(--grey-2);
 }
+/* every language on one line: "5 Stunden" is longer than "5 ore" */
+.meter-limit-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .meter-limit {
   display: grid;
-  grid-template-columns: 44px 1fr 32px;
+  grid-template-columns: 60px 1fr 32px;
   align-items: center;
   gap: 8px;
   font-family: var(--label);
@@ -2216,7 +2222,7 @@ a {
   transition: width 0.4s var(--ease);
 }
 .meter-pct {
-  text-align: right;
+  text-align: end;
   color: var(--grey);
 }
 
@@ -2233,7 +2239,7 @@ a {
 }
 .live-resize {
   position: absolute;
-  left: -3px;
+  inset-inline-start: -3px;
   top: 0;
   bottom: 0;
   width: 6px;
@@ -2321,7 +2327,7 @@ a {
   border: 0;
   background: transparent;
   color: var(--white);
-  text-align: left;
+  text-align: start;
   font-family: var(--code);
   font-size: 12px;
   cursor: pointer;
@@ -2362,7 +2368,7 @@ a {
 .picker-key {
   flex: none;
   min-width: 18px;
-  margin-left: auto;
+  margin-inline-start: auto;
   padding: 1px 4px;
   border: 1px solid var(--line-2);
   font-family: var(--label);
@@ -2371,7 +2377,7 @@ a {
   color: var(--grey-2);
 }
 .picker-opt.on > .picker-key {
-  margin-left: 4px;
+  margin-inline-start: 4px;
 }
 .picker-btn.mode-auto {
   color: var(--volt);
@@ -2472,7 +2478,7 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: 6px;
+  margin-inline-start: 6px;
 }
 .bolt {
   fill: var(--volt);
@@ -2517,7 +2523,7 @@ a {
 @keyframes live-in {
   from {
     opacity: 0;
-    transform: translateX(14px);
+    transform: translateX(calc(14px * var(--dir)));
   }
   to {
     opacity: 1;
@@ -2548,7 +2554,7 @@ a {
   place-items: center;
   width: 24px;
   height: 24px;
-  margin: -4px -6px -4px 8px;
+  margin-block: -4px -4px; margin-inline: 8px -6px;
   border: 0;
   background: transparent;
   color: var(--grey);
@@ -2562,12 +2568,12 @@ a {
     display: grid;
   }
   .live-label .volt {
-    margin-left: auto;
+    margin-inline-start: auto;
   }
   .live {
     position: absolute;
     top: 36px;
-    right: 0;
+    inset-inline-end: 0;
     bottom: 0;
     z-index: 30;
     box-shadow: -18px 0 48px rgba(0, 0, 0, 0.55);
@@ -2631,7 +2637,7 @@ a {
 }
 .chrome-toggle.chevron {
   padding: 0 5px;
-  margin-left: -6px;
+  margin-inline-start: -6px;
 }
 .chrome-toggle.on {
   color: var(--volt);
@@ -2644,7 +2650,7 @@ a {
 }
 .steps {
   margin: 0 0 14px;
-  padding-left: 18px;
+  padding-inline-start: 18px;
   display: grid;
   gap: 8px;
 }
@@ -2680,7 +2686,7 @@ a {
   border: 0;
   background: transparent;
   color: var(--grey);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 .tasks-bar:hover {
@@ -2734,7 +2740,7 @@ a {
   display: inline-block;
   width: 6px;
   height: 6px;
-  margin-right: 8px;
+  margin-inline-end: 8px;
   background: var(--volt);
   vertical-align: 1px;
   animation: blink-soft 1.2s steps(2) infinite;
@@ -2781,8 +2787,8 @@ a {
 }
 .mentions {
   position: absolute;
-  left: -1px;
-  right: -1px;
+  inset-inline-start: -1px;
+  inset-inline-end: -1px;
   bottom: calc(100% + 6px);
   z-index: 35;
   border: 1px solid var(--line-2);
@@ -2800,7 +2806,7 @@ a {
   border: 0;
   background: transparent;
   color: var(--grey);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 .mention.on {
@@ -2849,10 +2855,10 @@ a {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
-  text-align: right;
+  text-align: end;
 }
 .meter-time .pct {
-  margin-right: 0;
+  margin-inline-end: 0;
 }
 .queue-title { display: flex; gap: 6px; align-items: center; color: var(--volt); font: 10px var(--label); text-transform: uppercase; letter-spacing: 0.08em; padding: 1px 2px; }
 .queue-title span { color: var(--grey-2); }
@@ -3013,7 +3019,7 @@ a {
   background: transparent;
   color: var(--grey);
   font-size: 13px;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 .ctx-item svg {
@@ -3050,4 +3056,34 @@ a {
   height: 1px;
   margin: 5px 4px;
   background: var(--line);
+}
+
+/* Right-to-left languages (Arabic). The layout mirrors through logical properties; this flips what
+   cannot (arrows, slide directions) and keeps code, diffs, commands and paths left to right. */
+:root {
+  --dir: 1;
+}
+[dir='rtl'] {
+  --dir: -1;
+  /* the label and headline fonts have no Arabic: a monospace fallback would set every letter apart */
+  --label: 'Barlow', 'Segoe UI', Tahoma, sans-serif;
+  --display: 'Barlow', 'Segoe UI', Tahoma, sans-serif;
+}
+[dir='rtl'] :is(.lucide-arrow-right, .lucide-arrow-left, .lucide-chevron-right, .lucide-chevron-left, .lucide-panel-left-close, .lucide-panel-left-open, .lucide-panel-right-close, .lucide-panel-right-open) {
+  scale: -1 1;
+}
+[dir='rtl'] :is(pre, .terminal, .code-live, .change-diff, .diff-line, .state-detail.code, .browser-live-url, .filemap-dir, .change-path) {
+  direction: ltr;
+  text-align: left;
+}
+[dir='rtl'] code {
+  unicode-bidi: isolate;
+}
+/* Arabic letters join: any letter spacing (the small uppercase labels use it) breaks the words apart */
+[dir='rtl'] * {
+  letter-spacing: normal !important;
+}
+/* the wordmark keeps its own face in every language */
+[dir='rtl'] .brand-name {
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
 }

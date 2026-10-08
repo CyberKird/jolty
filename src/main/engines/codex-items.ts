@@ -4,6 +4,7 @@ import os from 'os'
 import path from 'path'
 import type { Attachment, ChatItem, FileDiff, PlanStep } from '@shared/types'
 import { truncate } from './format'
+import { tr } from '@shared/i18n'
 
 type Any = any
 
@@ -44,7 +45,7 @@ export function codexItem(item: Any, liveOutput?: string): ChatItem | undefined 
       }
     case 'fileChange': {
       const diffs: FileDiff[] = (item.changes || []).map((c: Any) => ({ path: c.path, kind: c.kind?.type || 'update', diff: truncate(c.diff || '', 30000) }))
-      return { kind: 'tool', id: item.id, name: 'Edit', title: `Editează ${diffs.map((d) => d.path).join(', ')}`, status: toolStatus(item.status), diffs }
+      return { kind: 'tool', id: item.id, name: 'Edit', title: tr("Editează {join}", { join: diffs.map((d) => d.path).join(', ') }), status: toolStatus(item.status), diffs }
     }
     case 'mcpToolCall':
       return {
@@ -57,9 +58,9 @@ export function codexItem(item: Any, liveOutput?: string): ChatItem | undefined 
         output: item.error ? String(item.error.message ?? JSON.stringify(item.error)) : item.result ? truncate(JSON.stringify(item.result.content ?? item.result, null, 2)) : undefined
       }
     case 'webSearch':
-      return { kind: 'tool', id: item.id, name: 'WebSearch', title: `Caută pe web: ${item.query ?? ''}`, status: 'done' }
+      return { kind: 'tool', id: item.id, name: 'WebSearch', title: tr("Caută pe web: {v0}", { v0: item.query ?? '' }), status: 'done' }
     case 'contextCompaction':
-      return { kind: 'notice', id: item.id, text: 'Conversația a fost compactată ca să încapă în context.', level: 'info' }
+      return { kind: 'notice', id: item.id, text: tr("Conversația a fost compactată ca să încapă în context."), level: 'info' }
     default:
       return undefined
   }

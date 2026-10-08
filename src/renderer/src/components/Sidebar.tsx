@@ -2,6 +2,7 @@ import { BarChart3, Cpu, Download, FolderOpen, KeyRound, Link, MessageSquare, Pl
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { copyItem, pathItems, showMenu } from './ContextMenu'
+import { tr } from '@shared/i18n'
 
 function money(n: number, currency = 'USD'): string {
   const v = n.toFixed(2)
@@ -18,13 +19,13 @@ function UsageMeter() {
   // a profile with empty windows but a note (rate-limited probe) stays visible so the row does not vanish
   const rows = profiles.filter((p) => limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id])
   return (
-    <section className="meter" aria-label="Consum live">
+    <section className="meter" aria-label={tr("Consum live")}>
       <div className="meter-head">
         <span className={`dot ${running ? 'running' : ''}`} style={{ background: running ? 'var(--volt)' : 'var(--grey-2)' }} />
-        <span className="label">Consum live</span>
+        <span className="label">{tr("Consum live")}</span>
         <button
           className="meter-refresh"
-          title="Actualizează limitele acum"
+          title={tr("Actualizează limitele acum")}
           onClick={() => {
             for (const p of profiles) refreshLimitsSoon(p, true)
             void loadUsage()
@@ -34,26 +35,26 @@ function UsageMeter() {
         </button>
       </div>
       <div className="meter-list">
-        {rows.length === 0 && <div className="faint small meter-empty">Nimic folosit în ultimele 24 h.</div>}
+        {rows.length === 0 && <div className="faint small meter-empty">{tr("Nimic folosit în ultimele 24 h.")}</div>}
         {rows.map((p) => {
           const s = spend[p.id]
           return (
-            <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title="Deschide Consum">
+            <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title={tr("Deschide Consum")}>
             <span className="meter-name">
               <span className="dot" style={{ width: 6, height: 6, background: p.color }} />
               <span className="ellipsis">{p.name}</span>
               {s?.tokens ? (
-                <span className="meter-24h" title="Ultimele 24 de ore">
+                <span className="meter-24h" title={tr("Ultimele 24 de ore")}>
                   {fmtTokens(s.tokens)}
                   {s.costUsd ? ` · ${fmtUsd(s.costUsd)}` : ''}
                 </span>
               ) : null}
             </span>
             {balances[p.id] && (
-              <span className="meter-balance" title={`Actualizat ${timeAgo(balances[p.id].updatedAt)}`}>
+              <span className="meter-balance" title={tr("Actualizat {timeAgo}", { timeAgo: timeAgo(balances[p.id].updatedAt) })}>
                 {balances[p.id].amount !== undefined ? (
                   <>
-                    <span className="meter-limit-label">Rămas</span>
+                    <span className="meter-limit-label">{tr("Rămas")}</span>
                     <b className={balances[p.id].amount! <= 1 ? 'low' : ''}>{money(balances[p.id].amount!, balances[p.id].currency)}</b>
                   </>
                 ) : null}
@@ -61,8 +62,8 @@ function UsageMeter() {
               </span>
             )}
             {limits[p.id]?.windows.slice(0, 2).map((w) => (
-              <span className="meter-limit" key={w.label} title={`${w.label}: ${Math.round(w.usedPercent)}% folosit, ${resetIn(w.resetsAt)}`}>
-                <span className="meter-limit-label">{w.label}</span>
+              <span className="meter-limit" key={w.label} title={tr("{label}: {pct}% folosit, {reset}", { label: tr(w.label), pct: Math.round(w.usedPercent), reset: resetIn(w.resetsAt) })}>
+                <span className="meter-limit-label">{tr(w.label)}</span>
                 <span className="track">
                   <span className="fill" style={{ width: `${Math.min(100, w.usedPercent)}%`, background: levelColor(w.usedPercent) }} />
                 </span>
@@ -79,12 +80,12 @@ function UsageMeter() {
 }
 
 const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
-  { id: 'import', label: 'Importă sesiuni', icon: Download },
-  { id: 'accounts', label: 'Conturi și chei', icon: KeyRound },
-  { id: 'local', label: 'Modele locale', icon: Cpu },
-  { id: 'usage', label: 'Consum', icon: BarChart3 },
-  { id: 'system', label: 'Verificare sistem', icon: ShieldCheck },
-  { id: 'settings', label: 'Setări', icon: Settings }
+  { id: 'import', label: tr("Importă sesiuni"), icon: Download },
+  { id: 'accounts', label: tr("Conturi și chei"), icon: KeyRound },
+  { id: 'local', label: tr("Modele locale"), icon: Cpu },
+  { id: 'usage', label: tr("Consum"), icon: BarChart3 },
+  { id: 'system', label: tr("Verificare sistem"), icon: ShieldCheck },
+  { id: 'settings', label: tr("Setări"), icon: Settings }
 ]
 
 export function Sidebar() {
@@ -101,13 +102,13 @@ export function Sidebar() {
     await api.sessions.remove(id)
     if (activeId === id) await openSession(undefined)
     await loadSessions()
-    toast('Conversația a fost scoasă din Jolty')
+    toast(tr("Conversația a fost scoasă din Jolty"))
   }
 
   return (
-    <nav className="sidebar" aria-label="Navigare">
+    <nav className="sidebar" aria-label={tr("Navigare")}>
       <button className="btn primary new-chat" onClick={() => void openSession(undefined)}>
-        <Plus size={14} strokeWidth={2.5} /> Conversație nouă
+        <Plus size={14} strokeWidth={2.5} /> {tr("Conversație nouă")}
       </button>
       <div className="nav">
         {NAV.map((n) => (
@@ -117,15 +118,15 @@ export function Sidebar() {
         ))}
       </div>
       <div className="side-head">
-        <span className="label">Conversații</span>
+        <span className="label">{tr("Conversații")}</span>
         <span className="label">{sessions.length}</span>
       </div>
       <div className="search">
         <Search size={13} />
-        <input placeholder="Caută" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Caută conversații" />
+        <input placeholder={tr("Caută conversații")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={tr("Caută conversații")} />
       </div>
       <div className="session-list">
-        {groups.length === 0 && <div className="faint small" style={{ padding: '6px 12px' }}>Nicio conversație încă.</div>}
+        {groups.length === 0 && <div className="faint small" style={{ padding: '6px 12px' }}>{tr("Nicio conversație încă.")}</div>}
         {groups.map(([cwd, list]) => (
           <div className="session-group" key={cwd}>
             <div className="session-group-title" title={cwd} onContextMenu={(e) => showMenu(e, pathItems(cwd))}>
@@ -140,13 +141,13 @@ export function Sidebar() {
                   onClick={() => void openSession(s.id)}
                   onContextMenu={(e) =>
                     showMenu(e, [
-                      { label: 'Deschide conversația', icon: MessageSquare, run: () => void openSession(s.id) },
-                      copyItem('Copiază titlul', s.title),
+                      { label: tr("Deschide conversația"), icon: MessageSquare, run: () => void openSession(s.id) },
+                      copyItem(tr("Copiază titlul"), s.title),
                       'sep',
-                      { label: 'Arată folderul în Explorer', icon: FolderOpen, run: () => void api.app.revealPath(s.cwd) },
-                      copyItem('Copiază calea folderului', s.cwd, Link),
+                      { label: tr("Arată folderul în Explorer"), icon: FolderOpen, run: () => void api.app.revealPath(s.cwd) },
+                      copyItem(tr("Copiază calea folderului"), s.cwd, Link),
                       'sep',
-                      { label: 'Scoate din Jolty', icon: Trash2, run: () => void removeSession(s.id) }
+                      { label: tr("Scoate din Jolty"), icon: Trash2, run: () => void removeSession(s.id) }
                     ])
                   }
                   role="button"
@@ -157,7 +158,7 @@ export function Sidebar() {
                   <span className="when">{timeAgo(s.updatedAt)}</span>
                   <button
                     className="del"
-                    title="Scoate din Jolty (sesiunea rămâne în Claude Code / Codex)"
+                    title={tr("Scoate din Jolty (sesiunea rămâne în Claude Code / Codex)")}
                     onClick={(e) => {
                       e.stopPropagation()
                       void removeSession(s.id)

@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { create } from 'zustand'
 import type { EditAction } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
+import { tr } from '@shared/i18n'
 
 export interface MenuItem {
   label: string
@@ -50,17 +51,17 @@ const editItem = (label: string, action: EditAction, icon: LucideIcon, hint: str
 /** Items for a file or folder on disk. */
 export function pathItems(p: string): Entry[] {
   return [
-    { label: 'Deschide', icon: FileCode, run: () => void api.app.openLocal(p).catch((err) => useStore.getState().toast(errMsg(err), true)) },
-    { label: 'Arată în Explorer', icon: FolderOpen, run: () => void api.app.revealPath(p) },
-    copyItem('Copiază calea', p, Link)
+    { label: tr("Deschide"), icon: FileCode, run: () => void api.app.openLocal(p).catch((err) => useStore.getState().toast(errMsg(err), true)) },
+    { label: tr("Arată în Explorer"), icon: FolderOpen, run: () => void api.app.revealPath(p) },
+    copyItem(tr("Copiază calea"), p, Link)
   ]
 }
 
 export function imageItems(image: string, name: string): Entry[] {
   return [
-    { label: 'Copiază imaginea', icon: Copy, run: () => void api.app.image('copy', image, name) },
-    { label: 'Salvează imaginea...', icon: Download, run: () => void api.app.image('save', image, name) },
-    { label: 'Deschide imaginea', icon: ImageIcon, run: () => void api.app.image('open', image, name) }
+    { label: tr("Copiază imaginea"), icon: Copy, run: () => void api.app.image('copy', image, name) },
+    { label: tr("Salvează imaginea..."), icon: Download, run: () => void api.app.image('save', image, name) },
+    { label: tr("Deschide imaginea"), icon: ImageIcon, run: () => void api.app.image('open', image, name) }
   ]
 }
 
@@ -74,20 +75,20 @@ export function itemsAt(el: Element | null): Entry[] {
   const field = el?.closest<HTMLInputElement | HTMLTextAreaElement>('textarea, input[type="text"], input[type="search"], input[type="password"], input:not([type])')
   if (field && !field.disabled) {
     const picked = field.selectionStart !== field.selectionEnd
-    if (field.readOnly) return picked ? [editItem('Copiază', 'copy', Copy, 'Ctrl+C'), editItem('Selectează tot', 'selectAll', TextSelect, 'Ctrl+A')] : [editItem('Selectează tot', 'selectAll', TextSelect, 'Ctrl+A')]
+    if (field.readOnly) return picked ? [editItem(tr("Copiază"), 'copy', Copy, 'Ctrl+C'), editItem(tr("Selectează tot"), 'selectAll', TextSelect, 'Ctrl+A')] : [editItem(tr("Selectează tot"), 'selectAll', TextSelect, 'Ctrl+A')]
     return [
-      editItem('Anulează', 'undo', Undo2, 'Ctrl+Z'),
+      editItem(tr("Anulează"), 'undo', Undo2, 'Ctrl+Z'),
       editItem('Reface', 'redo', Redo2, 'Ctrl+Y'),
       'sep',
       editItem('Taie', 'cut', Scissors, 'Ctrl+X', !picked),
-      editItem('Copiază', 'copy', Copy, 'Ctrl+C', !picked),
-      editItem('Lipește', 'paste', ClipboardPaste, 'Ctrl+V'),
-      editItem('Selectează tot', 'selectAll', TextSelect, 'Ctrl+A')
+      editItem(tr("Copiază"), 'copy', Copy, 'Ctrl+C', !picked),
+      editItem(tr("Lipește"), 'paste', ClipboardPaste, 'Ctrl+V'),
+      editItem(tr("Selectează tot"), 'selectAll', TextSelect, 'Ctrl+A')
     ]
   }
   const href = el?.closest('a[href]')?.getAttribute('href') || ''
   if (/^https?:\/\//i.test(href)) {
-    group({ label: 'Deschide linkul', icon: ExternalLink, run: () => void api.app.openLink(href) }, copyItem('Copiază linkul', href, Link))
+    group({ label: tr("Deschide linkul"), icon: ExternalLink, run: () => void api.app.openLink(href) }, copyItem(tr("Copiază linkul"), href, Link))
   } else if (href && !href.startsWith('#')) {
     let p = href.replace(/^\/(?=[a-z]:[\\/])/i, '')
     try { p = decodeURIComponent(p) } catch { /* Keep literal percent signs. */ }
@@ -96,9 +97,9 @@ export function itemsAt(el: Element | null): Entry[] {
   const path = el?.closest<HTMLElement>('[data-path]')?.dataset.path
   if (path) group(...pathItems(path))
   const selected = window.getSelection()?.toString().trim()
-  if (selected) group(copyItem('Copiază', selected))
+  if (selected) group(copyItem(tr("Copiază"), selected))
   const code = el?.closest('pre')
-  if (code && !selected) group(copyItem('Copiază codul', code.innerText.trim(), FileCode))
+  if (code && !selected) group(copyItem(tr("Copiază codul"), code.innerText.trim(), FileCode))
   return out
 }
 

@@ -3,12 +3,13 @@ import { useEffect, useState } from 'react'
 import type { AccountStatus, AuthKind, EngineKind, Profile, ProfileInput } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
+import { tr } from '@shared/i18n'
 
 const AUTH_LABEL: Record<AuthKind, string> = {
   subscription: 'Abonament',
-  apiKey: 'Cheie API',
-  endpoint: 'Endpoint compatibil',
-  existing: 'Configurația existentă'
+  apiKey: tr("Cheie API"),
+  endpoint: tr("Endpoint compatibil"),
+  existing: tr("Configurația existentă")
 }
 
 const PRESETS = [
@@ -17,25 +18,25 @@ const PRESETS = [
   { name: 'Kimi (Moonshot)', baseUrl: 'https://api.moonshot.ai/anthropic', models: 'kimi-k2-turbo-preview', vision: false },
   { name: 'GLM (Z.ai)', baseUrl: 'https://api.z.ai/api/anthropic', models: 'glm-4.6', vision: false },
   { name: 'Xiaomi MiMo', baseUrl: 'https://api.xiaomimimo.com/anthropic', models: '', vision: false },
-  { name: 'LiteLLM local', baseUrl: 'http://127.0.0.1:4000', models: 'deepseek', vision: false },
-  { name: 'Personalizat', baseUrl: '', models: '', vision: false }
+  { name: tr("LiteLLM local"), baseUrl: 'http://127.0.0.1:4000', models: 'deepseek', vision: false },
+  { name: tr("Personalizat"), baseUrl: '', models: '', vision: false }
 ]
 
 export function LimitMeters({ profileId, compact }: { profileId: string; compact?: boolean }) {
   const snap = useStore((s) => s.limits[profileId])
-  if (!snap) return compact ? null : <div className="faint small">Limitele apar după prima conversație sau la „Actualizează”.</div>
+  if (!snap) return compact ? null : <div className="faint small">{tr("Limitele apar după prima conversație sau la „Actualizează”.")}</div>
   return (
     <div>
       {snap.windows.map((w) => (
         <div className="meter" key={w.label}>
           <div className="meter-head">
-            <span>{w.label}</span>
+            <span>{tr(w.label)}</span>
             <span className="muted meter-time" title={resetIn(w.resetsAt)}>
               <span className="pct" style={{ color: 'var(--white)' }}>{Math.round(w.usedPercent)}%</span>
-              <span>Reset: {resetAt(w.resetsAt)}</span>
+              <span>{tr("Reset:")} {resetAt(w.resetsAt)}</span>
             </span>
           </div>
-          <div className="meter-track" role="meter" aria-valuenow={Math.round(w.usedPercent)} aria-valuemin={0} aria-valuemax={100} aria-label={w.label}>
+          <div className="meter-track" role="meter" aria-valuenow={Math.round(w.usedPercent)} aria-valuemin={0} aria-valuemax={100} aria-label={tr(w.label)}>
             <div className="meter-fill" style={{ width: `${Math.min(100, w.usedPercent)}%`, background: levelColor(w.usedPercent) }} />
           </div>
         </div>
@@ -66,7 +67,7 @@ function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void
       const s = await api.profiles.login(profile.id)
       setStatus(s)
       if (profile.engine === 'claude' && profile.auth === 'subscription' && !s.loggedIn) {
-        toast('Termină autentificarea în fereastra care s-a deschis. Verific automat...')
+        toast(tr("Termină autentificarea în fereastra care s-a deschis. Verific automat..."))
         for (let i = 0; i < 100; i++) {
           await new Promise((r) => setTimeout(r, 3000))
           if ((await refresh()).loggedIn) {
@@ -94,16 +95,16 @@ function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void
           </div>
           <div className="faint small">
             {ENGINE_LABEL[profile.engine]} · {AUTH_LABEL[profile.auth]}
-            {profile.local ? ' · pe PC-ul tău' : ''}
+            {profile.local ? tr(" · pe PC-ul tău") : ''}
           </div>
         </div>
         <div className="spacer" />
         {status === undefined ? (
-          <span className="tag">se verifică...</span>
+          <span className="tag">{tr("se verifică...")}</span>
         ) : status.loggedIn ? (
-          <span className="tag good">conectat</span>
+          <span className="tag good">{tr("conectat")}</span>
         ) : (
-          <span className="tag warn">neconectat</span>
+          <span className="tag warn">{tr("neconectat")}</span>
         )}
       </div>
       {status?.loggedIn && (status.email || status.plan || status.detail) && (
@@ -118,10 +119,10 @@ function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void
       )}
       {profile.auth === 'subscription' && <LimitMeters profileId={profile.id} />}
       <div className="row wrap" style={{ marginTop: 12 }}>
-        {profile.auth === 'existing' && <button className="btn small" onClick={() => void refresh()}><RefreshCw size={14} /> Verifică Hermes</button>}
+        {profile.auth === 'existing' && <button className="btn small" onClick={() => void refresh()}><RefreshCw size={14} /> {tr("Verifică Hermes")}</button>}
         {!status?.loggedIn && profile.auth !== 'endpoint' && profile.auth !== 'existing' && (
           <button className="btn primary small" disabled={busy} onClick={() => void login()}>
-            <LogIn size={14} /> {profile.auth === 'subscription' ? 'Conectează contul' : 'Conectează cheia'}
+            <LogIn size={14} /> {profile.auth === 'subscription' ? tr("Conectează contul") : tr("Conectează cheia")}
           </button>
         )}
         {status?.loggedIn && profile.auth === 'subscription' && (
@@ -137,24 +138,24 @@ function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void
               }
             }}
           >
-            <RefreshCw size={14} /> Actualizează limitele
+            <RefreshCw size={14} /> {tr("Actualizează limitele")}
           </button>
         )}
         <div className="spacer" />
-        <button className="btn ghost small icon" title="Editează" onClick={onEdit}>
+        <button className="btn ghost small icon" title={tr("Editează profilul")} onClick={onEdit}>
           <Pencil size={14} />
         </button>
         {status?.loggedIn && profile.auth === 'subscription' && (
-          <button className="btn ghost small icon" title="Deconectează" onClick={async () => setStatus(await api.profiles.logout(profile.id))}>
+          <button className="btn ghost small icon" title={tr("Deconectează")} onClick={async () => setStatus(await api.profiles.logout(profile.id))}>
             <LogOut size={14} />
           </button>
         )}
         {!profile.isDefaultDir || profile.auth !== 'subscription' ? (
           <button
             className="btn ghost small icon danger"
-            title="Șterge profilul"
+            title={tr("Șterge profilul")}
             onClick={async () => {
-              if (!confirm(`Ștergi profilul „${profile.name}”? Conversațiile lui din Jolty dispar; cele din Claude Code / Codex rămân.`)) return
+              if (!confirm(tr("Ștergi profilul „{name}”? Conversațiile lui din Jolty dispar; cele din Claude Code / Codex rămân.", { name: profile.name }))) return
               try {
                 await api.profiles.remove(profile.id)
                 await loadProfiles()
@@ -205,7 +206,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
 
   const save = async (): Promise<void> => {
     const input: ProfileInput = {
-      name: name || (auth === 'subscription' ? `${ENGINE_LABEL[engine]} (cont nou)` : `${ENGINE_LABEL[engine]} · ${AUTH_LABEL[auth]}`),
+      name: name || (auth === 'subscription' ? tr("{engine} (cont nou)", { engine: ENGINE_LABEL[engine] }) : `${ENGINE_LABEL[engine]} · ${AUTH_LABEL[auth]}`),
       engine,
       auth,
       baseUrl: auth === 'endpoint' ? baseUrl : undefined,
@@ -219,7 +220,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
       if (profile) await api.profiles.update(profile.id, { name: input.name, baseUrl: input.baseUrl, models: input.models, vision: input.vision, price: input.price, ...(secret ? { secret } : {}), ...(isMiMo && cookie ? { cookie } : {}) })
       else await api.profiles.create(input)
       await loadProfiles()
-      toast(editing ? 'Profil salvat' : 'Profil adăugat')
+      toast(editing ? tr("Profil salvat") : tr("Profil adăugat"))
       onClose()
     } catch (err) {
       toast(errMsg(err), true)
@@ -229,11 +230,11 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
   return (
     <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-        <h2 className="modal-title">{editing ? 'Editează profilul' : 'Profil nou'}</h2>
+        <h2 className="modal-title">{editing ? tr("Editează profilul") : tr("Profil nou")}</h2>
         {!editing && (
           <>
             <div className="field">
-              <label>Motor</label>
+              <label>{tr("Motor")}</label>
               <div className="segmented">
                 {(['claude', 'codex', 'hermes'] as EngineKind[]).map((e) => (
                   <button
@@ -251,7 +252,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
               </div>
             </div>
             <div className="field">
-              <label>Autentificare</label>
+              <label>{tr("Autentificare")}</label>
               <div className="segmented">
                 {(['subscription', 'apiKey', 'endpoint', 'existing'] as AuthKind[])
                   .filter((a) => engine === 'hermes' ? a === 'existing' : a !== 'existing' && (engine === 'claude' || a !== 'endpoint'))
@@ -262,26 +263,26 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
                   ))}
               </div>
               <div className="hint">
-                {auth === 'existing' && 'Folosește modelul, cheia, memoria și skill-urile deja configurate în Hermes. Nu trebuie să copiezi cheia aici.'}
+                {auth === 'existing' && tr("Folosește modelul, cheia, memoria și skill-urile deja configurate în Hermes. Nu trebuie să copiezi cheia aici.")}
                 {auth === 'subscription' &&
                   (engine === 'claude'
-                    ? 'Te conectezi cu contul tău claude.ai în fereastra oficială Claude Code. Fiecare profil are login-ul lui, deci poți avea mai multe conturi.'
-                    : 'Te conectezi cu contul ChatGPT în browser, prin login-ul oficial Codex.')}
-                {auth === 'apiKey' && (engine === 'claude' ? 'Cheie din console.anthropic.com. Plătești la token.' : 'Cheie din platform.openai.com. Plătești la token.')}
-                {auth === 'endpoint' && 'Orice API compatibil Anthropic (DeepSeek, OpenRouter, Kimi, GLM, LiteLLM). Claude Code rulează cu modelul lor.'}
+                    ? tr("Te conectezi cu contul tău claude.ai în fereastra oficială Claude Code. Fiecare profil are login-ul lui, deci poți avea mai multe conturi.")
+                    : tr("Te conectezi cu contul ChatGPT în browser, prin login-ul oficial Codex."))}
+                {auth === 'apiKey' && (engine === 'claude' ? tr("Cheie din console.anthropic.com. Plătești la token.") : tr("Cheie din platform.openai.com. Plătești la token."))}
+                {auth === 'endpoint' && tr("Orice API compatibil Anthropic (DeepSeek, OpenRouter, Kimi, GLM, LiteLLM). Claude Code rulează cu modelul lor.")}
               </div>
             </div>
           </>
         )}
         <div className="field">
-          <label>Nume</label>
-          <input className="input" value={name} placeholder="ex. Claude personal, Claude firmă" onChange={(e) => setName(e.target.value)} />
+          <label>{tr("Nume")}</label>
+          <input className="input" value={name} placeholder={tr("ex. Claude personal, Claude firmă")} onChange={(e) => setName(e.target.value)} />
         </div>
         {auth === 'endpoint' && (
           <>
             {!editing && (
               <div className="field">
-                <label>Furnizor</label>
+                <label>{tr("Furnizor")}</label>
                 <div className="row wrap" style={{ gap: 6 }}>
                   {PRESETS.map((p) => (
                     <button
@@ -303,26 +304,26 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
               </div>
             )}
             <div className="field">
-              <label>Adresa API (base URL)</label>
+              <label>{tr("Adresa API (base URL)")}</label>
               <input className="input mono" value={baseUrl} placeholder="https://..." onChange={(e) => setBaseUrl(e.target.value)} />
             </div>
             <div className="field">
-              <label>Modele (separate prin virgulă, primul e implicit)</label>
+              <label>{tr("Modele (separate prin virgulă, primul e implicit)")}</label>
               <input className="input mono" value={models} onChange={(e) => setModels(e.target.value)} />
-              <div className="hint">Verifică numele exacte în documentația furnizorului.</div>
+              <div className="hint">{tr("Verifică numele exacte în documentația furnizorului.")}</div>
             </div>
             <label className="row small" style={{ marginBottom: 14, cursor: 'pointer' }}>
-              <input type="checkbox" checked={vision} onChange={(e) => setVision(e.target.checked)} /> Modelul vede imagini (altfel Jolty i le descrie)
+              <input type="checkbox" checked={vision} onChange={(e) => setVision(e.target.checked)} /> {tr("Modelul vede imagini (altfel Jolty i le descrie)")}
             </label>
             {!profile?.local && (
               <div className="field">
-                <label>Preț în $ pe 1 milion de tokeni (opțional)</label>
+                <label>{tr("Preț în $ pe 1 milion de tokeni (opțional)")}</label>
                 <div className="row" style={{ gap: 8 }}>
                   {(
                     [
                       ['input', 'Intrare'],
-                      ['output', 'Ieșire'],
-                      ['cacheRead', 'Din cache']
+                      ['output', tr("Ieșire")],
+                      ['cacheRead', tr("Din cache")]
                     ] as const
                   ).map(([k, label]) => (
                     <input
@@ -336,7 +337,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
                     />
                   ))}
                 </div>
-                <div className="hint">Copiază-le din pagina de prețuri a furnizorului. Fără ele, Jolty arată doar tokenii: estimarea Claude Code folosește prețurile Anthropic și ar fi greșită.</div>
+                <div className="hint">{tr("Copiază-le din pagina de prețuri a furnizorului. Fără ele, Jolty arată doar tokenii: estimarea Claude Code folosește prețurile Anthropic și ar fi greșită.")}</div>
               </div>
             )}
           </>
@@ -344,28 +345,28 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
         {auth !== 'subscription' && auth !== 'existing' && (
           <div className="field">
             <label>
-              <KeyRound size={12} /> Cheie API {editing && profile?.hasSecret ? '(lasă gol ca s-o păstrezi)' : ''}
+              <KeyRound size={12} /> {tr("Cheie API")} {editing && profile?.hasSecret ? tr("(lasă gol ca s-o păstrezi)") : ''}
             </label>
             <input className="input mono" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="sk-..." />
-            <div className="hint">Se păstrează criptată cu protecția Windows a contului tău.</div>
+            <div className="hint">{tr("Se păstrează criptată cu protecția Windows a contului tău.")}</div>
           </div>
         )}
         {auth === 'endpoint' && isMiMo && (
           <div className="field">
             <label>
-              <KeyRound size={12} /> Cookie platform.xiaomimimo.com {editing && profile?.hasCookie ? '(lasă gol ca să-l păstrezi)' : ''}
+              <KeyRound size={12} /> {tr("Cookie platform.xiaomimimo.com")} {editing && profile?.hasCookie ? tr("(lasă gol ca să-l păstrezi)") : ''}
             </label>
             <input className="input mono" type="password" value={cookie} onChange={(e) => setCookie(e.target.value)} placeholder="api-platform_serviceToken=...; userId=..." />
-            <div className="hint">Soldul MiMo se citește doar cu cookie-urile consolei, nu cu cheia API. Autentifică-te pe platform.xiaomimimo.com, apoi copiază header-ul Cookie dintr-un request. Expiră în ~24 h.</div>
+            <div className="hint">{tr("Soldul MiMo se citește doar cu cookie-urile consolei, nu cu cheia API. Autentifică-te pe platform.xiaomimimo.com, apoi copiază header-ul Cookie dintr-un request. Expiră în ~24 h.")}</div>
           </div>
         )}
         <div className="row">
           <div className="spacer" />
           <button className="btn ghost" onClick={onClose}>
-            Renunță
+           {tr("Renunță")}
           </button>
           <button className="btn primary" onClick={() => void save()}>
-            {editing ? 'Salvează' : 'Adaugă profilul'}
+            {editing ? tr("Salvează") : tr("Adaugă profilul")}
           </button>
         </div>
       </div>
@@ -380,14 +381,14 @@ export function AccountsPage() {
     <div className="page">
       <div className="page-inner">
         <div className="row">
-          <h1 className="page-title">Conturi și chei</h1>
+          <h1 className="page-title">{tr("Conturi și chei")}</h1>
           <div className="spacer" />
           <button className="btn primary" onClick={() => setModal({})}>
-            <Plus size={16} /> Adaugă profil
+            <Plus size={16} /> {tr("Adaugă profil")}
           </button>
         </div>
         <p className="lead">
-          Fiecare abonament are profilul lui, cu login-ul oficial Anthropic sau OpenAI. Comuți tu între ele din conversație; Jolty nu le folosește prin rotație automată. Pentru al doilea cont Claude: Adaugă profil → Claude Code → Abonament.
+         {tr("Fiecare abonament are profilul lui, cu login-ul oficial Anthropic sau OpenAI. Comuți tu între ele din conversație; Jolty nu le folosește prin rotație automată. Pentru al doilea cont Claude: Adaugă profil → Claude Code → Abonament.")}
         </p>
         <div className="grid two">
           {profiles.map((p) => (

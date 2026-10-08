@@ -3,6 +3,7 @@ import { File, Sparkles, SquareSlash } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { SlashItem } from '@shared/types'
 import { api } from '../store'
+import { tr } from '@shared/i18n'
 
 interface Token {
   kind: '/' | '@'
@@ -59,7 +60,7 @@ export function useMentions(text: string, caret: number, cwd?: string) {
         .filter((s) => !q || s.name.toLowerCase().includes(q))
         .sort((a, b) => Number(!a.name.toLowerCase().startsWith(q)) - Number(!b.name.toLowerCase().startsWith(q)))
         .slice(0, 8)
-        .map((s) => ({ key: `${s.kind}:${s.name}`, label: `/${s.name}`, detail: s.description || (s.scope === 'proiect' ? 'din proiect' : undefined), icon: s.kind, insert: `/${s.name} ` }))
+        .map((s) => ({ key: `${s.kind}:${s.name}`, label: `/${s.name}`, detail: s.description || (s.scope === 'proiect' ? tr("din proiect") : undefined), icon: s.kind, insert: `/${s.name} ` }))
     }
     const base = (p: string): string => p.slice(p.lastIndexOf('/') + 1).toLowerCase()
     return files
@@ -88,7 +89,7 @@ export function useMentions(text: string, caret: number, cwd?: string) {
 
 export function MentionMenu({ items, index, onPick, onHover }: { items: MentionItem[]; index: number; onPick: (i: MentionItem) => void; onHover: (i: number) => void }) {
   return (
-    <div className="mentions" role="listbox" aria-label="Sugestii">
+    <div className="mentions" role="listbox" aria-label={tr("Sugestii")}>
       {items.map((it, i) => (
         <button
           key={it.key}
@@ -104,7 +105,7 @@ export function MentionMenu({ items, index, onPick, onHover }: { items: MentionI
           {it.detail && <span className="mention-detail">{it.detail}</span>}
         </button>
       ))}
-      <div className="mentions-hint">↑↓ alegi · Enter sau Tab pui · Esc închizi</div>
+      <div className="mentions-hint">{tr("↑↓ alegi · Enter sau Tab pui · Esc închizi")}</div>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { codexItem, planItemSteps, saveImages } from './codex-items'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
 import type { EngineHost, EngineSession } from './types'
+import { tr } from '@shared/i18n'
 
 type Any = any
 
@@ -149,7 +150,7 @@ export class CodexSession implements EngineSession, ThreadListener {
   }
 
   async send(text: string, images: Attachment[] = []): Promise<void> {
-    if (this.startPending || this.status === 'running') throw new Error('Conversația lucrează deja. Pune mesajul în așteptare.')
+    if (this.startPending || this.status === 'running') throw new Error(tr("Conversația lucrează deja. Pune mesajul în așteptare."))
     const operation = ++this.operation
     this.startPending = operation
     this.stopRequested = false
@@ -205,7 +206,7 @@ export class CodexSession implements EngineSession, ThreadListener {
           this.setStatus('idle')
         } else if (p.status?.type === 'systemError') {
           this.finishTurn()
-          this.setStatus('error', 'Conversația Codex s-a oprit cu o eroare.')
+          this.setStatus('error', tr("Conversația Codex s-a oprit cu o eroare."))
         }
         return
       case 'turn/started':
@@ -245,7 +246,7 @@ export class CodexSession implements EngineSession, ThreadListener {
       case 'item/started':
       case 'item/completed': {
         const item = p.item?.type === 'contextCompaction' && method === 'item/started'
-          ? { kind: 'notice' as const, id: p.item.id, text: 'Compactez conversația. Răspunsul continuă după compactare.', level: 'info' as const }
+          ? { kind: 'notice' as const, id: p.item.id, text: tr("Compactez conversația. Răspunsul continuă după compactare."), level: 'info' as const }
           : codexItem(p.item, this.liveOutput.get(p.item?.id))
         if (!item || p.item?.type === 'userMessage') return
         if (item.kind === 'tool' && item.diffs) this.diffs.set(item.id, item.diffs)
@@ -318,7 +319,7 @@ export class CodexSession implements EngineSession, ThreadListener {
         return
       }
       case 'error':
-        this.notice(p.willRetry ? `Reîncerc: ${p.error?.message}` : p.error?.message || 'Eroare Codex', p.willRetry ? 'warn' : 'error')
+        this.notice(p.willRetry ? tr("Reîncerc: {v0}", { v0: p.error?.message }) : p.error?.message || tr("Eroare Codex"), p.willRetry ? 'warn' : 'error')
         return
       default:
         return
@@ -352,7 +353,7 @@ export class CodexSession implements EngineSession, ThreadListener {
       this.host.emit({
         type: 'permission',
         sessionId: this.meta.id,
-        request: { id, toolName: 'Edit', title: 'Modificări de fișiere', detail: p.reason || undefined, diffs: this.diffs.get(p.itemId), canAllowForSession: true }
+        request: { id, toolName: 'Edit', title: tr("Modificări de fișiere"), detail: p.reason || undefined, diffs: this.diffs.get(p.itemId), canAllowForSession: true }
       })
       return true
     }
@@ -369,11 +370,11 @@ export class CodexSession implements EngineSession, ThreadListener {
   }
 
   async rewind(_id: string, _dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }> {
-    throw new Error('Codex nu păstrează copii ale fișierelor pe mesaj. Folosește git pentru a reveni.')
+    throw new Error(tr("Codex nu păstrează copii ale fișierelor pe mesaj. Folosește git pentru a reveni."))
   }
 
   async compact(): Promise<void> {
-    if (this.startPending || this.status === 'running') throw new Error('Conversația lucrează deja.')
+    if (this.startPending || this.status === 'running') throw new Error(tr("Conversația lucrează deja."))
     const operation = ++this.operation
     this.startPending = operation
     this.stopRequested = false

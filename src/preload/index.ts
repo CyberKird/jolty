@@ -102,3 +102,5 @@ const api: JoltyApi = {
 }
 
 contextBridge.exposeInMainWorld('jolty', api)
+// the language is known before any interface module runs, so texts built at load time are right too
+contextBridge.exposeInMainWorld('joltyLang', ipcRenderer.sendSync('app:lang'))

@@ -17,6 +17,7 @@ import { JsonRpcProcess, type RpcNotification, type RpcRequest } from './jsonrpc
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 import { codexItem, saveImages } from './codex-items'
 import { CodexSession, type ThreadListener } from './codex-session'
+import { tr } from '@shared/i18n'
 
 export { codexItem } from './codex-items'
 
@@ -38,12 +39,12 @@ function toMs(t: number | null | undefined): number | undefined {
 
 export function codexLimitSnapshot(profileId: string, snap: Any): RateLimitSnapshot {
   const windows: LimitWindow[] = []
-  if (snap?.primary) windows.push({ label: windowLabel(snap.primary.windowDurationMins, 'Principală'), usedPercent: snap.primary.usedPercent, resetsAt: toMs(snap.primary.resetsAt) })
-  if (snap?.secondary) windows.push({ label: windowLabel(snap.secondary.windowDurationMins, 'Secundară'), usedPercent: snap.secondary.usedPercent, resetsAt: toMs(snap.secondary.resetsAt) })
+  if (snap?.primary) windows.push({ label: windowLabel(snap.primary.windowDurationMins, tr("Principală")), usedPercent: snap.primary.usedPercent, resetsAt: toMs(snap.primary.resetsAt) })
+  if (snap?.secondary) windows.push({ label: windowLabel(snap.secondary.windowDurationMins, tr("Secundară")), usedPercent: snap.secondary.usedPercent, resetsAt: toMs(snap.secondary.resetsAt) })
   const notes: string[] = []
   if (snap?.planType) notes.push(`Plan: ${snap.planType}`)
   if (snap?.credits?.balance != null) notes.push(`Credite: ${snap.credits.balance}`)
-  if (snap?.rateLimitReachedType) notes.push('Limita a fost atinsă')
+  if (snap?.rateLimitReachedType) notes.push(tr("Limita a fost atinsă"))
   return { profileId, windows, note: notes.join(' · ') || undefined, updatedAt: Date.now() }
 }
 
@@ -64,7 +65,7 @@ class OneShot implements ThreadListener {
   onNotification(method: string, p: Any): void {
     if (method === 'item/completed' && p.item?.type === 'agentMessage') this.text += (this.text ? '\n' : '') + (p.item.text || '')
     if (method === 'turn/completed') {
-      if (p.turn?.status === 'failed') this.reject(new Error(p.turn.error?.message || 'descrierea a eșuat'))
+      if (p.turn?.status === 'failed') this.reject(new Error(p.turn.error?.message || tr("descrierea a eșuat")))
       else this.resolve(this.text.trim())
     }
   }
@@ -101,7 +102,7 @@ class CodexServer {
 
   private async spawn(): Promise<JsonRpcProcess> {
     const exe = codexExecutable()
-    if (!exe) throw new Error('Nu găsesc Codex (binarul inclus lipsește)')
+    if (!exe) throw new Error(tr("Nu găsesc Codex (binarul inclus lipsește)"))
     prepareProfileDir(this.profile)
     const rpc = new JsonRpcProcess(exe, ['app-server', ...CODEX_PRIVATE_ARGS], codexEnv(this.profile, exe))
     rpc.on('notification', (n: RpcNotification) => this.onNotification(n))
@@ -148,13 +149,13 @@ class CodexServer {
     const s = threadId ? this.sessions.get(threadId) : undefined
     if (s && s.onRequest(r)) return
     if (r.method === 'item/tool/requestUserInput') rpc.respond(r.id, { answers: {} })
-    else if (r.method === 'execCommandApproval' || r.method === 'applyPatchApproval') rpc.respond(r.id, { decision: { denied: { rejection: 'Neacceptat de Jolty' } } })
-    else rpc.respondError(r.id, 'Jolty nu suportă această cerere')
+    else if (r.method === 'execCommandApproval' || r.method === 'applyPatchApproval') rpc.respond(r.id, { decision: { denied: { rejection: tr("Neacceptat de Jolty") } } })
+    else rpc.respondError(r.id, tr("Jolty nu suportă această cerere"))
   }
 
   waitForLogin(timeoutMs: number): Promise<{ ok: boolean; error?: string }> {
     return new Promise((resolve) => {
-      const timer = setTimeout(() => resolve({ ok: false, error: 'Autentificarea a expirat' }), timeoutMs)
+      const timer = setTimeout(() => resolve({ ok: false, error: tr("Autentificarea a expirat") }), timeoutMs)
       this.loginWaiters.push((ok, error) => {
         clearTimeout(timer)
         resolve({ ok, error })
@@ -212,8 +213,8 @@ export class CodexDriver implements EngineDriver {
       const r = await rpc.request<Any>('account/read', {})
       const a = r?.account
       if (!a) return { profileId: profile.id, loggedIn: false }
-      if (a.type === 'chatgpt') return { profileId: profile.id, loggedIn: true, email: a.email ?? undefined, plan: a.planType ?? undefined, detail: 'Cont ChatGPT' }
-      return { profileId: profile.id, loggedIn: true, detail: a.type === 'apiKey' ? 'Cheie API OpenAI' : a.type }
+      if (a.type === 'chatgpt') return { profileId: profile.id, loggedIn: true, email: a.email ?? undefined, plan: a.planType ?? undefined, detail: tr("Cont ChatGPT") }
+      return { profileId: profile.id, loggedIn: true, detail: a.type === 'apiKey' ? tr("Cheie API OpenAI") : a.type }
     } catch (err) {
       return { profileId: profile.id, loggedIn: false, error: err instanceof Error ? err.message : String(err) }
     }
@@ -224,7 +225,7 @@ export class CodexDriver implements EngineDriver {
     const rpc = await server.get()
     if (profile.auth === 'apiKey') {
       const key = getSecret(profile.id)
-      if (!key) throw new Error('Adaugă întâi cheia API OpenAI')
+      if (!key) throw new Error(tr("Adaugă întâi cheia API OpenAI"))
       await rpc.request('account/login/start', { type: 'apiKey', apiKey: key })
       return this.status(profile)
     }
@@ -309,7 +310,7 @@ export class CodexDriver implements EngineDriver {
     try {
       const input = [...saveImages(images).map((p) => ({ type: 'localImage', path: p })), { type: 'text', text: prompt, text_elements: [] }]
       await rpc.request('turn/start', { threadId, input })
-      return await Promise.race([shot.done, new Promise<string>((_, rej) => setTimeout(() => rej(new Error('descrierea a expirat')), 180000))])
+      return await Promise.race([shot.done, new Promise<string>((_, rej) => setTimeout(() => rej(new Error(tr("descrierea a expirat"))), 180000))])
     } finally {
       server.sessions.delete(threadId)
     }

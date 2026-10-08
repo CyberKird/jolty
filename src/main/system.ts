@@ -5,6 +5,7 @@ import path from 'path'
 import type { SystemCheck } from '@shared/types'
 import * as local from './local'
 import { claudeExecutable, codexExecutable } from './runtime'
+import { tr } from '@shared/i18n'
 
 const isWin = process.platform === 'win32'
 
@@ -47,38 +48,38 @@ export async function check(): Promise<SystemCheck[]> {
   const ollama = await local.status()
   const redirect = settingsRedirect()
   const checks: SystemCheck[] = [
-    { id: 'claude', label: 'Claude Code (inclus în Jolty)', ok: Boolean(claude), detail: claude || 'Binarul inclus lipsește: reinstalează Jolty.' },
-    { id: 'codex', label: 'Codex (inclus în Jolty)', ok: Boolean(codex), detail: codex || 'Binarul inclus lipsește: reinstalează Jolty.' },
+    { id: 'claude', label: tr("Claude Code (inclus în Jolty)"), ok: Boolean(claude), detail: claude || tr("Binarul inclus lipsește: reinstalează Jolty.") },
+    { id: 'codex', label: tr("Codex (inclus în Jolty)"), ok: Boolean(codex), detail: codex || tr("Binarul inclus lipsește: reinstalează Jolty.") },
     {
       id: 'git',
       label: 'Git for Windows',
       ok: Boolean(bash),
-      detail: bash ? bash : 'Claude Code folosește Git Bash pentru comenzi pe Windows.',
-      fixLabel: bash ? undefined : 'Instalează Git'
+      detail: bash ? bash : tr("Claude Code folosește Git Bash pentru comenzi pe Windows."),
+      fixLabel: bash ? undefined : tr("Instalează Git")
     },
     {
       id: 'vcredist',
       label: 'Microsoft Visual C++ Runtime',
       ok: vc,
-      detail: vc ? 'Instalat' : 'Necesar pentru Codex și pentru multe unelte de dezvoltare.',
-      fixLabel: vc ? undefined : 'Instalează runtime-ul'
+      detail: vc ? tr("Instalat") : tr("Necesar pentru Codex și pentru multe unelte de dezvoltare."),
+      fixLabel: vc ? undefined : tr("Instalează runtime-ul")
     },
     {
       id: 'ollama',
-      label: 'Ollama (modele locale)',
+      label: tr("Ollama (modele locale)"),
       ok: ollama.running,
       optional: true,
-      detail: ollama.running ? `Rulează (versiunea ${ollama.version}), ${ollama.models.length} modele` : ollama.installed ? 'Instalat, dar nu rulează: pornește aplicația Ollama.' : 'Opțional: pentru modele care rulează pe PC-ul tău.',
-      fixLabel: ollama.installed ? undefined : 'Instalează Ollama'
+      detail: ollama.running ? tr("Rulează (versiunea {version}), {length} modele", { version: ollama.version, length: ollama.models.length }) : ollama.installed ? tr("Instalat, dar nu rulează: pornește aplicația Ollama.") : tr("Opțional: pentru modele care rulează pe PC-ul tău."),
+      fixLabel: ollama.installed ? undefined : tr("Instalează Ollama")
     }
   ]
   if (redirect) {
     checks.push({
       id: 'redirect',
-      label: 'Setări Claude Code',
+      label: tr("Setări Claude Code"),
       ok: false,
-      detail: `~/.claude/settings.json trimite Claude Code la ${redirect} pentru toate profilurile. Jolty gestionează singur modelele; șterge ANTHROPIC_BASE_URL din blocul „env” (sau rulează „ai-mode sub”).`,
-      fixLabel: 'Deschide settings.json'
+      detail: tr("~/.claude/settings.json trimite Claude Code la {redirect} pentru toate profilurile. Jolty gestionează singur modelele; șterge ANTHROPIC_BASE_URL din blocul „env” (sau rulează „ai-mode sub”).", { redirect }),
+      fixLabel: tr("Deschide settings.json")
     })
   }
   return checks
@@ -90,7 +91,7 @@ function startDetached(args: string): void {
 }
 
 function winget(id: string, title: string): void {
-  if (!isWin) throw new Error('Instalarea automată e disponibilă doar pe Windows')
+  if (!isWin) throw new Error(tr("Instalarea automată e disponibilă doar pe Windows"))
   startDetached(`"${title}" winget install -e --id ${id} --accept-source-agreements --accept-package-agreements`)
 }
 

@@ -11,6 +11,8 @@ import { MentionMenu, useMentions } from './Mentions'
 import { withQuote } from '@shared/quote'
 import { QuoteBar, SelectionPopup } from './Quote'
 import { LimitStrip, TaskStrip, UpdateStrip, VerificationStrip } from './Tasks'
+import { tr } from '@shared/i18n'
+import { Trans } from './Trans'
 
 const EMPTY: ChatItem[] = []
 
@@ -22,13 +24,13 @@ async function toAttachment(file: File): Promise<Attachment> {
   const src = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error('fișierul nu a putut fi citit'))
+    reader.onerror = () => reject(new Error(tr("fișierul nu a putut fi citit")))
     reader.readAsDataURL(file)
   })
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image()
     i.onload = () => resolve(i)
-    i.onerror = () => reject(new Error('imagine invalidă'))
+    i.onerror = () => reject(new Error(tr("imagine invalidă")))
     i.src = src
   })
   const max = 1600
@@ -79,7 +81,7 @@ function Advice({ text, images, groups, profileId, model, effort, onApply }: {
       {t && (
         <button
           className="advice-apply"
-          title={other ? `Conversația continuă în ${t.profileName}, cu istoricul ei` : undefined}
+          title={other ? tr("Conversația continuă în {profileName}, cu istoricul ei", { profileName: t.profileName }) : undefined}
           onClick={() => onApply(t.profileId, t.model.id, t.effort)}
         >
           {other ? `${t.profileName} · ` : ''}
@@ -163,7 +165,7 @@ function Composer(p: ComposerProps) {
       const key = `jolty:queue:${p.sessionId}`
       if (queue.length) localStorage.setItem(key, JSON.stringify(queue))
       else localStorage.removeItem(key)
-    } catch { toast('Nu am putut salva coada locală.', true) }
+    } catch { toast(tr("Nu am putut salva coada locală."), true) }
   }, [p.sessionId, queue, toast])
 
   useEffect(() => {
@@ -196,7 +198,7 @@ function Composer(p: ComposerProps) {
     async (files: File[]) => {
       if (!files.length) return
       const room = Math.max(0, 8 - atts.length)
-      if (files.length > room) toast('Maximum 8 fișiere per mesaj.', true)
+      if (files.length > room) toast(tr("Maximum 8 fișiere per mesaj."), true)
       const converted: Attachment[] = []
       for (const file of files.slice(0, room)) {
         try {
@@ -216,7 +218,7 @@ function Composer(p: ComposerProps) {
             })
             converted.push({ id: crypto.randomUUID(), name: file.name, mime: file.type || 'application/octet-stream', data, size: file.size })
           } else {
-            toast(`${file.name}: lipește un fișier sub 16 MB sau alege-l de pe disc.`, true)
+            toast(tr("{name}: lipește un fișier sub 16 MB sau alege-l de pe disc.", { name: file.name }), true)
           }
         } catch (err) { toast(`${file.name}: ${errMsg(err)}`, true) }
       }
@@ -256,7 +258,7 @@ function Composer(p: ComposerProps) {
     <div className="composer-wrap">
       {queue.length > 0 && (
         <div className="queue" aria-live="polite">
-          <div className="queue-title">{restoredQueue ? 'Restaurate, trimite manual' : 'În așteptare'} <span>{queue.length}</span></div>
+          <div className="queue-title">{restoredQueue ? tr("Restaurate, trimite manual") : tr("În așteptare")} <span>{queue.length}</span></div>
           {queue.map((q, i) => (
             <div className="queued" key={q.id}>
               <span className="queued-order">{i + 1}</span>
@@ -268,12 +270,12 @@ function Composer(p: ComposerProps) {
                   setQueue((x) => x.filter((item) => item.id !== q.id))
                   void p.onSend(q.text, q.atts)
                 }}
-                aria-label="Trimite acum"
-                title="Trimite acum, fără să aștepți ca răspunsul curent să se termine"
+                aria-label={tr("Trimite acum")}
+                title={tr("Trimite acum, fără să aștepți ca răspunsul curent să se termine")}
               >
                 <ArrowUp size={12} />
               </button>
-              <button onClick={() => setQueue((x) => x.filter((item) => item.id !== q.id))} aria-label="Scoate mesajul din așteptare" title="Scoate din așteptare">
+              <button onClick={() => setQueue((x) => x.filter((item) => item.id !== q.id))} aria-label={tr("Scoate mesajul din așteptare")} title={tr("Scoate din așteptare")}>
                 <X size={12} />
               </button>
             </div>
@@ -310,13 +312,13 @@ function Composer(p: ComposerProps) {
             ))}
           </div>
         )}
-        {atts.some((a) => a.mime.startsWith('image/')) && engine === 'claude' && p.profiles.find((profile) => profile.id === p.profileId)?.vision === false && <div className="attachment-note">Modelul ales nu vede imagini. Jolty va folosi încă un profil ca să le descrie, cu consum suplimentar.</div>}
+        {atts.some((a) => a.mime.startsWith('image/')) && engine === 'claude' && p.profiles.find((profile) => profile.id === p.profileId)?.vision === false && <div className="attachment-note">{tr("Modelul ales nu vede imagini. Jolty va folosi încă un profil ca să le descrie, cu consum suplimentar.")}</div>}
         {mentions.open && <MentionMenu items={mentions.items} index={mentions.index} onPick={pickMention} onHover={(i) => mentions.move(i - mentions.index)} />}
         <QuoteBar sessionId={p.sessionId} />
         <textarea
           ref={taRef}
           value={text}
-          placeholder={p.running ? 'Scrie următorul mesaj: pleacă imediat ce termină.' : 'Descrie ce vrei să facă. / pentru skill-uri, @ pentru fișiere.'}
+          placeholder={p.running ? tr("Scrie următorul mesaj: pleacă imediat ce termină.") : tr("Descrie ce vrei să facă. / pentru skill-uri, @ pentru fișiere.")}
           onChange={(e) => {
             setText(e.target.value)
             setCaret(e.target.selectionStart)
@@ -375,17 +377,17 @@ function Composer(p: ComposerProps) {
         {costNote && <div className="attachment-note" role="status">{costNote}</div>}
         {secret && (
           <div className="attachment-note" role="status">
-            Mesajul pare să conțină {secret}. Nu l-am blocat, dar se trimite către {sendProfile?.name}. Pentru ceva sensibil, un model local nu trimite nimic în afara PC-ului.
+           {tr("Mesajul pare să conțină {secret}. Nu l-am blocat, dar se trimite către {profile}. Pentru ceva sensibil, un model local nu trimite nimic în afara PC-ului.", { secret, profile: sendProfile?.name })}
           </div>
         )}
         <div className="composer-bar">
-          <button className="btn ghost small icon" title="Atașează imagini, videouri sau fișiere" onClick={() => fileRef.current?.click()}>
+          <button className="btn ghost small icon" title={tr("Atașează imagini, videouri sau fișiere")} onClick={() => fileRef.current?.click()}>
             <Paperclip size={15} />
           </button>
           <input ref={fileRef} type="file" multiple hidden onChange={(e) => { void addFiles([...(e.target.files || [])]); e.target.value = '' }} />
           {p.onCwd && (
             <button className="pill-select" style={{ paddingRight: 10, cursor: 'pointer', background: 'transparent' }} onClick={p.onCwd} title={p.cwd}>
-              <FolderOpen size={13} /> <span style={{ color: 'var(--white)' }}>{p.cwd ? basename(p.cwd) : 'Alege proiectul'}</span>
+              <FolderOpen size={13} /> <span style={{ color: 'var(--white)' }}>{p.cwd ? basename(p.cwd) : tr("Alege proiectul")}</span>
             </button>
           )}
           <ModelPicker
@@ -408,7 +410,7 @@ function Composer(p: ComposerProps) {
               className={`chrome-toggle ${p.mode === 'plan' ? 'on' : ''}`}
               aria-pressed={p.mode === 'plan'}
               onClick={() => p.onMode(p.mode === 'plan' ? DEFAULT_MODE : 'plan')}
-              title={p.mode === 'plan' ? 'Plan activ: clic ca să revii la Build, unde editează fișiere' : 'Comută în Plan: modelul doar cercetează și propune un plan, fără să modifice nimic'}
+              title={p.mode === 'plan' ? tr("Plan activ: clic ca să revii la Build, unde editează fișiere") : tr("Comută în Plan: modelul doar cercetează și propune un plan, fără să modifice nimic")}
             >
               {p.mode === 'plan' ? 'Plan' : 'Build'}
             </button>
@@ -419,17 +421,17 @@ function Composer(p: ComposerProps) {
             aria-pressed={Boolean(p.browser)}
             onClick={() => p.onBrowser(!p.browser)}
             title={
-              engine === 'hermes' ? 'Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.' : p.browser
-                ? 'Jolty în browser e pornit: modelul poate folosi browserul tău (Chrome, Vivaldi, Edge, Brave), cu login-urile tale. Clic ca să-l oprești.'
-                : 'Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări).'
+              engine === 'hermes' ? tr("Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.") : p.browser
+                ? tr("Jolty în browser e pornit: modelul poate folosi browserul tău (Chrome, Vivaldi, Edge, Brave), cu login-urile tale. Clic ca să-l oprești.")
+                : tr("Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări).")
             }
           >
-            <Globe size={14} strokeWidth={1.8} /> Browser
+            <Globe size={14} strokeWidth={1.8} /> {tr("Browser")}
           </button>
           {engine !== 'hermes' && <BrowserMenu />}
           <div className="spacer" />
           {p.running && (
-            <button className="btn send-btn" onClick={p.onStop} title="Oprește (Esc)">
+            <button className="btn send-btn" onClick={p.onStop} title={tr("Oprește (Esc)")}>
               <Square size={12} fill="currentColor" />
             </button>
           )}
@@ -438,7 +440,7 @@ function Composer(p: ComposerProps) {
               className="btn primary send-btn"
               onClick={() => void submit()}
               disabled={!text.trim() && !atts.length}
-              title={p.running ? 'Pune în așteptare (Enter)' : 'Trimite (Enter)'}
+              title={p.running ? tr("Pune în așteptare (Enter)") : tr("Trimite (Enter)")}
             >
               <ArrowUp size={17} />
             </button>
@@ -479,7 +481,7 @@ function UserTurn({ sessionId, itemId, disabled, children }: { sessionId: string
       {!disabled && preview !== undefined && preview > 0 && (
         <button
           className={`rewind ${armed ? 'armed' : ''}`}
-          title="Readuce fișierele proiectului la starea de dinainte de acest mesaj"
+          title={tr("Readuce fișierele proiectului la starea de dinainte de acest mesaj")}
           onClick={() => {
             if (!armed) return setArmed(true)
             setArmed(false)
@@ -487,12 +489,12 @@ function UserTurn({ sessionId, itemId, disabled, children }: { sessionId: string
               .rewind(sessionId, itemId)
               .then((r) => {
                 setPreview(0)
-                toast(`Am anulat modificările din ${r.files.length} ${r.files.length === 1 ? 'fișier' : 'fișiere'}`)
+                toast(tr("Am anulat modificările din {length} {v1}", { length: r.files.length, v1: r.files.length === 1 ? tr("fișier") : tr("fișiere") }))
               })
               .catch((e) => toast(errMsg(e), true))
           }}
         >
-          <RotateCcw size={12} /> {armed ? 'Sigur? Clic din nou' : `Anulează modificările de aici (${preview} ${preview === 1 ? 'fișier' : 'fișiere'})`}
+          <RotateCcw size={12} /> {armed ? tr("Sigur? Clic din nou") : tr("Anulează modificările de aici ({preview} {v1})", { preview, v1: preview === 1 ? tr("fișier") : tr("fișiere") })}
         </button>
       )}
     </div>
@@ -510,8 +512,8 @@ function ContextMeter({ sessionId, running }: { sessionId: string; running: bool
     <button
       className={`context-meter ${pct !== undefined && pct >= 80 ? 'high' : ''}`}
       disabled={running}
-      title={`${k(ctx.used)}${ctx.window ? ` din ${k(ctx.window)}` : ''} tokeni în context. Clic ca să compactezi: modelul rezumă conversația și eliberează loc.`}
-      onClick={() => void api.sessions.compact(sessionId).then(() => toast('Compactez conversația…')).catch((e) => toast(errMsg(e), true))}
+      title={tr("{k}{v1} tokeni în context. Clic ca să compactezi: modelul rezumă conversația și eliberează loc.", { k: k(ctx.used), v1: ctx.window ? tr(" din {k}", { k: k(ctx.window) }) : '' })}
+      onClick={() => void api.sessions.compact(sessionId).then(() => toast(tr("Compactez conversația…"))).catch((e) => toast(errMsg(e), true))}
     >
       <span className="context-ring" style={{ ['--p' as string]: `${pct ?? 0}` }} aria-hidden />
       {pct !== undefined ? `${Math.round(pct)}%` : k(ctx.used)}
@@ -525,8 +527,8 @@ function MiniLimits({ profileId }: { profileId: string }) {
   return (
     <div className="mini-limits">
       {snap.windows.slice(0, 2).map((w) => (
-        <div className="mini-limit" key={w.label} title={`${w.label}: ${Math.round(w.usedPercent)}% folosit, ${resetIn(w.resetsAt)}`}>
-          {w.label} · {Math.round(w.usedPercent)}%
+        <div className="mini-limit" key={w.label} title={tr("{label}: {pct}% folosit, {reset}", { label: tr(w.label), pct: Math.round(w.usedPercent), reset: resetIn(w.resetsAt) })}>
+          {tr(w.label)} · {Math.round(w.usedPercent)}%
           <div className="track">
             <div className="fill" style={{ width: `${Math.min(100, w.usedPercent)}%`, background: levelColor(w.usedPercent) }} />
           </div>
@@ -546,7 +548,7 @@ function ReviewButton({ session, running, items }: { session: SessionMeta; runni
     <button
       className="btn small"
       disabled={busy || running}
-      title="Un model din altă familie (Codex pentru Claude sau invers) citește modificările și spune ce s-ar putea strica. Doar citire."
+      title={tr("Un model din altă familie (Codex pentru Claude sau invers) citește modificările și spune ce s-ar putea strica. Doar citire.")}
       onClick={() => {
         setBusy(true)
         void api.sessions
@@ -555,7 +557,7 @@ function ReviewButton({ session, running, items }: { session: SessionMeta; runni
           .finally(() => setBusy(false))
       }}
     >
-      {busy ? 'Se verifică…' : 'Verifică'}
+      {busy ? tr("Se verifică…") : tr("Verifică")}
     </button>
   )
 }
@@ -567,8 +569,8 @@ function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Pr
   if (!targets.length) return null
   return (
     <div style={{ position: 'relative' }}>
-      <button className="btn small" onClick={() => setOpen(!open)} title="Continuă conversația cu alt model sau alt cont">
-        Continuă în
+      <button className="btn small" onClick={() => setOpen(!open)} title={tr("Continuă conversația cu alt model sau alt cont")}>
+       {tr("Continuă în")}
       </button>
       {open && (
         <div className="panel" style={{ position: 'absolute', right: 0, top: 36, zIndex: 20, width: 290, padding: 6 }} onMouseLeave={() => setOpen(false)}>
@@ -583,7 +585,7 @@ function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Pr
                   const meta = await api.sessions.handoff(session.id, t.id)
                   await loadSessions()
                   await openSession(meta.id)
-                  toast(`Conversația continuă în ${t.name}`)
+                  toast(tr("Conversația continuă în {name}", { name: t.name }))
                 } catch (err) {
                   toast(errMsg(err), true)
                 }
@@ -656,7 +658,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
     for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'reasoning') return items[i].id
     return undefined
   }, [items])
-  const how = `${session.model || 'model implicit'} · efort ${session.effort || 'implicit'}`
+  const how = tr("{v0} · efort {v1}", { v0: session.model || tr("model implicit"), v1: session.effort || 'implicit' })
   const who = `${profile?.name || ENGINE_LABEL[session.engine]} · ${how}`
 
   return (
@@ -667,13 +669,13 @@ export function ChatView({ session }: { session: SessionMeta }) {
         <span className="meta-chip" title={session.cwd}>
           {basename(session.cwd)}
         </span>
-        <span className="meta-chip">{profile?.name || 'profil șters'}</span>
+        <span className="meta-chip">{profile?.name || tr("profil șters")}</span>
         <div className="spacer" />
         <ContextMeter sessionId={session.id} running={running} />
         <MiniLimits profileId={session.profileId} />
         <ReviewButton session={session} running={running} items={items} />
         <HandoffMenu session={session} profiles={profiles} />
-        <button className="btn ghost small icon" onClick={() => setLiveOpen(!liveOpen)} title={liveOpen ? 'Ascunde panoul Live' : 'Arată panoul Live'}>
+        <button className="btn ghost small icon" onClick={() => setLiveOpen(!liveOpen)} title={liveOpen ? 'Ascunde panoul Live' : tr("Arată panoul Live")}>
           {liveOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
         </button>
       </div>
@@ -700,7 +702,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
           })}
           {running && items[items.length - 1]?.kind === 'user' && (
             <div className="turn-head">
-              <span className="dot running" /> Jolty pornește · {how}
+              <span className="dot running" /> {tr("Jolty pornește ·")} {how}
             </div>
           )}
           {perms?.map((r) => (
@@ -720,8 +722,8 @@ export function ChatView({ session }: { session: SessionMeta }) {
         profileId={session.profileId}
         cwd={session.cwd}
         model={session.model}
-        otherProfileHint="Continuă conversația în acest cont"
-        seed={session.handoffPending ? 'Continuă de unde ai rămas.' : undefined}
+        otherProfileHint={tr("Continuă conversația în acest cont")}
+        seed={session.handoffPending ? tr("Continuă de unde ai rămas.") : undefined}
         onPick={(profileId, m, effort) => {
           if (profileId === session.profileId) {
             void api.sessions
@@ -738,7 +740,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
             .then(async (meta) => {
               await loadSessions()
               await openSession(meta.id)
-              toast(`Conversația continuă în ${target?.name || 'alt profil'}`)
+              toast(tr("Conversația continuă în {v0}", { v0: target?.name || 'alt profil' }))
             })
             .catch((e) => toast(errMsg(e), true))
         }}
@@ -767,12 +769,12 @@ export function ChatView({ session }: { session: SessionMeta }) {
 // New conversation
 // ---------------------------------------------------------------------------
 const STARTS = [
-  'Explică-mi cum e construit proiectul',
-  'Găsește bug-urile și repară-le',
-  'Optimizează ce e lent',
-  'Scrie teste pentru partea fragilă',
-  'Fă interfața mai fluidă',
-  'Pregătește-l pentru lansare'
+  tr("Explică-mi cum e construit proiectul"),
+  tr("Găsește bug-urile și repară-le"),
+  tr("Optimizează ce e lent"),
+  tr("Scrie teste pentru partea fragilă"),
+  tr("Fă interfața mai fluidă"),
+  tr("Pregătește-l pentru lansare")
 ]
 
 export function NewChat() {
@@ -825,17 +827,17 @@ export function NewChat() {
     <>
       <div className="welcome">
         <h1 className="headline">
-          Ce construim
+         {tr("Ce construim")}
           <br />
-          azi<span>?</span>
+         {tr("azi")}<span>?</span>
         </h1>
         <div className="context">
           {cwd ? (
             <>
-              În <b>{basename(cwd)}</b>, cu <b>{profile?.name || 'un profil'}</b>.
+             <Trans text={tr("În {folder}, cu {profile}.")} values={{ folder: <b>{basename(cwd)}</b>, profile: <b>{profile?.name || tr("un profil")}</b> }} />
             </>
           ) : (
-            'Alege întâi folderul proiectului.'
+            tr("Alege întâi folderul proiectului.")
           )}
         </div>
         <div className="starts">
@@ -879,11 +881,11 @@ export function NewChat() {
         onSend={async (text, atts) => {
           if (launching.current) {
             launchQueue.current.push({ id: crypto.randomUUID(), text, atts })
-            toast('Mesajul a intrat în așteptare până pornește conversația.')
+            toast(tr("Mesajul a intrat în așteptare până pornește conversația."))
             return
           }
           if (!cwd) {
-            toast('Alege întâi folderul proiectului.', true)
+            toast(tr("Alege întâi folderul proiectului."), true)
             await pickCwd()
             return
           }
@@ -905,7 +907,7 @@ export function NewChat() {
                 localStorage.setItem(`jolty:queue:${meta.id}`, JSON.stringify(queued))
                 sessionStorage.setItem(`jolty:queue:immediate:${meta.id}`, '1')
               } catch {
-                toast('Nu am putut salva mesajele puse în așteptare.', true)
+                toast(tr("Nu am putut salva mesajele puse în așteptare."), true)
               }
             }
             useStore.getState().activateSession(meta)

@@ -46,7 +46,7 @@ class H(BaseHTTPRequestHandler):
         if LOG:
             with open(LOG, "a") as f:
                 f.write(json.dumps({"path": path, "model": req.get("model"), "auth": (self.headers.get("authorization") or self.headers.get("x-api-key") or "")[:14],
-                                    "stream": req.get("stream"), "thinking": req.get("thinking"), "output_config": req.get("output_config"), "n_tools": len(req.get("tools") or []), "last": last[:200], "has_image": "IMAGE_BLOCK" in all_text, "desc_in_prompt": "Imagine atașată" in all_text, "handoff": "Preiei o conversa" in all_text,
+                                    "stream": req.get("stream"), "thinking": req.get("thinking"), "output_config": req.get("output_config"), "n_tools": len(req.get("tools") or []), "last": last[:200], "has_image": "IMAGE_BLOCK" in all_text, "desc_in_prompt": "Attached image" in all_text, "handoff": "You are taking over a conversation" in all_text,
                                     "dash_rule": "U+2014" in json.dumps(req.get("system")),
                                     "browser_tools": "jolty-browser__browser_navigate" in json.dumps(req), "unsafe_tool": "browser_run_code_unsafe" in json.dumps(req),
                                     "browser_rule": "jolty-browser tools" in json.dumps(req.get("system"))}) + "\n")

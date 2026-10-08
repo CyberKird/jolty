@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "strict": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "paths": { "@shared/*": ["./src/shared/*"] }

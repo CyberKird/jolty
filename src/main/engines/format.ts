@@ -1,4 +1,5 @@
 import type { FileDiff } from '@shared/types'
+import { tr } from '@shared/i18n'
 
 const MAX_DIFF_LINES = 400
 
@@ -41,29 +42,29 @@ export function claudeToolTitle(name: string, input: Record<string, unknown>): s
     case 'Bash':
       return `$ ${str(input.command)}`
     case 'Read':
-      return `Citește ${str(input.file_path)}`
+      return tr("Citește {str}", { str: str(input.file_path) })
     case 'Edit':
     case 'MultiEdit':
-      return `Editează ${str(input.file_path)}`
+      return tr("Editează {str}", { str: str(input.file_path) })
     case 'Write':
-      return `Scrie ${str(input.file_path)}`
+      return tr("Scrie {str}", { str: str(input.file_path) })
     case 'NotebookEdit':
-      return `Editează ${str(input.notebook_path)}`
+      return tr("Editează {str}", { str: str(input.notebook_path) })
     case 'Glob':
-      return `Caută fișiere ${str(input.pattern)}`
+      return tr("Caută fișiere {str}", { str: str(input.pattern) })
     case 'Grep':
-      return `Caută "${str(input.pattern)}"`
+      return tr("Caută \"{str}\"", { str: str(input.pattern) })
     case 'WebFetch':
-      return `Deschide ${str(input.url)}`
+      return tr("Deschide {str}", { str: str(input.url) })
     case 'WebSearch':
-      return `Caută pe web: ${str(input.query)}`
+      return tr("Caută pe web: {str}", { str: str(input.query) })
     case 'Task':
     case 'Agent':
       return `Subagent: ${str(input.description) || str(input.subagent_type)}`
     case 'TodoWrite':
-      return 'Actualizează lista de sarcini'
+      return tr("Actualizează lista de sarcini")
     case 'ExitPlanMode':
-      return 'Planul e gata'
+      return tr("Planul e gata")
     default:
       return name.startsWith('mcp__') ? name.replace(/^mcp__/, '').replace('__', ' / ') : name
   }

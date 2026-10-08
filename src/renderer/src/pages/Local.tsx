@@ -2,11 +2,13 @@ import { Cpu, Download, Eye, Gauge, HardDrive, Loader2, MemoryStick, Plus, Refre
 import { useCallback, useEffect, useState } from 'react'
 import type { CatalogModel, HardwareInfo, OllamaStatus } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
+import { tr } from '@shared/i18n'
+import { Trans } from '../components/Trans'
 
 const FIT: Record<CatalogModel['fit'], { label: string; cls: string }> = {
-  gpu: { label: 'Rulează pe placa video · rapid', cls: 'good' },
-  cpu: { label: 'Doar pe procesor · lent', cls: 'warn' },
-  no: { label: 'Prea mare pentru PC-ul tău', cls: 'bad' }
+  gpu: { label: tr("Rulează pe placa video · rapid"), cls: 'good' },
+  cpu: { label: tr("Doar pe procesor · lent"), cls: 'warn' },
+  no: { label: tr("Prea mare pentru PC-ul tău"), cls: 'bad' }
 }
 
 function PullBar({ tag }: { tag: string }) {
@@ -48,7 +50,7 @@ export function LocalPage() {
     setBusy(tag)
     try {
       await api.local.pull(tag)
-      toast(`${tag} a fost descărcat`)
+      toast(tr("{tag} a fost descărcat", { tag }))
       await refresh()
     } catch (err) {
       toast(errMsg(err), true)
@@ -62,7 +64,7 @@ export function LocalPage() {
     try {
       const p = await api.local.createProfile(tag)
       await loadProfiles()
-      toast(`Profilul „${p.name}” e gata: îl alegi din conversație`)
+      toast(tr("Profilul „{name}” e gata: îl alegi din conversație", { name: p.name }))
     } catch (err) {
       toast(errMsg(err), true)
     } finally {
@@ -75,30 +77,30 @@ export function LocalPage() {
     <div className="page">
       <div className="page-inner">
         <div className="row">
-          <h1 className="page-title">Modele locale</h1>
+          <h1 className="page-title">{tr("Modele locale")}</h1>
           <div className="spacer" />
           <button className="btn small" onClick={() => void refresh()}>
-            <RefreshCw size={14} /> Reîmprospătează
+            <RefreshCw size={14} /> {tr("Reîmprospătează")}
           </button>
         </div>
         <p className="lead">
-          Pentru când se termină abonamentele sau lucrezi fără internet. Modelele rulează pe PC-ul tău prin Ollama, iar Claude Code le folosește exact ca pe Claude. Sunt mult mai slabe decât Opus și Sonnet la sarcini complexe; echivalențele de mai jos sunt estimări orientative, nu rezultate de benchmark.
+          {tr("Pentru când se termină abonamentele sau lucrezi fără internet. Modelele rulează pe PC-ul tău prin Ollama, iar Claude Code le folosește exact ca pe Claude. Sunt mult mai slabe decât Opus și Sonnet la sarcini complexe; echivalențele de mai jos sunt estimări orientative, nu rezultate de benchmark.")}
         </p>
 
         <div className="grid three" style={{ marginBottom: 16 }}>
           <div className="card">
             <div className="row faint small" style={{ marginBottom: 6 }}>
-              <Gauge size={14} /> Placa video
+              <Gauge size={14} /> {tr("Placa video")}
             </div>
             {hw ? (
               hw.gpus.length ? (
                 hw.gpus.map((g) => (
                   <div key={g.name}>
-                    <b>{g.name}</b> <span className="muted">· {g.vramGb} GB VRAM</span>
+                    <b>{g.name}</b> <span className="muted">· {g.vramGb} {tr("GB VRAM")}</span>
                   </div>
                 ))
               ) : (
-                <span className="muted">Nicio placă video dedicată detectată</span>
+                <span className="muted">{tr("Nicio placă video dedicată detectată")}</span>
               )
             ) : (
               <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
@@ -106,13 +108,13 @@ export function LocalPage() {
           </div>
           <div className="card">
             <div className="row faint small" style={{ marginBottom: 6 }}>
-              <MemoryStick size={14} /> Memorie și procesor
+              <MemoryStick size={14} /> {tr("Memorie și procesor")}
             </div>
             {hw && (
               <>
-                <b>{hw.ramGb} GB RAM</b>
+                <b>{hw.ramGb} {tr("GB RAM")}</b>
                 <div className="muted small ellipsis">
-                  {hw.cpu} · {hw.cores} fire
+                  {hw.cpu} · {hw.cores} {tr("fire")}
                 </div>
               </>
             )}
@@ -125,28 +127,28 @@ export function LocalPage() {
               <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
             ) : ollama.running ? (
               <>
-                <b>Rulează</b> <span className="muted">· versiunea {ollama.version}</span>
-                <div className="muted small">{ollama.models.length} modele instalate</div>
+                <b>{tr("Pornit")}</b> <span className="muted">{tr("· versiunea {version}", { version: ollama.version })}</span>
+                <div className="muted small">{tr("{n} modele instalate", { n: ollama.models.length })}</div>
               </>
             ) : ollama.installed ? (
-              <div className="muted">Instalat, dar oprit. Pornește aplicația Ollama din meniul Start.</div>
+              <div className="muted">{tr("Instalat, dar oprit. Pornește aplicația Ollama din meniul Start.")}</div>
             ) : (
               <>
                 <div className="muted small" style={{ marginBottom: 8 }}>
-                  Nu e instalat. Se instalează gratuit, într-un minut.
+                  {tr("Nu e instalat. Se instalează gratuit, într-un minut.")}
                 </div>
                 <button
                   className="btn primary small"
                   onClick={async () => {
                     try {
                       await api.local.installOllama()
-                      toast('Instalarea a pornit în fereastra nouă. Apasă „Reîmprospătează” după ce termină.')
+                      toast(tr("Instalarea a pornit în fereastra nouă. Apasă „Reîmprospătează” după ce termină."))
                     } catch (err) {
                       toast(errMsg(err), true)
                     }
                   }}
                 >
-                  <Download size={14} /> Instalează Ollama
+                  <Download size={14} /> {tr("Instalează Ollama")}
                 </button>
               </>
             )}
@@ -155,8 +157,10 @@ export function LocalPage() {
 
         {hw && (
           <div className="muted small" style={{ marginBottom: 12 }}>
-            Pe PC-ul tău încap confortabil modele de până la <b style={{ color: 'var(--white)' }}>~{Math.floor(budget)} GB</b>
-            {hw.bestVramGb > 0 ? ' pe placa video.' : ' (fără placă video dedicată rulează pe procesor, mult mai lent).'}
+            <Trans
+              text={hw.bestVramGb > 0 ? tr("Pe PC-ul tău încap confortabil modele de până la {size} pe placa video.") : tr("Pe PC-ul tău încap confortabil modele de până la {size} (fără placă video dedicată rulează pe procesor, mult mai lent).")}
+              values={{ size: <b style={{ color: 'var(--white)' }}>~{Math.floor(budget)} GB</b> }}
+            />
           </div>
         )}
 
@@ -170,22 +174,22 @@ export function LocalPage() {
                   <b>{m.title}</b>
                   <span className="mono faint">{m.tag}</span>
                   <div className="spacer" />
-                  {m.installed && <span className="tag good">instalat</span>}
+                  {m.installed && <span className="tag good">{tr("instalat")}</span>}
                 </div>
                 <div className="row wrap" style={{ gap: 6, marginBottom: 10 }}>
-                  <span className="tag volt" title="Estimare orientativă față de modelele Claude">
+                  <span className="tag volt" title={tr("Estimare orientativă față de modelele Claude")}>
                     ≈ {m.equivalent}
                   </span>
                   {m.unrestricted && (
-                    <span className="tag warn" title="Refuzurile au fost scoase din model. Tu răspunzi de ce generezi cu el.">
-                      fără restricții
+                    <span className="tag warn" title={tr("Refuzurile au fost scoase din model. Tu răspunzi de ce generezi cu el.")}>
+                      {tr("fără restricții")}
                     </span>
                   )}
                   <span className={`tag ${fit.cls}`}>{fit.label}</span>
-                  <span className="tag">~{m.vramGb} GB</span>
+                  <span className="tag">~{m.vramGb} {tr("GB")}</span>
                   {m.vision && (
                     <span className="tag">
-                      <Eye size={11} /> vede imagini
+                      <Eye size={11} /> {tr("vede imagini")}
                     </span>
                   )}
                 </div>
@@ -195,12 +199,12 @@ export function LocalPage() {
                 <PullBar tag={m.tag} />
                 <div className="row" style={{ marginTop: 12 }}>
                   {!m.installed ? (
-                    <button className="btn small" disabled={!ollama?.running || busy === m.tag} onClick={() => void pull(m.tag)} title={ollama?.running ? '' : 'Pornește întâi Ollama'}>
-                      {busy === m.tag ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} />} Descarcă
+                    <button className="btn small" disabled={!ollama?.running || busy === m.tag} onClick={() => void pull(m.tag)} title={ollama?.running ? '' : tr("Pornește întâi Ollama")}>
+                      {busy === m.tag ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} />} {tr("Descarcă")}
                     </button>
                   ) : (
                     <button className="btn primary small" disabled={busy === m.tag} onClick={() => void makeProfile(installedTag?.tag || m.tag)}>
-                      <Plus size={14} /> Folosește în Jolty
+                      <Plus size={14} /> {tr("Folosește în Jolty")}
                     </button>
                   )}
                 </div>
@@ -213,14 +217,14 @@ export function LocalPage() {
           <div className="card" style={{ marginTop: 16 }}>
             <div className="row" style={{ marginBottom: 8 }}>
               <Cpu size={16} />
-              <b>Instalate în Ollama</b>
+              <b>{tr("Instalate în Ollama")}</b>
             </div>
             <table className="table">
               <thead>
                 <tr>
-                  <th>Model</th>
-                  <th>Poate</th>
-                  <th className="num">Mărime</th>
+                  <th>{tr("Model")}</th>
+                  <th>{tr("Poate")}</th>
+                  <th className="num">{tr("Mărime")}</th>
                   <th />
                 </tr>
               </thead>
@@ -232,32 +236,32 @@ export function LocalPage() {
                       <div className="row" style={{ gap: 5 }}>
                         {m.tools ? (
                           <span className="tag good">
-                            <Wrench size={11} /> unelte
+                            <Wrench size={11} /> {tr("unelte")}
                           </span>
                         ) : (
-                          <span className="tag bad">fără unelte</span>
+                          <span className="tag bad">{tr("fără unelte")}</span>
                         )}
                         {m.vision && (
                           <span className="tag">
-                            <Eye size={11} /> imagini
+                            <Eye size={11} /> {tr("imagini")}
                           </span>
                         )}
-                        {m.thinking && <span className="tag">gândire</span>}
+                        {m.thinking && <span className="tag">{tr("gândire")}</span>}
                       </div>
                     </td>
-                    <td className="num">{m.sizeGb} GB</td>
+                    <td className="num">{m.sizeGb} {tr("GB")}</td>
                     <td style={{ textAlign: 'right' }}>
                       <div className="row" style={{ justifyContent: 'flex-end', gap: 6 }}>
                         {m.tools && !m.tag.includes('-jolty') && (
                           <button className="btn small" disabled={busy === m.tag} onClick={() => void makeProfile(m.tag)}>
-                            <Plus size={13} /> Folosește
+                            <Plus size={13} /> {tr("Folosește")}
                           </button>
                         )}
                         <button
                           className="btn ghost small icon danger"
-                          title="Șterge modelul de pe disc"
+                          title={tr("Șterge modelul de pe disc")}
                           onClick={async () => {
-                            if (!confirm(`Ștergi ${m.tag} de pe disc?`)) return
+                            if (!confirm(tr("Ștergi {tag} de pe disc?", { tag: m.tag }))) return
                             try {
                               await api.local.remove(m.tag)
                               await refresh()

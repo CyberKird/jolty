@@ -37,12 +37,13 @@ import { prepareAttachments, filePrompt } from './attachments'
 import { handoffPrompt, roughTokens, sameProvider } from './handoff'
 import { gitDiff, reviewerFor, reviewPrompt, transcriptDiff } from './review'
 import * as store from './store'
+import { tr } from '@shared/i18n'
 
 const COLORS = ['#d97757', '#10a37f', '#6c8cff', '#e0a23b', '#c060d0', '#3bb3c3', '#e05a7a', '#8fb339']
 
 const DEFAULT_PROFILES: Profile[] = [
-  { id: 'claude-main', name: 'Claude (contul principal)', engine: 'claude', auth: 'subscription', isDefaultDir: true, color: COLORS[0] },
-  { id: 'codex-main', name: 'Codex (contul principal)', engine: 'codex', auth: 'subscription', isDefaultDir: true, color: COLORS[1] }
+  { id: 'claude-main', name: tr("Claude (contul principal)"), engine: 'claude', auth: 'subscription', isDefaultDir: true, color: COLORS[0] },
+  { id: 'codex-main', name: tr("Codex (contul principal)"), engine: 'codex', auth: 'subscription', isDefaultDir: true, color: COLORS[1] }
 ]
 
 export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes' }
@@ -119,20 +120,20 @@ export class Jolty {
 
   profile(id: string): Profile {
     const p = store.loadProfiles().find((x) => x.id === id)
-    if (!p) throw new Error('Profil inexistent')
+    if (!p) throw new Error(tr("Profil inexistent"))
     return p
   }
 
   createProfile(input: ProfileInput): Profile {
     const all = store.loadProfiles()
     if (!['claude', 'codex', 'hermes'].includes(input.engine)) throw new Error('Motor necunoscut')
-    if ((input.engine === 'hermes') !== (input.auth === 'existing')) throw new Error('Hermes folosește configurația existentă.')
-    if (input.engine === 'hermes' && all.some((p) => p.engine === 'hermes')) throw new Error('Profilul Hermes există deja.')
-    if (input.engine === 'hermes' && (input.secret || input.baseUrl || input.models?.length)) throw new Error('Configurează modelul și cheia în Hermes.')
-    if (input.engine === 'codex' && input.auth === 'endpoint') throw new Error('Endpoint-urile compatibile sunt disponibile doar pentru motorul Claude Code')
+    if ((input.engine === 'hermes') !== (input.auth === 'existing')) throw new Error(tr("Hermes folosește configurația existentă."))
+    if (input.engine === 'hermes' && all.some((p) => p.engine === 'hermes')) throw new Error(tr("Profilul Hermes există deja."))
+    if (input.engine === 'hermes' && (input.secret || input.baseUrl || input.models?.length)) throw new Error(tr("Configurează modelul și cheia în Hermes."))
+    if (input.engine === 'codex' && input.auth === 'endpoint') throw new Error(tr("Endpoint-urile compatibile sunt disponibile doar pentru motorul Claude Code"))
     const profile: Profile = {
       id: randomUUID().slice(0, 8),
-      name: input.name.trim() || 'Profil nou',
+      name: input.name.trim() || tr("Profil nou"),
       engine: input.engine,
       auth: input.auth,
       // Claude API-key/endpoint profiles reuse ~/.claude (settings, skills, MCP); logins need their own folder.
@@ -153,8 +154,8 @@ export class Jolty {
   updateProfile(id: string, patch: Partial<ProfileInput>): Profile {
     const all = store.loadProfiles()
     const p = all.find((x) => x.id === id)
-    if (!p) throw new Error('Profil inexistent')
-    if (p.engine === 'hermes' && (patch.secret !== undefined || patch.baseUrl !== undefined || patch.models !== undefined)) throw new Error('Configurează modelul și cheia în Hermes.')
+    if (!p) throw new Error(tr("Profil inexistent"))
+    if (p.engine === 'hermes' && (patch.secret !== undefined || patch.baseUrl !== undefined || patch.models !== undefined)) throw new Error(tr("Configurează modelul și cheia în Hermes."))
     if (patch.name !== undefined) p.name = patch.name.trim() || p.name
     if (patch.baseUrl !== undefined) p.baseUrl = patch.baseUrl.trim() || undefined
     if (patch.models !== undefined) p.models = patch.models.map((m) => m.trim()).filter(Boolean)
@@ -168,7 +169,7 @@ export class Jolty {
   }
 
   async removeProfile(id: string): Promise<void> {
-    if (DEFAULT_PROFILES.some((d) => d.id === id)) throw new Error('Profilurile principale nu se pot șterge')
+    if (DEFAULT_PROFILES.some((d) => d.id === id)) throw new Error(tr("Profilurile principale nu se pot șterge"))
     const p = this.profile(id)
     // Close the chats first and wait: the engine process keeps files open in the config folder until it exits.
     for (const s of store.loadSessions().filter((x) => x.profileId === id)) await this.removeSession(s.id)
@@ -186,7 +187,7 @@ export class Jolty {
           if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'ENOTEMPTY') throw e
           if (i >= 15) {
             throw new Error(
-              'Contul nu a putut fi șters: folderul lui de configurare este încă folosit (fereastra de autentificare deschisă sau o conversație care încă rulează pe acest cont). Închide-le și încearcă din nou.'
+              tr("Contul nu a putut fi șters: folderul lui de configurare este încă folosit (fereastra de autentificare deschisă sau o conversație care încă rulează pe acest cont). Închide-le și încearcă din nou.")
             )
           }
           await new Promise((r) => setTimeout(r, 250))
@@ -300,7 +301,7 @@ export class Jolty {
 
   private meta(id: string): SessionMeta {
     const m = store.loadSessions().find((s) => s.id === id)
-    if (!m) throw new Error('Conversație inexistentă')
+    if (!m) throw new Error(tr("Conversație inexistentă"))
     return m
   }
 
@@ -324,7 +325,7 @@ export class Jolty {
     const p = this.profile(input.profileId)
     if (p.engine === 'hermes') {
       hermesMode(input.permissionMode)
-      if (input.browser) throw new Error('Conectarea la browserul Jolty nu este disponibilă pentru Hermes.')
+      if (input.browser) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru Hermes."))
     }
     const now = Date.now()
     const meta: SessionMeta = {
@@ -332,7 +333,7 @@ export class Jolty {
       profileId: p.id,
       engine: p.engine,
       cwd: input.cwd,
-      title: input.title || 'Conversație nouă',
+      title: input.title || tr("Conversație nouă"),
       model: input.model,
       effort: p.engine === 'hermes' ? undefined : input.effort,
       permissionMode: input.permissionMode,
@@ -347,7 +348,7 @@ export class Jolty {
         this.transcripts.set(meta.id, items)
         store.saveTranscript(meta.id, items)
       } catch (err) {
-        this.transcripts.set(meta.id, [{ kind: 'notice', id: randomUUID(), text: `Nu am putut încărca istoricul: ${err instanceof Error ? err.message : err}`, level: 'warn' }])
+        this.transcripts.set(meta.id, [{ kind: 'notice', id: randomUUID(), text: tr("Nu am putut încărca istoricul: {v0}", { v0: err instanceof Error ? err.message : err }), level: 'warn' }])
       }
     }
     this.saveMeta(meta)
@@ -371,7 +372,7 @@ export class Jolty {
       store.saveTranscript(sessionId, items)
       return items
     } catch (err) {
-      return [{ kind: 'notice', id: randomUUID(), text: `Nu am putut încărca istoricul: ${err instanceof Error ? err.message : err}`, level: 'warn' }]
+      return [{ kind: 'notice', id: randomUUID(), text: tr("Nu am putut încărca istoricul: {v0}", { v0: err instanceof Error ? err.message : err }), level: 'warn' }]
     }
   }
 
@@ -406,7 +407,7 @@ export class Jolty {
           profileId: p.id,
           engine: p.engine,
           cwd: s.cwd || os.homedir(),
-          title: s.title.replace(/\s+/g, ' ').trim().slice(0, 60) || 'Sesiune importată',
+          title: s.title.replace(/\s+/g, ' ').trim().slice(0, 60) || tr("Sesiune importată"),
           permissionMode: 'autoEdit',
           engineSessionId: s.engineSessionId,
           createdAt: s.updatedAt,
@@ -424,7 +425,17 @@ export class Jolty {
     if (!s) {
       const meta = this.meta(sessionId)
       const p = this.profile(meta.profileId)
-      s = this.driver(p.engine).createSession(p, meta, this.host())
+      const host = this.host()
+      // a session replaced under the same chat (account switch, removal) still emits as it shuts down;
+      // its late "idle" must not overwrite the new session's state, so only the live one speaks for the chat
+      const own: EngineSession = this.driver(p.engine).createSession(p, meta, {
+        ...host,
+        emit: (e) => {
+          if ('sessionId' in e && e.sessionId === sessionId && this.live.get(sessionId) !== own) return
+          host.emit(e)
+        }
+      })
+      s = own
       this.live.set(sessionId, s)
     }
     return s
@@ -458,12 +469,13 @@ export class Jolty {
 
   private async describeImages(sessionId: string, images: Attachment[]): Promise<string> {
     const vp = this.visionProfile()
-    if (!vp) throw new Error('Niciun profil nu poate citi imagini: adaugă un profil Claude sau un model local cu vision.')
-    this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: `Modelul curent nu vede imagini: le descrie „${vp.name}”...`, level: 'info' } })
+    if (!vp) throw new Error(tr("Niciun profil nu poate citi imagini: adaugă un profil Claude sau un model local cu vision."))
+    this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: tr("Modelul curent nu vede imagini: le descrie „{name}”...", { name: vp.name }), level: 'info' } })
     const text = await this.driver(vp.engine).describe(vp, images, DESCRIBE_PROMPT)
+    // for the model, not the user: kept in English whatever the interface language
     return images.length === 1
-      ? `[Imagine atașată: ${images[0].name}. Modelul tău nu o poate vedea, așa că iată descrierea ei făcută de ${vp.name}:]\n${text}\n[Sfârșitul descrierii]`
-      : `[${images.length} imagini atașate (${images.map((i) => i.name).join(', ')}). Descrierea lor, făcută de ${vp.name}:]\n${text}\n[Sfârșitul descrierii]`
+      ? `[Attached image: ${images[0].name}. Your model cannot see it, so here is a description of it by ${vp.name}:]\n${text}\n[End of description]`
+      : `[${images.length} attached images (${images.map((i) => i.name).join(', ')}). Their description, by ${vp.name}:]\n${text}\n[End of description]`
   }
 
   async sendMessage(sessionId: string, text: string, attachments: Attachment[] = [], display?: string): Promise<void> {
@@ -478,7 +490,7 @@ export class Jolty {
       this.saveMeta(s.meta)
     }
     const prepared = prepareAttachments(attachments)
-    if (s.meta.title === 'Conversație nouă') {
+    if (s.meta.title === tr('Conversație nouă') || s.meta.title === 'Conversație nouă') {
       s.meta.title = text.replace(/\s+/g, ' ').trim().slice(0, 60) || attachments[0]?.name || s.meta.title
       this.saveMeta(s.meta)
       this.send({ type: 'meta', sessionId, meta: s.meta })
@@ -498,11 +510,11 @@ export class Jolty {
         prompt = `${await this.describeImages(sessionId, images)}\n\n${prompt}`
         images = []
       } catch (err) {
-        this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: `Nu am putut descrie imaginea: ${err instanceof Error ? err.message : err}`, level: 'error' } })
+        this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: tr("Nu am putut descrie imaginea: {v0}", { v0: err instanceof Error ? err.message : err }), level: 'error' } })
         return
       }
     }
-    await s.send(prompt || 'Uită-te la imaginea atașată.', images, userId)
+    await s.send(prompt || 'Look at the attached image.', images, userId)
     this.saveMeta(s.meta)
   }
 
@@ -515,7 +527,7 @@ export class Jolty {
 
   async createLocalProfile(tag: string): Promise<Profile> {
     const info = await local.modelInfo(tag)
-    if (!info.tools) throw new Error(`${tag} nu știe să folosească unelte, deci nu poate lucra ca agent (citit și editat fișiere).`)
+    if (!info.tools) throw new Error(tr("{tag} nu știe să folosească unelte, deci nu poate lucra ca agent (citit și editat fișiere).", { tag }))
     const big = await local.ensureLargeContext(tag)
     return this.createProfile({
       name: `Local · ${tag.replace(/:latest$/, '')}`,
@@ -543,8 +555,8 @@ export class Jolty {
     }
     const r = await s.rewind(target, dryRun)
     if (dryRun) return r
-    const what = r.files.length ? `${r.files.length} ${r.files.length === 1 ? 'fișier' : 'fișiere'} (+${r.insertions} -${r.deletions})` : 'nimic de schimbat'
-    this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: `Fișierele au revenit la starea de dinainte de acel mesaj: ${what}.`, level: 'info' } })
+    const what = r.files.length ? `${r.files.length} ${r.files.length === 1 ? tr("fișier") : tr("fișiere")} (+${r.insertions} -${r.deletions})` : tr("nimic de schimbat")
+    this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: tr("Fișierele au revenit la starea de dinainte de acel mesaj: {what}.", { what }), level: 'info' } })
     return r
   }
 
@@ -566,7 +578,7 @@ export class Jolty {
   }
 
   async setEffort(sessionId: string, effort: string): Promise<void> {
-    if (effort && this.meta(sessionId).engine === 'hermes') throw new Error('Hermes folosește efortul din configurația proprie.')
+    if (effort && this.meta(sessionId).engine === 'hermes') throw new Error(tr("Hermes folosește efortul din configurația proprie."))
     const s = this.live.get(sessionId)
     if (s) await s.setEffort(effort)
     const meta = s?.meta || this.meta(sessionId)
@@ -593,8 +605,8 @@ export class Jolty {
   }
 
   async setBrowser(sessionId: string, on: boolean): Promise<void> {
-    if (on && this.meta(sessionId).engine === 'hermes') throw new Error('Conectarea la browserul Jolty nu este disponibilă pentru Hermes.')
-    if (on && browserMode() === 'own' && !browsers().active) throw new Error('Nu găsesc niciun browser Chromium (Chrome, Vivaldi, Edge sau Brave) pentru fereastra Jolty.')
+    if (on && this.meta(sessionId).engine === 'hermes') throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru Hermes."))
+    if (on && browserMode() === 'own' && !browsers().active) throw new Error(tr("Nu găsesc niciun browser Chromium (Chrome, Vivaldi, Edge sau Brave) pentru fereastra Jolty."))
     // the separate Jolty window needs no extension at all
     if (on && browserMode() !== 'own' && (browserMode() === 'pick' || !store.getSecret(BROWSER_TOKEN_KEY))) {
       // first use: no extension yet means the page of the right browser, not a 30 s wait that ends in a timeout
@@ -602,7 +614,7 @@ export class Jolty {
       if (!info.extension) {
         const b = activeBrowser()
         if (b) b.open(BROWSER_EXTENSION_URL)
-        throw new Error(`Instalează extensia Playwright în ${b?.name || 'browser'} (am deschis pagina), apoi apasă din nou Browser.`)
+        throw new Error(tr("Instalează extensia Playwright în {v0} (am deschis pagina), apoi apasă din nou Browser.", { v0: b?.name || 'browser' }))
       }
     }
     const s = this.live.get(sessionId)
@@ -661,7 +673,7 @@ export class Jolty {
       kind: 'notice',
       id: randomUUID(),
       level: 'info',
-      text: `Conversația continuă în ${target.name}. Poți schimba modelul acum; un rezumat compact al istoricului (~${Math.round(cost / 100) / 10}k tokeni) pleacă odată cu primul tău mesaj.`
+      text: tr("Conversația continuă în {name}. Poți schimba modelul acum; un rezumat compact al istoricului (~{v1}k tokeni) pleacă odată cu primul tău mesaj.", { name: target.name, v1: Math.round(cost / 100) / 10 })
     })
     this.transcripts.set(meta.id, carried)
     store.saveTranscript(meta.id, carried)
@@ -672,23 +684,23 @@ export class Jolty {
   async review(sessionId: string): Promise<void> {
     const meta = this.meta(sessionId)
     const reviewer = reviewerFor(meta.engine, store.loadProfiles())
-    if (!reviewer) throw new Error('Pentru o a doua părere ai nevoie de un profil din altă familie (Codex pentru Claude sau invers).')
+    if (!reviewer) throw new Error(tr("Pentru o a doua părere ai nevoie de un profil din altă familie (Codex pentru Claude sau invers)."))
     const diff = (await gitDiff(meta.cwd)) || transcriptDiff(this.transcript(sessionId))
-    if (!diff.trim()) throw new Error('Nu există modificări de verificat.')
+    if (!diff.trim()) throw new Error(tr("Nu există modificări de verificat."))
     const note = (text: string, level: 'info' | 'error'): void =>
       this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text, level } })
-    note(`${reviewer.name} verifică modificările (doar citire)…`, 'info')
+    note(tr("{name} verifică modificările (doar citire)…", { name: reviewer.name }), 'info')
     try {
       const verdict = await this.driver(reviewer.engine).describe(reviewer, [], reviewPrompt(diff), reviewer.engine === 'claude' ? 'sonnet' : undefined)
-      this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'assistant', id: randomUUID(), text: `**Review de la ${reviewer.name}**\n\n${verdict}` } })
+      this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'assistant', id: randomUUID(), text: tr("**Review de la {name}**\n\n{verdict}", { name: reviewer.name, verdict }) } })
     } catch (err) {
-      note(`Review-ul nu a mers: ${err instanceof Error ? err.message : err}`, 'error')
+      note(tr("Review-ul nu a mers: {v0}", { v0: err instanceof Error ? err.message : err }), 'error')
     }
   }
 
   /** The same chat, on another profile: the engine picks the conversation up from its own files. */
   private async retarget(meta: SessionMeta, from: Profile | undefined, to: Profile, model?: string, effort?: string): Promise<SessionMeta> {
-    if (this.busy.has(meta.id)) throw new Error('Oprește răspunsul curent înainte să schimbi contul.')
+    if (this.busy.has(meta.id)) throw new Error(tr("Oprește răspunsul curent înainte să schimbi contul."))
     if (meta.engineSessionId && from && to.engine === 'claude') copyClaudeSession(from, to, meta.engineSessionId)
     await this.live.get(meta.id)?.close()
     this.live.delete(meta.id)
@@ -701,7 +713,7 @@ export class Jolty {
       meta.browser = undefined
     }
     this.saveMeta(meta)
-    this.onEngineEvent({ type: 'item', sessionId: meta.id, item: { kind: 'notice', id: randomUUID(), level: 'info', text: `Continuă în ${to.name}.` } })
+    this.onEngineEvent({ type: 'item', sessionId: meta.id, item: { kind: 'notice', id: randomUUID(), level: 'info', text: tr("Continuă în {name}.", { name: to.name }) } })
     this.send({ type: 'meta', sessionId: meta.id, meta })
     return meta
   }

@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 import type { Profile } from '@shared/types'
 import { getSecret, loadSettings, profileDir } from './store'
+import { tr } from '@shared/i18n'
 
 const isWin = process.platform === 'win32'
 
@@ -229,7 +230,7 @@ export function claudeSettingsOverride(profile: Profile): string | undefined {
   try {
     const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'))
     const url = s?.env?.ANTHROPIC_BASE_URL
-    if (url) return `settings.json din ${dir} trimite Claude Code la ${url} (de ex. de la ai-brain). Rulează „ai-mode sub” sau șterge ANTHROPIC_BASE_URL din settings.json.`
+    if (url) return tr("settings.json din {dir} trimite Claude Code la {url} (de ex. de la ai-brain). Rulează „ai-mode sub” sau șterge ANTHROPIC_BASE_URL din settings.json.", { dir, url })
   } catch {
     // no settings file
   }
