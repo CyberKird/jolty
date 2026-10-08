@@ -12,6 +12,31 @@ import { tr } from '@shared/i18n'
 
 const NONE: PlanStep[] = []
 
+/** Turn progress beside the composer. A percentage is shown only for a current task list. */
+export function WorkClock({ sessionId }: { sessionId: string }) {
+  const steps = useStore((s) => s.plans[sessionId]) || NONE
+  const timer = useStore((s) => s.clocks[sessionId])
+  const now = useNow(true)
+  const current = Boolean(timer?.plan && timer.turn && timer.plan >= timer.turn)
+  const planned = current ? steps : NONE
+  const done = planned.filter((step) => step.status === 'done').length
+  const left = timeLeft(timer, planned, now)
+  const elapsed = clock(now - (timer?.turn || now))
+  const remaining = left === undefined ? tr("se estimează") : `~${clock(left)}`
+  return (
+    <div className="work-clock" role="status" aria-label={`${tr("Lucrează de {clock}", { clock: elapsed })}, ${tr("Rămas")}: ${remaining}`}>
+      <span className="work-clock-times">
+        <span>{elapsed}</span>
+        <span className="work-clock-separator">/</span>
+        <span>{remaining}</span>
+      </span>
+      <span className={`work-clock-track ${planned.length ? '' : 'waiting'}`} aria-hidden="true">
+        <span style={planned.length ? { width: `${(done / planned.length) * 100}%` } : undefined} />
+      </span>
+    </div>
+  )
+}
+
 /** The current time, re-read every second while `on`, for clocks that count. */
 export function useNow(on: boolean): number {
   const [now, setNow] = useState(Date.now)

@@ -1,5 +1,5 @@
 import { Paperclip } from 'lucide-react'
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ChatItem, PermissionDecision, PermissionRequest } from '@shared/types'
 import { splitQuote } from '@shared/quote'
@@ -111,17 +111,39 @@ const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
   )
 })
 
+/** The thinking while it arrives: whole, readable, following its newest line unless the user scrolled up to read. */
+function LiveThought({ text }: { text: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const follow = useRef(true)
+  useEffect(() => {
+    const el = ref.current
+    if (el && follow.current) el.scrollTop = el.scrollHeight
+  }, [text])
+  return (
+    <div className="reasoning reasoning-live" aria-live="polite">
+      <div className="reasoning-head">{tr("Se gândește…")}</div>
+      {text.trim() && (
+        <div
+          className="body"
+          ref={ref}
+          onScroll={(e) => {
+            const el = e.currentTarget
+            follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24
+          }}
+        >
+          {plainDashes(text)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Reasoning({ text, live }: { text: string; live: boolean }) {
   const [open, setOpen] = useState(false)
   if (!text.trim() && !live) return null
   // while it thinks, the thinking is on screen as it arrives (its latest part); afterwards it folds away
-  if (live)
-    return (
-      <div className="reasoning reasoning-live" aria-live="polite">
-        <div className="reasoning-head">{tr("Se gândește…")}</div>
-        {text.trim() && <div className="body">{plainDashes(text.length > 1500 ? `…${text.slice(-1500)}` : text)}</div>}
-      </div>
-    )
+  if (live) return <LiveThought text={text} />
+
   return (
     <details className="reasoning" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
       <summary style={{ color: live ? 'var(--volt)' : undefined }}>{live ? tr("Se gândește…{v0}", { v0: text.trim() ? ` ${open ? '−' : '+'}` : '' }) : tr("Raționament {v0}", { v0: open ? '−' : '+' })}</summary>

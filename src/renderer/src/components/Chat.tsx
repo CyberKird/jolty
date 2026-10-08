@@ -10,7 +10,7 @@ import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODE
 import { MentionMenu, useMentions } from './Mentions'
 import { withQuote } from '@shared/quote'
 import { QuoteBar, SelectionPopup } from './Quote'
-import { LimitStrip, TaskStrip, UpdateStrip, VerificationStrip } from './Tasks'
+import { LimitStrip, TaskStrip, UpdateStrip, VerificationStrip, WorkClock } from './Tasks'
 import { tr } from '@shared/i18n'
 import { Trans } from './Trans'
 
@@ -430,6 +430,7 @@ function Composer(p: ComposerProps) {
           </button>
           {engine !== 'hermes' && <BrowserMenu />}
           <div className="spacer" />
+          {p.sessionId && p.running && <WorkClock sessionId={p.sessionId} />}
           {p.running && (
             <button className="btn send-btn" onClick={p.onStop} title={tr("Oprește (Esc)")}>
               <Square size={12} fill="currentColor" />

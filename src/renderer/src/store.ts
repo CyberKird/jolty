@@ -60,6 +60,7 @@ interface State {
   limits: Record<string, RateLimitSnapshot>
   /** tokens and cost per profile over the last 24 h, kept live from usage events */
   spend: Record<string, { tokens: number; costUsd: number }>
+  spend7d: Record<string, { tokens: number; costUsd: number }>
   balances: Record<string, ProviderBalance>
   contexts: Record<string, { used: number; window?: number }>
   update?: UpdateStatus
@@ -110,6 +111,7 @@ export const useStore = create<State>((set, get) => ({
   setQuote: (sessionId, text) => set((s) => ({ quotes: { ...s.quotes, [sessionId]: text?.trim() || '' } })),
   limits: {},
   spend: {},
+  spend7d: {},
   balances: {},
   contexts: {},
   pulls: {},
@@ -140,7 +142,8 @@ export const useStore = create<State>((set, get) => ({
     const list = await api.usage.summary()
     set((s) => ({
       spend: Object.fromEntries(list.map((u) => [u.profileId, { tokens: u.last24h.tokens, costUsd: u.last24h.costUsd }])),
-      limits: { ...s.limits, ...Object.fromEntries(list.filter((u) => u.limits).map((u) => [u.profileId, u.limits!])) }
+      spend7d: Object.fromEntries(list.map((u) => [u.profileId, { tokens: u.last7d.tokens, costUsd: u.last7d.costUsd }])),
+      limits: { ...s.limits, ...Object.fromEntries(list.filter((u) => u.limits && (!s.limits[u.profileId] || u.limits.updatedAt >= s.limits[u.profileId].updatedAt)).map((u) => [u.profileId, u.limits!])) }
     }))
   },
 
@@ -157,6 +160,7 @@ export const useStore = create<State>((set, get) => ({
     activeId: meta.id,
     page: 'chat',
     status: { ...s.status, [meta.id]: 'running' },
+    clocks: { ...s.clocks, [meta.id]: { turn: Date.now() } },
     transcripts: { ...s.transcripts, [meta.id]: s.transcripts[meta.id] || [] }
   })),
 
@@ -235,7 +239,11 @@ export const useStore = create<State>((set, get) => ({
         const tokens = u.inputTokens + u.outputTokens + u.cacheReadTokens + u.cacheWriteTokens
         set((s) => {
           const cur = s.spend[u.profileId] || { tokens: 0, costUsd: 0 }
-          return { spend: { ...s.spend, [u.profileId]: { tokens: cur.tokens + tokens, costUsd: cur.costUsd + (u.costUsd || 0) } } }
+          const week = s.spend7d[u.profileId] || { tokens: 0, costUsd: 0 }
+          return {
+            spend: { ...s.spend, [u.profileId]: { tokens: cur.tokens + tokens, costUsd: cur.costUsd + (u.costUsd || 0) } },
+            spend7d: { ...s.spend7d, [u.profileId]: { tokens: week.tokens + tokens, costUsd: week.costUsd + (u.costUsd || 0) } }
+          }
         })
         return
       }
@@ -247,30 +255,30 @@ export const useStore = create<State>((set, get) => ({
 // ponytail: one probe per profile per minute at most; Codex also pushes limits by itself
 const lastProbe = new Map<string, number>()
 
-function balanceNote(p: Profile, err: unknown): string {
-  if (p.hasCookie && /HTTP 40[13]/.test(errMsg(err))) return tr("Cookie expirat: pune-l din nou în Conturi")
+function balanceNote(err: unknown): string {
   return `Sold indisponibil (${errMsg(err)})`
 }
-export function refreshLimitsSoon(p: Profile, force = false): void {
-  if (p.local || (!force && Date.now() - (lastProbe.get(p.id) || 0) < 60e3)) return
+/** Settles when the read is done (at once when nothing is read), so a refresh button can spin until then. */
+export function refreshLimitsSoon(p: Profile, force = false): Promise<void> {
+  if (p.local || (!force && Date.now() - (lastProbe.get(p.id) || 0) < 60e3)) return Promise.resolve()
   if (p.auth === 'endpoint') {
     // pay-as-you-go providers: what is left on the account instead of 5 h / 7 d windows
-    if (!p.hasSecret && !p.hasCookie) return
+    if (!p.hasSecret && !p.hasCookie) return Promise.resolve()
     lastProbe.set(p.id, Date.now())
-    api.usage
+    return api.usage
       .balance(p.id)
-      .then((b) => b && useStore.setState((s) => ({ balances: { ...s.balances, [p.id]: b } })))
-      // a failed read keeps the row and says why (an expired MiMo cookie, for example) instead of hiding it
-      .catch((err) =>
-        useStore.setState((s) => ({ balances: { ...s.balances, [p.id]: { ...s.balances[p.id], profileId: p.id, note: balanceNote(p, err), updatedAt: Date.now() } } }))
-      )
-    return
+      .then((b) => void (b && useStore.setState((s) => ({ balances: { ...s.balances, [p.id]: b } }))))
+      // Other providers keep an error note; MiMo shows local usage when its console cookie expires.
+      .catch((err) => useStore.setState((s) => ({ balances: {
+        ...s.balances,
+        [p.id]: { profileId: p.id, note: balanceNote(err), updatedAt: Date.now() }
+      } })))
   }
-  if (p.auth !== 'subscription') return
+  if (p.auth !== 'subscription') return Promise.resolve()
   lastProbe.set(p.id, Date.now())
-  api.usage
+  return api.usage
     .refreshLimits(p.id)
-    .then((snap) => snap && useStore.getState().onEvent({ type: 'limits', snapshot: snap }))
+    .then((snap) => void (snap && useStore.getState().onEvent({ type: 'limits', snapshot: snap })))
     .catch(() => undefined)
 }
 

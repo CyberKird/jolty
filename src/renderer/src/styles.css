@@ -943,15 +943,14 @@ a {
   text-transform: uppercase;
   color: var(--volt);
 }
-/* the live thought keeps its newest lines in view and fades the older ones out at the top */
+/* the live thought: readable, tall, follows its newest line; scroll up inside it to read back */
 .reasoning-live .body {
-  max-height: 180px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  max-height: 45vh;
+  overflow-y: auto;
+  color: var(--grey);
+  line-height: 1.55;
   border-inline-start-color: var(--volt-line);
-  mask-image: linear-gradient(to bottom, transparent, #000 40px);
+  scrollbar-width: thin;
 }
 
 /* tool calls read like a log: verb, target, state */
@@ -1311,6 +1310,42 @@ a {
   width: 40px;
   height: 36px;
   padding: 0;
+}
+.work-clock {
+  display: grid;
+  gap: 4px;
+  min-width: 110px;
+  color: var(--volt);
+  font-family: var(--label);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.work-clock-times {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.work-clock-separator { color: var(--grey-2); }
+.work-clock-track {
+  height: 2px;
+  overflow: hidden;
+  background: var(--line-2);
+}
+.work-clock-track span {
+  display: block;
+  height: 100%;
+  background: var(--volt);
+  transition: width 0.4s ease;
+}
+.work-clock-track.waiting span {
+  width: 35%;
+  animation: work-clock-wait 1.4s ease-in-out infinite alternate;
+}
+@keyframes work-clock-wait {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(290%); }
 }
 
 /* first screen */
@@ -2156,6 +2191,14 @@ a {
 }
 .meter-refresh:hover {
   color: var(--white);
+}
+/* turns on click and keeps turning until every account answered (volt alone under reduced motion) */
+.meter-refresh.spinning {
+  color: var(--volt);
+  cursor: progress;
+}
+.meter-refresh.spinning svg {
+  animation: spin 0.7s linear infinite;
 }
 .meter-empty {
   padding: 2px 12px;

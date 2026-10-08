@@ -9,26 +9,43 @@ function money(n: number, currency = 'USD'): string {
   return currency === 'USD' ? `$${v}` : `${v} ${currency}`
 }
 
+function isMiMoProfile(p: { auth: string; baseUrl?: string }): boolean {
+  return p.auth === 'endpoint' && /^https:\/\/(?:api|token-plan-cn)\.xiaomimimo\.com(?:[:/]|$)/i.test(p.baseUrl || '')
+}
+
 /** Always-visible meter: each account's 5 h / 7 d limits and its last 24 h, updated as turns finish. */
 function UsageMeter() {
-  const { profiles, limits, spend, balances, status, setPage, loadUsage } = useStore()
+  const { profiles, limits, spend, spend7d, balances, status, setPage, loadUsage, loadSessions, toast } = useStore()
   const running = Object.values(status).some((s) => s === 'running')
+  const [refreshing, setRefreshing] = useState(false)
   useEffect(() => {
     for (const p of profiles) refreshLimitsSoon(p)
   }, [profiles])
   // a profile with empty windows but a note (rate-limited probe) stays visible so the row does not vanish
-  const rows = profiles.filter((p) => limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id])
+  const rows = profiles.filter((p) => isMiMoProfile(p) || limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id])
   return (
     <section className="meter" aria-label={tr("Consum live")}>
       <div className="meter-head">
         <span className={`dot ${running ? 'running' : ''}`} style={{ background: running ? 'var(--volt)' : 'var(--grey-2)' }} />
         <span className="label">{tr("Consum live")}</span>
         <button
-          className="meter-refresh"
-          title={tr("Actualizează limitele acum")}
+          className={`meter-refresh ${refreshing ? 'spinning' : ''}`}
+          title={`${tr("Importă sesiuni")} · ${tr("Consum live")}`}
+          aria-busy={refreshing}
+          disabled={refreshing}
           onClick={() => {
-            for (const p of profiles) refreshLimitsSoon(p, true)
-            void loadUsage()
+            setRefreshing(true)
+            // Recheck usage and discover new local conversations, then refresh account limits.
+            void (async () => {
+              const summary = await Promise.allSettled([loadUsage(), api.sessions.importAll(), new Promise((r) => setTimeout(r, 700))])
+              if (summary[0].status === 'rejected') toast(String(summary[0].reason), true)
+              if (summary[1].status === 'fulfilled') {
+                await loadSessions().catch((err) => toast(String(err), true))
+                if (summary[1].value.failed.length) toast(tr("Nu am putut citi: {join} (verifică login-ul în Conturi și chei)", { join: summary[1].value.failed.join(', ') }), true)
+              } else toast(String(summary[1].reason), true)
+              await Promise.allSettled(profiles.map((p) => refreshLimitsSoon(p, true)))
+              setRefreshing(false)
+            })()
           }}
         >
           <RefreshCw size={12} />
@@ -38,27 +55,41 @@ function UsageMeter() {
         {rows.length === 0 && <div className="faint small meter-empty">{tr("Nimic folosit în ultimele 24 h.")}</div>}
         {rows.map((p) => {
           const s = spend[p.id]
+          const isMiMo = isMiMoProfile(p)
+          const balance = balances[p.id]
           return (
             <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title={tr("Deschide Consum")}>
             <span className="meter-name">
               <span className="dot" style={{ width: 6, height: 6, background: p.color }} />
               <span className="ellipsis">{p.name}</span>
-              {s?.tokens ? (
+              {!isMiMo && s?.tokens ? (
                 <span className="meter-24h" title={tr("Ultimele 24 de ore")}>
                   {fmtTokens(s.tokens)}
                   {s.costUsd ? ` · ${fmtUsd(s.costUsd)}` : ''}
                 </span>
               ) : null}
             </span>
-            {balances[p.id] && (
-              <span className="meter-balance" title={tr("Actualizat {timeAgo}", { timeAgo: timeAgo(balances[p.id].updatedAt) })}>
-                {balances[p.id].amount !== undefined ? (
+            {isMiMo && (
+              <>
+                <span className="meter-balance" title={tr("Ultimele 24 de ore")}>
+                  <span className="meter-limit-label">24h</span>
+                  <b>{fmtTokens(s?.tokens || 0)}</b>
+                </span>
+                <span className="meter-balance" title={tr("Ultimele 7 zile")}>
+                  <span className="meter-limit-label">7d</span>
+                  <b>{fmtTokens(spend7d[p.id]?.tokens || 0)}</b>
+                </span>
+              </>
+            )}
+            {balance && (!isMiMo || balance.amount !== undefined) && (
+              <span className="meter-balance" title={tr("Actualizat {timeAgo}", { timeAgo: timeAgo(balance.updatedAt) })}>
+                {balance.amount !== undefined ? (
                   <>
                     <span className="meter-limit-label">{tr("Rămas")}</span>
-                    <b className={balances[p.id].amount! <= 1 ? 'low' : ''}>{money(balances[p.id].amount!, balances[p.id].currency)}</b>
+                    <b className={balance.amount <= 1 ? 'low' : ''}>{money(balance.amount, balance.currency)}</b>
                   </>
                 ) : null}
-                {balances[p.id].note && <span className="faint">{balances[p.id].note}</span>}
+                {balance.note && <span className="faint">{balance.note}</span>}
               </span>
             )}
             {limits[p.id]?.windows.slice(0, 2).map((w) => (
