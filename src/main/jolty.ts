@@ -37,6 +37,7 @@ import { prepareAttachments, filePrompt } from './attachments'
 import { handoffPrompt, roughTokens, sameProvider } from './handoff'
 import { gitDiff, reviewerFor, reviewPrompt, transcriptDiff } from './review'
 import * as store from './store'
+import { removeProfileFiles } from './profile-files'
 import { tr } from '@shared/i18n'
 
 const COLORS = ['#d97757', '#10a37f', '#6c8cff', '#e0a23b', '#c060d0', '#3bb3c3', '#e05a7a', '#8fb339']
@@ -91,6 +92,7 @@ export class Jolty {
   private busy = new Set<string>()
   private transcripts = new Map<string, ChatItem[]>()
   private saveTimers = new Map<string, NodeJS.Timeout>()
+  private removingProfiles = new Set<string>()
 
   constructor(private send: (e: ChatEvent) => void) {
     this.codex.onLimits = (s) => this.recordLimits(s)
@@ -119,6 +121,7 @@ export class Jolty {
   }
 
   profile(id: string): Profile {
+    if (this.removingProfiles.has(id)) throw new Error(tr("Profil inexistent"))
     const p = store.loadProfiles().find((x) => x.id === id)
     if (!p) throw new Error(tr("Profil inexistent"))
     return p
@@ -171,33 +174,39 @@ export class Jolty {
   async removeProfile(id: string): Promise<void> {
     if (DEFAULT_PROFILES.some((d) => d.id === id)) throw new Error(tr("Profilurile principale nu se pot șterge"))
     const p = this.profile(id)
-    // Close the chats first and wait: the engine process keeps files open in the config folder until it exits.
-    for (const s of store.loadSessions().filter((x) => x.profileId === id)) await this.removeSession(s.id)
-    const dir = store.profileDir(p)
-    if (dir) {
-      // Windows keeps the folder locked while the engine process still has files open in it:
-      // close() only ends the stream, the process exits a moment later. Hand-rolled retry because
-      // Node's maxRetries does not retry EPERM (measured, Node 25).
-      for (let i = 0; ; i++) {
-        try {
-          fs.rmSync(dir, { recursive: true, force: true })
-          break
-        } catch (e) {
-          const code = (e as NodeJS.ErrnoException).code
-          if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'ENOTEMPTY') throw e
-          if (i >= 15) {
-            throw new Error(
-              tr("Contul nu a putut fi șters: folderul lui de configurare este încă folosit (fereastra de autentificare deschisă sau o conversație care încă rulează pe acest cont). Închide-le și încearcă din nou.")
-            )
+    this.removingProfiles.add(id)
+    try {
+      if (p.engine === 'claude') await this.claude.releaseProfile(id)
+      // Close the chats first and wait: the engine process keeps files open in the config folder until it exits.
+      for (const s of store.loadSessions().filter((x) => x.profileId === id)) await this.removeSession(s.id)
+      if (p.engine === 'codex') await this.codex.releaseProfile(id)
+      const dir = store.profileDir(p)
+      if (dir) {
+        // Windows keeps the folder locked while the engine process still has files open in it:
+        // close() only ends the stream, the process exits a moment later. Hand-rolled retry because
+        // Node's maxRetries does not retry EPERM (measured, Node 25).
+        for (let i = 0; ; i++) {
+          try {
+            removeProfileFiles(dir)
+            break
+          } catch (e) {
+            const code = (e as NodeJS.ErrnoException).code
+            if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'ENOTEMPTY') throw e
+            if (i >= 15) {
+              throw new Error(
+                tr("Contul nu a putut fi șters: folderul lui de configurare este încă folosit (fereastra de autentificare deschisă sau o conversație care încă rulează pe acest cont). Închide-le și încearcă din nou.")
+              )
+            }
+            await new Promise((r) => setTimeout(r, 250))
           }
-          await new Promise((r) => setTimeout(r, 250))
         }
       }
+      store.setSecret(id, undefined)
+      store.setSecret(id + ':cookie', undefined)
+      store.saveProfiles(store.loadProfiles().filter((x) => x.id !== id))
+    } finally {
+      this.removingProfiles.delete(id)
     }
-    if (p.engine === 'codex') this.codex.reset(id)
-    store.setSecret(id, undefined)
-    store.setSecret(id + ':cookie', undefined)
-    store.saveProfiles(store.loadProfiles().filter((x) => x.id !== id))
   }
 
   async status(id: string): Promise<AccountStatus> {

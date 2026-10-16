@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
 import { EventEmitter } from 'events'
 import { tr } from '@shared/i18n'
+import { ProfileProcesses } from './profile-processes'
 
 export interface RpcRequest {
   id: number | string
@@ -16,6 +17,7 @@ export interface RpcNotification {
 /** Newline-delimited JSON-RPC over a child process's stdio (the protocol `codex app-server` speaks). */
 export class JsonRpcProcess extends EventEmitter {
   private proc: ChildProcessWithoutNullStreams
+  private processes = new ProfileProcesses()
   private nextId = 1
   private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void; method: string }>()
   private buffer = ''
@@ -25,6 +27,7 @@ export class JsonRpcProcess extends EventEmitter {
   constructor(exe: string, args: string[], env: Record<string, string>) {
     super()
     this.proc = spawn(exe, args, { env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+    this.processes.track('rpc', this.proc)
     this.proc.stdout.setEncoding('utf8')
     this.proc.stdout.on('data', (chunk: string) => this.onData(chunk))
     this.proc.stderr.setEncoding('utf8')
@@ -126,5 +129,9 @@ export class JsonRpcProcess extends EventEmitter {
 
   kill(): void {
     if (!this.exited) this.proc.kill()
+  }
+
+  async stop(): Promise<void> {
+    await this.processes.stop('rpc')
   }
 }

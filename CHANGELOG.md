@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.14
+
+- Deleting an account works again. The sign-in check that kept polling in the background no longer restarts the account's engine while its folder is being removed, and the engine processes are stopped first. Shared skills and plugins are never touched.
+
 ## 0.3.13
 
 - Refresh in the sidebar now imports new local conversations, reloads usage and checks every account. The icon spins until the refresh finishes.

@@ -1,5 +1,5 @@
 import { KeyRound, LogIn, LogOut, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AccountStatus, AuthKind, EngineKind, Profile, ProfileInput } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
@@ -49,6 +49,7 @@ export function LimitMeters({ profileId, compact }: { profileId: string; compact
 function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void }) {
   const [status, setStatus] = useState<AccountStatus>()
   const [busy, setBusy] = useState(false)
+  const polling = useRef(true)
   const { toast, loadProfiles, onEvent } = useStore()
 
   const refresh = async (): Promise<AccountStatus> => {
@@ -57,7 +58,9 @@ function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void
     return s
   }
   useEffect(() => {
+    polling.current = true
     void refresh()
+    return () => { polling.current = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.id, profile.hasSecret])
 
@@ -68,8 +71,9 @@ function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void
       setStatus(s)
       if (profile.engine === 'claude' && profile.auth === 'subscription' && !s.loggedIn) {
         toast(tr("Termină autentificarea în fereastra care s-a deschis. Verific automat..."))
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 100 && polling.current; i++) {
           await new Promise((r) => setTimeout(r, 3000))
+          if (!polling.current) break
           if ((await refresh()).loggedIn) {
             toast(`${profile.name} e conectat`)
             break
@@ -156,6 +160,7 @@ function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void
             title={tr("Șterge profilul")}
             onClick={async () => {
               if (!confirm(tr("Ștergi profilul „{name}”? Conversațiile lui din Jolty dispar; cele din Claude Code / Codex rămân.", { name: profile.name }))) return
+              polling.current = false
               try {
                 await api.profiles.remove(profile.id)
                 await loadProfiles()

@@ -38,6 +38,7 @@ import { TaskBoard } from './tasks'
 import { getSecret, loadSettings, profileDir, saveSettings } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
+import { ProfileProcesses } from './profile-processes'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 import { tr } from '@shared/i18n'
 
@@ -674,23 +675,24 @@ class ClaudeSession implements EngineSession {
 // ---------------------------------------------------------------------------
 // Driver: accounts, models, sessions on disk
 // ---------------------------------------------------------------------------
+const profileProcesses = new ProfileProcesses()
+
 function runCli(profile: Profile, args: string[], timeoutMs = 30000): Promise<{ code: number; stdout: string; stderr: string }> {
   const exe = claudeExecutable()
   if (!exe) return Promise.reject(new Error(tr("Nu găsesc Claude Code (binarul inclus lipsește)")))
   prepareProfileDir(profile)
   return new Promise((resolve) => {
-    execFile(exe, args, { env: claudeEnv(profile), timeout: timeoutMs, windowsHide: true }, (err, stdout, stderr) => {
+    profileProcesses.track(profile.id, execFile(exe, args, { env: claudeEnv(profile), timeout: timeoutMs, windowsHide: true }, (err, stdout, stderr) => {
       const code = err && typeof (err as { code?: unknown }).code === 'number' ? Number((err as { code: number }).code) : err ? 1 : 0
       resolve({ code, stdout: String(stdout), stderr: String(stderr) })
-    })
+    }))
   })
 }
 
 /** Opens a console window running an official login command, so the user signs in with Anthropic directly. */
-function openLoginWindow(exe: string, args: string[], env: Record<string, string>): void {
+function openLoginWindow(profileId: string, exe: string, args: string[], env: Record<string, string>): void {
   if (process.platform === 'win32') {
-    const cmdline = `start "Jolty - autentificare" "${exe}" ${args.join(' ')}`
-    spawn('cmd.exe', ['/d', '/s', '/c', `"${cmdline}"`], { env, detached: true, stdio: 'ignore', windowsVerbatimArguments: true }).unref()
+    profileProcesses.track(profileId, spawn(exe, args, { env, detached: true, stdio: 'ignore', windowsHide: false })).unref()
     return
   }
   if (process.platform === 'darwin') {
@@ -704,7 +706,7 @@ function openLoginWindow(exe: string, args: string[], env: Record<string, string
     return
   }
   // Linux: no reliable terminal; run it and open the sign-in URL it prints.
-  const child = spawn(exe, args, { env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = profileProcesses.track(profileId, spawn(exe, args, { env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] }))
   const onData = (buf: Buffer): void => {
     const url = buf.toString().match(/https:\/\/\S+/)?.[0]
     if (url) void shell.openExternal(url)
@@ -761,13 +763,19 @@ export class ClaudeDriver implements EngineDriver {
     const exe = claudeExecutable()
     if (!exe) throw new Error(tr("Nu găsesc Claude Code (binarul inclus lipsește)"))
     prepareProfileDir(profile)
-    openLoginWindow(exe, ['auth', 'login', '--claudeai'], claudeEnv(profile))
+    await profileProcesses.stop(profile.id)
+    openLoginWindow(profile.id, exe, ['auth', 'login', '--claudeai'], claudeEnv(profile))
     return this.status(profile)
   }
 
   async logout(profile: Profile): Promise<AccountStatus> {
     if (profile.auth === 'subscription') await runCli(profile, ['auth', 'logout'])
     return this.status(profile)
+  }
+
+  async releaseProfile(profileId: string): Promise<void> {
+    await profileProcesses.stop(profileId)
+    this.modelCache.delete(profileId)
   }
 
   async models(profile: Profile): Promise<ModelOption[]> {

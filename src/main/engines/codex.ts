@@ -85,6 +85,7 @@ class OneShot implements ThreadListener {
 class CodexServer {
   rpc?: JsonRpcProcess
   private starting?: Promise<JsonRpcProcess>
+  private spawningRpc?: JsonRpcProcess
   readonly sessions = new Map<string, ThreadListener>()
   private loginWaiters: ((ok: boolean, error?: string) => void)[] = []
   private importWaiters = new Map<string, () => void>()
@@ -105,6 +106,7 @@ class CodexServer {
     if (!exe) throw new Error(tr("Nu găsesc Codex (binarul inclus lipsește)"))
     prepareProfileDir(this.profile)
     const rpc = new JsonRpcProcess(exe, ['app-server', ...CODEX_PRIVATE_ARGS], codexEnv(this.profile, exe))
+    this.spawningRpc = rpc
     rpc.on('notification', (n: RpcNotification) => this.onNotification(n))
     rpc.on('request', (r: RpcRequest) => this.onRequest(rpc, r))
     rpc.on('exit', (reason: string) => {
@@ -118,6 +120,7 @@ class CodexServer {
     })
     rpc.notify('initialized')
     this.rpc = rpc
+    this.spawningRpc = undefined
     if (this.profile.auth === 'apiKey') {
       const acct = await rpc.request<Any>('account/read', {})
       const key = getSecret(this.profile.id)
@@ -178,6 +181,11 @@ class CodexServer {
   kill(): void {
     this.rpc?.kill()
   }
+
+  async stop(): Promise<void> {
+    await (this.rpc || this.spawningRpc)?.stop()
+    await this.starting?.catch(() => undefined)
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -200,6 +208,11 @@ export class CodexDriver implements EngineDriver {
   /** Stops the profile's app-server so the next call starts it with fresh settings. */
   reset(profileId: string): void {
     this.servers.get(profileId)?.kill()
+    this.servers.delete(profileId)
+  }
+
+  async releaseProfile(profileId: string): Promise<void> {
+    await this.servers.get(profileId)?.stop()
     this.servers.delete(profileId)
   }
 
