@@ -148,7 +148,16 @@ export const useStore = create<State>((set, get) => ({
   },
 
   openSession: async (id) => {
+    // a temporary chat ends when the user leaves it: nothing of it stays, here or on disk
+    const left = get().sessions.find((x) => x.id === get().activeId && x.temporary && x.id !== id)
     set({ activeId: id, page: 'chat' })
+    if (left) {
+      set((s) => {
+        const { [left.id]: _gone, ...transcripts } = s.transcripts
+        return { transcripts, sessions: s.sessions.filter((x) => x.id !== left.id) }
+      })
+      void api.sessions.remove(left.id).catch(() => undefined)
+    }
     if (id && !get().transcripts[id]) {
       const items = await api.sessions.history(id)
       set((s) => ({ transcripts: { ...s.transcripts, [id]: items } }))
@@ -199,6 +208,7 @@ export const useStore = create<State>((set, get) => ({
       case 'meta':
         set((s) => {
           const exists = s.sessions.some((x) => x.id === e.meta.id)
+          if (!exists && e.meta.temporary && s.activeId !== e.meta.id) return s
           return { sessions: exists ? s.sessions.map((x) => (x.id === e.meta.id ? { ...x, ...e.meta } : x)) : [e.meta, ...s.sessions] }
         })
         return

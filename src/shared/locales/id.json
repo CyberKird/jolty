@@ -700,5 +700,12 @@
  "7 zile (cu extra)": "7 hari (dengan ekstra)",
  "Extra": "Ekstra",
  "În repaus": "Siaga",
- "Pornit": "Berjalan"
+ "Pornit": "Berjalan",
+ "Conversația temporară nu este disponibilă pentru Hermes.": "Obrolan sementara tidak tersedia untuk Hermes.",
+ "O sesiune existentă nu poate deveni temporară.": "Sesi yang sudah ada tidak bisa menjadi sementara.",
+ "O conversație temporară nu poate fi mutată pe alt cont: nu se salvează nimic din ea.": "Obrolan sementara tidak bisa dipindahkan ke akun lain: tidak ada yang disimpan darinya.",
+ "Temporar": "Sementara",
+ "Conversație temporară: nu apare în listă și dispare când o părăsești sau închizi Jolty.": "Obrolan sementara: tidak muncul di daftar dan hilang saat kamu keluar atau menutup Jolty.",
+ "Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.": "Obrolan sementara aktif: tidak ada yang disimpan, baik pertanyaanmu maupun jawabannya. Klik untuk mematikan.",
+ "Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty.": "Obrolan sementara: tidak disimpan di Jolty, tidak muncul di daftar, dan hilang saat kamu keluar atau menutup Jolty."
 }

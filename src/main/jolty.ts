@@ -93,6 +93,11 @@ export class Jolty {
   private transcripts = new Map<string, ChatItem[]>()
   private saveTimers = new Map<string, NodeJS.Timeout>()
   private removingProfiles = new Set<string>()
+  /** temporary chats: kept here only, never in sessions.json or transcripts/ */
+  private temps = new Map<string, SessionMeta>()
+  private trackedTemps = new Set<string>()
+  /** ended temporary chats: a late event from the dying engine must not write them back to disk */
+  private wiped = new Set<string>()
 
   constructor(private send: (e: ChatEvent) => void) {
     this.codex.onLimits = (s) => this.recordLimits(s)
@@ -178,7 +183,7 @@ export class Jolty {
     try {
       if (p.engine === 'claude') await this.claude.releaseProfile(id)
       // Close the chats first and wait: the engine process keeps files open in the config folder until it exits.
-      for (const s of store.loadSessions().filter((x) => x.profileId === id)) await this.removeSession(s.id)
+      for (const s of [...store.loadSessions(), ...this.temps.values()].filter((x) => x.profileId === id)) await this.removeSession(s.id)
       if (p.engine === 'codex') await this.codex.releaseProfile(id)
       const dir = store.profileDir(p)
       if (dir) {
@@ -268,7 +273,7 @@ export class Jolty {
   }
 
   private scheduleSave(sessionId: string): void {
-    if (this.saveTimers.has(sessionId)) return
+    if (this.temps.has(sessionId) || this.saveTimers.has(sessionId)) return
     this.saveTimers.set(
       sessionId,
       setTimeout(() => {
@@ -279,6 +284,7 @@ export class Jolty {
   }
 
   private onEngineEvent(e: ChatEvent): void {
+    if ('sessionId' in e && this.wiped.has(e.sessionId)) return
     if (e.type === 'status') {
       if (e.status === 'running') this.busy.add(e.sessionId)
       else this.busy.delete(e.sessionId)
@@ -305,16 +311,26 @@ export class Jolty {
   // Sessions
   // -------------------------------------------------------------------------
   sessions(): SessionMeta[] {
-    return store.loadSessions().sort((a, b) => b.updatedAt - a.updatedAt)
+    return [...store.loadSessions(), ...this.temps.values()].sort((a, b) => b.updatedAt - a.updatedAt)
+  }
+
+  private findMeta(id: string): SessionMeta | undefined {
+    return this.temps.get(id) ?? store.loadSessions().find((s) => s.id === id)
   }
 
   private meta(id: string): SessionMeta {
-    const m = store.loadSessions().find((s) => s.id === id)
+    const m = this.findMeta(id)
     if (!m) throw new Error(tr("Conversație inexistentă"))
     return m
   }
 
   private saveMeta(meta: SessionMeta): void {
+    if (this.temps.has(meta.id)) {
+      meta.updatedAt = Date.now()
+      this.temps.set(meta.id, meta)
+      this.trackTemp(meta)
+      return
+    }
     const all = store.loadSessions()
     const i = all.findIndex((s) => s.id === meta.id)
     meta.updatedAt = Date.now()
@@ -325,7 +341,7 @@ export class Jolty {
 
   async externalSessions(profileId: string, cwd?: string): Promise<ExternalSession[]> {
     const p = this.profile(profileId)
-    const known = new Set(store.loadSessions().map((s) => s.engineSessionId).filter(Boolean))
+    const known = new Set([...store.loadSessions(), ...this.temps.values()].map((s) => s.engineSessionId).filter(Boolean))
     const list = await this.driver(p.engine).externalSessions(p, cwd)
     return list.filter((s) => !known.has(s.engineSessionId))
   }
@@ -335,6 +351,10 @@ export class Jolty {
     if (p.engine === 'hermes') {
       hermesMode(input.permissionMode)
       if (input.browser) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru Hermes."))
+    }
+    if (input.temporary) {
+      if (p.engine === 'hermes') throw new Error(tr("Conversația temporară nu este disponibilă pentru Hermes."))
+      if (input.resumeEngineSessionId) throw new Error(tr("O sesiune existentă nu poate deveni temporară."))
     }
     const now = Date.now()
     const meta: SessionMeta = {
@@ -347,6 +367,7 @@ export class Jolty {
       effort: p.engine === 'hermes' ? undefined : input.effort,
       permissionMode: input.permissionMode,
       browser: input.browser || undefined,
+      temporary: input.temporary || undefined,
       engineSessionId: input.resumeEngineSessionId,
       createdAt: now,
       updatedAt: now
@@ -360,8 +381,9 @@ export class Jolty {
         this.transcripts.set(meta.id, [{ kind: 'notice', id: randomUUID(), text: tr("Nu am putut încărca istoricul: {v0}", { v0: err instanceof Error ? err.message : err }), level: 'warn' }])
       }
     }
+    if (meta.temporary) this.temps.set(meta.id, meta)
     this.saveMeta(meta)
-    if (!input.resumeEngineSessionId && input.model) this.remember(p.id, { model: input.model, effort: input.effort || '' })
+    if (!input.resumeEngineSessionId && input.model && !meta.temporary) this.remember(p.id, { model: input.model, effort: input.effort || '' })
     return meta
   }
 
@@ -372,8 +394,8 @@ export class Jolty {
 
   async loadHistory(sessionId: string): Promise<ChatItem[]> {
     const t = this.transcript(sessionId)
-    const meta = store.loadSessions().find((s) => s.id === sessionId)
-    if (t.length || !meta?.engineSessionId || this.live.has(sessionId)) return t
+    const meta = this.findMeta(sessionId)
+    if (t.length || !meta?.engineSessionId || meta.temporary || this.live.has(sessionId)) return t
     try {
       const p = this.profile(meta.profileId)
       const items = await this.driver(p.engine).history(p, meta.engineSessionId, meta.cwd)
@@ -391,7 +413,7 @@ export class Jolty {
    */
   async importAll(): Promise<{ imported: number; failed: string[] }> {
     const metas = store.loadSessions()
-    const known = new Set(metas.map((s) => s.engineSessionId).filter(Boolean))
+    const known = new Set([...metas, ...this.temps.values()].map((s) => s.engineSessionId).filter(Boolean))
     const dirs = new Set<string>()
     const failed: string[] = []
     let imported = 0
@@ -491,7 +513,7 @@ export class Jolty {
     const s = this.liveSession(sessionId)
     if (s.meta.handoffPending) {
       // a moved chat's first message carries the history it came with
-      const from = store.loadSessions().find((x) => x.id === s.meta.handoffFrom) || s.meta
+      const from = this.findMeta(s.meta.handoffFrom ?? '') || s.meta
       const fromProfile = store.loadProfiles().find((p) => p.id === from.profileId)
       display ??= text
       text = brief(from, fromProfile, this.transcript(sessionId), await gitState(s.meta.cwd), text)
@@ -656,6 +678,7 @@ export class Jolty {
    */
   async handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string): Promise<SessionMeta> {
     const src = this.meta(sessionId)
+    if (src.temporary) throw new Error(tr("O conversație temporară nu poate fi mutată pe alt cont: nu se salvează nimic din ea."))
     const srcProfile = store.loadProfiles().find((p) => p.id === src.profileId)
     const target = this.profile(targetProfileId)
     if ((src.handoffPending && !src.engineSessionId) || (srcProfile && sameProvider(srcProfile, target))) {
@@ -727,7 +750,47 @@ export class Jolty {
     return meta
   }
 
+  /** Remembers the engine file of a temporary Claude chat, so a crash cannot leave it behind. */
+  private trackTemp(meta: SessionMeta): void {
+    if (meta.engine !== 'claude' || !meta.engineSessionId || this.trackedTemps.has(meta.engineSessionId)) return
+    this.trackedTemps.add(meta.engineSessionId)
+    const list = store.loadTempLeftovers()
+    if (list.some((x) => x.engineSessionId === meta.engineSessionId)) return
+    store.saveTempLeftovers([...list, { profileId: meta.profileId, engineSessionId: meta.engineSessionId, cwd: meta.cwd }])
+  }
+
+  private async wipeTemp(sessionId: string): Promise<void> {
+    const meta = this.temps.get(sessionId)
+    if (!meta) return
+    await this.live.get(sessionId)?.close().catch(() => undefined)
+    this.live.delete(sessionId)
+    this.transcripts.delete(sessionId)
+    this.temps.delete(sessionId)
+    this.wiped.add(sessionId)
+    const p = store.loadProfiles().find((x) => x.id === meta.profileId)
+    if (p && meta.engine === 'claude' && meta.engineSessionId) {
+      // the engine process exits a moment after close(): give it time to let go of its files
+      await new Promise((r) => setTimeout(r, 400))
+      await this.claude.wipeSession(p, meta.engineSessionId, meta.cwd)
+      store.saveTempLeftovers(store.loadTempLeftovers().filter((x) => x.engineSessionId !== meta.engineSessionId))
+    }
+  }
+
+  /** Engine files of temporary chats that were still open when Jolty last stopped. */
+  async sweepTemps(): Promise<void> {
+    const live = new Set([...this.temps.values()].map((m) => m.engineSessionId))
+    const swept = new Set<string>()
+    for (const l of store.loadTempLeftovers()) {
+      if (live.has(l.engineSessionId)) continue
+      const p = store.loadProfiles().find((x) => x.id === l.profileId)
+      if (p) await this.claude.wipeSession(p, l.engineSessionId, l.cwd)
+      swept.add(l.engineSessionId)
+    }
+    store.saveTempLeftovers(store.loadTempLeftovers().filter((l) => !swept.has(l.engineSessionId)))
+  }
+
   async removeSession(sessionId: string): Promise<void> {
+    if (this.temps.has(sessionId)) return this.wipeTemp(sessionId)
     await this.live.get(sessionId)?.close()
     this.live.delete(sessionId)
     this.transcripts.delete(sessionId)
@@ -800,6 +863,7 @@ export class Jolty {
       clearTimeout(t)
       store.saveTranscript(id, this.transcript(id))
     }
+    for (const id of [...this.temps.keys()]) await this.wipeTemp(id)
     await this.claude.shutdown()
     await this.codex.shutdown()
     await this.hermes.shutdown()

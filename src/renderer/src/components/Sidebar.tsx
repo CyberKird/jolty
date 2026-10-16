@@ -122,12 +122,13 @@ const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
 export function Sidebar() {
   const { page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast } = useStore()
   const [q, setQ] = useState('')
+  const saved = useMemo(() => sessions.filter((s) => !s.temporary), [sessions])
   const groups = useMemo(() => {
-    const filtered = sessions.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.cwd.toLowerCase().includes(q.toLowerCase()))
+    const filtered = saved.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.cwd.toLowerCase().includes(q.toLowerCase()))
     const map = new Map<string, typeof filtered>()
     for (const s of filtered) map.set(s.cwd, [...(map.get(s.cwd) || []), s])
     return [...map.entries()]
-  }, [sessions, q])
+  }, [saved, q])
 
   const removeSession = async (id: string): Promise<void> => {
     await api.sessions.remove(id)
@@ -150,7 +151,7 @@ export function Sidebar() {
       </div>
       <div className="side-head">
         <span className="label">{tr("Conversații")}</span>
-        <span className="label">{sessions.length}</span>
+        <span className="label">{saved.length}</span>
       </div>
       <div className="search">
         <Search size={13} />

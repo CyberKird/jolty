@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUp, FolderOpen, Globe, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
+import { ArrowRight, ArrowUp, FolderOpen, Globe, MessageSquareDashed, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
@@ -118,6 +118,9 @@ interface ComposerProps {
   onMode: (m: PermissionMode) => void
   browser?: boolean
   onBrowser: (on: boolean) => void
+  /** temporary chat: chosen before the first message, shown as locked once the chat exists */
+  temporary?: boolean
+  onTemporary?: (on: boolean) => void
   cwd?: string
   onCwd?: () => void
   seed?: string
@@ -140,10 +143,12 @@ function Composer(p: ComposerProps) {
   const secret = sendProfile && !sendProfile.local ? secretHint(text) : undefined
   const costNote = usageRisk(text, atts.filter((a) => a.mime.startsWith('image/')).length, atts.filter((a) => a.mime.startsWith('video/')).length)
   // messages written while the model works wait here and go out, in order, when the turn ends
+  // a temporary chat must not leave its queued messages on disk
+  const queueStore = p.temporary ? sessionStorage : localStorage
   const [queue, setQueue] = useState<{ id: string; text: string; atts: Attachment[] }[]>(() => {
     if (!p.sessionId) return []
     try {
-      const saved = JSON.parse(localStorage.getItem(`jolty:queue:${p.sessionId}`) || '[]')
+      const saved = JSON.parse(queueStore.getItem(`jolty:queue:${p.sessionId}`) || '[]')
       return Array.isArray(saved) ? saved.filter((item) =>
         item && typeof item.id === 'string' && typeof item.text === 'string' && Array.isArray(item.atts)
       ) : []
@@ -163,10 +168,10 @@ function Composer(p: ComposerProps) {
     if (!p.sessionId) return
     try {
       const key = `jolty:queue:${p.sessionId}`
-      if (queue.length) localStorage.setItem(key, JSON.stringify(queue))
-      else localStorage.removeItem(key)
+      if (queue.length) queueStore.setItem(key, JSON.stringify(queue))
+      else queueStore.removeItem(key)
     } catch { toast(tr("Nu am putut salva coada locală."), true) }
-  }, [p.sessionId, queue, toast])
+  }, [p.sessionId, queue, queueStore, toast])
 
   useEffect(() => {
     if (!queue.length && restoredQueue) { setRestoredQueue(false); return }
@@ -429,6 +434,23 @@ function Composer(p: ComposerProps) {
             <Globe size={14} strokeWidth={1.8} /> {tr("Browser")}
           </button>
           {engine !== 'hermes' && <BrowserMenu />}
+          {(p.onTemporary || p.temporary) && (
+            <button
+              className={`chrome-toggle ${p.temporary ? 'on' : ''}`}
+              disabled={engine === 'hermes' || !p.onTemporary}
+              aria-pressed={Boolean(p.temporary)}
+              onClick={() => p.onTemporary?.(!p.temporary)}
+              title={
+                engine === 'hermes' ? tr("Conversația temporară nu este disponibilă pentru Hermes.") : !p.onTemporary
+                  ? tr("Conversație temporară: nu apare în listă și dispare când o părăsești sau închizi Jolty.")
+                  : p.temporary
+                    ? tr("Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.")
+                    : tr("Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty.")
+              }
+            >
+              <MessageSquareDashed size={14} strokeWidth={1.8} /> {tr("Temporar")}
+            </button>
+          )}
           <div className="spacer" />
           {p.sessionId && p.running && <WorkClock sessionId={p.sessionId} />}
           {p.running && (
@@ -750,6 +772,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
         mode={session.permissionMode}
         onMode={(m) => void api.sessions.setPermissionMode(session.id, m).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         browser={session.browser}
+        temporary={session.temporary}
         onBrowser={(on) => void api.sessions.setBrowser(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         onStop={() => void api.sessions.interrupt(session.id)}
         onSend={async (text, atts) => {
@@ -786,6 +809,7 @@ export function NewChat() {
   const [effort, setEffort] = useState<string>()
   const [mode, setMode] = useState<PermissionMode>(DEFAULT_MODE)
   const [browser, setBrowser] = useState(false)
+  const [temporary, setTemporary] = useState(false)
   const [cwd, setCwd] = useState<string>()
   const [seed, setSeed] = useState<string>()
   const groups = useAllModels(profiles)
@@ -862,6 +886,7 @@ export function NewChat() {
           if (profiles.find((p) => p.id === id)?.engine === 'hermes') {
             if (mode === 'plan' || mode === 'auto') setMode('ask')
             setBrowser(false)
+            setTemporary(false)
           }
           if (id !== profileId) {
             setProfileId(id)
@@ -876,6 +901,8 @@ export function NewChat() {
         onMode={setMode}
         browser={browser}
         onBrowser={setBrowser}
+        temporary={temporary}
+        onTemporary={setTemporary}
         cwd={cwd}
         onCwd={() => void pickCwd()}
         seed={seed}
@@ -900,12 +927,13 @@ export function NewChat() {
               model: model || undefined,
               effort: effort || undefined,
               permissionMode: mode,
-              browser
+              browser,
+              temporary: temporary || undefined
             })
             const queued = launchQueue.current.splice(0)
             if (queued.length) {
               try {
-                localStorage.setItem(`jolty:queue:${meta.id}`, JSON.stringify(queued))
+                ;(temporary ? sessionStorage : localStorage).setItem(`jolty:queue:${meta.id}`, JSON.stringify(queued))
                 sessionStorage.setItem(`jolty:queue:immediate:${meta.id}`, '1')
               } catch {
                 toast(tr("Nu am putut salva mesajele puse în așteptare."), true)

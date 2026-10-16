@@ -700,5 +700,12 @@
  "7 zile (cu extra)": "7 日 (追加分込み)",
  "Extra": "追加分",
  "În repaus": "待機中",
- "Pornit": "起動中"
+ "Pornit": "起動中",
+ "Conversația temporară nu este disponibilă pentru Hermes.": "一時チャットは Hermes では使えません。",
+ "O sesiune existentă nu poate deveni temporară.": "既存のセッションを一時チャットにすることはできません。",
+ "O conversație temporară nu poate fi mutată pe alt cont: nu se salvează nimic din ea.": "一時チャットは別のアカウントへ移せません。内容は何も保存されません。",
+ "Temporar": "一時",
+ "Conversație temporară: nu apare în listă și dispare când o părăsești sau închizi Jolty.": "一時チャット: 一覧に表示されず、離れるか Jolty を閉じると消えます。",
+ "Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.": "一時チャットがオンです。質問も回答も何も保存されません。クリックでオフにします。",
+ "Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty.": "一時チャット: Jolty に保存されず、一覧にも表示されず、離れるか Jolty を閉じると消えます。"
 }

@@ -700,5 +700,12 @@
  "7 zile (cu extra)": "7 días (con extra)",
  "Extra": "Extra",
  "În repaus": "En reposo",
- "Pornit": "En marcha"
+ "Pornit": "En marcha",
+ "Conversația temporară nu este disponibilă pentru Hermes.": "El chat temporal no está disponible para Hermes.",
+ "O sesiune existentă nu poate deveni temporară.": "Una sesión existente no puede pasar a ser temporal.",
+ "O conversație temporară nu poate fi mutată pe alt cont: nu se salvează nimic din ea.": "Un chat temporal no se puede mover a otra cuenta: no se guarda nada de él.",
+ "Temporar": "Temporal",
+ "Conversație temporară: nu apare în listă și dispare când o părăsești sau închizi Jolty.": "Chat temporal: no aparece en la lista y desaparece cuando lo dejas o cierras Jolty.",
+ "Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.": "Chat temporal activo: no se guarda nada, ni tus preguntas ni las respuestas. Haz clic para desactivarlo.",
+ "Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty.": "Chat temporal: no se guarda en Jolty, no aparece en la lista y desaparece cuando lo dejas o cierras Jolty."
 }

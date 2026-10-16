@@ -109,6 +109,8 @@ export interface SessionMeta {
   permissionMode: PermissionMode
   /** Jolty in Chrome: the model may drive the user's Chrome through the Playwright extension */
   browser?: boolean
+  /** temporary chat: lives only in memory, never listed or written to disk, and its engine files are wiped when it ends */
+  temporary?: boolean
   /** Claude session id or Codex thread id, once the engine has one */
   engineSessionId?: string
   createdAt: number
@@ -311,6 +313,7 @@ export interface StartSessionInput {
   effort?: string
   permissionMode: PermissionMode
   browser?: boolean
+  temporary?: boolean
   /** resume an existing Claude session / Codex thread */
   resumeEngineSessionId?: string
   title?: string

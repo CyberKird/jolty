@@ -778,6 +778,20 @@ export class ClaudeDriver implements EngineDriver {
     this.modelCache.delete(profileId)
   }
 
+  /** Wipes what Claude Code wrote for one conversation: its transcript, the edit backups and the env snapshot. */
+  async wipeSession(profile: Profile, engineSessionId: string, cwd: string): Promise<void> {
+    const sdk = await loadSdk()
+    await this.withConfigDir(profile, () => sdk.deleteSession(engineSessionId, { dir: cwd })).catch(() => undefined)
+    const root = profileDir(profile) ?? path.join(os.homedir(), '.claude')
+    for (const sub of ['file-history', 'session-env']) {
+      try {
+        fs.rmSync(path.join(root, sub, engineSessionId), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
+      } catch {
+        // still held by the dying process; the start-up sweep tries again
+      }
+    }
+  }
+
   async models(profile: Profile): Promise<ModelOption[]> {
     if (profile.auth === 'endpoint') {
       return Promise.all(

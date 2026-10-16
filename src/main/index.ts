@@ -268,7 +268,9 @@ if (!app.requestSingleInstanceLock()) {
     const scanModels = (): void => {
       for (const p of jolty.profiles()) if (p.engine === 'claude' && p.auth === 'subscription') void jolty.models(p.id).catch(() => undefined)
     }
+    void jolty.sweepTemps().catch(() => undefined)
     if (!process.env.JOLTY_TEST) {
+      setTimeout(() => void store.shrinkTranscripts(), 10000)
       setTimeout(scanModels, 30000)
       setInterval(scanModels, 4 * 3600e3)
     }

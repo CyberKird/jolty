@@ -700,5 +700,12 @@
  "7 zile (cu extra)": "7 أيام (مع الإضافي)",
  "Extra": "إضافي",
  "În repaus": "في وضع الاستعداد",
- "Pornit": "يعمل"
+ "Pornit": "يعمل",
+ "Conversația temporară nu este disponibilă pentru Hermes.": "الدردشة المؤقتة غير متاحة لـ Hermes.",
+ "O sesiune existentă nu poate deveni temporară.": "لا يمكن تحويل جلسة موجودة إلى مؤقتة.",
+ "O conversație temporară nu poate fi mutată pe alt cont: nu se salvează nimic din ea.": "لا يمكن نقل دردشة مؤقتة إلى حساب آخر: لا يُحفظ منها شيء.",
+ "Temporar": "مؤقتة",
+ "Conversație temporară: nu apare în listă și dispare când o părăsești sau închizi Jolty.": "دردشة مؤقتة: لا تظهر في القائمة وتختفي عند مغادرتها أو إغلاق Jolty.",
+ "Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.": "الدردشة المؤقتة مفعّلة: لا يُحفظ شيء، لا أسئلتك ولا الإجابات. انقر لإيقافها.",
+ "Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty.": "دردشة مؤقتة: لا تُحفظ في Jolty ولا تظهر في القائمة وتختفي عند مغادرتها أو إغلاق Jolty."
 }

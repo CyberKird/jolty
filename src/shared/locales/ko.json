@@ -700,5 +700,12 @@
  "7 zile (cu extra)": "7일 (추가분 포함)",
  "Extra": "추가분",
  "În repaus": "대기 중",
- "Pornit": "실행 중"
+ "Pornit": "실행 중",
+ "Conversația temporară nu este disponibilă pentru Hermes.": "임시 채팅은 Hermes에서 사용할 수 없습니다.",
+ "O sesiune existentă nu poate deveni temporară.": "기존 세션은 임시 채팅으로 바꿀 수 없습니다.",
+ "O conversație temporară nu poate fi mutată pe alt cont: nu se salvează nimic din ea.": "임시 채팅은 다른 계정으로 옮길 수 없습니다. 아무것도 저장되지 않습니다.",
+ "Temporar": "임시",
+ "Conversație temporară: nu apare în listă și dispare când o părăsești sau închizi Jolty.": "임시 채팅: 목록에 표시되지 않으며 나가거나 Jolty를 닫으면 사라집니다.",
+ "Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.": "임시 채팅 켜짐: 질문도 답변도 저장되지 않습니다. 클릭하면 끕니다.",
+ "Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty.": "임시 채팅: Jolty에 저장되지 않고 목록에 표시되지 않으며 나가거나 Jolty를 닫으면 사라집니다."
 }

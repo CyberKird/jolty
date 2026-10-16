@@ -140,7 +140,7 @@ export class CodexSession implements EngineSession, ThreadListener {
     }
     const resp = this.meta.engineSessionId
       ? await rpc.request<Any>('thread/resume', { threadId: this.meta.engineSessionId, ...common })
-      : await rpc.request<Any>('thread/start', common)
+      : await rpc.request<Any>('thread/start', this.meta.temporary ? { ...common, ephemeral: true } : common)
     this.threadId = resp.thread.id as string
     this.server.sessions.set(this.threadId, this)
     this.meta.engineSessionId = this.threadId

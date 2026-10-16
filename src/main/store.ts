@@ -20,11 +20,11 @@ function readJson<T>(name: string, fallback: T): T {
   }
 }
 
-function writeJson(name: string, value: unknown): void {
+function writeJson(name: string, value: unknown, pretty = true): void {
   const target = file(name)
   fs.mkdirSync(path.dirname(target), { recursive: true })
   const tmp = `${target}.${process.pid}.tmp`
-  fs.writeFileSync(tmp, JSON.stringify(value, null, 2))
+  fs.writeFileSync(tmp, pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value))
   fs.renameSync(tmp, target)
 }
 
@@ -77,12 +77,85 @@ export function saveSessions(sessions: SessionMeta[]): void {
   writeJson('sessions.json', sessions)
 }
 
+// A tool result can be megabytes (a Read of a big file, a browser screenshot). The engine keeps the
+// original in its own session file; Jolty's copy only has to show the chat again, so it is clipped.
+const CLIP = 20000
+
+function clipText(s: string): string {
+  if (s.length <= CLIP) return s
+  const head = Math.floor(CLIP * 0.7)
+  return `${s.slice(0, head)}
+... [${s.length - CLIP} characters omitted] ...
+${s.slice(s.length - (CLIP - head))}`
+}
+
+function clipDeep(v: unknown): unknown {
+  if (typeof v === 'string') return clipText(v)
+  if (Array.isArray(v)) return v.map(clipDeep)
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, clipDeep(x)]))
+  return v
+}
+
+export function slimTranscript(items: ChatItem[]): ChatItem[] {
+  return items.map((i) => {
+    if (i.kind !== 'tool') return i
+    // images a tool returned are shown live; they are the bulk of the file (54 of 61 MB in one chat) and are not kept
+    const { images: _images, ...rest } = i
+    return {
+      ...rest,
+      command: rest.command && clipText(rest.command),
+      output: rest.output && clipText(rest.output),
+      input: rest.input === undefined ? undefined : clipDeep(rest.input),
+      diffs: rest.diffs?.map((d) => ({ ...d, diff: clipText(d.diff) }))
+    }
+  })
+}
+
 export function loadTranscript(sessionId: string): ChatItem[] {
-  return readJson<ChatItem[]>(path.join('transcripts', `${sessionId}.json`), [])
+  return slimTranscript(readJson<ChatItem[]>(path.join('transcripts', `${sessionId}.json`), []))
 }
 
 export function saveTranscript(sessionId: string, items: ChatItem[]): void {
-  writeJson(path.join('transcripts', `${sessionId}.json`), items)
+  writeJson(path.join('transcripts', `${sessionId}.json`), slimTranscript(items), false)
+}
+
+/** Shrinks transcripts written before clipping existed; files under 1 MB are left alone, so it is cheap to run at every start. */
+export async function shrinkTranscripts(): Promise<void> {
+  const dir = file('transcripts')
+  let names: string[]
+  try {
+    names = fs.readdirSync(dir)
+  } catch {
+    return
+  }
+  for (const name of names) {
+    if (!name.endsWith('.json')) continue
+    try {
+      const target = path.join(dir, name)
+      if (fs.statSync(target).size < 1024 * 1024) continue
+      const items = slimTranscript(JSON.parse(fs.readFileSync(target, 'utf8')) as ChatItem[])
+      writeJson(path.join('transcripts', name), items, false)
+    } catch {
+      // a file that cannot be read stays as it is
+    }
+    await new Promise((r) => setTimeout(r, 50))
+  }
+}
+
+/** Engine files of temporary chats still to wipe: ids only, no content. A crash leaves them here for the next start. */
+export interface TempLeftover {
+  profileId: string
+  engineSessionId: string
+  cwd: string
+}
+
+export function loadTempLeftovers(): TempLeftover[] {
+  return readJson<TempLeftover[]>('temp-leftovers.json', [])
+}
+
+export function saveTempLeftovers(list: TempLeftover[]): void {
+  if (list.length) writeJson('temp-leftovers.json', list)
+  else fs.rmSync(file('temp-leftovers.json'), { force: true })
 }
 
 export function removeTranscript(sessionId: string): void {

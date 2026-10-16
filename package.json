@@ -1,7 +1,7 @@
 {
   "name": "jolty",
   "productName": "Jolty",
-  "version": "0.3.14",
+  "version": "0.3.15",
   "description": "Desktop app for Claude Code and Codex: multiple profiles, API keys, model picker, usage dashboard",
   "author": "CyberKird",
   "license": "UNLICENSED",
@@ -14,7 +14,8 @@
     "start": "electron-vite preview",
     "dist:win": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish never",
     "dist:release": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish always",
-    "test": "npm run test:profile-processes && npm run test:codex-lifecycle && npm run test:eta && npm run test:handoff && npm run test:i18n",
+    "test": "npm run test:store && npm run test:profile-processes && npm run test:codex-lifecycle && npm run test:eta && npm run test:handoff && npm run test:i18n",
+    "test:store": "esbuild test/store-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --outfile=out-test/store-test.mjs --log-level=warning && node --test out-test/store-test.mjs",
     "test:profile-processes": "esbuild test/profile-processes-test.ts --bundle --platform=node --format=cjs --outfile=out-test/profile-processes-test.cjs --log-level=warning && node --test out-test/profile-processes-test.cjs",
     "test:account-removal": "electron-vite build && node test/account-removal-test.mjs",
     "test:handoff": "esbuild test/handoff-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/handoff-test.cjs --log-level=warning && node --test out-test/handoff-test.cjs",

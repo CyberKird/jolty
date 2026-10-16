@@ -700,5 +700,12 @@
  "7 zile (cu extra)": "7 दिन (अतिरिक्त सहित)",
  "Extra": "अतिरिक्त",
  "În repaus": "निष्क्रिय",
- "Pornit": "चल रहा है"
+ "Pornit": "चल रहा है",
+ "Conversația temporară nu este disponibilă pentru Hermes.": "Hermes के लिए अस्थायी चैट उपलब्ध नहीं है।",
+ "O sesiune existentă nu poate deveni temporară.": "मौजूदा सेशन अस्थायी नहीं बन सकता।",
+ "O conversație temporară nu poate fi mutată pe alt cont: nu se salvează nimic din ea.": "अस्थायी चैट को दूसरे खाते में नहीं ले जाया जा सकता: उसका कुछ भी सहेजा नहीं जाता।",
+ "Temporar": "अस्थायी",
+ "Conversație temporară: nu apare în listă și dispare când o părăsești sau închizi Jolty.": "अस्थायी चैट: यह सूची में नहीं दिखती और छोड़ने या Jolty बंद करने पर गायब हो जाती है।",
+ "Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.": "अस्थायी चैट चालू है: न आपके सवाल सहेजे जाते हैं, न जवाब। बंद करने के लिए क्लिक करें।",
+ "Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty.": "अस्थायी चैट: यह Jolty में सहेजी नहीं जाती, सूची में नहीं दिखती और छोड़ने या Jolty बंद करने पर गायब हो जाती है।"
 }
