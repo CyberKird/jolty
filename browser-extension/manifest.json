@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Jolty",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Lets the Jolty desktop app work in this browser, with your logins. It talks only to Jolty on this computer.",
   "minimum_chrome_version": "116",
   "permissions": ["debugger", "tabs", "tabGroups", "alarms", "storage"],

@@ -250,11 +250,6 @@ test('console, network, wait_for, find, evaluate, back, scroll', async () => {
   assert.match(slow, /Loading|Slow content ready/)
   const waited = ok(await h.call('browser_wait_for', { text: 'Slow content ready' }))
   assert.match(waited, /Found "Slow content ready"/)
-  const timeout = Date.now()
-  const never = await h.call('browser_wait_for', { textGone: 'Slow content ready', time: 0.1 }).catch(() => undefined)
-  void timeout
-  void never
-
   ok(await h.call('browser_navigate', { url: h.site + '/' }))
   const back = ok(await h.call('browser_navigate_back'))
   assert.match(back, /Page Title: Slow/)

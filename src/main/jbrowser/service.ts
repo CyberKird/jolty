@@ -121,7 +121,7 @@ export class BrowserService {
   }
 
   /** A new tab in the window Jolty keeps for the model, so the user's own tabs stay untouched. */
-  async openTab(sid: string, url = 'about:blank'): Promise<Tab> {
+  async openTab(sid: string, url = `http://127.0.0.1:${this.hub.port}/jolty-blank`): Promise<Tab> {
     const s = this.session(sid)
     if (s.tabs.length >= MAX_TABS) throw new Error(`This chat already controls ${MAX_TABS} tabs. Close one first (browser_tabs, action "close").`)
     let info: { id: number; windowId: number }

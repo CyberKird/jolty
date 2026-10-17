@@ -148,6 +148,11 @@ export class BrowserHub extends EventEmitter {
       return
     }
     const url = new URL(req.url || '/', 'http://127.0.0.1')
+    // the page a new Jolty tab starts on: some browsers (Vivaldi) give about:blank a special page that DevTools commands never reach
+    if (req.method === 'GET' && url.pathname === '/jolty-blank') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end('<!doctype html><title>Jolty</title><body style="margin:0;background:#060709"></body>')
+      return
+    }
     // no CORS headers anywhere: a web page must not be able to talk to this server, only the extension and the engines can
     if (req.method === 'GET' && url.pathname === '/jolty-hello') {
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ app: 'jolty', v: 1 }))

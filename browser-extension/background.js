@@ -135,6 +135,21 @@ async function attach(tabId) {
   attached.add(tabId)
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// Some browsers (Vivaldi) open a new window on their own start page and ignore the URL: there DevTools commands
+// get no answer. Pointing the tab at the URL with the tabs API makes it an ordinary page.
+async function settleTab(t, want) {
+  if (!/^https?:/i.test(want)) return t
+  for (let i = 0; i < 40; i++) {
+    const cur = await chrome.tabs.get(t.id)
+    if (cur.url && cur.url.startsWith(want.split('#')[0]) && cur.status === 'complete') return cur
+    if (i === 2 && !(cur.url || '').startsWith(want.split('#')[0])) await chrome.tabs.update(t.id, { url: want }).catch(() => {})
+    await sleep(150)
+  }
+  return chrome.tabs.get(t.id)
+}
+
 const handlers = {
   ping: () => 'pong',
   info: () => ({ version: VERSION, agent: navigator.userAgent }),
@@ -150,12 +165,13 @@ const handlers = {
 
   // a new tab for the model. `windowId` keeps the model's tabs together in one window of its own.
   'tabs.create': async ({ url, windowId, newWindow }) => {
+    const want = url || 'about:blank'
+    let t
     if (newWindow || !windowId) {
-      const w = await chrome.windows.create({ url: url || 'about:blank', focused: false, type: 'normal', width: 1280, height: 860 })
-      return { ...tabInfo(w.tabs[0]), windowId: w.id }
-    }
-    const t = await chrome.tabs.create({ url: url || 'about:blank', windowId, active: true })
-    return tabInfo(t)
+      const w = await chrome.windows.create({ url: want, focused: false, type: 'normal', width: 1280, height: 860 })
+      t = w.tabs[0]
+    } else t = await chrome.tabs.create({ url: want, windowId, active: true })
+    return tabInfo(await settleTab(t, want))
   },
   'tabs.update': async ({ tabId, url, active }) => tabInfo(await chrome.tabs.update(tabId, { ...(url ? { url } : {}), ...(active ? { active: true } : {}) })),
   'tabs.close': async ({ tabId }) => {
@@ -172,9 +188,9 @@ const handlers = {
       return null
     }
   },
-  'window.bounds': async ({ windowId, width, height }) => {
-    const w = await chrome.windows.update(windowId, { state: 'normal', width, height })
-    return { width: w.width, height: w.height }
+  'window.bounds': async ({ windowId, width, height, state }) => {
+    const w = await chrome.windows.update(windowId, state ? { state } : { state: 'normal', width, height })
+    return { width: w.width, height: w.height, state: w.state }
   },
   'window.raise': async ({ windowId }) => {
     await chrome.windows.update(windowId, { drawAttention: true })

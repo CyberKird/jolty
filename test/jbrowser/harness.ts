@@ -40,7 +40,7 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
   }
   const hub = new BrowserHub({
     token: () => TOKEN,
-    bundledVersion: () => '1.0.0',
+    bundledVersion: () => '1.0.1',
     mcp: (sid, m) => svc.handle(sid, m),
     log: debug('[hub]')
   })
@@ -54,7 +54,7 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
 
   const proc: ChildProcess = spawn(
     chrome,
-    [`--user-data-dir=${path.join(root, 'profile')}`, `--load-extension=${ext}`, `--disable-extensions-except=${ext}`, '--headless=new', '--no-first-run', '--no-default-browser-check', '--window-size=1280,900', 'about:blank'],
+    [`--user-data-dir=${path.join(root, 'profile')}`, `--load-extension=${ext}`, `--disable-extensions-except=${ext}`, ...(process.env.JBROWSER_HEADFUL ? [] : ['--headless=new']), '--no-first-run', '--no-default-browser-check', '--window-size=1280,900', 'about:blank'],
     { stdio: 'ignore' }
   )
   const end = Date.now() + 30000
