@@ -743,5 +743,6 @@
  "Apasă „Încarcă nepachetată” și alege folderul:": "'압축해제된 확장 프로그램을 로드합니다'를 클릭하고 다음 폴더를 선택하세요:",
  "Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.": "완료: 위의 상태가 '연결됨'으로 바뀝니다. 한 번만 하면 되며, 이후에는 확장 프로그램이 알아서 연결되고 Jolty와 함께 업데이트됩니다.",
  "Extensia Playwright e instalată în browserul ales.": "Playwright 확장 프로그램이 선택한 브라우저에 설치되어 있습니다.",
- "Extensia Playwright nu e instalată în browserul ales.": "Playwright 확장 프로그램이 선택한 브라우저에 설치되어 있지 않습니다."
+ "Extensia Playwright nu e instalată în browserul ales.": "Playwright 확장 프로그램이 선택한 브라우저에 설치되어 있지 않습니다.",
+ "Trage ca să schimbi ordinea (sau Alt+săgeți)": "드래그하여 순서 변경 (또는 Alt+화살표)"
 }

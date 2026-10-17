@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.5
+
+- Accounts can be reordered: drag a card on the Accounts and keys page, or a row in Live usage, to where you want it (or focus it and press Alt+Up / Alt+Down). The order is saved and the model menu follows it too.
+- Every account now has its own color. New accounts take a color nobody uses yet, and accounts that shared a color (it happened once you had more than eight) get a free one on the next start.
+
 ## 0.4.4
 
 - The thinking level row in the model menu (AUTO to MAX) stuck out past the right edge of the menu. It now fits the menu width and the buttons share the space evenly.

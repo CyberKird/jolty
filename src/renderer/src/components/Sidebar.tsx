@@ -2,6 +2,7 @@ import { BarChart3, Cpu, Download, FolderOpen, KeyRound, Link, MessageSquare, Pl
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { copyItem, pathItems, showMenu } from './ContextMenu'
+import { MOVE_HINT, useProfileDrag } from '../pages/Accounts'
 import { tr } from '@shared/i18n'
 
 function money(n: number, currency = 'USD'): string {
@@ -23,6 +24,7 @@ function UsageMeter() {
   }, [profiles])
   // a profile with empty windows but a note (rate-limited probe) stays visible so the row does not vanish
   const rows = profiles.filter((p) => isMiMoProfile(p) || limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id])
+  const dragProps = useProfileDrag(rows.map((p) => p.id))
   return (
     <section className="meter" aria-label={tr("Consum live")}>
       <div className="meter-head">
@@ -58,7 +60,7 @@ function UsageMeter() {
           const isMiMo = isMiMoProfile(p)
           const balance = balances[p.id]
           return (
-            <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title={tr("Deschide Consum")}>
+            <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title={`${tr("Deschide Consum")}\n${MOVE_HINT}`} {...dragProps(p.id)}>
             <span className="meter-name">
               <span className="dot" style={{ width: 6, height: 6, background: p.color }} />
               <span className="ellipsis">{p.name}</span>

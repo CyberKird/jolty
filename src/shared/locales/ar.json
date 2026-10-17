@@ -743,5 +743,6 @@
  "Apasă „Încarcă nepachetată” și alege folderul:": "انقر «تحميل إضافة غير مُحزَّمة» واختر المجلد:",
  "Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.": "تم: تتحول الحالة أعلاه إلى «متصلة». تفعل ذلك مرة واحدة؛ بعدها تتصل الإضافة تلقائيًا وتتحدّث مع Jolty.",
  "Extensia Playwright e instalată în browserul ales.": "إضافة Playwright مثبّتة في المتصفح المختار.",
- "Extensia Playwright nu e instalată în browserul ales.": "إضافة Playwright غير مثبّتة في المتصفح المختار."
+ "Extensia Playwright nu e instalată în browserul ales.": "إضافة Playwright غير مثبّتة في المتصفح المختار.",
+ "Trage ca să schimbi ordinea (sau Alt+săgeți)": "اسحب لتغيير الترتيب (أو Alt+الأسهم)"
 }

@@ -743,5 +743,6 @@
  "Apasă „Încarcă nepachetată” și alege folderul:": "Klik \"Muat yang belum dikemas\" dan pilih folder:",
  "Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.": "Selesai: status di atas menjadi \"Terhubung\". Ini cukup dilakukan sekali; setelah itu ekstensi terhubung sendiri dan diperbarui bersama Jolty.",
  "Extensia Playwright e instalată în browserul ales.": "Ekstensi Playwright terpasang di browser yang dipilih.",
- "Extensia Playwright nu e instalată în browserul ales.": "Ekstensi Playwright belum terpasang di browser yang dipilih."
+ "Extensia Playwright nu e instalată în browserul ales.": "Ekstensi Playwright belum terpasang di browser yang dipilih.",
+ "Trage ca să schimbi ordinea (sau Alt+săgeți)": "Seret untuk mengubah urutan (atau Alt+panah)"
 }

@@ -743,5 +743,6 @@
  "Apasă „Încarcă nepachetată” și alege folderul:": "「パッケージ化されていない拡張機能を読み込む」をクリックし、次のフォルダーを選びます:",
  "Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.": "完了: 上の状態が「接続済み」になります。この操作は一度だけで、その後は拡張機能が自動で接続し、Jolty と一緒に更新されます。",
  "Extensia Playwright e instalată în browserul ales.": "Playwright 拡張機能は選択したブラウザにインストールされています。",
- "Extensia Playwright nu e instalată în browserul ales.": "Playwright 拡張機能は選択したブラウザにインストールされていません。"
+ "Extensia Playwright nu e instalată în browserul ales.": "Playwright 拡張機能は選択したブラウザにインストールされていません。",
+ "Trage ca să schimbi ordinea (sau Alt+săgeți)": "ドラッグで順番を変更（または Alt+矢印キー）"
 }

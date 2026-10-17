@@ -48,3 +48,17 @@ test('old oversized transcripts shrink, small ones are left alone', async () => 
 })
 
 test.after(() => fs.rmSync(data, { recursive: true, force: true }))
+
+test('profile colors never repeat, order follows the saved ids', () => {
+  const colors = Array.from({ length: 30 }).reduce<{ color: string }[]>((acc) => [...acc, { color: store.freeColor(acc) }], [])
+  assert.equal(new Set(colors.map((c) => c.color)).size, 30)
+  const p = (id: string, color?: string) => ({ id, name: id, engine: 'claude' as const, auth: 'apiKey' as const, color })
+  store.saveProfiles([p('a', '#d97757'), p('b', '#10a37f'), p('c', '#D97757'), p('d')])
+  store.fixProfileColors()
+  const fixed = store.loadProfiles()
+  assert.equal(fixed[0].color, '#d97757')
+  assert.equal(new Set(fixed.map((x) => x.color?.toLowerCase())).size, 4)
+  assert.deepEqual(store.reorderProfiles(['c', 'zzz', 'a']).map((x) => x.id), ['c', 'a', 'b', 'd'])
+  assert.deepEqual(store.loadProfiles().map((x) => x.id), ['c', 'a', 'b', 'd'])
+  assert.throws(() => store.reorderProfiles('a'))
+})

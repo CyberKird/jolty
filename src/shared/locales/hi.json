@@ -743,5 +743,6 @@
  "Apasă „Încarcă nepachetată” și alege folderul:": "'अनपैक्ड लोड करें' पर क्लिक करें और यह फ़ोल्डर चुनें:",
  "Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.": "हो गया: ऊपर की स्थिति 'जुड़ा है' हो जाएगी। यह सिर्फ एक बार करना है; उसके बाद एक्सटेंशन अपने आप जुड़ता है और Jolty के साथ अपडेट होता है।",
  "Extensia Playwright e instalată în browserul ales.": "Playwright एक्सटेंशन चुने हुए ब्राउज़र में इंस्टॉल है।",
- "Extensia Playwright nu e instalată în browserul ales.": "Playwright एक्सटेंशन चुने हुए ब्राउज़र में इंस्टॉल नहीं है।"
+ "Extensia Playwright nu e instalată în browserul ales.": "Playwright एक्सटेंशन चुने हुए ब्राउज़र में इंस्टॉल नहीं है।",
+ "Trage ca să schimbi ordinea (sau Alt+săgeți)": "क्रम बदलने के लिए खींचें (या Alt+तीर कुंजियाँ)"
 }

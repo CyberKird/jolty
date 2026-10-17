@@ -43,7 +43,7 @@ import * as store from './store'
 import { removeProfileFiles } from './profile-files'
 import { tr } from '@shared/i18n'
 
-const COLORS = ['#d97757', '#10a37f', '#6c8cff', '#e0a23b', '#c060d0', '#3bb3c3', '#e05a7a', '#8fb339']
+const { COLORS } = store
 
 const DEFAULT_PROFILES: Profile[] = [
   { id: 'claude-main', name: tr("Claude (contul principal)"), engine: 'claude', auth: 'subscription', isDefaultDir: true, color: COLORS[0] },
@@ -124,8 +124,9 @@ export class Jolty {
     if (store.loadProfiles().length === 0) store.saveProfiles(DEFAULT_PROFILES)
     const profiles = store.loadProfiles()
     if (!profiles.some((p) => p.engine === 'hermes') && hermesExecutable()) {
-      store.saveProfiles([...profiles, { id: 'hermes-main', name: 'Hermes', engine: 'hermes', auth: 'existing', isDefaultDir: true, color: COLORS[2] }])
+      store.saveProfiles([...profiles, { id: 'hermes-main', name: 'Hermes', engine: 'hermes', auth: 'existing', isDefaultDir: true, color: store.freeColor(profiles) }])
     }
+    store.fixProfileColors()
   }
 
   private driver(engine: EngineKind): EngineDriver {
@@ -171,7 +172,7 @@ export class Jolty {
       vision: input.vision,
       local: input.local,
       price: input.price || undefined,
-      color: COLORS[all.length % COLORS.length]
+      color: store.freeColor(all)
     }
     store.saveProfiles([...all, profile])
     if (input.secret) store.setSecret(profile.id, input.secret.trim())

@@ -3226,3 +3226,30 @@ a {
 .power-bar.counting svg {
   color: var(--critical);
 }
+
+/* Reordering profiles: accounts cards and live usage rows */
+.drag-grip {
+  display: inline-flex;
+  margin-inline-start: -8px;
+  color: var(--grey-2);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.profile-card:hover .drag-grip,
+.profile-card:focus-within .drag-grip {
+  opacity: 1;
+}
+[data-dragging] {
+  opacity: 0.4;
+}
+.profile-card[data-drop] {
+  border-color: var(--volt-line);
+  background: var(--volt-dim);
+}
+.meter-row[data-drop] {
+  box-shadow: inset 2px 0 0 var(--volt);
+}
+[dir='rtl'] .meter-row[data-drop] {
+  box-shadow: inset -2px 0 0 var(--volt);
+}

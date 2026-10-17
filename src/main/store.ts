@@ -39,6 +39,44 @@ export function saveProfiles(profiles: Profile[]): void {
   writeJson('profiles.json', profiles)
 }
 
+export const COLORS = ['#d97757', '#10a37f', '#6c8cff', '#e0a23b', '#c060d0', '#3bb3c3', '#e05a7a', '#8fb339', '#9a6cf0', '#4cbb5e', '#4aa3e8', '#b08a6a']
+
+/** First palette color no profile uses; past the palette, golden-angle hues, so two profiles never share a color. */
+export function freeColor(profiles: Pick<Profile, 'color'>[]): string {
+  const taken = new Set(profiles.map((p) => p.color?.toLowerCase()))
+  const free = COLORS.find((c) => !taken.has(c))
+  if (free) return free
+  for (let i = 0; ; i++) {
+    // lighter / darker than the palette so a hue close to a palette color still reads as different
+    const c = `hsl(${Math.round((i * 137.508 + 20) % 360)} 60% ${i % 2 ? 78 : 42}%)`
+    if (!taken.has(c)) return c
+  }
+}
+
+/** Gives every profile that repeats an earlier profile's color (or has none) a free one; saves only if something changed. */
+export function fixProfileColors(): void {
+  const seen: Profile[] = []
+  let changed = false
+  for (const p of loadProfiles()) {
+    if (!p.color || seen.some((q) => q.color?.toLowerCase() === p.color!.toLowerCase())) {
+      p.color = freeColor(seen)
+      changed = true
+    }
+    seen.push(p)
+  }
+  if (changed) saveProfiles(seen)
+}
+
+/** Saves the profiles in the order of `ids`; ids it does not know are ignored, profiles missing from it keep their place at the end. */
+export function reorderProfiles(ids: unknown): Profile[] {
+  if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string')) throw new Error('Ordine invalidă')
+  const rank = new Map(ids.map((id, i) => [id, i]))
+  const all = loadProfiles()
+  const sorted = all.map((p, i) => ({ p, k: rank.get(p.id) ?? ids.length + i })).sort((a, b) => a.k - b.k).map((x) => x.p)
+  saveProfiles(sorted)
+  return sorted
+}
+
 /** Per-profile config folder (CLAUDE_CONFIG_DIR / CODEX_HOME) for non-default profiles. */
 export function profileDir(profile: Profile): string | undefined {
   if (profile.isDefaultDir || profile.engine === 'hermes') return undefined

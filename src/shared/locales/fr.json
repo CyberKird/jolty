@@ -743,5 +743,6 @@
  "Apasă „Încarcă nepachetată” și alege folderul:": "Clique sur « Charger l'extension non empaquetée » et choisis le dossier :",
  "Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.": "Terminé : l'état ci-dessus devient « Connectée ». À faire une seule fois ; ensuite l'extension se connecte seule et se met à jour avec Jolty.",
  "Extensia Playwright e instalată în browserul ales.": "L'extension Playwright est installée dans le navigateur choisi.",
- "Extensia Playwright nu e instalată în browserul ales.": "L'extension Playwright n'est pas installée dans le navigateur choisi."
+ "Extensia Playwright nu e instalată în browserul ales.": "L'extension Playwright n'est pas installée dans le navigateur choisi.",
+ "Trage ca să schimbi ordinea (sau Alt+săgeți)": "Faites glisser pour changer l'ordre (ou Alt+flèches)"
 }

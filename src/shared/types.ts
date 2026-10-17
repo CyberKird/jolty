@@ -398,6 +398,8 @@ export interface JoltyApi {
     create(input: ProfileInput): Promise<Profile>
     update(id: string, patch: Partial<ProfileInput>): Promise<Profile>
     remove(id: string): Promise<void>
+    /** saves the list order (accounts page, live usage, model picker) */
+    reorder(ids: string[]): Promise<void>
     status(id: string): Promise<AccountStatus>
     login(id: string): Promise<AccountStatus>
     logout(id: string): Promise<AccountStatus>

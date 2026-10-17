@@ -1,5 +1,5 @@
-import { KeyRound, LogIn, LogOut, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { GripVertical, KeyRound, LogIn, LogOut, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
 import type { AccountStatus, AuthKind, EngineKind, Profile, ProfileInput } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
@@ -46,7 +46,49 @@ export function LimitMeters({ profileId, compact }: { profileId: string; compact
   )
 }
 
-function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void }) {
+export const MOVE_HINT = tr("Trage ca să schimbi ordinea (sau Alt+săgeți)")
+
+/** Drag, or Alt+Up/Down, to reorder profiles; `ids` = the profiles on screen, in order. */
+export function useProfileDrag(ids: string[]) {
+  const moveProfile = useStore((s) => s.moveProfile)
+  const [drag, setDrag] = useState<string>()
+  const [over, setOver] = useState<string>()
+  return (id: string) => ({
+    draggable: true,
+    'data-dragging': drag === id || undefined,
+    'data-drop': (drag && over === id && drag !== id) || undefined,
+    onDragStart: (e: DragEvent) => {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/x-jolty-profile', id)
+      setDrag(id)
+    },
+    onDragOver: (e: DragEvent) => {
+      if (!drag) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      if (over !== id) setOver(id)
+    },
+    onDrop: (e: DragEvent) => {
+      if (!drag) return
+      e.preventDefault()
+      if (drag !== id) void moveProfile(drag, id)
+      setOver(undefined)
+    },
+    onDragEnd: () => {
+      setDrag(undefined)
+      setOver(undefined)
+    },
+    onKeyDown: (e: KeyboardEvent) => {
+      if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return
+      const to = ids[ids.indexOf(id) + (e.key === 'ArrowUp' ? -1 : 1)]
+      if (!to) return
+      e.preventDefault()
+      void moveProfile(id, to)
+    }
+  })
+}
+
+function ProfileCard({ profile, onEdit, dragProps }: { profile: Profile; onEdit: () => void; dragProps: ReturnType<ReturnType<typeof useProfileDrag>> }) {
   const [status, setStatus] = useState<AccountStatus>()
   const [busy, setBusy] = useState(false)
   const polling = useRef(true)
@@ -90,8 +132,11 @@ function ProfileCard({ profile, onEdit }: { profile: Profile; onEdit: () => void
   }
 
   return (
-    <div className="card">
+    <div className="card profile-card" {...dragProps}>
       <div className="row" style={{ marginBottom: 12 }}>
+        <span className="drag-grip" title={MOVE_HINT} aria-hidden>
+          <GripVertical size={14} />
+        </span>
         <ProfileDot profile={profile} size={11} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 600 }} className="ellipsis">
@@ -382,6 +427,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
 export function AccountsPage() {
   const profiles = useStore((s) => s.profiles)
   const [modal, setModal] = useState<{ profile?: Profile } | null>(null)
+  const dragProps = useProfileDrag(profiles.map((p) => p.id))
   return (
     <div className="page">
       <div className="page-inner">
@@ -397,7 +443,7 @@ export function AccountsPage() {
         </p>
         <div className="grid two">
           {profiles.map((p) => (
-            <ProfileCard key={p.id} profile={p} onEdit={() => setModal({ profile: p })} />
+            <ProfileCard key={p.id} profile={p} onEdit={() => setModal({ profile: p })} dragProps={dragProps(p.id)} />
           ))}
         </div>
       </div>

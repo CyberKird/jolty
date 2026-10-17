@@ -74,6 +74,8 @@ interface State {
   setPage(p: Page): void
   toast(text: string, error?: boolean): void
   loadProfiles(): Promise<void>
+  /** puts `from` where `to` is (after it when moving down) and saves the order */
+  moveProfile(from: string, to: string): Promise<void>
   loadSessions(): Promise<void>
   loadUsage(): Promise<void>
   openSession(id: string | undefined): Promise<void>
@@ -135,6 +137,21 @@ export const useStore = create<State>((set, get) => ({
 
   loadProfiles: async () => {
     set({ profiles: await api.profiles.list() })
+  },
+
+  moveProfile: async (from, to) => {
+    const list = [...get().profiles]
+    const i = list.findIndex((p) => p.id === from)
+    const j = list.findIndex((p) => p.id === to)
+    if (i < 0 || j < 0 || i === j) return
+    list.splice(j, 0, list.splice(i, 1)[0])
+    set({ profiles: list })
+    try {
+      await api.profiles.reorder(list.map((p) => p.id))
+    } catch (err) {
+      get().toast(String(err), true)
+      await get().loadProfiles()
+    }
   },
 
   loadSessions: async () => {

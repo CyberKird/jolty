@@ -129,6 +129,7 @@ function registerIpc(): void {
   handle('profiles:create', (input) => jolty.createProfile(input as never))
   handle('profiles:update', (id: string, patch) => jolty.updateProfile(id, patch as never))
   handle('profiles:remove', (id: string) => jolty.removeProfile(id))
+  handle('profiles:reorder', (ids: unknown) => void store.reorderProfiles(ids))
   handle('profiles:status', (id: string) => jolty.status(id))
   handle('profiles:login', (id: string) => jolty.login(id))
   handle('profiles:logout', (id: string) => jolty.logout(id))

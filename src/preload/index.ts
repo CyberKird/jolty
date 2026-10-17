@@ -18,6 +18,7 @@ const api: JoltyApi = {
     create: (input) => call('profiles:create', input),
     update: (id, patch) => call('profiles:update', id, patch),
     remove: (id) => call('profiles:remove', id),
+    reorder: (ids) => call('profiles:reorder', ids),
     status: (id) => call('profiles:status', id),
     login: (id) => call('profiles:login', id),
     logout: (id) => call('profiles:logout', id),

@@ -743,5 +743,6 @@
  "Apasă „Încarcă nepachetată” și alege folderul:": "Klicke auf „Entpackte Erweiterung laden“ und wähle den Ordner:",
  "Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.": "Fertig: Der Status oben wird zu „Verbunden“. Das machst du nur einmal; danach verbindet sich die Erweiterung selbst und wird mit Jolty aktualisiert.",
  "Extensia Playwright e instalată în browserul ales.": "Die Playwright-Erweiterung ist im gewählten Browser installiert.",
- "Extensia Playwright nu e instalată în browserul ales.": "Die Playwright-Erweiterung ist im gewählten Browser nicht installiert."
+ "Extensia Playwright nu e instalată în browserul ales.": "Die Playwright-Erweiterung ist im gewählten Browser nicht installiert.",
+ "Trage ca să schimbi ordinea (sau Alt+săgeți)": "Ziehen, um die Reihenfolge zu ändern (oder Alt+Pfeiltasten)"
 }
