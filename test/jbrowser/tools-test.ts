@@ -279,3 +279,16 @@ test('the model cannot see the user tabs, only take the current one on request',
   const list = ok(await h.call('browser_tabs', { action: 'list' }, 'fresh'))
   assert.match(list, /No tabs are open/)
 })
+
+test('typing Enter into a search box that navigates still returns the new page; long menus are collapsed and can be opened', async () => {
+  const first = ok(await h.call('browser_navigate', { url: h.site + '/search' }))
+  assert.match(first, /navigation "Menu" \[ref=e\d+\] \(2\d links and buttons; browser_snapshot with this ref opens it\)/)
+  assert.doesNotMatch(first, /Menu item 3/)
+  const menu = ref(first, /navigation "Menu"/)
+  const open = ok(await h.call('browser_snapshot', { ref: menu }))
+  assert.match(open, /Menu item 19/)
+  const r = ok(await h.call('browser_type', { ref: ref(first, /textbox "Query"/), text: 'zebra', submit: true }))
+  assert.match(r, /Page Title: Results/)
+  assert.match(r, /heading "Results page"/)
+})
+

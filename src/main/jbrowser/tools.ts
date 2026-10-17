@@ -245,7 +245,7 @@ export const TOOLS: ToolDef[] = [
       free(tab)
       svc.touched(tab)
       await tab.touch()
-      return text(await svc.state(sid, tab, { ref: optStr(a.ref), budget: 70000 }))
+      return text(await svc.state(sid, tab, { ref: optStr(a.ref), budget: 60000 }))
     }
   },
   {

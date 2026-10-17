@@ -214,7 +214,15 @@ export class BrowserService {
     let body = ''
     let scroll = ''
     if (opts.snapshot !== false) {
-      const snap = await tab.P<{ url: string; title: string; text: string; scroll: { y: number; height: number; view: number }; error?: string }>('snapshot', { ref: opts.ref, budget: opts.budget })
+      type Snap = { url: string; title: string; text: string; scroll: { y: number; height: number; view: number }; error?: string; loading?: boolean }
+      if (tab.state === 'loading') await tab.waitLoad(10000)
+      let snap = await tab.P<Snap>('snapshot', { ref: opts.ref, budget: opts.budget })
+      // a click or Enter may have started a navigation: the new document has no body for a moment
+      for (let i = 0; snap.loading && i < 25; i++) {
+        await sleep(200)
+        snap = await tab.P<Snap>('snapshot', { ref: opts.ref, budget: opts.budget })
+      }
+      if (snap.loading) throw new Error('The page is still loading: try again in a moment.')
       if (snap.error) throw new Error(snap.error)
       url = snap.url
       title = snap.title.replace(/^⚡ /, '')

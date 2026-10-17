@@ -287,6 +287,15 @@ const snapshotOf = (start, budget) => {
       for (const k of kids) push(depth + 1, k)
       return
     }
+    // page chrome with dozens of links (menus, footers, sidebars) costs thousands of tokens and is rarely needed:
+    // one line says what it is, and browser_snapshot with its ref opens it
+    if ((eff === 'navigation' || eff === 'contentinfo' || eff === 'complementary') && el !== start) {
+      const n = el.querySelectorAll('a[href], button, input, select, textarea, [role=button], [role=link], [role=menuitem]').length
+      if (n > 12) {
+        push(depth, line + ' (' + n + ' links and buttons; browser_snapshot with this ref opens it)')
+        return
+      }
+    }
     // a container: its own line, then its children one level deeper
     const mark = lines.length
     push(depth, line + ':')
@@ -306,7 +315,8 @@ const snapshotOf = (start, budget) => {
 
 P.snapshot = (opts) => {
   opts = opts || {}
-  const start = opts.ref ? get(opts.ref) : document.body || document.documentElement
+  if (!opts.ref && !document.body) return { loading: true }
+  const start = opts.ref ? get(opts.ref) : document.body
   if (!start) return { error: 'ref ' + opts.ref + ' is not on the page any more: take a new snapshot' }
   const doc = document.scrollingElement || document.documentElement
   return {

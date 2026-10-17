@@ -211,11 +211,19 @@ export class Tab {
   /** Waits until the main frame has loaded (or the time is up). */
   async waitLoad(timeoutMs = 20000): Promise<void> {
     const end = Date.now() + timeoutMs
+    const start = Date.now()
+    let probed = 0
     while (this.state !== 'complete' && !this.dialog && Date.now() < end) {
       await new Promise<void>((r) => {
         this.waiters.push(r)
         setTimeout(r, 250)
       })
+      // a page restored from the back/forward cache never fires a load event: ask the page itself
+      if ((this.state as LoadState) !== 'complete' && Date.now() - start > 1200 && Date.now() - probed > 500) {
+        probed = Date.now()
+        const ready = await this.eval<string>('document.readyState', { awaitPromise: false }).catch(() => '')
+        if (ready === 'complete') this.state = 'complete'
+      }
     }
   }
 
