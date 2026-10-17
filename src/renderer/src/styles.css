@@ -35,7 +35,7 @@
   --del: rgba(208, 59, 59, 0.13);
   --del-ink: #ff9d9d;
   --display: 'Bebas Neue', 'Barlow', sans-serif;
-  --label: 'Space Mono', ui-monospace, monospace;
+  --label: 'Barlow', 'Segoe UI', sans-serif;
   --code: 'JetBrains Mono Variable', ui-monospace, Consolas, monospace;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   font-family: 'Barlow', 'Segoe UI', sans-serif;
@@ -102,8 +102,9 @@ a {
 }
 .label {
   font-family: var(--label);
-  font-size: 10px;
-  letter-spacing: 0.22em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey);
 }
@@ -212,7 +213,8 @@ a {
 .nav-item .count {
   margin-inline-start: auto;
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   color: var(--grey-2);
 }
 
@@ -257,7 +259,8 @@ a {
 .session-group-title {
   padding: 6px 12px 4px;
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey-2);
@@ -296,7 +299,8 @@ a {
 }
 .session-item .when {
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   color: var(--grey-2);
 }
 .session-item .del {
@@ -380,9 +384,9 @@ a {
   color: var(--white);
   cursor: pointer;
   font-family: var(--label);
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
   transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.2s, transform 0.12s;
@@ -475,7 +479,8 @@ a {
   padding: 0 8px;
   border: 1px solid var(--line-2);
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey);
@@ -531,8 +536,9 @@ a {
 }
 .field > label {
   font-family: var(--label);
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey);
   display: flex;
@@ -557,7 +563,8 @@ a {
   color: var(--grey);
   cursor: pointer;
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -698,7 +705,8 @@ a {
   padding: 0 9px;
   border: 1px solid var(--line);
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.06em;
   color: var(--grey);
   white-space: nowrap;
@@ -714,7 +722,8 @@ a {
 .mini-limit {
   width: 88px;
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.06em;
   color: var(--grey);
 }
@@ -746,8 +755,9 @@ a {
   gap: 8px;
   margin-top: 10px;
   font-family: var(--label);
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey-2);
 }
@@ -923,8 +933,9 @@ a {
   cursor: pointer;
   list-style: none;
   font-family: var(--label);
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 .reasoning summary::-webkit-details-marker {
@@ -938,8 +949,9 @@ a {
 }
 .reasoning-head {
   font-family: var(--label);
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--volt);
 }
@@ -982,8 +994,9 @@ a {
 }
 .tool-verb {
   font-family: var(--label);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey-2);
 }
@@ -1000,7 +1013,8 @@ a {
 }
 .tool-state {
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -1042,7 +1056,8 @@ a {
   padding: 7px 14px;
   border-bottom: 1px solid var(--line);
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.06em;
   color: var(--grey);
 }
@@ -1142,7 +1157,7 @@ a {
 }
 .md th {
   font-family: var(--label);
-  font-size: 10px;
+  font-size: 11.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey);
@@ -1269,7 +1284,21 @@ a {
   gap: 8px;
   padding-block: 10px 10px; padding-inline: 14px 10px;
   border-top: 1px solid var(--line);
-  flex-wrap: wrap;
+  min-width: 0;
+}
+/* one row: the project name gives way first, the send button never drops below */
+.cwd-btn {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 190px;
+}
+.cwd-btn span {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .composer-bar {
+    flex-wrap: wrap;
+  }
 }
 .attachments {
   display: flex;
@@ -1317,7 +1346,8 @@ a {
   min-width: 110px;
   color: var(--volt);
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -1438,8 +1468,9 @@ a {
   justify-content: space-between;
   margin-bottom: 14px;
   font-family: var(--label);
-  font-size: 10px;
-  letter-spacing: 0.2em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey);
 }
@@ -1492,7 +1523,8 @@ a {
 }
 .counter .k {
   font-family: var(--label);
-  font-size: 9px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey);
@@ -1537,7 +1569,8 @@ a {
   gap: 12px;
   margin-bottom: 8px;
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--grey);
@@ -1588,7 +1621,8 @@ a {
 }
 .filemap-dir {
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.04em;
   color: var(--grey);
   overflow-wrap: anywhere;
@@ -1618,7 +1652,8 @@ a {
   gap: 16px;
   margin-top: 12px;
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--grey);
@@ -1738,8 +1773,9 @@ a {
 }
 .stat .k {
   font-family: var(--label);
-  font-size: 9.5px;
-  letter-spacing: 0.16em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey);
 }
@@ -1784,7 +1820,8 @@ a {
 .chart .axis {
   fill: var(--grey);
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
 }
 .chart .grid-line {
   stroke: var(--line);
@@ -1808,7 +1845,7 @@ a {
 }
 .tooltip b {
   font-family: var(--label);
-  font-size: 10px;
+  font-size: 11.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 400;
@@ -1823,8 +1860,8 @@ a {
 .table th {
   text-align: start;
   font-family: var(--label);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 400;
   color: var(--grey);
@@ -1948,8 +1985,9 @@ a {
 }
 .advice-label {
   font-family: var(--label);
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--white);
   white-space: nowrap;
@@ -1963,7 +2001,8 @@ a {
 }
 .advice-ok {
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey-2);
@@ -1985,7 +2024,8 @@ a {
   color: var(--volt);
   cursor: pointer;
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   white-space: nowrap;
   transition: background 0.15s, color 0.15s;
@@ -2036,10 +2076,9 @@ a {
   color: var(--volt);
 }
 .picker-effort {
-  font-family: var(--label);
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
   color: var(--grey);
 }
 .picker-pop {
@@ -2073,7 +2112,8 @@ a {
   gap: 8px;
   padding: 6px 8px 4px;
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--grey-2);
@@ -2132,7 +2172,8 @@ a {
 }
 .picker-tag {
   font-family: var(--label);
-  font-size: 8.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--grey-2);
@@ -2149,7 +2190,8 @@ a {
 }
 .picker-foot-label {
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--grey-2);
@@ -2235,7 +2277,8 @@ a {
   margin-inline-start: auto;
   flex: none;
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   color: var(--grey-2);
 }
 /* every language on one line: "5 Stunden" is longer than "5 ore" */
@@ -2246,14 +2289,14 @@ a {
 }
 .meter-limit {
   display: grid;
-  grid-template-columns: 60px 1fr 32px;
+  grid-template-columns: 64px 1fr 36px;
   align-items: center;
   gap: 8px;
   font-family: var(--label);
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--grey-2);
+  font-weight: 500;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--grey);
 }
 .meter-limit .track {
   height: 3px;
@@ -2312,7 +2355,8 @@ a {
   background: transparent;
   color: var(--grey-2);
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -2345,7 +2389,8 @@ a {
 .changes-sum {
   margin-bottom: 10px;
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.06em;
   color: var(--grey);
 }
@@ -2382,7 +2427,8 @@ a {
 .change-row b {
   flex: none;
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
 }
 .change-path {
   flex: 1;
@@ -2392,7 +2438,8 @@ a {
   flex: none;
   width: 16px;
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   text-align: center;
   color: var(--warning);
 }
@@ -2415,7 +2462,8 @@ a {
   padding: 1px 4px;
   border: 1px solid var(--line-2);
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   text-align: center;
   color: var(--grey-2);
 }
@@ -2430,8 +2478,8 @@ a {
   align-items: baseline;
   gap: 8px;
   font-family: var(--label);
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  font-size: 11.5px;
 }
 .meter-balance b {
   font-weight: 400;
@@ -2443,7 +2491,8 @@ a {
 }
 .picker-score {
   font-family: var(--label);
-  font-size: 11px;
+  font-weight: 500;
+  font-size: 11.5px;
   min-width: 24px;
   text-align: center;
   color: var(--white);
@@ -2459,7 +2508,8 @@ a {
 }
 .picker-speed {
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--grey-2);
@@ -2534,8 +2584,9 @@ a {
 }
 .titlebar-by {
   font-family: var(--label);
-  font-size: 8.5px;
-  letter-spacing: 0.2em;
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--grey-2);
 }
@@ -2742,7 +2793,8 @@ a {
 .tasks-count {
   flex: none;
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -2772,7 +2824,8 @@ a {
 .tasks-eta {
   flex: none;
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--volt);
@@ -2876,7 +2929,8 @@ a {
 .mentions-hint {
   padding: 6px 10px 2px;
   font-family: var(--label);
-  font-size: 9px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   color: var(--grey-2);
 }
@@ -2903,7 +2957,7 @@ a {
 .meter-time .pct {
   margin-inline-end: 0;
 }
-.queue-title { display: flex; gap: 6px; align-items: center; color: var(--volt); font: 10px var(--label); text-transform: uppercase; letter-spacing: 0.08em; padding: 1px 2px; }
+.queue-title { display: flex; gap: 6px; align-items: center; color: var(--volt); font: 500 11.5px var(--label); text-transform: uppercase; letter-spacing: 0.08em; padding: 1px 2px; }
 .queue-title span { color: var(--grey-2); }
 .queued {
   display: flex;
@@ -2916,9 +2970,9 @@ a {
   font-size: 12px;
   color: var(--grey);
 }
-.queued-order { flex: none; color: var(--grey-2); font: 10px var(--label); }
+.queued-order { flex: none; color: var(--grey-2); font: 500 11.5px var(--label); }
 .queued-text { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.queued-files { display: inline-flex; align-items: center; gap: 3px; flex: none; color: var(--grey-2); font: 10px var(--label); }
+.queued-files { display: inline-flex; align-items: center; gap: 3px; flex: none; color: var(--grey-2); font: 500 11.5px var(--label); }
 .queued button {
   flex: none;
   display: grid;
@@ -2949,7 +3003,8 @@ a {
   background: transparent;
   color: var(--grey);
   font-family: var(--label);
-  font-size: 10px;
+  font-weight: 500;
+  font-size: 11.5px;
   cursor: pointer;
 }
 .context-meter:hover:not(:disabled) {
@@ -2982,7 +3037,8 @@ a {
   background: transparent;
   color: var(--grey-2);
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.06em;
   cursor: pointer;
   opacity: 0;
@@ -3022,7 +3078,8 @@ a {
   background: var(--volt-dim);
   color: var(--volt);
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -3091,7 +3148,8 @@ a {
 }
 .ctx-item kbd {
   font-family: var(--label);
-  font-size: 9.5px;
+  font-weight: 500;
+  font-size: 11.5px;
   letter-spacing: 0.06em;
   color: var(--grey-2);
 }

@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUp, FolderOpen, Globe, MessageSquareDashed, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
+import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, Globe, MessageSquareDashed, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
@@ -391,8 +391,8 @@ function Composer(p: ComposerProps) {
           </button>
           <input ref={fileRef} type="file" multiple hidden onChange={(e) => { void addFiles([...(e.target.files || [])]); e.target.value = '' }} />
           {p.onCwd && (
-            <button className="pill-select" style={{ paddingRight: 10, cursor: 'pointer', background: 'transparent' }} onClick={p.onCwd} title={p.cwd}>
-              <FolderOpen size={13} /> <span style={{ color: 'var(--white)' }}>{p.cwd ? basename(p.cwd) : tr("Alege proiectul")}</span>
+            <button className="picker-btn cwd-btn" onClick={p.onCwd} title={p.cwd}>
+              <FolderOpen size={14} strokeWidth={1.8} /> <span className="ellipsis">{p.cwd ? basename(p.cwd) : tr("Alege proiectul")}</span>
             </button>
           )}
           <ModelPicker
@@ -417,7 +417,8 @@ function Composer(p: ComposerProps) {
               onClick={() => p.onMode(p.mode === 'plan' ? DEFAULT_MODE : 'plan')}
               title={p.mode === 'plan' ? tr("Plan activ: clic ca să revii la Build, unde editează fișiere") : tr("Comută în Plan: modelul doar cercetează și propune un plan, fără să modifice nimic")}
             >
-              {p.mode === 'plan' ? 'Plan' : 'Build'}
+              <ClipboardList size={14} strokeWidth={1.8} />
+              {p.mode === 'plan' && 'Plan'}
             </button>
           )}
           <button
@@ -431,9 +432,10 @@ function Composer(p: ComposerProps) {
                 : tr("Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări).")
             }
           >
-            <Globe size={14} strokeWidth={1.8} /> {tr("Browser")}
+            <Globe size={14} strokeWidth={1.8} />
+            {p.browser && tr("Browser")}
           </button>
-          {engine !== 'hermes' && <BrowserMenu />}
+          {engine !== 'hermes' && p.browser && <BrowserMenu />}
           {(p.onTemporary || p.temporary) && (
             <button
               className={`chrome-toggle ${p.temporary ? 'on' : ''}`}
@@ -448,7 +450,8 @@ function Composer(p: ComposerProps) {
                     : tr("Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty.")
               }
             >
-              <MessageSquareDashed size={14} strokeWidth={1.8} /> {tr("Temporar")}
+              <MessageSquareDashed size={14} strokeWidth={1.8} />
+              {p.temporary && tr("Temporar")}
             </button>
           )}
           <div className="spacer" />
