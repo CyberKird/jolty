@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.3.17
+## 0.3.18
 
-- The title bar reads "JOLTY | by Joltarise" in clear text instead of a tiny blurry wordmark image.
+- The Joltarise wordmark in the title bar is almost twice as big (20 px instead of 11), so its spiked letters read clearly, with a thin divider after "by".
 
 ## 0.3.16
 

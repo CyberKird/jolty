@@ -2590,9 +2590,10 @@ a {
   border-inline-start: 1px solid var(--line-2);
   line-height: 1;
 }
-.titlebar-by b {
-  font-weight: 600;
-  color: var(--white);
+/* the spiked lettering needs height to read: at 11 px it turned into a smear */
+.titlebar-wordmark {
+  height: 20px;
+  width: auto;
 }
 
 /* ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 import { ArrowDownToLine, PanelLeftClose, PanelLeftOpen, RefreshCw } from 'lucide-react'
 import { lazy, Suspense, useEffect } from 'react'
 import { ChatView, NewChat } from './components/Chat'
+import wordmark from './assets/joltarise-wordmark-volt.svg'
 import { ContextMenu } from './components/ContextMenu'
 import { LivePanel } from './components/LivePanel'
 import { Sidebar } from './components/Sidebar'
@@ -54,9 +55,8 @@ function TitleBar() {
         <span className="brand-name">
          JOLT<b>Y</b>
         </span>
-        <span className="titlebar-by">
-          by <b>Joltarise</b>
-        </span>
+        <span className="titlebar-by">by</span>
+        <img className="titlebar-wordmark" src={wordmark} alt="Joltarise" draggable={false} />
       </div>
       <div className="titlebar-spacer" />
       <UpdatePill />
