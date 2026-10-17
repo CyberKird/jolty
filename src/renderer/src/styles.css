@@ -2196,6 +2196,16 @@ a {
   text-transform: uppercase;
   color: var(--grey-2);
 }
+/* the effort row takes the menu width and shares it between the buttons, so it never sticks out */
+.picker-foot .segmented {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.picker-foot .segmented button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 4px;
+}
 .picker-foot .segmented button:focus-visible {
   outline: 1px solid var(--volt);
   outline-offset: -1px;
