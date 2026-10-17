@@ -237,14 +237,34 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: 'browser_snapshot',
-    description: 'Read the current page: roles, names, values and refs of everything on it. Better than a screenshot for acting. Pass ref to read only one part.',
-    inputSchema: obj({ ref: { type: 'string', description: 'Optional: only this element and what is inside it' } }),
+    description:
+      'Read the current page. Default: roles, names, values and refs of everything on it, to act on it. With mode "text": only the readable text (articles, threads, product pages), far smaller, no refs; long pages come in parts, continue with offset. Pass ref to read only one part of the tree.',
+    inputSchema: obj({
+      ref: { type: 'string', description: 'Optional: only this element and what is inside it' },
+      mode: { type: 'string', enum: ['tree', 'text'], description: 'tree (default) to act on the page, text to read it' },
+      offset: { type: 'number', description: 'text mode: character to continue from (the previous answer says where)' },
+      maxChars: { type: 'number', description: 'text mode: how much to return at most (default 20000)' }
+    }),
     annotations: READ,
     async run(svc, sid, a) {
       const tab = cur(svc, sid)
       free(tab)
       svc.touched(tab)
       await tab.touch()
+      if (a.mode === 'text') {
+        if (tab.state === 'loading') await tab.waitLoad(10000)
+        type Read = { text: string; total: number; from: number; to: number; loading?: boolean }
+        const offset = Number(a.offset) || 0
+        const max = Math.min(Math.max(Number(a.maxChars) || 20000, 1000), 60000)
+        let r = await tab.P<Read>('readable', { offset, max })
+        for (let i = 0; r.loading && i < 25; i++) {
+          await sleep(200)
+          r = await tab.P<Read>('readable', { offset, max })
+        }
+        const header = await svc.state(sid, tab, { snapshot: false })
+        const note = r.to < r.total ? `[characters ${r.from}-${r.to} of ${r.total}. Call browser_snapshot with mode "text" and offset ${r.to} for the next part.]` : `[characters ${r.from}-${r.to} of ${r.total}: the end]`
+        return text(header, '### Text\n' + (r.text || '(no readable text on this page)'), note)
+      }
       return text(await svc.state(sid, tab, { ref: optStr(a.ref), budget: 60000 }))
     }
   },

@@ -292,3 +292,19 @@ test('typing Enter into a search box that navigates still returns the new page; 
   assert.match(r, /heading "Results page"/)
 })
 
+
+test('text mode reads an article without chrome, in parts', async () => {
+  ok(await h.call('browser_navigate', { url: h.site + '/article' }))
+  const first = ok(await h.call('browser_snapshot', { mode: 'text', maxChars: 1500 }))
+  assert.match(first, /# Long read/)
+  assert.match(first, /First paragraph with a link and bold text\./)
+  assert.doesNotMatch(first, /\[1\]|\[edit\]|Footer links|\[ref=/)
+  assert.match(first, /## Part two/)
+  assert.match(first, /- one\n- two/)
+  assert.match(first, /Name \| Ada/)
+  const next = /offset (\d+)/.exec(first)![1]
+  const second = ok(await h.call('browser_snapshot', { mode: 'text', offset: Number(next), maxChars: 60000 }))
+  assert.match(second, /THE END MARKER/)
+  assert.match(second, /: the end\]/)
+  assert.ok(first.length < 4000, 'text mode must stay small')
+})

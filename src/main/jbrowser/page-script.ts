@@ -3,7 +3,7 @@
 // glow / cursor / bolt overlay. Plain JavaScript in a string: it runs in the page, not in Jolty.
 import { drawOverlay } from '../browser-overlay'
 
-const VERSION = 7
+const VERSION = 8
 
 const BODY = String.raw`
 const P = { v: ${VERSION}, n: 0, refs: new Map(), ids: new WeakMap() }
@@ -329,6 +329,71 @@ P.snapshot = (opts) => {
 }
 
 const words = (s) => s.toLowerCase().split(/\s+/).filter(Boolean)
+
+// the readable text of the page (an article, a thread, a product page) without refs, links or page chrome
+P.readable = (opts) => {
+  opts = opts || {}
+  const BLOCK = new Set(['P', 'DIV', 'LI', 'UL', 'OL', 'TABLE', 'TR', 'SECTION', 'ARTICLE', 'MAIN', 'BLOCKQUOTE', 'PRE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'DL', 'DT', 'DD', 'FIGURE', 'FIGCAPTION', 'DETAILS', 'SUMMARY', 'BR', 'HR', 'FORM', 'FIELDSET'])
+  const DROP_ROLE = new Set(['navigation', 'complementary', 'contentinfo', 'banner', 'search', 'dialog', 'alert', 'tooltip'])
+  const root = document.querySelector('main, article, [role=main]') || document.body
+  if (!root) return { loading: true }
+  const out = []
+  let buf = ''
+  const flush = () => {
+    const t = buf.replace(/\s+/g, ' ').trim()
+    buf = ''
+    if (t) out.push(t)
+  }
+  const walk = (n) => {
+    if (n.nodeType === 3) { buf += n.nodeValue; return }
+    if (n.nodeType !== 1) return
+    const tag = n.tagName.toUpperCase()
+    if (SKIP.has(tag) || tag === 'NAV' || tag === 'ASIDE' || tag === 'FOOTER' || tag === 'BUTTON' || tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return
+    if (hidden(n) === true) return
+    const role = n.getAttribute('role')
+    if (role && DROP_ROLE.has(role)) return
+    // footnote markers, edit links and the like are noise in running text
+    if ((tag === 'SUP' && /reference|cite/i.test(String(n.className) + ' ' + (n.id || ''))) || /editsection|navbox|noprint|hatnote/i.test(String(n.className))) return
+    if (n.shadowRoot) { for (const c of n.shadowRoot.childNodes) walk(c); return }
+    if (tag === 'IFRAME') { try { if (n.contentDocument && n.contentDocument.body) { flush(); walk(n.contentDocument.body) } } catch {} return }
+    const block = BLOCK.has(tag)
+    if (block) flush()
+    if (/^H[1-6]$/.test(tag)) {
+      for (const c of n.childNodes) walk(c)
+      const t = buf.replace(/\s+/g, ' ').trim()
+      buf = ''
+      if (t) out.push('#'.repeat(Number(tag[1])) + ' ' + t)
+      return
+    }
+    if (tag === 'TR') {
+      const cells = []
+      for (const c of n.children) {
+        if (c.tagName !== 'TD' && c.tagName !== 'TH') continue
+        const saved = buf
+        buf = ''
+        for (const k of c.childNodes) walk(k)
+        const t = buf.replace(/\s+/g, ' ').trim()
+        buf = saved
+        if (t) cells.push(t)
+      }
+      if (cells.length) out.push(cells.join(' | '))
+      return
+    }
+    if (tag === 'LI') buf += '- '
+    if (tag === 'PRE') { flush(); out.push(n.textContent.replace(/\s+$/, '')); return }
+    for (const c of n.childNodes) walk(c)
+    if (block) flush()
+  }
+  walk(root)
+  flush()
+  const text = out.join('\n')
+  const max = opts.max || 20000
+  const from = Math.min(opts.offset || 0, text.length)
+  let to = Math.min(text.length, from + max)
+  // cut at a line end when there is one nearby
+  if (to < text.length) { const nl = text.lastIndexOf('\n', to); if (nl > from + max * 0.6) to = nl }
+  return { url: location.href, title: document.title, text: text.slice(from, to), total: text.length, from, to }
+}
 
 P.find = (query, limit) => {
   const wanted = words(query)
