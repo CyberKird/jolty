@@ -68,6 +68,8 @@ interface State {
   toasts: Toast[]
   liveOpen: boolean
   sidebarOpen: boolean
+  /** "turn the PC off when the work is done" */
+  power: { armed: boolean; seconds?: number; reason?: 'done' | 'usage' | 'error' }
 
   setPage(p: Page): void
   toast(text: string, error?: boolean): void
@@ -117,6 +119,7 @@ export const useStore = create<State>((set, get) => ({
   pulls: {},
   toasts: [],
   // on a narrow window the live panel floats over the chat, so it starts closed there
+  power: { armed: false },
   liveOpen: window.innerWidth >= 1180,
   sidebarOpen: true,
 
@@ -204,6 +207,9 @@ export const useStore = create<State>((set, get) => ({
           const profile = get().profiles.find((p) => p.id === get().sessions.find((x) => x.id === e.sessionId)?.profileId)
           if (profile) refreshLimitsSoon(profile)
         }
+        return
+      case 'power':
+        set({ power: { armed: e.armed, seconds: e.seconds, reason: e.reason } })
         return
       case 'meta':
         set((s) => {

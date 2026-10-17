@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, Globe, MessageSquareDashed, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
+import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, Globe, MessageSquareDashed, Power, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
@@ -127,6 +127,7 @@ interface ComposerProps {
 }
 
 function Composer(p: ComposerProps) {
+  const powerArmed = useStore((s) => s.power.armed)
   const engine = p.profiles.find((profile) => profile.id === p.profileId)?.engine
   const [text, setText] = useState('')
   const [atts, setAtts] = useState<Attachment[]>([])
@@ -454,6 +455,19 @@ function Composer(p: ComposerProps) {
               {p.temporary && tr("Temporar")}
             </button>
           )}
+          <button
+            className={`chrome-toggle ${powerArmed ? 'on' : ''}`}
+            aria-pressed={powerArmed}
+            onClick={() => void api.power.arm(!powerArmed)}
+            title={
+              powerArmed
+                ? tr("PC-ul se oprește la final. Clic ca să anulezi.")
+                : tr("Oprește PC-ul când termină lucrul sau când rămâi fără usage. Se face doar după ce a început un task și toate conversațiile au fost liniștite 30 de secunde; apoi ai 60 de secunde să anulezi.")
+            }
+          >
+            <Power size={14} strokeWidth={1.8} />
+            {powerArmed && tr("Oprește PC-ul la final")}
+          </button>
           <div className="spacer" />
           {p.sessionId && p.running && <WorkClock sessionId={p.sessionId} />}
           {p.running && (

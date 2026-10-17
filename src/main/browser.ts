@@ -27,6 +27,7 @@ export const BROWSER_READ_TOOLS = [
   'browser_network_requests',
   'browser_network_request',
   'browser_hover',
+  'browser_scroll',
   'browser_resize',
   'browser_emulate_media'
 ]
@@ -59,11 +60,16 @@ const BROWSER_RULES =
 
 /** The browser instructions for the current connection mode. */
 export function browserPrompt(): string {
+  const mode = browserMode()
   const who =
-    browserMode() === 'own'
+    mode === 'own'
       ? "You can operate a separate Jolty browser window with the jolty-browser tools. It has its own profile: the user's everyday logins are not in it, and the user signs in there once per site when you need it."
       : "You can operate the user's real browser (their logged-in sessions) with the jolty-browser tools."
-  return `${who} ${BROWSER_RULES}`
+  const how =
+    mode === 'jolty'
+      ? " Tabs you open appear in a separate browser window kept for you, so the user's own tabs stay untouched; take over the tab the user has open (browser_use_current_tab) only when they ask you to work on it. Read pages with browser_snapshot (refs like e12 stay valid until the page changes), use browser_find for things off screen, browser_scroll to move, and browser_take_screenshot only when you need to see layout or images."
+      : ''
+  return `${who}${how} ${BROWSER_RULES}`
 }
 
 export interface StdioServer {
@@ -149,15 +155,17 @@ export function browsers(): BrowserInfo {
     ready[0] ||
     (def && installedExe(def) ? def : undefined) ||
     list[0]?.id
-  return { installed: list, active, defaultApp: def, extension: active ? ready.includes(active) : false }
+  return { mode: browserMode(), installed: list, active, defaultApp: def, extension: active ? ready.includes(active) : false }
 }
 
 /** The browser Jolty uses (name + launcher), for "Open in Vivaldi" style menu items. */
-export function activeBrowser(): { name: string; open: (url: string) => void } | undefined {
+const SCHEME: Record<BrowserApp, string> = { chrome: 'chrome', vivaldi: 'vivaldi', edge: 'edge', brave: 'brave' }
+
+export function activeBrowser(): { name: string; open: (url: string) => void; extensionsUrl: string } | undefined {
   const app = browsers().active
   const exe = app && installedExe(app)
   if (!app || !exe) return undefined
-  return { name: BROWSERS[app].name, open: (url) => spawn(exe, [url], { detached: true, stdio: 'ignore' }).unref() }
+  return { name: BROWSERS[app].name, open: (url) => spawn(exe, [url], { detached: true, stdio: 'ignore' }).unref(), extensionsUrl: `${SCHEME[app]}://extensions` }
 }
 
 function cliPath(): string {
@@ -241,7 +249,10 @@ function ownLauncher(): string {
 }
 
 export function browserMode(): BrowserMode {
-  return loadSettings().browserMode || 'auto'
+  const chosen = loadSettings().browserMode
+  if (chosen) return chosen
+  // someone who set Playwright's extension up keeps it until they switch; everyone else gets Jolty's own
+  return getSecret(BROWSER_TOKEN_KEY) ? 'auto' : 'jolty'
 }
 
 export function browserServer(): StdioServer {

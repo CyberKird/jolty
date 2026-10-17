@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { Notification, powerSaveBlocker, shell } from 'electron'
 import type {
   AccountStatus,
   Attachment,
@@ -23,6 +24,8 @@ import type {
   UsageSummary
 } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browserMode, browsers } from './browser'
+import { nativeBrowser } from './jbrowser/native'
+import { PowerGuard, systemShutdown } from './power'
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
 import { HermesDriver } from './engines/hermes'
@@ -93,6 +96,23 @@ export class Jolty {
   private transcripts = new Map<string, ChatItem[]>()
   private saveTimers = new Map<string, NodeJS.Timeout>()
   private removingProfiles = new Set<string>()
+  /** "turn the PC off when the work is done" */
+  readonly power = new PowerGuard({
+    emit: (e) => this.send(e),
+    busy: () => this.busy.size,
+    notify: (title, body) => {
+      if (Notification.isSupported() && !process.env.JOLTY_TEST) new Notification({ title, body }).show()
+    },
+    shutdown: process.env.JOLTY_TEST ? () => () => undefined : systemShutdown,
+    keepAwake: (on) => {
+      if (on && this.awakeId === undefined) this.awakeId = powerSaveBlocker.start('prevent-app-suspension')
+      else if (!on && this.awakeId !== undefined) {
+        powerSaveBlocker.stop(this.awakeId)
+        this.awakeId = undefined
+      }
+    }
+  })
+  private awakeId?: number
   /** temporary chats: kept here only, never in sessions.json or transcripts/ */
   private temps = new Map<string, SessionMeta>()
   private trackedTemps = new Set<string>()
@@ -259,6 +279,7 @@ export class Jolty {
 
   private recordLimits(s: RateLimitSnapshot): RateLimitSnapshot {
     const merged = store.saveLimit(s)
+    this.power.onLimits(merged)
     this.send({ type: 'limits', snapshot: merged })
     return merged
   }
@@ -288,6 +309,7 @@ export class Jolty {
     if (e.type === 'status') {
       if (e.status === 'running') this.busy.add(e.sessionId)
       else this.busy.delete(e.sessionId)
+      this.power.onStatus(e.status, e.error)
     }
     if (e.type === 'item') {
       const t = this.transcript(e.sessionId)
@@ -638,8 +660,9 @@ export class Jolty {
   async setBrowser(sessionId: string, on: boolean): Promise<void> {
     if (on && this.meta(sessionId).engine === 'hermes') throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru Hermes."))
     if (on && browserMode() === 'own' && !browsers().active) throw new Error(tr("Nu găsesc niciun browser Chromium (Chrome, Vivaldi, Edge sau Brave) pentru fereastra Jolty."))
+    if (on && browserMode() === 'jolty') await this.prepareNativeBrowser()
     // the separate Jolty window needs no extension at all
-    if (on && browserMode() !== 'own' && (browserMode() === 'pick' || !store.getSecret(BROWSER_TOKEN_KEY))) {
+    if (on && (browserMode() === 'auto' || browserMode() === 'pick') && (browserMode() === 'pick' || !store.getSecret(BROWSER_TOKEN_KEY))) {
       // first use: no extension yet means the page of the right browser, not a 30 s wait that ends in a timeout
       const info = browsers()
       if (!info.extension) {
@@ -653,6 +676,21 @@ export class Jolty {
     const meta = s?.meta || this.meta(sessionId)
     meta.browser = on || undefined
     this.saveMeta(meta)
+    if (!on) void nativeBrowser.release(sessionId)
+  }
+
+  /** First use of Jolty's own extension: put its files in place and show the user where to load them. */
+  private async prepareNativeBrowser(): Promise<void> {
+    await nativeBrowser.start()
+    const st = nativeBrowser.status()
+    if (st.connected || st.installed) return
+    const dir = nativeBrowser.install()
+    const b = activeBrowser()
+    b?.open(b.extensionsUrl)
+    void shell.openPath(dir)
+    throw new Error(
+      tr("Am pregătit extensia Jolty. În {name}: pornește „Mod dezvoltator” pe pagina de extensii (am deschis-o), apasă „Încarcă nepachetată” și alege folderul {dir} (l-am deschis în Explorer). Apoi apasă din nou Browser.", { name: b?.name || 'browser', dir })
+    )
   }
 
   /** New token or browser settings: chats with the browser on swap their server now, no off/on needed. */
@@ -790,6 +828,7 @@ export class Jolty {
   }
 
   async removeSession(sessionId: string): Promise<void> {
+    void nativeBrowser.release(sessionId)
     if (this.temps.has(sessionId)) return this.wipeTemp(sessionId)
     await this.live.get(sessionId)?.close()
     this.live.delete(sessionId)

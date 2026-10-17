@@ -5,6 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import type { ChatEvent } from '@shared/types'
 import { browserMode } from './browser'
+import { nativeBrowser } from './jbrowser/native'
 import { dataDir } from './store'
 import { tr } from '@shared/i18n'
 
@@ -43,12 +44,14 @@ export class BrowserLive {
   private note?: string
   private url = ''
   private title = ''
+  private native = false
 
   constructor(private emit: (e: ChatEvent) => void) {}
 
   start(): void {
     if (this.timer) return
     this.note = undefined
+    if (browserMode() === 'jolty') return this.startNative()
     void this.poll()
     // follows tab switches and navigations; frames themselves arrive as the page paints
     this.timer = setInterval(() => void this.poll(), 2000)
@@ -57,7 +60,31 @@ export class BrowserLive {
   stop(): void {
     clearInterval(this.timer)
     this.timer = undefined
+    if (this.native) nativeBrowser.service.setLive(undefined)
+    this.native = false
     this.close()
+  }
+
+  /** Jolty's own extension streams the model's tab itself; this only reports why there is no picture. */
+  private startNative(): void {
+    this.native = true
+    nativeBrowser.service.setLive((f) => {
+      if (!f.frame) return this.say(tr("Modelul nu a deschis încă nicio pagină."))
+      this.note = undefined
+      this.emit({ type: 'browserLive', frame: f.frame, url: f.url, title: f.title })
+    })
+    let offline = false
+    const tick = (): void => {
+      if (!nativeBrowser.status().connected) {
+        offline = true
+        this.say(tr("Extensia Jolty nu e conectată la browser. Vezi Setări, la Browser."))
+      } else if (offline) {
+        offline = false
+        this.note = undefined
+      }
+    }
+    tick()
+    this.timer = setInterval(tick, 2000)
   }
 
   private close(): void {

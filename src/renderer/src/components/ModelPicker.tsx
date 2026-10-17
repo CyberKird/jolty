@@ -331,6 +331,7 @@ const TRUST: { id: SiteTrust; label: string; desc: string }[] = [
 ]
 
 const CONNECT: { id: BrowserMode; label: string; desc: string }[] = [
+  { id: 'jolty', label: tr("Extensia Jolty"), desc: tr("Recomandat: browserul tău, cu login-urile tale, într-o fereastră separată ca să nu-ți atingă tab-urile. Necesită extensia Jolty (Setări, la Browser)") },
   { id: 'auto', label: tr("Tab propriu, automat"), desc: tr("Browserul tău: se conectează singur și lucrează într-un tab deschis de el") },
   { id: 'pick', label: tr("Aleg eu tabul"), desc: tr("Browserul tău: extensia îți arată tab-urile deschise și modelul lucrează în cel pe care îl alegi") },
   { id: 'own', label: tr("Fereastră Jolty, profil separat"), desc: tr("Un browser aparte, cu profilul lui: vede toate tab-urile din fereastra aceea și nu atinge conturile tale. Te loghezi o dată pe site-urile de care are nevoie") }
@@ -343,9 +344,9 @@ export function BrowserMenu() {
   const [mode, setMode] = useState<BrowserMode>('auto')
   useEffect(() => {
     if (open)
-      void api.app.settings().then((s) => {
+      void Promise.all([api.app.settings(), api.browser.info()]).then(([s, info]) => {
         setTrust(s.siteTrust || 'site')
-        setMode(s.browserMode || 'auto')
+        setMode(info.mode)
       })
   }, [open])
   return (

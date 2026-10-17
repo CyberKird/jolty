@@ -78,11 +78,18 @@ const api: JoltyApi = {
     slash: (cwd) => call('composer:slash', cwd),
     files: (cwd) => call('composer:files', cwd)
   },
+  power: {
+    arm: (on) => call('power:arm', on),
+    cancel: () => call('power:cancel'),
+    state: () => call('power:state')
+  },
   browser: {
     hasToken: () => call('browser:hasToken'),
     info: () => call('browser:info'),
     setToken: (token) => call('browser:setToken', token),
     openExtensionPage: () => call('browser:openExtensionPage'),
+    native: () => call('browser:native'),
+    installNative: () => call('browser:installNative'),
     live: (on) => call('browser:live', on)
   },
   app: {

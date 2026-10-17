@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; width: 260px; padding: 14px; background: #060709; color: #f0f0f0; font: 13px/1.45 system-ui, sans-serif; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 9px; height: 9px; background: #d03b3b; }
+  .on .dot { background: #d4ff00; }
+  b { font-weight: 600; }
+  p { margin: 8px 0 12px; color: #a3a3a3; }
+  button { width: 100%; height: 30px; border: 1px solid rgba(255,255,255,.22); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+  button:hover { border-color: #d4ff00; color: #d4ff00; }
+</style>
+<div id="box" class="row"><span class="dot"></span><b id="title">Jolty</b></div>
+<p id="text"></p>
+<button id="retry"></button>
+<script src="popup.js"></script>

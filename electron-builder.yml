@@ -23,6 +23,9 @@ asarUnpack:
   - node_modules/playwright/**
   - node_modules/playwright-core/**
 extraResources:
+  # Jolty's own browser extension: copied to the user's data folder, then loaded by the browser from there
+  - from: browser-extension
+    to: browser-extension
   - from: build/icon.ico
     to: icon.ico
   # Microsoft Visual C++ runtime, installed by the setup when missing (downloaded by CI, see README)

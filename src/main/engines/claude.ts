@@ -29,7 +29,8 @@ import type {
   SessionMeta
 } from '@shared/types'
 import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
-import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer, pageHost } from '../browser'
+import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, pageHost } from '../browser'
+import { claudeBrowserServer } from '../browser-mcp'
 import { modelInfo } from '../local'
 import { noThinkingUrl } from '../thinking-proxy'
 import { endpointEfforts, endpointThinking } from './thinking'
@@ -341,7 +342,7 @@ class ClaudeSession implements EngineSession {
       enableFileCheckpointing: true,
       settingSources: ['user', 'project', 'local'],
       systemPrompt: { type: 'preset', preset: 'claude_code', append: this.meta.browser ? `${APPEND_PROMPT} ${browserPrompt()}` : APPEND_PROMPT },
-      ...(this.meta.browser ? { mcpServers: { [BROWSER_SERVER]: { type: 'stdio' as const, ...browserServer() } } } : {}),
+      ...(this.meta.browser ? { mcpServers: { [BROWSER_SERVER]: claudeBrowserServer(this.meta.id) } } : {}),
       disallowedTools: ['AskUserQuestion', ...BROWSER_BLOCKED_TOOLS.map((t) => `mcp__${BROWSER_SERVER}__${t}`)],
       settings: {
         permissions: {
@@ -653,7 +654,7 @@ class ClaudeSession implements EngineSession {
     if (Boolean(this.meta.browser) === on) return
     this.meta.browser = on
     // the running process swaps its dynamic MCP servers; the prompt addition comes with the next start
-    await this.q?.setMcpServers(on ? { [BROWSER_SERVER]: { type: 'stdio', ...browserServer() } } : {})
+    await this.q?.setMcpServers(on ? { [BROWSER_SERVER]: claudeBrowserServer(this.meta.id) } : {})
   }
 
   private sdkMode(mode: PermissionMode): SdkPermissionMode {

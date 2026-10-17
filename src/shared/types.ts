@@ -200,6 +200,8 @@ export interface RateLimitSnapshot {
 
 export type ChatEvent =
   | { type: 'status'; sessionId: string; status: 'idle' | 'running' | 'error'; error?: string }
+  /** "turn the PC off when the work is done": armed, and the countdown once it started */
+  | { type: 'power'; armed: boolean; seconds?: number; reason?: 'done' | 'usage' | 'error' }
   | { type: 'meta'; sessionId: string; meta: SessionMeta }
   | { type: 'item'; sessionId: string; item: ChatItem }
   | { type: 'delta'; sessionId: string; itemId: string; kind: 'assistant' | 'reasoning'; delta: string }
@@ -273,7 +275,19 @@ export interface AppSettings {
 }
 
 export type SiteTrust = 'ask' | 'site' | 'free'
-export type BrowserMode = 'auto' | 'pick' | 'own'
+/** jolty = Jolty's own extension (default); auto/pick = Playwright's extension; own = a separate Jolty browser window */
+export type BrowserMode = 'jolty' | 'auto' | 'pick' | 'own'
+
+export interface NativeBrowserStatus {
+  /** the extension files are in Jolty's folder (the browser still has to load them once) */
+  installed: boolean
+  connected: boolean
+  /** version of the connected extension */
+  version?: string
+  bundledVersion: string
+  dir: string
+  port: number
+}
 
 export interface UpdateStatus {
   /** dev: a development build, nothing to compare; latest: checked, nothing newer */
@@ -297,6 +311,8 @@ export type BrowserApp = 'chrome' | 'vivaldi' | 'edge' | 'brave'
 export type EditAction = 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'selectAll'
 
 export interface BrowserInfo {
+  /** how Jolty connects to the browser right now (the saved choice, or the default) */
+  mode: BrowserMode
   installed: { id: BrowserApp; name: string }[]
   /** the browser Jolty will open */
   active?: BrowserApp
@@ -444,12 +460,23 @@ export interface JoltyApi {
     slash(cwd?: string): Promise<SlashItem[]>
     files(cwd: string): Promise<string[]>
   }
+  power: {
+    /** arm or disarm "turn the PC off when the work is done" */
+    arm(on: boolean): Promise<void>
+    /** stop a running countdown and disarm */
+    cancel(): Promise<void>
+    state(): Promise<{ armed: boolean; seconds?: number; reason?: 'done' | 'usage' | 'error' }>
+  }
   browser: {
     /** whether an extension token is saved (the value never leaves the main process) */
     hasToken(): Promise<boolean>
     info(): Promise<BrowserInfo>
     setToken(token: string): Promise<void>
     openExtensionPage(): Promise<void>
+    /** Jolty's own browser extension: whether it is installed and connected */
+    native(): Promise<NativeBrowserStatus>
+    /** puts the extension files in place, opens the browser's extensions page and the folder */
+    installNative(): Promise<NativeBrowserStatus>
     /** start or stop streaming the Jolty browser page to the Live panel */
     live(on: boolean): Promise<void>
   }

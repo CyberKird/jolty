@@ -4,6 +4,7 @@ import { ChatView, NewChat } from './components/Chat'
 import wordmark from './assets/joltarise-wordmark-volt.svg'
 import { ContextMenu } from './components/ContextMenu'
 import { LivePanel } from './components/LivePanel'
+import { PowerBar } from './components/PowerBar'
 import { Sidebar } from './components/Sidebar'
 import { api, useStore } from './store'
 import { getLang, isRtl, tr } from '@shared/i18n'
@@ -77,6 +78,7 @@ export function App() {
     document.documentElement.lang = getLang()
     document.documentElement.dir = isRtl() ? 'rtl' : 'ltr'
     void api.updates.status().then((status) => onEvent({ type: 'update', status }))
+    void api.power.state().then((p) => onEvent({ type: 'power', ...p }))
     return off
   }, [loadProfiles, loadSessions, loadUsage, onEvent])
 
@@ -118,6 +120,7 @@ export function App() {
       </main>
       {isChat ? <LivePanel session={session} /> : <div />}
       <ContextMenu />
+      <PowerBar />
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.error ? 'error' : ''}`}>

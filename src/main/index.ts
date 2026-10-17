@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url'
 import type { ChatEvent } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers, cleanToken } from './browser'
 import { BrowserLive } from './browser-live'
+import { nativeBrowser } from './jbrowser/native'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
 import * as updater from './updater'
@@ -146,6 +147,9 @@ function registerIpc(): void {
   handle('sessions:compact', (id: string) => jolty.compact(id))
   handle('sessions:rewind', (id: string, itemId: string, dryRun?: boolean) => jolty.rewind(id, String(itemId), dryRun === true))
   handle('sessions:setBrowser', (id: string, on: boolean) => jolty.setBrowser(id, on === true))
+  handle('power:arm', (on: boolean) => jolty.power.arm(on === true))
+  handle('power:cancel', () => jolty.power.cancel())
+  handle('power:state', () => jolty.power.state())
   handle('browser:hasToken', () => Boolean(store.getSecret(BROWSER_TOKEN_KEY)))
   handle('browser:info', () => browsers())
   handle('updates:status', () => updater.current())
@@ -158,6 +162,19 @@ function registerIpc(): void {
     await jolty.reconnectBrowser()
   })
   handle('browser:openExtensionPage', () => openWeb(BROWSER_EXTENSION_URL))
+  handle('browser:native', async () => {
+    await nativeBrowser.start()
+    return nativeBrowser.status()
+  })
+  handle('browser:installNative', async () => {
+    await nativeBrowser.start()
+    const dir = nativeBrowser.install()
+    clipboard.writeText(dir)
+    const b = activeBrowser()
+    b?.open(b.extensionsUrl)
+    void shell.openPath(dir)
+    return nativeBrowser.status()
+  })
   handle('browser:live', (on: boolean) => (on === true ? browserLive.start() : browserLive.stop()))
   handle('sessions:respond', (id: string, requestId: string, decision) => jolty.respond(id, requestId, decision as never))
   handle('sessions:handoff', (id: string, target: string, model?: string, effort?: string) =>
@@ -255,6 +272,7 @@ if (!app.requestSingleInstanceLock()) {
   })
   app.whenReady().then(() => {
     jolty = new Jolty(send)
+    void nativeBrowser.start()
     registerIpc()
     createWindow()
     updater.init(
@@ -285,7 +303,7 @@ app.on('before-quit', (e) => {
   if (quitting || !jolty) return
   e.preventDefault()
   quitting = true
-  void jolty.shutdown().finally(() => app.quit())
+  void jolty.shutdown().then(() => nativeBrowser.stop()).finally(() => app.quit())
 })
 
 app.on('window-all-closed', () => {

@@ -3188,3 +3188,31 @@ a {
 [dir='rtl'] .brand-name {
   font-family: 'Bebas Neue', 'Barlow', sans-serif;
 }
+
+/* "turn the PC off when done": one strip over every page while it is armed */
+.power-bar {
+  position: fixed;
+  top: 46px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 7px 8px 7px 12px;
+  border: 1px solid var(--volt-line);
+  background: var(--s2);
+  color: var(--volt);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.55);
+}
+.power-bar.counting {
+  border-color: var(--critical);
+  color: var(--white);
+  background: #1a0b0b;
+}
+.power-bar.counting svg {
+  color: var(--critical);
+}

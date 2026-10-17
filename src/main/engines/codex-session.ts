@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import type { Attachment, FileDiff, PermissionDecision, PermissionMode, Profile, SessionMeta } from '@shared/types'
-import { BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, browserServer } from '../browser'
+import { BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER } from '../browser'
+import { codexBrowserServer } from '../browser-mcp'
 import { codexItem, planItemSteps, saveImages } from './codex-items'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
@@ -424,7 +425,7 @@ export class CodexSession implements EngineSession, ThreadListener {
   /** The Playwright server for this thread; reading pages runs on its own outside Manual mode. */
   private browserConfig(): Record<string, unknown> {
     const tools = this.meta.permissionMode === 'ask' ? {} : Object.fromEntries(BROWSER_READ_TOOLS.map((t) => [t, { approval_mode: 'approve' }]))
-    return { ...browserServer(), disabled_tools: BROWSER_BLOCKED_TOOLS, tools }
+    return { ...codexBrowserServer(this.meta.id), disabled_tools: BROWSER_BLOCKED_TOOLS, tools }
   }
 
   async setBrowser(on: boolean): Promise<void> {
