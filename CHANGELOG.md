@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.17
+
+- The title bar reads "JOLTY | by Joltarise" in clear text instead of a tiny blurry wordmark image.
+
 ## 0.3.16
 
 - The composer toolbar stays on one row: Plan, Browser and Temporary are icons that show their name only while on, the browser permissions menu appears with the browser, and the project name shortens before the send button ever drops to a second row.
