@@ -30,7 +30,8 @@ import type {
 } from '@shared/types'
 import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
 import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, pageHost } from '../browser'
-import { claudeBrowserServer } from '../browser-mcp'
+import { claudeBrowserServer, claudeJoltyServer } from '../browser-mcp'
+import { JOLTY_READ_TOOLS, JOLTY_SERVER, JOLTY_TOOLS_PROMPT } from '../jolty-tools'
 import { modelInfo } from '../local'
 import { noThinkingUrl } from '../thinking-proxy'
 import { endpointEfforts, endpointThinking } from './thinking'
@@ -341,8 +342,8 @@ class ClaudeSession implements EngineSession {
       // a backup before every edit, so any message can be undone with rewind()
       enableFileCheckpointing: true,
       settingSources: ['user', 'project', 'local'],
-      systemPrompt: { type: 'preset', preset: 'claude_code', append: this.meta.browser ? `${APPEND_PROMPT} ${browserPrompt()}` : APPEND_PROMPT },
-      ...(this.meta.browser ? { mcpServers: { [BROWSER_SERVER]: claudeBrowserServer(this.meta.id) } } : {}),
+      systemPrompt: { type: 'preset', preset: 'claude_code', append: [APPEND_PROMPT, JOLTY_TOOLS_PROMPT, this.meta.browser ? browserPrompt() : ''].filter(Boolean).join(' ') },
+      mcpServers: this.mcpServers(),
       disallowedTools: ['AskUserQuestion', ...BROWSER_BLOCKED_TOOLS.map((t) => `mcp__${BROWSER_SERVER}__${t}`)],
       settings: {
         permissions: {
@@ -543,7 +544,8 @@ class ClaudeSession implements EngineSession {
   private ask(toolName: string, input: Record<string, unknown>, opts: Parameters<CanUseTool>[2]): Promise<PermissionResult> {
     // reading pages is not an action on the user's behalf: only Manual mode asks for it
     const [, server, tool] = /^mcp__(.+?)__(.+)$/.exec(toolName) || []
-    if (server === BROWSER_SERVER && BROWSER_READ_TOOLS.includes(tool) && this.meta.permissionMode !== 'ask') {
+    const reads = (server === BROWSER_SERVER && BROWSER_READ_TOOLS.includes(tool)) || (server === JOLTY_SERVER && JOLTY_READ_TOOLS.includes(tool))
+    if (reads && this.meta.permissionMode !== 'ask') {
       return Promise.resolve({ behavior: 'allow', updatedInput: input })
     }
     const acts = server === BROWSER_SERVER && BROWSER_ACT_TOOLS.includes(tool) && this.meta.permissionMode !== 'ask'
@@ -654,7 +656,12 @@ class ClaudeSession implements EngineSession {
     if (Boolean(this.meta.browser) === on) return
     this.meta.browser = on
     // the running process swaps its dynamic MCP servers; the prompt addition comes with the next start
-    await this.q?.setMcpServers(on ? { [BROWSER_SERVER]: claudeBrowserServer(this.meta.id) } : {})
+    await this.q?.setMcpServers(this.mcpServers())
+  }
+
+  /** Jolty's own tools always, the browser when it is on. */
+  private mcpServers(): NonNullable<Options['mcpServers']> {
+    return { ...claudeJoltyServer(this.meta.id), ...(this.meta.browser ? { [BROWSER_SERVER]: claudeBrowserServer(this.meta.id) } : {}) }
   }
 
   private sdkMode(mode: PermissionMode): SdkPermissionMode {

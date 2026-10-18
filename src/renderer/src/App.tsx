@@ -16,6 +16,7 @@ const LocalPage = lazy(() => import('./pages/Local').then((m) => ({ default: m.L
 const SettingsPage = lazy(() => import('./pages/Settings').then((m) => ({ default: m.SettingsPage })))
 const SystemPage = lazy(() => import('./pages/System').then((m) => ({ default: m.SystemPage })))
 const UsagePage = lazy(() => import('./pages/Usage').then((m) => ({ default: m.UsagePage })))
+const SchedulesPage = lazy(() => import('./pages/Schedules').then((m) => ({ default: m.SchedulesPage })))
 
 /** The Joltarise bolt, drawn from the brand symbol's polygon. */
 export function Bolt({ size = 16 }: { size?: number }) {
@@ -114,6 +115,7 @@ export function App() {
           {page === 'accounts' && <AccountsPage />}
           {page === 'local' && <LocalPage />}
           {page === 'usage' && <UsagePage />}
+          {page === 'schedules' && <SchedulesPage />}
           {page === 'system' && <SystemPage />}
           {page === 'settings' && <SettingsPage />}
         </Suspense>

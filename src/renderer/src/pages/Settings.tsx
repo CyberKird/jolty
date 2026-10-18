@@ -117,6 +117,15 @@ export function SettingsPage() {
             </span>
           </span>
         </label>
+        <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
+          <input type="checkbox" checked={s.learningLoop !== false} onChange={async (e) => setS(await api.app.saveSettings({ learningLoop: e.target.checked }))} />
+          <span>
+            <b>{tr("Învață din conversații")}</b>
+            <span className="muted small" style={{ display: 'block' }}>
+              {tr("Ca la Hermes: la fiecare 10 mesaje modelul își notează în memorie ce a aflat despre tine și cum vrei să lucreze, iar la fiecare 15 actualizează sau creează un skill când a apărut ceva reutilizabil. Vezi în chat ce a salvat. Nu se aplică la conversațiile temporare.")}
+            </span>
+          </span>
+        </label>
         <div className="card" style={{ marginBottom: 14 }}>
           <b>{tr("Motoare")}</b>
           <p className="muted small">{tr("Claude Code și Codex sunt incluse. Hermes folosește instalarea de pe PC. Completează doar dacă vrei alt executabil.")}</p>

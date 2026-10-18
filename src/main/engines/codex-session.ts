@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto'
 import type { Attachment, FileDiff, PermissionDecision, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import { BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER } from '../browser'
-import { codexBrowserServer } from '../browser-mcp'
+import { codexBrowserServer, codexJoltyServer } from '../browser-mcp'
+import { JOLTY_TOOLS_PROMPT } from '../jolty-tools'
 import { codexItem, planItemSteps, saveImages } from './codex-items'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
@@ -60,6 +61,8 @@ export class CodexSession implements EngineSession, ThreadListener {
   private status: 'idle' | 'running' | 'error' = 'idle'
   private hasStructuredPlan = false
   private pending = new Map<string, number | string>()
+  /** pending requests that are MCP elicitations: they take an action, not a decision */
+  private elicitations = new Set<string>()
   private liveOutput = new Map<string, string>()
   private diffs = new Map<string, FileDiff[]>()
   private running = new Map<string, Any>()
@@ -104,6 +107,7 @@ export class CodexSession implements EngineSession, ThreadListener {
     this.liveOutput.clear()
     for (const requestId of this.pending.keys()) this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId })
     this.pending.clear()
+    this.elicitations.clear()
   }
 
   private requestFailed(err: unknown, version: number, submitted: boolean): void {
@@ -136,8 +140,14 @@ export class CodexSession implements EngineSession, ThreadListener {
       model: this.meta.model || null,
       approvalPolicy: mode.approvalPolicy,
       sandbox: mode.sandbox,
-      developerInstructions: this.meta.browser ? `${WRITING_RULES} ${PLAN_RULES} ${browserPrompt()}` : `${WRITING_RULES} ${PLAN_RULES}`,
-      ...(this.meta.browser ? { config: { mcp_servers: { [BROWSER_SERVER]: this.browserConfig() } } } : {})
+      developerInstructions: [WRITING_RULES, PLAN_RULES, JOLTY_TOOLS_PROMPT, this.meta.browser ? browserPrompt() : ''].filter(Boolean).join(' '),
+      // one dotted key per server: the user's own MCP servers from config.toml stay next to them
+      config: Object.fromEntries(
+        Object.entries({
+          ...codexJoltyServer(this.meta.id, this.meta.permissionMode === 'ask'),
+          ...(this.meta.browser ? { [BROWSER_SERVER]: this.browserConfig() } : {})
+        }).map(([name, server]) => [`mcp_servers.${name}`, server])
+      )
     }
     const resp = this.meta.engineSessionId
       ? await rpc.request<Any>('thread/resume', { threadId: this.meta.engineSessionId, ...common })
@@ -358,6 +368,25 @@ export class CodexSession implements EngineSession, ThreadListener {
       })
       return true
     }
+    // Codex asks for an MCP tool call (Jolty's tools, browser actions) as an elicitation with an empty form.
+    // A link to open or a form with real fields cannot be answered here: declined, never opened on its own.
+    if (r.method === 'mcpServer/elicitation/request') {
+      const fields = Object.keys(p.requestedSchema?.properties || {})
+      if (p.mode === 'url' || fields.length) {
+        this.server.rpc?.respond(r.id, { action: 'decline' })
+        this.notice(tr("{server} a cerut ceva ce Jolty nu poate afișa încă; cererea a fost refuzată.", { server: String(p.serverName || 'MCP') }), 'warn')
+        return true
+      }
+      const id = randomUUID()
+      this.pending.set(id, r.id)
+      this.elicitations.add(id)
+      this.host.emit({
+        type: 'permission',
+        sessionId: this.meta.id,
+        request: { id, toolName: `mcp__${p.serverName}`, title: String(p.message || p.serverName), canAllowForSession: false }
+      })
+      return true
+    }
     return false
   }
 
@@ -365,8 +394,8 @@ export class CodexSession implements EngineSession, ThreadListener {
     const rpcId = this.pending.get(requestId)
     if (rpcId === undefined) return
     this.pending.delete(requestId)
-    const value = decision === 'allow' ? 'accept' : decision === 'allowSession' ? 'acceptForSession' : 'decline'
-    this.server.rpc?.respond(rpcId, { decision: value })
+    if (this.elicitations.delete(requestId)) this.server.rpc?.respond(rpcId, decision === 'deny' ? { action: 'decline' } : { action: 'accept', content: {} })
+    else this.server.rpc?.respond(rpcId, { decision: decision === 'allow' ? 'accept' : decision === 'allowSession' ? 'acceptForSession' : 'decline' })
     this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId })
   }
 

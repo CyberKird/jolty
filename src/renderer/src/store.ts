@@ -16,7 +16,7 @@ import { dateLocale, tr } from '@shared/i18n'
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
-export type Page = 'chat' | 'import' | 'accounts' | 'local' | 'usage' | 'system' | 'settings'
+export type Page = 'chat' | 'import' | 'accounts' | 'local' | 'usage' | 'schedules' | 'system' | 'settings'
 
 export interface Draft {
   toolId: string

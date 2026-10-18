@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Search your earlier conversations: every Claude Code and Codex chat can now look through your past Jolty conversations and read one back when you mention earlier work ("what did we decide about the logo?"). It searches what was said, not tool output, ignores diacritics and case, and a chat moved with "Continue in" shows up once, not once per account. The first search after start takes a second or two, the next ones are instant.
+- Scheduled tasks: a new Scheduled page, and the model can set them up from the chat ("every weekday at 8:30 check the deploys"). A task runs once, every N minutes (at least 10) or daily at a time, optionally on chosen weekdays. Each run is a new conversation in the list, with a notification when it ends. Runs happen while Jolty is open; one missed while it was closed runs once at the next start, and a run waits if the previous one is still working. Manual and Plan modes are not offered (nobody is there to click), and a task the model creates never gets more freedom than Auto or accept edits.
+- Learning from conversations: every 10 messages the model is reminded to save what it learned about you to memory, and every 15 to update or create a skill when something reusable came up, with a one-line note in the reply when it saved something. It only keeps what you said or confirmed, never instructions from web pages or files. Codex writes to the same memory folder as Claude Code when one is set. A switch in Settings turns it off; temporary chats never save anything.
+- Codex chats keep your own MCP servers from config.toml next to Jolty's.
+- Codex asks before an MCP tool call (a page action in the browser, scheduling a task) with a request Jolty did not know, so every such call was refused. It now shows as a normal approval card. A request to open a link or fill a form is still declined, never opened on its own.
+
 ## 0.4.6
 
 - Turning the PC off when the work is done did nothing if you armed it while a chat was already working (start the long task, arm, go to bed). That chat's start came before the arm, so its end never started the countdown. It now counts work that is already running when you arm it.

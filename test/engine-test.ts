@@ -13,9 +13,11 @@ import { noThinkingUrl } from '../src/main/thinking-proxy'
 import { assess, recommend } from '../src/shared/complexity'
 import { modelScore } from '../src/shared/scores'
 import { secretHint } from '../src/shared/secrets'
+import { tr } from '../src/shared/i18n'
 import { TaskBoard } from '../src/main/engines/tasks'
 import { syncSettings } from '../src/main/runtime'
 import { Jolty } from '../src/main/jolty'
+import { nativeBrowser } from '../src/main/jbrowser/native'
 import * as store from '../src/main/store'
 
 const events: ChatEvent[] = []
@@ -57,6 +59,8 @@ function show(items: ChatItem[]): void {
 app.whenReady().then(async () => {
   const project = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-proj-'))
   fs.writeFileSync(path.join(project, 'README.md'), '# test project\n')
+  // the local server behind the Jolty browser and Jolty's own tools, as the app starts it
+  await nativeBrowser.start()
   const jolty = new Jolty((e) => {
     events.push(e)
     if (e.type === 'permission') {
@@ -172,13 +176,15 @@ app.whenReady().then(async () => {
     const r7 = recommend(hard, [ds, { ...claude, error: 'not logged in' }], { profileId: 'ds' }, {})
     check(r7.kind === 'weak' && !r7.target, 'no connected model is strong enough: says so, suggests nothing it cannot run')
 
+    const sub = prof('claude', 'claude', 'subscription') as Profile
+    const local: Profile = { id: 'ollama', name: 'ollama', engine: 'claude', auth: 'endpoint', isDefaultDir: true, color: '', local: true }
     const opus = modelScore(sub, { id: 'opus', label: 'Opus 5.5' })
     check(opus?.iq === 54 && opus.speed === 'mediu', 'Opus 5.5 scores 54 and is medium speed')
     check(modelScore(sub, { id: 'sonnet', label: 'Sonnet 5.5' })?.speed === 'rapid', 'Sonnet 5.5 is fast')
     check(modelScore(sub, { id: 'gpt-6.1-sol', label: 'GPT-6.1-Sol' })?.iq === 50, 'GPT-6.1 Sol is not mistaken for GPT-6 Sol')
     check(modelScore(sub, { id: 'xiaomi:mimo-v2.5-tts', label: 'mimo-v2.5-tts' }) === undefined, 'a speech model gets no intelligence score')
-    check(secretHint('foloseste cheia sk-ant-api03-abcdefghijklmnop1234 pentru test') === 'o cheie API', 'secret hint: an API key is noticed')
-    check(secretHint('password: hunter2x') === 'o parolă', 'secret hint: a password is noticed')
+    check(secretHint('foloseste cheia sk-ant-api03-abcdefghijklmnop1234 pentru test') === tr('o cheie API'), 'secret hint: an API key is noticed')
+    check(secretHint('password: hunter2x') === tr('o parolă'), 'secret hint: a password is noticed')
     check(secretHint('scrie teste pentru modulul de plată și refactorizează serviciul') === undefined, 'secret hint: ordinary text is left alone')
     const gemma = modelScore(local, { id: 'gemma4-jolty', label: 'gemma4-jolty' })
     check(gemma?.iq === 15 && gemma.speed === undefined, 'a local model has a score but no speed (that is the PC)')
@@ -340,7 +346,7 @@ app.whenReady().then(async () => {
     show(items)
     const user = items.find((i) => i.kind === 'user') as Extract<ChatItem, { kind: 'user' }> | undefined
     check(user?.images?.length === 1, 'the chat keeps the attached image for display')
-    check(items.some((i) => i.kind === 'notice' && i.text.includes('le descrie')), 'Jolty says another profile is describing the image')
+    check(items.some((i) => i.kind === 'notice' && i.text.includes(tr("Modelul curent nu vede imagini: le descrie „{name}”...", { name: jolty.visionProfile()?.name || '' }))), 'Jolty says another profile is describing the image')
     const log = fs.readFileSync(process.env.MOCK_ANTHROPIC_LOG!, 'utf8').trim().split('\n').map((l) => JSON.parse(l))
     check(log.some((r) => r.model === 'mock-vision' && r.has_image), 'the vision profile received the image')
     check(log.some((r) => r.model === 'mock-blind' && r.desc_in_prompt && !r.has_image), 'the blind model received a text description instead of the image')
@@ -393,7 +399,10 @@ app.whenReady().then(async () => {
       const mine = (st?.data || []).find((x: { name: string }) => x.name === 'jolty-browser')
       const tools = Object.keys(mine?.tools || {})
       console.log(`   codex jolty-browser: ${tools.length} tools${st?.error ? ` (${st.error})` : ''}`)
+      if (process.env.JOLTY_DEBUG_MCP) console.log(JSON.stringify(st).slice(0, 3000))
       check(tools.includes('browser_navigate') && !tools.includes('browser_run_code_unsafe'), 'codex sees the browser tools, without the unsafe one')
+      const own = Object.keys((st?.data || []).find((x: { name: string }) => x.name === 'jolty')?.tools || {})
+      check(own.includes('search_conversations') && own.includes('schedule_task'), `codex sees Jolty's own tools (${own.join(', ')})`)
     }
     {
       // project mode: no questions, inside the project folder (workspace-write sandbox, approval never).
@@ -418,7 +427,7 @@ app.whenReady().then(async () => {
       const before = idleCount(s.id)
       await jolty.compact(s.id)
       await waitFor(() => idleCount(s.id) > before, 120000, 'codex compaction')
-      check(jolty.history(s.id).some((i) => i.kind === 'notice' && i.text.includes('a fost compactată')), 'codex compaction completes')
+      check(jolty.history(s.id).some((i) => i.kind === 'notice' && i.text === tr("Conversația a fost compactată ca să încapă în context.")), 'codex compaction completes')
       const afterCompact = idleCount(s.id)
       const answers = jolty.history(s.id).filter((i) => i.kind === 'assistant').length
       await jolty.sendMessage(s.id, 'Continue after compaction')

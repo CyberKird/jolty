@@ -1,4 +1,5 @@
 // Types shared by the main process, the preload bridge and the renderer.
+import type { ScheduledTask, TaskInput } from './schedule'
 
 export type EngineKind = 'claude' | 'codex' | 'hermes'
 
@@ -219,6 +220,8 @@ export type ChatEvent =
   | { type: 'pull'; tag: string; status: string; completed?: number; total?: number; done?: boolean; error?: string }
   /** the Jolty browser page as the agent sees it (a JPEG frame), or why there is no picture */
   | { type: 'browserLive'; frame?: string; url?: string; title?: string; note?: string }
+  /** the scheduled tasks changed (added, edited, run): the page reads them again */
+  | { type: 'schedules' }
 
 export interface PlanStep {
   text: string
@@ -272,6 +275,8 @@ export interface AppSettings {
   siteTrust?: SiteTrust
   /** ask before a model reads or edits .env files, keys and similar; on unless false */
   protectSecretFiles?: boolean
+  /** every few messages the model saves what it learned to memory and skills (main/learning.ts); on unless false */
+  learningLoop?: boolean
 }
 
 export type SiteTrust = 'ask' | 'site' | 'free'
@@ -481,6 +486,14 @@ export interface JoltyApi {
     installNative(): Promise<NativeBrowserStatus>
     /** start or stop streaming the Jolty browser page to the Live panel */
     live(on: boolean): Promise<void>
+  }
+  schedules: {
+    list(): Promise<ScheduledTask[]>
+    add(input: TaskInput): Promise<ScheduledTask>
+    update(id: string, patch: Partial<TaskInput>): Promise<ScheduledTask>
+    remove(id: string): Promise<void>
+    /** starts a run now and returns its conversation id */
+    run(id: string): Promise<string>
   }
   app: {
     settings(): Promise<AppSettings>

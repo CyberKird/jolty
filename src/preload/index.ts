@@ -93,6 +93,13 @@ const api: JoltyApi = {
     installNative: () => call('browser:installNative'),
     live: (on) => call('browser:live', on)
   },
+  schedules: {
+    list: () => call('schedules:list'),
+    add: (input) => call('schedules:add', input),
+    update: (id, patch) => call('schedules:update', id, patch),
+    remove: (id) => call('schedules:remove', id),
+    run: (id) => call('schedules:run', id)
+  },
   app: {
     settings: () => call('app:settings'),
     saveSettings: (patch) => call('app:saveSettings', patch),

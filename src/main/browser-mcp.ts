@@ -1,6 +1,7 @@
 // The browser server as each engine wants it: Jolty's own bridge is a local HTTP MCP server (one URL per
-// chat); the older modes run Playwright MCP as a child process.
+// chat); the older modes run Playwright MCP as a child process. Jolty's own tools ride on the same local server.
 import { browserMode, browserServer, BROWSER_SERVER } from './browser'
+import { JOLTY_READ_TOOLS, JOLTY_SERVER } from './jolty-tools'
 import { nativeBrowser } from './jbrowser/native'
 
 export { BROWSER_SERVER }
@@ -18,4 +19,18 @@ export function codexBrowserServer(sid: string): Record<string, unknown> {
     return { url, http_headers: headers, tool_timeout_sec: 120 }
   }
   return { ...browserServer() }
+}
+
+/** Jolty's tools for Claude Code: empty while the local server is not up, so a chat never waits on it. */
+export function claudeJoltyServer(sid: string): Record<string, { type: 'http'; url: string; headers: Record<string, string> }> {
+  const c = nativeBrowser.toolsMcp(sid)
+  return c ? { [JOLTY_SERVER]: { type: 'http', ...c } } : {}
+}
+
+/** Jolty's tools for Codex; reading runs on its own outside Manual mode, like the browser's reading tools. */
+export function codexJoltyServer(sid: string, manual: boolean): Record<string, Record<string, unknown>> {
+  const c = nativeBrowser.toolsMcp(sid)
+  if (!c) return {}
+  const tools = manual ? {} : Object.fromEntries(JOLTY_READ_TOOLS.map((t) => [t, { approval_mode: 'approve' }]))
+  return { [JOLTY_SERVER]: { url: c.url, http_headers: c.headers, tool_timeout_sec: 120, tools } }
 }

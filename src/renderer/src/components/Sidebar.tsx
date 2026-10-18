@@ -1,4 +1,4 @@
-import { BarChart3, Cpu, Download, FolderOpen, KeyRound, Link, MessageSquare, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { BarChart3, CalendarClock, Cpu, Download, FolderOpen, KeyRound, Link, MessageSquare, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { copyItem, pathItems, showMenu } from './ContextMenu'
@@ -117,6 +117,7 @@ const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
   { id: 'accounts', label: tr("Conturi și chei"), icon: KeyRound },
   { id: 'local', label: tr("Modele locale"), icon: Cpu },
   { id: 'usage', label: tr("Consum"), icon: BarChart3 },
+  { id: 'schedules', label: tr("Programate"), icon: CalendarClock },
   { id: 'system', label: tr("Verificare sistem"), icon: ShieldCheck },
   { id: 'settings', label: tr("Setări"), icon: Settings }
 ]

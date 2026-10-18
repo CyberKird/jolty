@@ -8,6 +8,7 @@ import type { NativeBrowserStatus } from '@shared/types'
 import { activeBrowser } from '../browser'
 import { dataDir, getSecret, loadSettings, setSecret } from '../store'
 import { tr } from '@shared/i18n'
+import { handleJoltyTools } from '../jolty-tools'
 import { BrowserHub } from './hub'
 import { BrowserService } from './service'
 
@@ -44,6 +45,7 @@ class NativeBrowser {
     token,
     bundledVersion: () => versionOf(bundledDir()),
     mcp: (sid, m) => this.service.handle(sid, m),
+    tools: handleJoltyTools,
     log: (m) => process.env.JOLTY_DEBUG && console.error('[jbrowser]', m)
   })
   readonly service = new BrowserService(this.hub, {
@@ -115,6 +117,12 @@ class NativeBrowser {
   /** The MCP connection an engine gives its model, one per chat so each chat has tabs of its own. */
   mcp(sid: string): { url: string; headers: Record<string, string> } {
     return { url: `http://127.0.0.1:${this.hub.port}/mcp/${sid}`, headers: { Authorization: `Bearer ${token()}` } }
+  }
+
+  /** Jolty's own tools for the same chat; undefined while the local server is not up. */
+  toolsMcp(sid: string): { url: string; headers: Record<string, string> } | undefined {
+    if (!this.hub.port) return undefined
+    return { url: `http://127.0.0.1:${this.hub.port}/jolty/${sid}`, headers: { Authorization: `Bearer ${token()}` } }
   }
 
   release(sid: string): Promise<void> {

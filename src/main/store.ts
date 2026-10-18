@@ -2,6 +2,7 @@ import { app, safeStorage } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import type { AppSettings, ChatItem, Profile, RateLimitSnapshot, SessionMeta, TurnUsage } from '@shared/types'
+import type { ScheduledTask } from '@shared/schedule'
 
 /** Root folder for Jolty's own data. JOLTY_DATA_DIR overrides it (used by tests). */
 export function dataDir(): string {
@@ -149,6 +150,10 @@ export function slimTranscript(items: ChatItem[]): ChatItem[] {
   })
 }
 
+export function transcriptFile(sessionId: string): string {
+  return file(path.join('transcripts', `${sessionId}.json`))
+}
+
 export function loadTranscript(sessionId: string): ChatItem[] {
   return slimTranscript(readJson<ChatItem[]>(path.join('transcripts', `${sessionId}.json`), []))
 }
@@ -260,6 +265,17 @@ export function saveLimit(snapshot: RateLimitSnapshot): RateLimitSnapshot {
   all[snapshot.profileId] = merged
   writeJson('limits.json', all)
   return merged
+}
+
+// ---------------------------------------------------------------------------
+// Scheduled tasks
+// ---------------------------------------------------------------------------
+export function loadSchedules(): ScheduledTask[] {
+  return readJson<ScheduledTask[]>('schedules.json', [])
+}
+
+export function saveSchedules(tasks: ScheduledTask[]): void {
+  writeJson('schedules.json', tasks)
 }
 
 // ---------------------------------------------------------------------------

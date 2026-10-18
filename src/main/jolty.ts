@@ -41,6 +41,11 @@ import { handoffPrompt, roughTokens, sameProvider } from './handoff'
 import { gitDiff, reviewerFor, reviewPrompt, transcriptDiff } from './review'
 import * as store from './store'
 import { removeProfileFiles } from './profile-files'
+import { bindJoltyTools } from './jolty-tools'
+import { learningNudge } from './learning'
+import { forget } from './recall'
+import { Scheduler } from './scheduler'
+import type { ScheduledTask } from '@shared/schedule'
 import { tr } from '@shared/i18n'
 
 const { COLORS } = store
@@ -118,9 +123,16 @@ export class Jolty {
   private trackedTemps = new Set<string>()
   /** ended temporary chats: a late event from the dying engine must not write them back to disk */
   private wiped = new Set<string>()
+  readonly scheduler = new Scheduler({
+    run: (t) => this.runTask(t),
+    busy: (id) => this.busy.has(id),
+    profileExists: (id) => store.loadProfiles().some((p) => p.id === id),
+    changed: () => this.send({ type: 'schedules' })
+  })
 
   constructor(private send: (e: ChatEvent) => void) {
     this.codex.onLimits = (s) => this.recordLimits(s)
+    bindJoltyTools({ sessions: () => store.loadSessions(), meta: (id) => this.findMeta(id), history: (id) => this.loadHistory(id), scheduler: this.scheduler })
     if (store.loadProfiles().length === 0) store.saveProfiles(DEFAULT_PROFILES)
     const profiles = store.loadProfiles()
     if (!profiles.some((p) => p.engine === 'hermes') && hermesExecutable()) {
@@ -557,7 +569,9 @@ export class Jolty {
         images: prepared.images.map((a) => ({ name: a.name, dataUrl: `data:${a.mime};base64,${a.data}` })),
         files: prepared.files.map((f) => ({ name: f.name, mime: f.mime })) }
     })
-    let prompt = [text, filePrompt(prepared.files)].filter(Boolean).join('\n\n')
+    // every few messages the model is reminded to save what it learned (see learning.ts); a temporary chat leaves nothing behind
+    const nudge = s.meta.temporary || store.loadSettings().learningLoop === false ? undefined : learningNudge(s.meta.engine, this.transcript(sessionId).filter((i) => i.kind === 'user').length)
+    let prompt = [text, filePrompt(prepared.files), nudge].filter(Boolean).join('\n\n')
     let images = prepared.images
     if (images.length && !(await this.canSee(s.meta))) {
       try {
@@ -834,8 +848,19 @@ export class Jolty {
     await this.live.get(sessionId)?.close()
     this.live.delete(sessionId)
     this.transcripts.delete(sessionId)
+    forget(sessionId)
     store.removeTranscript(sessionId)
     store.saveSessions(store.loadSessions().filter((s) => s.id !== sessionId))
+  }
+
+  /** One run of a scheduled task: a new conversation that gets the task's prompt, as if the user had sent it. */
+  private async runTask(t: ScheduledTask): Promise<string> {
+    const meta = await this.startSession({ profileId: t.profileId, cwd: t.cwd, model: t.model, effort: t.effort, permissionMode: t.permissionMode, title: t.name })
+    this.send({ type: 'meta', sessionId: meta.id, meta })
+    // for the model only: the chat shows the prompt as written
+    const head = `[Scheduled task "${t.name}", started by Jolty on ${new Date().toString()}. Nobody is watching this run live: do the task, then end with a short summary of the result.]`
+    await this.sendMessage(meta.id, `${head}\n\n${t.prompt}`, [], t.prompt)
+    return meta.id
   }
 
   // -------------------------------------------------------------------------
@@ -898,6 +923,7 @@ export class Jolty {
   }
 
   async shutdown(): Promise<void> {
+    this.scheduler.stop()
     for (const s of this.live.values()) await s.close().catch(() => undefined)
     for (const [id, t] of this.saveTimers) {
       clearTimeout(t)

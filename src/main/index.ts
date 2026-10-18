@@ -148,6 +148,11 @@ function registerIpc(): void {
   handle('sessions:compact', (id: string) => jolty.compact(id))
   handle('sessions:rewind', (id: string, itemId: string, dryRun?: boolean) => jolty.rewind(id, String(itemId), dryRun === true))
   handle('sessions:setBrowser', (id: string, on: boolean) => jolty.setBrowser(id, on === true))
+  handle('schedules:list', () => jolty.scheduler.list())
+  handle('schedules:add', (input) => jolty.scheduler.add(input as never))
+  handle('schedules:update', (id: string, patch) => jolty.scheduler.update(String(id), (patch || {}) as never))
+  handle('schedules:remove', (id: string) => jolty.scheduler.remove(String(id)))
+  handle('schedules:run', (id: string) => jolty.scheduler.runNow(String(id)))
   handle('power:arm', (on: boolean) => jolty.power.arm(on === true))
   handle('power:cancel', () => jolty.power.cancel())
   handle('power:state', () => jolty.power.state())
@@ -274,6 +279,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     jolty = new Jolty(send)
     void nativeBrowser.start()
+    jolty.scheduler.start()
     registerIpc()
     createWindow()
     updater.init(

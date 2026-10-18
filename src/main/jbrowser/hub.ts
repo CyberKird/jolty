@@ -35,6 +35,8 @@ export interface HubOptions {
   bundledVersion: () => string
   /** a JSON-RPC message for the model-facing MCP server of one chat; undefined = a notification, no reply */
   mcp: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
+  /** the same for Jolty's own tools (conversation search, scheduled tasks), at /jolty/<chat id> */
+  tools?: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
   log?: (m: string) => void
 }
 
@@ -158,8 +160,9 @@ export class BrowserHub extends EventEmitter {
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ app: 'jolty', v: 1 }))
       return
     }
-    const m = /^\/mcp\/([A-Za-z0-9_.-]{1,80})$/.exec(url.pathname)
-    if (!m) {
+    const m = /^\/(mcp|jolty)\/([A-Za-z0-9_.-]{1,80})$/.exec(url.pathname)
+    const handler = m?.[1] === 'jolty' ? this.opts.tools : this.opts.mcp
+    if (!m || !handler) {
       res.writeHead(404).end()
       return
     }
@@ -193,7 +196,7 @@ export class BrowserHub extends EventEmitter {
       const batch = Array.isArray(message)
       const replies: Record<string, unknown>[] = []
       for (const item of (batch ? message : [message]) as unknown[]) {
-        const r = await this.opts.mcp(m[1], item as Record<string, unknown>)
+        const r = await handler(m[2], item as Record<string, unknown>)
         if (r) replies.push(r)
       }
       if (!replies.length) {

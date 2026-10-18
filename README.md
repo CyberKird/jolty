@@ -16,6 +16,8 @@ Jolty does not replace the official engines: it bundles them and starts them exa
 - **Images for any model**: if the chosen model cannot see images (DeepSeek, a local model), a Claude profile describes them in detail and the model gets the description.
 - **Live**: what the model does right now, the files it reads and changes, its thinking as it arrives, every edit line by line while it is written, the terminal, the task list with the time left, and the page in the Jolty browser.
 - **Reply and quote**: select text in the chat to quote it, or reply to any message, like in a chat app.
+- **It remembers and learns**: models search your earlier conversations when you refer to past work, and every few messages they save what they learned about you to memory and turn reusable know-how into skills (off in Settings).
+- **Scheduled tasks**: a prompt that runs by itself once, every N minutes or daily, each run a new conversation with a notification when it ends. Set them up on the Scheduled page or just ask in the chat.
 - **Usage**: the 5 hour and 7 day limits of every subscription, tokens per day and per model.
 - **Import**: open your existing Claude Code and Codex conversations in Jolty. CLAUDE.md, skills, subagents, commands and MCP servers on your PC work as they are.
 - **Local models** through Ollama, with recommendations for your graphics card and a rough comparison with the Claude models.
