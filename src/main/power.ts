@@ -46,7 +46,9 @@ export class PowerGuard {
     clearTimeout(this.idleTimer)
     this.armed = on
     this.host.keepAwake(on)
-    this.seenWork = false
+    // armed while a chat is already working (the usual way: start the long task, then arm and go to bed):
+    // that chat's "running" came before the arm, so count it as seen or its end never starts the countdown
+    this.seenWork = on && this.host.busy() > 0
     this.usageHit = false
     this.lastError = ''
     this.emitState()

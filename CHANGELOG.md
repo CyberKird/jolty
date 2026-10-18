@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.6
+
+- Turning the PC off when the work is done did nothing if you armed it while a chat was already working (start the long task, arm, go to bed). That chat's start came before the arm, so its end never started the countdown. It now counts work that is already running when you arm it.
+
 ## 0.4.5
 
 - Accounts can be reordered: drag a card on the Accounts and keys page, or a row in Live usage, to where you want it (or focus it and press Alt+Up / Alt+Down). The order is saved and the model menu follows it too.

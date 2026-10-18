@@ -145,3 +145,16 @@ test('disarmed means nothing ever happens', async () => {
   await sleep(120)
   assert.equal(t.calls.shutdown, 0)
 })
+
+test('armed while a chat is already working: its end still starts the shutdown', async () => {
+  const t = make()
+  // the chat started before the arm, so its "running" was never seen by the guard
+  t.setBusy(1)
+  t.guard.arm(true)
+  t.setBusy(0)
+  t.guard.onStatus('idle')
+  await sleep(120)
+  assert.equal(t.calls.shutdown, 1)
+  assert.equal(t.guard.state().reason, 'done')
+  t.guard.cancel()
+})
