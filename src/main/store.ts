@@ -225,6 +225,8 @@ export function loadUsage(sinceMs: number): TurnUsage[] {
     if (!line.trim()) continue
     try {
       const u = JSON.parse(line) as TurnUsage
+      // older Codex lines had the cached tokens inside inputTokens as well
+      if (u.engine === 'codex' && !u.netInput) u.inputTokens = Math.max(0, u.inputTokens - u.cacheReadTokens - u.cacheWriteTokens)
       if (u.ts >= sinceMs) out.push(u)
     } catch {
       // skip a torn line

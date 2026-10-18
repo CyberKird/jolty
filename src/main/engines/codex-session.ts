@@ -242,10 +242,12 @@ export class CodexSession implements EngineSession, ThreadListener {
             profileId: this.profile.id,
             engine: 'codex',
             model: this.meta.model || 'necunoscut',
-            inputTokens: this.turnUsage.inputTokens,
+            // Codex's input already holds the cached part; Jolty keeps them apart, like Claude reports them
+            inputTokens: Math.max(0, this.turnUsage.inputTokens - this.turnUsage.cachedInputTokens - this.turnUsage.cacheWriteInputTokens),
             outputTokens: this.turnUsage.outputTokens,
             cacheReadTokens: this.turnUsage.cachedInputTokens,
             cacheWriteTokens: this.turnUsage.cacheWriteInputTokens,
+            netInput: true,
             ts: Date.now()
           })
         }

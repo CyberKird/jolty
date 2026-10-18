@@ -62,3 +62,14 @@ test('profile colors never repeat, order follows the saved ids', () => {
   assert.deepEqual(store.loadProfiles().map((x) => x.id), ['c', 'a', 'b', 'd'])
   assert.throws(() => store.reorderProfiles('a'))
 })
+
+test('Codex usage: cached tokens are counted once, old lines corrected, Claude untouched', () => {
+  const base = { profileId: 'p', model: 'm', outputTokens: 1, cacheWriteTokens: 0, ts: Date.now() }
+  store.appendUsage({ ...base, engine: 'codex', inputTokens: 1000, cacheReadTokens: 900 })
+  store.appendUsage({ ...base, engine: 'codex', inputTokens: 100, cacheReadTokens: 900, netInput: true })
+  store.appendUsage({ ...base, engine: 'claude', inputTokens: 100, cacheReadTokens: 900 })
+  const [oldCodex, newCodex, claude] = store.loadUsage(0).slice(-3)
+  assert.equal(oldCodex.inputTokens, 100)
+  assert.equal(newCodex.inputTokens, 100)
+  assert.equal(claude.inputTokens, 100)
+})

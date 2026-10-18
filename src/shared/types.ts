@@ -183,6 +183,8 @@ export interface TurnUsage {
   cacheWriteTokens: number
   /** Claude only: cost as priced by Claude Code (an API-price estimate on subscriptions) */
   costUsd?: number
+  /** Codex since 0.5.1: inputTokens excludes the cached part; older Codex lines counted it twice */
+  netInput?: boolean
   ts: number
 }
 
