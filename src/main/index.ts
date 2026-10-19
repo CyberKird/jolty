@@ -1,6 +1,6 @@
 // first: every module after this one builds its texts in the chosen language
 import './lang'
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, Notification, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, Notification, session, shell } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url'
 import type { ChatEvent } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers, cleanToken } from './browser'
 import { BrowserLive } from './browser-live'
-import { Preview } from './preview'
+import { allowFraming, listening, Preview } from './preview'
 import { nativeBrowser } from './jbrowser/native'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
@@ -177,6 +177,7 @@ function registerIpc(): void {
   handle('browser:installNative', () => nativeBrowser.installAndOpen())
   handle('browser:live', (on: boolean) => (on === true ? browserLive.start() : browserLive.stop()))
   handle('preview:open', (cwd: string) => (typeof cwd === 'string' ? preview.open(cwd) : ''))
+  handle('preview:probe', (ports: unknown) => listening(Array.isArray(ports) ? ports.filter((p): p is number => Number.isInteger(p) && p > 0 && p < 65536) : []))
   handle('preview:draft', (rel: string, html: string | null) => {
     if (typeof rel === 'string' && (typeof html === 'string' || html === null)) preview.draft(rel, html)
   })
@@ -279,6 +280,7 @@ if (!app.requestSingleInstanceLock()) {
     void nativeBrowser.start()
     jolty.scheduler.start()
     registerIpc()
+    allowFraming(session.defaultSession)
     createWindow()
     updater.init(
       (status) => send({ type: 'update', status }),

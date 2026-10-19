@@ -401,17 +401,26 @@ function BrowserView({ items }: { items: ChatItem[] }) {
     void api.browser.live(true)
     return () => void api.browser.live(false)
   }, [])
-  if (live.note) return <div className="faint small">{live.note}</div>
-  if (!live.frame) return <div className="faint small">{tr("Se conectează la browserul Jolty…")}</div>
+  // the actions show even before there is a picture: they say what the model is doing right now
+  const list = (
+    <div className="browser-actions">
+      {actions.map((a, n) => (
+        <div key={a.id} className={`browser-action ${n === 0 ? 'now' : ''} ${a.status === 'running' ? 'running' : ''}`}>
+          {browserAction(a)}
+        </div>
+      ))}
+    </div>
+  )
+  if (live.note || !live.frame)
+    return (
+      <>
+        {list}
+        <div className="faint small">{live.note || tr("Se conectează la browserul Jolty…")}</div>
+      </>
+    )
   return (
     <div className="browser-live">
-      <div className="browser-actions">
-        {actions.map((a, n) => (
-          <div key={a.id} className={`browser-action ${n === 0 ? 'now' : ''} ${a.status === 'running' ? 'running' : ''}`}>
-            {browserAction(a)}
-          </div>
-        ))}
-      </div>
+      {list}
       <div className="browser-live-url ellipsis" title={live.url}>
         {live.url}
       </div>
@@ -425,22 +434,47 @@ function BrowserView({ items }: { items: ChatItem[] }) {
 // ---------------------------------------------------------------------------
 const DEV_SERVER = /https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0):\d{2,5}/g
 const HTML_FILE = /\.html?$/i
+// a dev server the model started in the background says nothing in the tool result, so its command is the hint
+const SERVER_CMD = /\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|serve)\b|\bnext\s+dev\b|\bvite\b(?!\s+build)|\bastro\s+dev\b|\bnuxt\s+dev\b|http\.server|live-server|\bnpx\s+serve\b/
+const DEV_PORTS = [3000, 3001, 3002, 4321, 5173, 5174, 4200, 8000, 8080, 1313]
 
 /** What the preview shows: a dev server the model started (HMR keeps it current), else the latest HTML page it touched. */
-function previewSource(items: ChatItem[], cwd: string, drafts: Draft[]): { dev?: string; page?: string } {
+function previewSource(items: ChatItem[], cwd: string, drafts: Draft[]): Source {
   const runs = items.filter((i): i is Tool => i.kind === 'tool' && toolKind(i.name) === 'run').slice(-20)
   const dev = runs.flatMap((r) => r.output?.match(DEV_SERVER) || []).pop()?.replace('0.0.0.0', 'localhost')
+  const hint = runs.some((r) => SERVER_CMD.test(r.command || r.title))
   const page = fileCells(items, cwd, drafts)
-    .filter((c) => HTML_FILE.test(c.path) && !c.path.includes('node_modules/'))
+    // inside the project only: the preview server serves nothing else
+    .filter((c) => HTML_FILE.test(c.path) && !c.path.includes('node_modules/') && !/^[a-z]:|^\.\./i.test(c.path))
     .sort((a, b) => b.last - a.last)[0]?.path
-  return { dev, page }
+  return { dev, page, hint }
 }
 
-function PreviewView({ source, cwd, drafts }: { source: { dev?: string; page?: string }; cwd: string; drafts: Draft[] }) {
+interface Source {
+  dev?: string
+  page?: string
+  hint?: boolean
+}
+
+function PreviewView({ source, cwd, drafts }: { source: Source; cwd: string; drafts: Draft[] }) {
   const [base, setBase] = useState('')
   const [nonce, setNonce] = useState(0)
   const sent = useRef(0)
-  const { dev, page } = source
+  const [probed, setProbed] = useState('')
+  const { page, hint } = source
+  const dev = source.dev || probed
+  // no address in the output: look for the server on the usual ports until one answers
+  useEffect(() => {
+    if (source.dev || !hint) return
+    let live = true
+    const look = (): void => void api.preview.probe(DEV_PORTS).then((up) => live && up.length && setProbed(`http://localhost:${up[0]}`))
+    look()
+    const t = setInterval(look, 2500)
+    return () => {
+      live = false
+      clearInterval(t)
+    }
+  }, [source.dev, hint])
   useEffect(() => {
     if (!dev && page && cwd) void api.preview.open(cwd).then(setBase)
   }, [dev, page, cwd])
@@ -507,7 +541,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   const changes = useMemo(() => changesOf(items, cwd), [items, cwd])
   const fileCount = useMemo(() => fileCells(items, cwd, drafts).length, [items, cwd, drafts])
   const source = useMemo(() => previewSource(items, cwd, drafts), [items, cwd, drafts])
-  const previewable = !!(source.dev || source.page)
+  const previewable = !!(source.dev || source.page || source.hint)
   const timer = useStore((s) => s.clocks[id])
   const running = status === 'running'
   const now = useNow(running)

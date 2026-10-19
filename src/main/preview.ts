@@ -4,8 +4,10 @@
 // Dev servers (Next.js, Vite) are shown directly by the panel and never come through here.
 import fs from 'fs'
 import http from 'http'
+import net from 'net'
 import path from 'path'
 import type { AddressInfo } from 'net'
+import type { Session } from 'electron'
 
 const TYPES: Record<string, string> = {
   html: 'text/html', htm: 'text/html', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json',
@@ -119,4 +121,37 @@ export class Preview {
       })
     })
   }
+}
+
+/** Which of these ports have something listening on this PC (a dev server the model started in the background). */
+export function listening(ports: number[]): Promise<number[]> {
+  const probe = (port: number): Promise<number | undefined> =>
+    new Promise((ok) => {
+      const sock = net.connect({ host: 'localhost', port })
+      const done = (up: boolean): void => {
+        sock.destroy()
+        ok(up ? port : undefined)
+      }
+      sock.setTimeout(400, () => done(false))
+      sock.once('connect', () => done(true))
+      sock.once('error', () => done(false))
+    })
+  return Promise.all(ports.slice(0, 20).map(probe)).then((r) => r.filter((p): p is number => p !== undefined))
+}
+
+/**
+ * Sites the model builds often ship X-Frame-Options / frame-ancestors (security headers), which would leave
+ * the preview frame blank. Only frames loaded from this PC, inside Jolty's own window, lose those two headers.
+ */
+export function allowFraming(ses: Session): void {
+  ses.webRequest.onHeadersReceived({ urls: ['http://localhost/*', 'http://127.0.0.1/*'] }, (d, done) => {
+    const headers = d.responseHeaders || {}
+    if (d.resourceType === 'subFrame') {
+      for (const k of Object.keys(headers)) {
+        if (k.toLowerCase() === 'x-frame-options') delete headers[k]
+        else if (k.toLowerCase() === 'content-security-policy') headers[k] = headers[k].map((v) => v.replace(/frame-ancestors[^;]*;?/gi, ''))
+      }
+    }
+    done({ responseHeaders: headers })
+  })
 }

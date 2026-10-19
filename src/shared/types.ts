@@ -514,6 +514,8 @@ export interface JoltyApi {
   preview: {
     /** serves the project folder on 127.0.0.1 and returns its origin ('' if it cannot) */
     open(cwd: string): Promise<string>
+    /** which of these ports have a dev server listening */
+    probe(ports: number[]): Promise<number[]>
     /** the unfinished content of a page being written, served until the real file lands */
     draft(rel: string, html: string | null): Promise<void>
   }

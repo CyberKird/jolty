@@ -95,6 +95,7 @@ const api: JoltyApi = {
   },
   preview: {
     open: (cwd) => call('preview:open', cwd),
+    probe: (ports) => call('preview:probe', ports),
     draft: (rel, html) => call('preview:draft', rel, html)
   },
   schedules: {
