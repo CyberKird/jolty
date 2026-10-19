@@ -3,6 +3,8 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import type { SystemCheck } from '@shared/types'
+import { browserMode } from './browser'
+import { nativeBrowser } from './jbrowser/native'
 import * as local from './local'
 import { claudeExecutable, codexExecutable } from './runtime'
 import { tr } from '@shared/i18n'
@@ -47,6 +49,8 @@ export async function check(): Promise<SystemCheck[]> {
   const vc = await vcRuntime()
   const ollama = await local.status()
   const redirect = settingsRedirect()
+  await nativeBrowser.start()
+  const ext = nativeBrowser.status()
   const checks: SystemCheck[] = [
     { id: 'claude', label: tr("Claude Code (inclus în Jolty)"), ok: Boolean(claude), detail: claude || tr("Binarul inclus lipsește: reinstalează Jolty.") },
     { id: 'codex', label: tr("Codex (inclus în Jolty)"), ok: Boolean(codex), detail: codex || tr("Binarul inclus lipsește: reinstalează Jolty.") },
@@ -73,6 +77,16 @@ export async function check(): Promise<SystemCheck[]> {
       fixLabel: ollama.installed ? undefined : tr("Instalează Ollama")
     }
   ]
+  // only the default way of connecting needs Jolty's own extension
+  if (browserMode() === 'jolty') {
+    checks.splice(4, 0, {
+      id: 'extension',
+      label: tr("Extensia Jolty"),
+      ok: ext.connected,
+      detail: ext.connected ? tr("Conectată la browser (versiunea {v})", { v: ext.version || '?' }) : ext.installed ? tr("Instalată, dar browserul nu e conectat. Deschide browserul sau apasă pe iconița extensiei și pe Reconectează.") : tr("Nu e instalată încă în browser."),
+      fixLabel: ext.connected ? undefined : ext.installed ? tr("Deschide pagina de extensii") : tr("Instalează extensia")
+    })
+  }
   if (redirect) {
     checks.push({
       id: 'redirect',
@@ -90,19 +104,33 @@ function startDetached(args: string): void {
   spawn('cmd.exe', ['/d', '/s', '/c', `"start ${args}"`], { detached: true, stdio: 'ignore', windowsVerbatimArguments: true }).unref()
 }
 
-function winget(id: string, title: string): void {
+/** winget ships with Windows 10 1809+ but is missing on some PCs (LTSC, stripped images), so the official installer is the fallback. */
+export async function install(id: string, title: string, installerUrl: () => Promise<string>, args: string): Promise<void> {
   if (!isWin) throw new Error(tr("Instalarea automată e disponibilă doar pe Windows"))
-  startDetached(`"${title}" winget install -e --id ${id} --accept-source-agreements --accept-package-agreements`)
+  if ((await run('where', ['winget'])).trim()) return startDetached(`"${title}" winget install -e --id ${id} --accept-source-agreements --accept-package-agreements`)
+  const res = await fetch(await installerUrl())
+  if (!res.ok) throw new Error(`${title}: HTTP ${res.status}`)
+  const file = path.join(os.tmpdir(), `jolty-${id}.exe`)
+  fs.writeFileSync(file, Buffer.from(await res.arrayBuffer()))
+  startDetached(`"" "${file}" ${args}`)
+}
+
+async function gitInstallerUrl(): Promise<string> {
+  const rel = (await (await fetch('https://api.github.com/repos/git-for-windows/git/releases/latest')).json()) as { assets: { name: string; browser_download_url: string }[] }
+  const asset = rel.assets.find((a) => /^Git-.*-64-bit\.exe$/.test(a.name))
+  if (!asset) throw new Error('Git for Windows installer not found')
+  return asset.browser_download_url
 }
 
 export async function fix(id: string, openPath: (p: string) => Promise<string>): Promise<void> {
-  if (id === 'git') winget('Git.Git', 'Jolty - instalare Git')
+  if (id === 'git') await install('Git.Git', 'Jolty - instalare Git', gitInstallerUrl, '/SILENT')
   else if (id === 'vcredist') {
     // the installer ships Microsoft's redistributable; winget is only the fallback
     const bundled = path.join(process.resourcesPath || '', 'redist', 'vc_redist.x64.exe')
     if (isWin && fs.existsSync(bundled)) startDetached(`"" "${bundled}" /install /passive /norestart`)
-    else winget('Microsoft.VCRedist.2015+.x64', 'Jolty - instalare Visual C++')
+    else await install('Microsoft.VCRedist.2015+.x64', 'Jolty - instalare Visual C++', async () => 'https://aka.ms/vs/17/release/vc_redist.x64.exe', '/install /passive /norestart')
   }
-  else if (id === 'ollama') local.installOllama()
+  else if (id === 'ollama') await install('Ollama.Ollama', 'Jolty - instalare Ollama', async () => 'https://ollama.com/download/OllamaSetup.exe', '/SILENT')
+  else if (id === 'extension') await nativeBrowser.installAndOpen()
   else if (id === 'redirect') await openPath(path.join(os.homedir(), '.claude', 'settings.json'))
 }

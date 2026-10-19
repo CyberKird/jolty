@@ -1,4 +1,4 @@
-import { execFile, spawn } from 'child_process'
+import { execFile } from 'child_process'
 import os from 'os'
 import type { CatalogModel, ChatEvent, Fit, GpuInfo, HardwareInfo, LocalModel, OllamaStatus } from '@shared/types'
 import { tr } from '@shared/i18n'
@@ -216,14 +216,4 @@ export async function ensureLargeContext(tag: string): Promise<string> {
   const name = `${base.replace(/:/g, '-')}-jolty`
   await api('/api/create', { model: name, from: tag, parameters: { num_ctx: LOCAL_CONTEXT }, stream: false }, 120000)
   return name
-}
-
-/** Installs Ollama with winget in a visible console window (Windows). */
-export function installOllama(): void {
-  if (process.platform !== 'win32') throw new Error(tr("Instalarea automată e disponibilă doar pe Windows; descarcă Ollama de pe ollama.com"))
-  spawn('cmd.exe', ['/d', '/s', '/c', '"start "Jolty - instalare Ollama" winget install -e --id Ollama.Ollama --accept-source-agreements --accept-package-agreements"'], {
-    detached: true,
-    stdio: 'ignore',
-    windowsVerbatimArguments: true
-  }).unref()
 }

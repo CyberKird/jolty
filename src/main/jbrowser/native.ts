@@ -1,7 +1,7 @@
 // Jolty's own browser bridge as the app uses it: starts the hub, keeps the extension folder in step with
 // the app, gives engines their MCP connection and tells the settings page what state everything is in.
 import { randomBytes } from 'crypto'
-import { app } from 'electron'
+import { app, clipboard, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import type { NativeBrowserStatus } from '@shared/types'
@@ -100,6 +100,16 @@ class NativeBrowser {
     const dir = installedDir()
     this.copyFiles(dir)
     return dir
+  }
+
+  /** Copies the files, puts the folder path on the clipboard and opens the browser's extensions page and the folder. */
+  async installAndOpen(): Promise<NativeBrowserStatus> {
+    await this.start()
+    const dir = this.install()
+    clipboard.writeText(dir)
+    activeBrowser()?.open(activeBrowser()!.extensionsUrl)
+    void shell.openPath(dir)
+    return this.status()
   }
 
   status(): NativeBrowserStatus {

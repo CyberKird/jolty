@@ -172,15 +172,7 @@ function registerIpc(): void {
     await nativeBrowser.start()
     return nativeBrowser.status()
   })
-  handle('browser:installNative', async () => {
-    await nativeBrowser.start()
-    const dir = nativeBrowser.install()
-    clipboard.writeText(dir)
-    const b = activeBrowser()
-    b?.open(b.extensionsUrl)
-    void shell.openPath(dir)
-    return nativeBrowser.status()
-  })
+  handle('browser:installNative', () => nativeBrowser.installAndOpen())
   handle('browser:live', (on: boolean) => (on === true ? browserLive.start() : browserLive.stop()))
   handle('sessions:respond', (id: string, requestId: string, decision) => jolty.respond(id, requestId, decision as never))
   handle('sessions:handoff', (id: string, target: string, model?: string, effort?: string) =>
@@ -199,7 +191,7 @@ function registerIpc(): void {
   handle('local:pull', (tag: string) => jolty.pullLocal(tag))
   handle('local:remove', (tag: string) => local.remove(tag))
   handle('local:createProfile', (tag: string) => jolty.createLocalProfile(tag))
-  handle('local:installOllama', () => local.installOllama())
+  handle('local:installOllama', () => system.fix('ollama', (p) => shell.openPath(p)))
 
   handle('system:check', () => system.check())
   handle('system:fix', (id: string) => system.fix(id, (p) => shell.openPath(p)))

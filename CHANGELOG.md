@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2
+
+- The bundled Claude Code and Codex are updated to their latest versions.
+- System Check no longer fails on PCs without winget: Git, the Visual C++ runtime and Ollama are downloaded from their official sources and started (with the Windows admin prompt) when winget is missing. Before, "Install Git" only showed "Windows cannot find winget".
+- System Check lists Jolty's browser extension as a requirement when the default way of connecting is used. One click copies its files (they ship with the app), opens the browser's extensions page and the folder, and the row turns green once the browser connects.
+
 ## 0.5.1
 
 - Usage counted Codex input twice: Codex reports the cached part inside its input, and Jolty added it again, so Codex tokens on the Usage page were about double and its cache looked like 50% instead of the real 90% and more. New turns are counted once, and older lines are corrected when the page reads them.
