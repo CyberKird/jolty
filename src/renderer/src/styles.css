@@ -2832,7 +2832,9 @@ a {
 .page {
   animation: rise 0.32s var(--ease);
 }
-.main {
+/* named only while a page switch runs: a permanent name would make the column its own stacking
+   context and the composer's menus would open under the Live panel */
+.vt-page .main {
   view-transition-name: main;
 }
 ::view-transition-old(root),

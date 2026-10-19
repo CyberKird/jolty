@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.6
+
+- Updates go straight to the newest version. Once an update was downloaded, Jolty stopped checking, so "Restart" installed that version even when a newer one had come out in the meantime, and after the restart you had to update again. Jolty now keeps checking while an update waits, and the restart button checks once more and fetches the newest release first, so one restart is enough. The "ready" notification no longer repeats for a version you were already told about.
+- The menus in the composer (browser, power, model) open above the Live panel again. In 0.5.5 the right part of a menu that reached over the panel was hidden under it.
+
 ## 0.5.5
 
 - The window can be any size without parts landing on each other. On a narrow window (with the sidebar shown) the Live panel opens as a drawer over a dimmed chat: a click on the chat closes it, making the window that narrow closes it by itself, and widening the window brings it back. With the sidebar hidden there is room again and the panel sits next to the chat. However wide you drag the panel, the chat keeps at least 480 px.

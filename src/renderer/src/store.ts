@@ -105,9 +105,14 @@ function upsert(list: ChatItem[], item: ChatItem): ChatItem[] {
 
 /** Page switches cross-fade the main column (View Transitions); instant with Reduce motion. */
 function swapPage(update: () => void): void {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown }
-  if (!doc.startViewTransition || document.documentElement.classList.contains('reduce-motion')) return update()
-  doc.startViewTransition(() => flushSync(update))
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } }
+  const root = document.documentElement
+  if (!doc.startViewTransition || root.classList.contains('reduce-motion')) return update()
+  root.classList.add('vt-page')
+  void doc
+    .startViewTransition(() => flushSync(update))
+    .finished.catch(() => undefined)
+    .finally(() => root.classList.remove('vt-page'))
 }
 
 export const useStore = create<State>((set, get) => ({

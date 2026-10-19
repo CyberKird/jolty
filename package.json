@@ -1,7 +1,7 @@
 {
   "name": "jolty",
   "productName": "Jolty",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "Desktop app for Claude Code and Codex: multiple profiles, API keys, model picker, usage dashboard",
   "author": "CyberKird",
   "license": "SEE LICENSE IN LICENSE",
@@ -14,7 +14,7 @@
     "start": "electron-vite preview",
     "dist:win": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish never",
     "dist:release": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish always",
-    "test": "npm run test:store && npm run test:agent && npm run test:power && npm run test:profile-processes && npm run test:codex-lifecycle && npm run test:preview && npm run test:eta && npm run test:handoff && npm run test:i18n",
+    "test": "npm run test:store && npm run test:agent && npm run test:power && npm run test:profile-processes && npm run test:codex-lifecycle && npm run test:preview && npm run test:updater && npm run test:eta && npm run test:handoff && npm run test:i18n",
     "test:store": "esbuild test/store-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --outfile=out-test/store-test.mjs --log-level=warning && node --test out-test/store-test.mjs",
     "test:agent": "esbuild test/agent-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --external:ws --outfile=out-test/agent-test.mjs --log-level=warning && node --test out-test/agent-test.mjs",
     "test:power": "node test/jbrowser/run.mjs test/power-test.ts --test",
@@ -31,7 +31,8 @@
     "test:ui": "electron-vite build && node test/ui-test.mjs",
     "test:links": "electron-vite build && node test/links-test.mjs",
     "icon": "electron scripts/make-icon.cjs",
-    "test:i18n": "node scripts/i18n-check.mjs"
+    "test:i18n": "node scripts/i18n-check.mjs",
+    "test:updater": "esbuild test/updater-test.ts --bundle --platform=node --format=cjs --alias:electron=./test/updater-stubs.ts --alias:electron-updater=./test/updater-stubs.ts --alias:@shared=./src/shared --outfile=out-test/updater-test.cjs --log-level=warning && node --test out-test/updater-test.cjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.303",
