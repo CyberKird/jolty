@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url'
 import type { ChatEvent } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers, cleanToken } from './browser'
 import { BrowserLive } from './browser-live'
+import { Preview } from './preview'
 import { nativeBrowser } from './jbrowser/native'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
@@ -59,6 +60,7 @@ const APP_ID = app.isPackaged ? 'com.joltarise.jolty' : 'com.joltarise.jolty.dev
 let win: BrowserWindow | undefined
 let jolty: Jolty
 const browserLive = new BrowserLive(send)
+const preview = new Preview()
 
 function send(e: ChatEvent): void {
   if (!win || win.isDestroyed()) return
@@ -153,7 +155,7 @@ function registerIpc(): void {
   handle('schedules:update', (id: string, patch) => jolty.scheduler.update(String(id), (patch || {}) as never))
   handle('schedules:remove', (id: string) => jolty.scheduler.remove(String(id)))
   handle('schedules:run', (id: string) => jolty.scheduler.runNow(String(id)))
-  handle('power:arm', (on: boolean) => jolty.power.arm(on === true))
+  handle('power:arm', (on: boolean, plan?: unknown) => jolty.power.arm(on === true, plan))
   handle('power:cancel', () => jolty.power.cancel())
   handle('power:state', () => jolty.power.state())
   handle('browser:hasToken', () => Boolean(store.getSecret(BROWSER_TOKEN_KEY)))
@@ -174,6 +176,10 @@ function registerIpc(): void {
   })
   handle('browser:installNative', () => nativeBrowser.installAndOpen())
   handle('browser:live', (on: boolean) => (on === true ? browserLive.start() : browserLive.stop()))
+  handle('preview:open', (cwd: string) => (typeof cwd === 'string' ? preview.open(cwd) : ''))
+  handle('preview:draft', (rel: string, html: string | null) => {
+    if (typeof rel === 'string' && (typeof html === 'string' || html === null)) preview.draft(rel, html)
+  })
   handle('sessions:respond', (id: string, requestId: string, decision) => jolty.respond(id, requestId, decision as never))
   handle('sessions:handoff', (id: string, target: string, model?: string, effort?: string) =>
     jolty.handoff(id, target, typeof model === 'string' ? model : undefined, typeof effort === 'string' ? effort : undefined)
@@ -302,6 +308,7 @@ app.on('before-quit', (e) => {
   if (quitting || !jolty) return
   e.preventDefault()
   quitting = true
+  preview.stop()
   void jolty.shutdown().then(() => nativeBrowser.stop()).finally(() => app.quit())
 })
 

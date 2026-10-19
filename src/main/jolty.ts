@@ -101,7 +101,7 @@ export class Jolty {
   private transcripts = new Map<string, ChatItem[]>()
   private saveTimers = new Map<string, NodeJS.Timeout>()
   private removingProfiles = new Set<string>()
-  /** "turn the PC off when the work is done" */
+  /** "turn the PC off when the work is done", or at a time, or sleep, restart…: see power.ts */
   readonly power = new PowerGuard({
     emit: (e) => this.send(e),
     busy: () => this.busy.size,

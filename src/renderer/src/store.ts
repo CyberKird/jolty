@@ -6,6 +6,7 @@ import type {
   JoltyApi,
   PermissionRequest,
   PlanStep,
+  PowerState,
   Profile,
   ProviderBalance,
   RateLimitSnapshot,
@@ -13,6 +14,7 @@ import type {
   SessionMeta
 } from '@shared/types'
 import { dateLocale, tr } from '@shared/i18n'
+import { DEFAULT_PLAN } from '@shared/power'
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
@@ -69,7 +71,7 @@ interface State {
   liveOpen: boolean
   sidebarOpen: boolean
   /** "turn the PC off when the work is done" */
-  power: { armed: boolean; seconds?: number; reason?: 'done' | 'usage' | 'error' }
+  power: PowerState
 
   setPage(p: Page): void
   toast(text: string, error?: boolean): void
@@ -121,7 +123,7 @@ export const useStore = create<State>((set, get) => ({
   pulls: {},
   toasts: [],
   // on a narrow window the live panel floats over the chat, so it starts closed there
-  power: { armed: false },
+  power: { armed: false, plan: DEFAULT_PLAN },
   liveOpen: window.innerWidth >= 1180,
   sidebarOpen: true,
 
@@ -226,7 +228,7 @@ export const useStore = create<State>((set, get) => ({
         }
         return
       case 'power':
-        set({ power: { armed: e.armed, seconds: e.seconds, reason: e.reason } })
+        set({ power: { armed: e.armed, plan: e.plan, due: e.due, seconds: e.seconds, reason: e.reason } })
         return
       case 'meta':
         set((s) => {

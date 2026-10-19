@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.4
+
+- Live preview of what the model is building: the Live panel has a new Preview tab. When the model makes an HTML page, Jolty serves the project folder on your own PC (127.0.0.1 only, no dot-files, nothing outside the project) and shows the page rendered, reloading by itself every time a file changes. A page still being written already shows while the model types it, so a client who is waiting sees the page take shape instead of a progress snake. When the model starts a dev server (Next.js, Vite, `serve`), the tab shows that server instead, and its own hot reload keeps it current. The tab opens by itself while the model writes or edits, and has buttons to reload and to open the page in your browser.
+- The Browser tab names what the model is doing on the page: the last four actions (Click, Type, Navigate, Screenshot, Scroll, Read the page) with the target, the current one marked while it runs, next to the live picture with the cursor and glow the extension already draws.
+- The Live panel's tab strip keeps the tab in use in view (there are seven of them now).
+- Power plans: the power button in the composer opens a menu like ShutdownTimer's. Pick what the PC does (shut down, restart, sleep, hibernate, log off or lock) and when (once the work is done, after some minutes, or at a time of day), and whether to close programs that would hold a shutdown back. A timer fires at its time whatever the chats are doing; "once the work is done" still waits for the chats to go quiet. Shutdown and restart use Windows' own countdown, so they still happen if Jolty closes, and you can cancel during the warning. Sleep, hibernate and lock get a short 15 second warning.
+
 ## 0.5.3
 
 - Jolty's browser extension now works in Firefox too. Firefox gives extensions no DevTools protocol, so it has its own extension that does the same work with what Firefox offers: pages, clicks and typing, forms, tabs, screenshots, console and network, and the live picture. Pick Firefox under Settings > Browser (or let it be your Windows default) and follow the steps: Jolty copies the files, opens about:debugging and puts the manifest.json path in the clipboard. Firefox forgets temporary add-ons when it closes, so the steps repeat after a restart. Not available in Firefox: choosing files to upload, dragging between page parts, and dialogs that wait for an answer (alert, confirm and prompt are reported and answered at once, confirm with yes and prompt with its default).

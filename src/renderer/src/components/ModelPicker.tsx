@@ -66,7 +66,7 @@ export const EFFORT_TITLES: Record<string, string> = {
 }
 
 /** Closes a popover on outside click or Escape, and moves focus with the arrow keys. */
-function usePopover(): { open: boolean; setOpen: (v: boolean) => void; ref: React.RefObject<HTMLDivElement | null> } {
+export function usePopover(): { open: boolean; setOpen: (v: boolean) => void; ref: React.RefObject<HTMLDivElement | null> } {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {

@@ -201,10 +201,30 @@ export interface RateLimitSnapshot {
   updatedAt: number
 }
 
+/** what the PC does (modelled on ShutdownTimer's actions) */
+export type PowerAction = 'shutdown' | 'restart' | 'sleep' | 'hibernate' | 'logoff' | 'lock'
+/** when: once the work is done, after some minutes, or at a time of day ("HH:mm", today or tomorrow) */
+export type PowerWhen = { kind: 'done' } | { kind: 'in'; minutes: number } | { kind: 'at'; time: string }
+export interface PowerPlan {
+  action: PowerAction
+  when: PowerWhen
+  /** close programs that would hold a shutdown, restart or log off back */
+  force: boolean
+}
+export interface PowerState {
+  armed: boolean
+  plan: PowerPlan
+  /** when a timed plan fires (ms since the epoch) */
+  due?: number
+  /** the warning countdown, once it started */
+  seconds?: number
+  reason?: 'done' | 'usage' | 'error' | 'timer'
+}
+
 export type ChatEvent =
   | { type: 'status'; sessionId: string; status: 'idle' | 'running' | 'error'; error?: string }
-  /** "turn the PC off when the work is done": armed, and the countdown once it started */
-  | { type: 'power'; armed: boolean; seconds?: number; reason?: 'done' | 'usage' | 'error' }
+  /** the PC power plan: armed, and the countdown once it started */
+  | ({ type: 'power' } & PowerState)
   | { type: 'meta'; sessionId: string; meta: SessionMeta }
   | { type: 'item'; sessionId: string; item: ChatItem }
   | { type: 'delta'; sessionId: string; itemId: string; kind: 'assistant' | 'reasoning'; delta: string }
@@ -472,11 +492,11 @@ export interface JoltyApi {
     files(cwd: string): Promise<string[]>
   }
   power: {
-    /** arm or disarm "turn the PC off when the work is done" */
-    arm(on: boolean): Promise<void>
+    /** arm (with a plan, or the last one) or disarm the power plan */
+    arm(on: boolean, plan?: PowerPlan): Promise<void>
     /** stop a running countdown and disarm */
     cancel(): Promise<void>
-    state(): Promise<{ armed: boolean; seconds?: number; reason?: 'done' | 'usage' | 'error' }>
+    state(): Promise<PowerState>
   }
   browser: {
     /** whether an extension token is saved (the value never leaves the main process) */
@@ -490,6 +510,12 @@ export interface JoltyApi {
     installNative(): Promise<NativeBrowserStatus>
     /** start or stop streaming the Jolty browser page to the Live panel */
     live(on: boolean): Promise<void>
+  }
+  preview: {
+    /** serves the project folder on 127.0.0.1 and returns its origin ('' if it cannot) */
+    open(cwd: string): Promise<string>
+    /** the unfinished content of a page being written, served until the real file lands */
+    draft(rel: string, html: string | null): Promise<void>
   }
   schedules: {
     list(): Promise<ScheduledTask[]>

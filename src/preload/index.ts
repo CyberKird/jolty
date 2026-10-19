@@ -80,7 +80,7 @@ const api: JoltyApi = {
     files: (cwd) => call('composer:files', cwd)
   },
   power: {
-    arm: (on) => call('power:arm', on),
+    arm: (on, plan) => call('power:arm', on, plan),
     cancel: () => call('power:cancel'),
     state: () => call('power:state')
   },
@@ -92,6 +92,10 @@ const api: JoltyApi = {
     native: () => call('browser:native'),
     installNative: () => call('browser:installNative'),
     live: (on) => call('browser:live', on)
+  },
+  preview: {
+    open: (cwd) => call('preview:open', cwd),
+    draft: (rel, html) => call('preview:draft', rel, html)
   },
   schedules: {
     list: () => call('schedules:list'),

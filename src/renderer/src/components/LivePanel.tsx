@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { ExternalLink, RotateCw, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
 import { clock, etaLabel, timeLeft, type Clock } from '@shared/eta'
@@ -371,8 +371,31 @@ function TerminalView({ items }: { items: ChatItem[] }) {
 /** Playwright MCP's tools, whatever prefix the engine gives them (mcp__jolty-browser__browser_click). */
 const isBrowserTool = (name: string): boolean => /(^|__)browser_/.test(name)
 
-function BrowserView() {
+/** One line for what a browser tool call does, from its own input: "Click · Add to cart". */
+function browserAction(t: Tool): string {
+  const i = (t.input || {}) as Record<string, unknown>
+  const s = (k: string): string => (typeof i[k] === 'string' ? (i[k] as string) : '')
+  const verb = t.name.replace(/^.*browser_/, '')
+  const label: Record<string, [string, string]> = {
+    click: [tr("Click"), s('element')],
+    hover: [tr("Click"), s('element')],
+    type: [tr("Tastează"), s('element')],
+    fill_form: [tr("Tastează"), ''],
+    press_key: [tr("Tastează"), s('key')],
+    navigate: [tr("Navighează"), s('url')],
+    navigate_back: [tr("Navighează"), ''],
+    take_screenshot: [tr("Screenshot"), ''],
+    scroll: [tr("Derulează"), ''],
+    snapshot: [tr("Citește pagina"), ''],
+    find: [tr("Citește pagina"), s('query')]
+  }
+  const [name, what] = label[verb] || [verb.replace(/_/g, ' '), '']
+  return what ? `${name} · ${what}` : name
+}
+
+function BrowserView({ items }: { items: ChatItem[] }) {
   const live = useStore((s) => s.browserLive)
+  const actions = items.filter((i): i is Tool => i.kind === 'tool' && isBrowserTool(i.name)).slice(-4).reverse()
   // the stream runs only while this tab is on screen
   useEffect(() => {
     void api.browser.live(true)
@@ -382,6 +405,13 @@ function BrowserView() {
   if (!live.frame) return <div className="faint small">{tr("Se conectează la browserul Jolty…")}</div>
   return (
     <div className="browser-live">
+      <div className="browser-actions">
+        {actions.map((a, n) => (
+          <div key={a.id} className={`browser-action ${n === 0 ? 'now' : ''} ${a.status === 'running' ? 'running' : ''}`}>
+            {browserAction(a)}
+          </div>
+        ))}
+      </div>
       <div className="browser-live-url ellipsis" title={live.url}>
         {live.url}
       </div>
@@ -390,7 +420,63 @@ function BrowserView() {
   )
 }
 
-type Tab = 'changes' | 'plan' | 'terminal' | 'code' | 'browser' | 'files'
+// ---------------------------------------------------------------------------
+// Preview: the page or dev server the model is building, rendered and kept current
+// ---------------------------------------------------------------------------
+const DEV_SERVER = /https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0):\d{2,5}/g
+const HTML_FILE = /\.html?$/i
+
+/** What the preview shows: a dev server the model started (HMR keeps it current), else the latest HTML page it touched. */
+function previewSource(items: ChatItem[], cwd: string, drafts: Draft[]): { dev?: string; page?: string } {
+  const runs = items.filter((i): i is Tool => i.kind === 'tool' && toolKind(i.name) === 'run').slice(-20)
+  const dev = runs.flatMap((r) => r.output?.match(DEV_SERVER) || []).pop()?.replace('0.0.0.0', 'localhost')
+  const page = fileCells(items, cwd, drafts)
+    .filter((c) => HTML_FILE.test(c.path) && !c.path.includes('node_modules/'))
+    .sort((a, b) => b.last - a.last)[0]?.path
+  return { dev, page }
+}
+
+function PreviewView({ source, cwd, drafts }: { source: { dev?: string; page?: string }; cwd: string; drafts: Draft[] }) {
+  const [base, setBase] = useState('')
+  const [nonce, setNonce] = useState(0)
+  const sent = useRef(0)
+  const { dev, page } = source
+  useEffect(() => {
+    if (!dev && page && cwd) void api.preview.open(cwd).then(setBase)
+  }, [dev, page, cwd])
+  // a page still being written is handed to the server (at most every 0.7 s), so it renders while the model types
+  const writing = drafts.filter((d) => d.name === 'Write' && d.path && HTML_FILE.test(d.path)).pop()
+  useEffect(() => {
+    if (!writing?.path || !base) return
+    const rel = relPath(writing.path, cwd)
+    const wait = writing.done ? 0 : Math.max(0, sent.current + 700 - Date.now())
+    const t = setTimeout(() => {
+      sent.current = Date.now()
+      void api.preview.draft(rel, writing.done ? null : writing.content)
+    }, wait)
+    return () => clearTimeout(t)
+  }, [writing?.content, writing?.done, writing?.path, base, cwd])
+  const url = dev || (page && base ? `${base}/${page.split('/').map(encodeURIComponent).join('/')}` : '')
+  if (!url) return <div className="faint small">{tr("Când modelul face o pagină HTML sau pornește un server (Next.js, Vite), o vezi aici cum se schimbă, fără refresh.")}</div>
+  return (
+    <div className="preview-live">
+      <div className="preview-live-bar">
+        <span className="ellipsis" title={url}>
+          {url}
+        </span>
+        <button onClick={() => setNonce(nonce + 1)} aria-label={tr("Reîncarcă previzualizarea")} title={tr("Reîncarcă previzualizarea")}>
+          <RotateCw size={13} />
+        </button>
+        <button onClick={() => window.open(url)} aria-label={tr("Deschide în browser")} title={tr("Deschide în browser")}>
+          <ExternalLink size={13} />
+        </button>
+      </div>
+      <iframe key={`${url}#${nonce}`} src={url} title={tr("Previzualizare")} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals" />
+    </div>
+  )
+}
+
+type Tab = 'changes' | 'plan' | 'terminal' | 'code' | 'preview' | 'browser' | 'files'
 
 const WIDTH_KEY = 'jolty.liveWidth'
 function savedWidth(): number {
@@ -420,6 +506,8 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   const planDone = plan ? plan.filter((s) => s.status === 'done').length : 0
   const changes = useMemo(() => changesOf(items, cwd), [items, cwd])
   const fileCount = useMemo(() => fileCells(items, cwd, drafts).length, [items, cwd, drafts])
+  const source = useMemo(() => previewSource(items, cwd, drafts), [items, cwd, drafts])
+  const previewable = !!(source.dev || source.page)
   const timer = useStore((s) => s.clocks[id])
   const running = status === 'running'
   const now = useNow(running)
@@ -433,12 +521,16 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
     setPicked(undefined)
     auto.current = 'changes'
   }, [id])
-  if (phase.key === 'write' || phase.key === 'edit') auto.current = 'code'
+  if (phase.key === 'write' || phase.key === 'edit') auto.current = previewable ? 'preview' : 'code'
   else if (phase.key === 'run') auto.current = 'terminal'
   else if (browsing) auto.current = 'browser'
   else if (phase.key === 'plan' && plan?.length) auto.current = 'plan'
   else if (phase.key === 'idle' && changes.length) auto.current = 'changes'
   const tab = picked || auto.current
+  // seven tabs do not all fit: the one in use (also when the model switches it) is never left off the edge
+  useEffect(() => {
+    document.querySelector('.live-tab.on')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+  }, [tab, open])
 
   const [width, setWidth] = useState(savedWidth)
   const [resizing, setResizing] = useState(false)
@@ -472,6 +564,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
     { id: 'plan', label: tr("Plan"), count: plan?.length ? `${planDone}/${plan.length}` : undefined },
     { id: 'terminal', label: tr("Terminal"), count: runs ? String(runs) : undefined },
     { id: 'code', label: tr("Cod live"), count: drafts.some((d) => !d.done) ? '●' : undefined },
+    { id: 'preview', label: tr("Previzualizare"), count: previewable && drafts.some((d) => !d.done) ? '●' : undefined },
     { id: 'browser', label: tr("Browser"), count: browsing ? '●' : undefined },
     { id: 'files', label: tr("Fișiere"), count: fileCount ? String(fileCount) : undefined }
   ]
@@ -526,7 +619,8 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
           (plan?.length ? <PlanView steps={plan} timer={timer} running={running} now={now} /> :<div className="faint small">{tr("Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.")}</div>)}
         {tab === 'terminal' && <TerminalView items={items} />}
         {tab === 'code' && <LiveCode drafts={drafts} />}
-        {tab === 'browser' && <BrowserView />}
+        {tab === 'preview' && <PreviewView source={source} cwd={cwd} drafts={drafts} />}
+        {tab === 'browser' && <BrowserView items={items} />}
         {tab === 'files' && <FileMap items={items} cwd={cwd} drafts={drafts} />}
       </div>
     </aside>
