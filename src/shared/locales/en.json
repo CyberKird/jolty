@@ -792,5 +792,8 @@
  "Nimeni nu aprobă la rulare: ce cere acord așteaptă până deschizi conversația.": "Nobody approves during a run: anything that needs a yes waits until you open the conversation.",
  "Învață din conversații": "Learn from conversations",
  "Ca la Hermes: la fiecare 10 mesaje modelul își notează în memorie ce a aflat despre tine și cum vrei să lucreze, iar la fiecare 15 actualizează sau creează un skill când a apărut ceva reutilizabil. Vezi în chat ce a salvat. Nu se aplică la conversațiile temporare.": "Like Hermes: every 10 messages the model notes in memory what it learned about you and how you want it to work, and every 15 it updates or creates a skill when something reusable came up. You see in the chat what it saved. Does not apply to temporary chats.",
- "{server} a cerut ceva ce Jolty nu poate afișa încă; cererea a fost refuzată.": "{server} asked for something Jolty cannot show yet; the request was declined."
+ "{server} a cerut ceva ce Jolty nu poate afișa încă; cererea a fost refuzată.": "{server} asked for something Jolty cannot show yet; the request was declined.",
+ "Merge cu Chrome, Vivaldi, Edge, Brave și Firefox.": "Works with Chrome, Vivaldi, Edge, Brave and Firefox.",
+ "Pe pagina deschisă apasă „Încarcă un supliment temporar” (în engleză „Load Temporary Add-on”) și alege fișierul manifest.json din folderul:": "On the page that opened, click “Load Temporary Add-on” and choose the manifest.json file in the folder:",
+ "Gata: starea de mai sus devine „Conectată”. Firefox șterge suplimentele temporare când se închide, deci după repornire repetă pașii.": "Done: the status above turns to “Connected”. Firefox removes temporary add-ons when it closes, so repeat the steps after a restart."
 }

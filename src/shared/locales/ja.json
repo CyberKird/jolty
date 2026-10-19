@@ -792,5 +792,8 @@
  "Nimeni nu aprobă la rulare: ce cere acord așteaptă până deschizi conversația.": "実行中に承認する人はいません。承認が必要なものは、会話を開くまで待機します。",
  "Învață din conversații": "会話から学ぶ",
  "Ca la Hermes: la fiecare 10 mesaje modelul își notează în memorie ce a aflat despre tine și cum vrei să lucreze, iar la fiecare 15 actualizează sau creează un skill când a apărut ceva reutilizabil. Vezi în chat ce a salvat. Nu se aplică la conversațiile temporare.": "Hermes と同じく、10メッセージごとにモデルがあなたについて学んだことや作業の進め方の好みをメモリーに記録し、15メッセージごとに再利用できるものがあればスキルを更新または作成します。保存した内容はチャットで確認できます。一時的な会話には適用されません。",
- "{server} a cerut ceva ce Jolty nu poate afișa încă; cererea a fost refuzată.": "{server} が Jolty でまだ表示できない内容を求めたため、リクエストを拒否しました。"
+ "{server} a cerut ceva ce Jolty nu poate afișa încă; cererea a fost refuzată.": "{server} が Jolty でまだ表示できない内容を求めたため、リクエストを拒否しました。",
+ "Merge cu Chrome, Vivaldi, Edge, Brave și Firefox.": "Chrome、Vivaldi、Edge、Brave、Firefox で使えます。",
+ "Pe pagina deschisă apasă „Încarcă un supliment temporar” (în engleză „Load Temporary Add-on”) și alege fișierul manifest.json din folderul:": "開いたページで「一時的なアドオンを読み込む」(英語では “Load Temporary Add-on”)をクリックし、次のフォルダーにある manifest.json を選びます:",
+ "Gata: starea de mai sus devine „Conectată”. Firefox șterge suplimentele temporare când se închide, deci după repornire repetă pașii.": "完了:上の状態が「接続済み」になります。Firefox は終了すると一時的なアドオンを削除するため、再起動後は手順をもう一度行ってください。"
 }

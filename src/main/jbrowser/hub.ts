@@ -32,7 +32,8 @@ export interface HubOptions {
   /** the shared secret: the extension sends it in its hello, models send it as a Bearer token */
   token: () => string
   /** version of the extension files Jolty ships: an older connected extension is told to reload */
-  bundledVersion: () => string
+  /** version of the extension files that ship with the app, for the browser that is connecting (Chromium or Firefox) */
+  bundledVersion: (agent: string) => string
   /** a JSON-RPC message for the model-facing MCP server of one chat; undefined = a notification, no reply */
   mcp: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
   /** the same for Jolty's own tools (conversation search, scheduled tasks), at /jolty/<chat id> */
@@ -213,7 +214,7 @@ export class BrowserHub extends EventEmitter {
   // ------------------------------------------------------------------ the extension
   private onUpgrade(req: http.IncomingMessage, socket: import('stream').Duplex, head: Buffer): void {
     const origin = String(req.headers.origin || '')
-    if (!this.hostOk(req) || new URL(req.url || '/', 'http://127.0.0.1').pathname !== '/ext' || !origin.startsWith('chrome-extension://')) {
+    if (!this.hostOk(req) || new URL(req.url || '/', 'http://127.0.0.1').pathname !== '/ext' || !/^(chrome|moz)-extension:\/\//.test(origin)) {
       socket.destroy()
       return
     }
@@ -241,7 +242,7 @@ export class BrowserHub extends EventEmitter {
         conn.ready = true
         conn.info = { version: String(msg.version || ''), agent: String(msg.agent || '') }
         this.conns.push(conn)
-        ws.send(JSON.stringify({ type: 'ready', bundled: this.opts.bundledVersion() }))
+        ws.send(JSON.stringify({ type: 'ready', bundled: this.opts.bundledVersion(String(msg.agent || '')) }))
         this.emit('status', true)
         return
       }

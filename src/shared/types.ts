@@ -294,6 +294,8 @@ export interface NativeBrowserStatus {
   bundledVersion: string
   dir: string
   port: number
+  /** Firefox loads the extension differently (as a temporary add-on, from manifest.json) */
+  firefox?: boolean
 }
 
 export interface UpdateStatus {
@@ -313,7 +315,7 @@ export interface SlashItem {
   scope: 'proiect' | 'global'
 }
 
-export type BrowserApp = 'chrome' | 'vivaldi' | 'edge' | 'brave'
+export type BrowserApp = 'chrome' | 'vivaldi' | 'edge' | 'brave' | 'firefox'
 
 export type EditAction = 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'selectAll'
 

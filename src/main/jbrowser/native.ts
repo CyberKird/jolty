@@ -5,7 +5,7 @@ import { app, clipboard, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import type { NativeBrowserStatus } from '@shared/types'
-import { activeBrowser } from '../browser'
+import { activeBrowser, browsers } from '../browser'
 import { dataDir, getSecret, loadSettings, setSecret } from '../store'
 import { tr } from '@shared/i18n'
 import { handleJoltyTools } from '../jolty-tools'
@@ -16,12 +16,19 @@ const TOKEN_KEY = 'jbrowser-token'
 
 export const NATIVE_SERVER = 'jolty-browser'
 
+/** Chromium browsers load one extension, Firefox another (it has no DevTools protocol for extensions). */
+type Kind = 'browser-extension' | 'browser-extension-firefox'
+const kindOf = (firefox: boolean): Kind => (firefox ? 'browser-extension-firefox' : 'browser-extension')
+/** The browser that is on the other end of a connection, from the user agent it reports. */
+const kindOfAgent = (agent: string): Kind => kindOf(/Firefox\//.test(agent))
+
 /** The extension files that ship with the app: next to the executable when installed, in the repo while developing. */
-const bundledDir = (): string => {
-  const candidates = [path.join(process.resourcesPath || '', 'browser-extension'), path.join(__dirname, '../../browser-extension'), path.join(app.getAppPath(), 'browser-extension')]
+const bundledDir = (kind: Kind): string => {
+  const candidates = [path.join(process.resourcesPath || '', kind), path.join(__dirname, '../..', kind), path.join(app.getAppPath(), kind)]
   return candidates.find((c) => fs.existsSync(path.join(c, 'manifest.json'))) || candidates[0]
 }
-export const installedDir = (): string => path.join(dataDir(), 'browser-extension')
+export const installedDir = (kind: Kind = 'browser-extension'): string => path.join(dataDir(), kind)
+const KINDS: Kind[] = ['browser-extension', 'browser-extension-firefox']
 
 const versionOf = (dir: string): string => {
   try {
@@ -43,7 +50,7 @@ function token(): string {
 class NativeBrowser {
   readonly hub = new BrowserHub({
     token,
-    bundledVersion: () => versionOf(bundledDir()),
+    bundledVersion: (agent) => versionOf(bundledDir(kindOfAgent(agent))),
     mcp: (sid, m) => this.service.handle(sid, m),
     tools: handleJoltyTools,
     log: (m) => process.env.JOLTY_DEBUG && console.error('[jbrowser]', m)
@@ -74,6 +81,11 @@ class NativeBrowser {
     this.started = undefined
   }
 
+  /** Whether the browser Jolty works in is Firefox. */
+  private firefox(): boolean {
+    return browsers().active === 'firefox'
+  }
+
   /** Port and token in the extension folder: the extension reads them each time it connects. */
   private writeConfig(dir: string): void {
     fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ token: token(), ports: [this.hub.port] }))
@@ -81,24 +93,27 @@ class NativeBrowser {
 
   /** What the user installed once stays current: files copied again when the app ships a newer extension. */
   private refreshFiles(): void {
-    const dir = installedDir()
-    if (!fs.existsSync(dir)) return
-    const stale = versionOf(dir) !== versionOf(bundledDir())
-    if (stale) this.copyFiles(dir)
-    else this.writeConfig(dir)
-    if (stale) this.hub.reloadExtension()
+    for (const kind of KINDS) {
+      const dir = installedDir(kind)
+      if (!fs.existsSync(dir)) continue
+      const stale = versionOf(dir) !== versionOf(bundledDir(kind))
+      if (stale) this.copyFiles(kind, dir)
+      else this.writeConfig(dir)
+      if (stale) this.hub.reloadExtension()
+    }
   }
 
-  private copyFiles(dir: string): void {
+  private copyFiles(kind: Kind, dir: string): void {
     fs.mkdirSync(dir, { recursive: true })
-    for (const name of fs.readdirSync(bundledDir())) fs.copyFileSync(path.join(bundledDir(), name), path.join(dir, name))
+    for (const name of fs.readdirSync(bundledDir(kind))) fs.copyFileSync(path.join(bundledDir(kind), name), path.join(dir, name))
     this.writeConfig(dir)
   }
 
   /** Puts the extension files where the browser will load them from (once; the browser keeps the path). */
   install(): string {
-    const dir = installedDir()
-    this.copyFiles(dir)
+    const kind = kindOf(this.firefox())
+    const dir = installedDir(kind)
+    this.copyFiles(kind, dir)
     return dir
   }
 
@@ -106,21 +121,25 @@ class NativeBrowser {
   async installAndOpen(): Promise<NativeBrowserStatus> {
     await this.start()
     const dir = this.install()
-    clipboard.writeText(dir)
+    // Firefox asks for the manifest file, the other browsers for the folder
+    clipboard.writeText(this.firefox() ? path.join(dir, 'manifest.json') : dir)
     activeBrowser()?.open(activeBrowser()!.extensionsUrl)
     void shell.openPath(dir)
     return this.status()
   }
 
   status(): NativeBrowserStatus {
-    const dir = installedDir()
+    const firefox = this.firefox()
+    const kind = kindOf(firefox)
+    const dir = installedDir(kind)
     return {
       installed: fs.existsSync(path.join(dir, 'manifest.json')),
       connected: this.hub.connected,
       version: this.hub.extension?.version,
-      bundledVersion: versionOf(bundledDir()),
+      bundledVersion: versionOf(bundledDir(kind)),
       dir,
-      port: this.hub.port
+      port: this.hub.port,
+      ...(firefox ? { firefox } : {})
     }
   }
 

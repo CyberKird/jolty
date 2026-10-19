@@ -1,4 +1,4 @@
-// End to end: a real Chromium with the Jolty extension, driven through the same MCP endpoint a model uses.
+// End to end: a real Chromium (or Firefox, with JBROWSER_FIREFOX) with the Jolty extension, driven through the same MCP endpoint a model uses.
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -6,6 +6,8 @@ import path from 'node:path'
 import test from 'node:test'
 import { startHarness, type Harness } from './harness'
 
+// what Firefox cannot do for an extension: files into inputs, HTML5 drags, and holding a dialog open for an answer
+const NO_FF = process.env.JBROWSER_FIREFOX ? { skip: 'not available in Firefox' } : {}
 let h: Harness
 test.before(async () => {
   h = await startHarness()
@@ -130,7 +132,7 @@ test('press_key: chords and navigation keys', async () => {
   assert.equal(bad.isError, true)
 })
 
-test('file upload: straight into an input and through a file chooser', async () => {
+test('file upload: straight into an input and through a file chooser', NO_FF, async () => {
   const f = path.join(os.tmpdir(), 'jbrowser-upload.txt')
   fs.writeFileSync(f, 'hello')
   let snap = ok(await h.call('browser_snapshot'))
@@ -168,7 +170,7 @@ test('a link that opens a new tab: the new tab is adopted, tabs can be listed, s
   assert.match(closed, /Jolty test home|Popup/)
 })
 
-test('dialogs block the page until answered', async () => {
+test('dialogs block the page until answered', NO_FF, async () => {
   ok(await h.call('browser_navigate', { url: h.site + '/dialog' }))
   let snap = ok(await h.call('browser_snapshot'))
   const alertBtn = ref(snap, /button "Alert"/)
@@ -202,7 +204,7 @@ test('shadow DOM and same-origin iframes are readable and clickable', async () =
   assert.equal(await evalIn('() => document.title.replace("⚡ ","")'), '"iframe click"')
 })
 
-test('drag and drop (HTML5)', async () => {
+test('drag and drop (HTML5)', NO_FF, async () => {
   const snap = ok(await h.call('browser_navigate', { url: h.site + '/dnd' }))
   ok(await h.call('browser_drag', { startRef: ref(snap, /button "Drag me"/), endRef: ref(snap, /region "Drop zone"/) }))
   assert.equal(await evalIn('() => document.title.replace("⚡ ","")'), '"dropped payload"')

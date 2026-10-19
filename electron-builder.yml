@@ -26,6 +26,9 @@ extraResources:
   # Jolty's own browser extension: copied to the user's data folder, then loaded by the browser from there
   - from: browser-extension
     to: browser-extension
+  # the same for Firefox, which has no DevTools protocol for extensions and needs its own script
+  - from: browser-extension-firefox
+    to: browser-extension-firefox
   - from: build/icon.ico
     to: icon.ico
   # Microsoft Visual C++ runtime, installed by the setup when missing (downloaded by CI, see README)

@@ -105,6 +105,12 @@ const BROWSERS: Record<BrowserApp, { name: string; exe: string[]; data: string; 
     exe: [path.join(env('PROGRAMFILES'), 'BraveSoftware/Brave-Browser/Application/brave.exe'), path.join(env('LOCALAPPDATA'), 'BraveSoftware/Brave-Browser/Application/brave.exe')],
     data: path.join(env('LOCALAPPDATA'), 'BraveSoftware/Brave-Browser/User Data'),
     progId: /^BraveHTML/i
+  },
+  firefox: {
+    name: 'Firefox',
+    exe: [path.join(env('PROGRAMFILES'), 'Mozilla Firefox/firefox.exe'), path.join(env('PROGRAMFILES(X86)'), 'Mozilla Firefox/firefox.exe'), path.join(env('LOCALAPPDATA'), 'Mozilla Firefox/firefox.exe')],
+    data: '',
+    progId: /^FirefoxURL/i
   }
 }
 
@@ -135,6 +141,7 @@ const EXTENSION_ID = 'mmlmfjhmonkocbjadbfplnigmagldckm'
 
 /** Chromium browsers that have the Playwright extension in some profile (the folder exists once installed). */
 function withExtension(app: BrowserApp): boolean {
+  if (!BROWSERS[app].data) return false
   try {
     return fs.readdirSync(BROWSERS[app].data).some((d) => /^(Default|Profile \d+)$/.test(d) && fs.existsSync(path.join(BROWSERS[app].data, d, 'Extensions', EXTENSION_ID)))
   } catch {
@@ -159,13 +166,13 @@ export function browsers(): BrowserInfo {
 }
 
 /** The browser Jolty uses (name + launcher), for "Open in Vivaldi" style menu items. */
-const SCHEME: Record<BrowserApp, string> = { chrome: 'chrome', vivaldi: 'vivaldi', edge: 'edge', brave: 'brave' }
+const SCHEME: Record<BrowserApp, string> = { chrome: 'chrome', vivaldi: 'vivaldi', edge: 'edge', brave: 'brave', firefox: 'about' }
 
 export function activeBrowser(): { name: string; open: (url: string) => void; extensionsUrl: string } | undefined {
   const app = browsers().active
   const exe = app && installedExe(app)
   if (!app || !exe) return undefined
-  return { name: BROWSERS[app].name, open: (url) => spawn(exe, [url], { detached: true, stdio: 'ignore' }).unref(), extensionsUrl: `${SCHEME[app]}://extensions` }
+  return { name: BROWSERS[app].name, open: (url) => spawn(exe, [url], { detached: true, stdio: 'ignore' }).unref(), extensionsUrl: app === 'firefox' ? 'about:debugging#/runtime/this-firefox' : `${SCHEME[app]}://extensions` }
 }
 
 function cliPath(): string {

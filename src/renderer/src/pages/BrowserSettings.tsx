@@ -97,7 +97,7 @@ export function BrowserSettings({ s, setS }: { s: AppSettings; setS: (v: AppSett
             </option>
           ))}
         </select>
-        <div className="hint">{tr("Merge cu orice browser construit pe Chromium: Chrome, Vivaldi, Edge, Brave.")}</div>
+        <div className="hint">{tr("Merge cu Chrome, Vivaldi, Edge, Brave și Firefox.")}</div>
       </div>
 
       {mode === 'jolty' ? (
@@ -125,26 +125,39 @@ export function BrowserSettings({ s, setS }: { s: AppSettings; setS: (v: AppSett
                     <ExternalLink size={13} /> {native?.installed ? tr("Deschide pagina de extensii") : tr("Instalează extensia")}
                   </button>
                 </li>
-                <li>{tr("Pe pagina de extensii pornește „Mod dezvoltator” (colț dreapta sus).")}</li>
-                <li>
-                  {tr("Apasă „Încarcă nepachetată” și alege folderul:")}
-                  {native?.dir && (
-                    <span className="row" style={{ gap: 8, marginTop: 4 }}>
-                      <code className="mono small">{native.dir}</code>
-                      <button
-                        className="btn ghost small"
-                        onClick={() => {
-                          void navigator.clipboard.writeText(native.dir)
-                          setCopied(true)
-                          setTimeout(() => setCopied(false), 1500)
-                        }}
-                      >
-                        {copied ? <Check size={13} /> : <Copy size={13} />}
-                      </button>
-                    </span>
-                  )}
-                </li>
-                <li>{tr("Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.")}</li>
+                {native?.firefox ? (
+                  <li>
+                    {tr("Pe pagina deschisă apasă „Încarcă un supliment temporar” (în engleză „Load Temporary Add-on”) și alege fișierul manifest.json din folderul:")}
+                    {native.dir && (
+                      <span className="row" style={{ gap: 8, marginTop: 4 }}>
+                        <code className="mono small">{native.dir}</code>
+                      </span>
+                    )}
+                  </li>
+                ) : (
+                  <>
+                    <li>{tr("Pe pagina de extensii pornește „Mod dezvoltator” (colț dreapta sus).")}</li>
+                    <li>
+                      {tr("Apasă „Încarcă nepachetată” și alege folderul:")}
+                      {native?.dir && (
+                        <span className="row" style={{ gap: 8, marginTop: 4 }}>
+                          <code className="mono small">{native.dir}</code>
+                          <button
+                            className="btn ghost small"
+                            onClick={() => {
+                              void navigator.clipboard.writeText(native.dir)
+                              setCopied(true)
+                              setTimeout(() => setCopied(false), 1500)
+                            }}
+                          >
+                            {copied ? <Check size={13} /> : <Copy size={13} />}
+                          </button>
+                        </span>
+                      )}
+                    </li>
+                  </>
+                )}
+                <li>{native?.firefox ? tr("Gata: starea de mai sus devine „Conectată”. Firefox șterge suplimentele temporare când se închide, deci după repornire repetă pașii.") : tr("Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.")}</li>
               </ol>
             </>
           )}

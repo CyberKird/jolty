@@ -21,11 +21,13 @@ export interface Harness {
 }
 
 export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Harness> {
+  // JBROWSER_FIREFOX=<firefox.exe> runs the same tests in Firefox, with the Firefox extension loaded by web-ext
+  const firefox = process.env.JBROWSER_FIREFOX
   const chrome = process.env.JBROWSER_CHROME || path.join(process.env.LOCALAPPDATA || '', 'ms-playwright/chromium-1234/chrome-win64/chrome.exe')
-  if (!fs.existsSync(chrome)) throw new Error('no test Chromium at ' + chrome)
+  if (!firefox && !fs.existsSync(chrome)) throw new Error('no test Chromium at ' + chrome)
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'jbrowser-test-'))
   const ext = path.join(root, 'ext')
-  fs.cpSync(path.resolve('browser-extension'), ext, { recursive: true })
+  fs.cpSync(path.resolve(firefox ? 'browser-extension-firefox' : 'browser-extension'), ext, { recursive: true })
 
   const site = http.createServer((req, res) => {
     const url = new URL(req.url || '/', 'http://x')
@@ -52,7 +54,9 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
   const port = await hub.start()
   fs.writeFileSync(path.join(ext, 'config.json'), JSON.stringify({ token: TOKEN, ports: [port] }))
 
-  const proc: ChildProcess = spawn(
+  const proc: ChildProcess = firefox
+    ? spawn('npx', ['--yes', 'web-ext', 'run', '--source-dir', ext, '--firefox', firefox, '--firefox-profile', path.join(root, 'profile'), '--profile-create-if-missing', '--no-reload', '--no-input', '--start-url', 'about:blank'].map((a) => `"${a}"`), { stdio: process.env.JBROWSER_DEBUG ? 'inherit' : 'ignore', shell: true })
+    : spawn(
     chrome,
     [`--user-data-dir=${path.join(root, 'profile')}`, `--load-extension=${ext}`, `--disable-extensions-except=${ext}`, ...(process.env.JBROWSER_HEADFUL ? [] : ['--headless=new']), '--no-first-run', '--no-default-browser-check', '--window-size=1280,900', 'about:blank'],
     { stdio: 'ignore' }
@@ -60,7 +64,8 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
   const end = Date.now() + 30000
   while (!hub.connected && Date.now() < end) await new Promise((r) => setTimeout(r, 200))
   if (!hub.connected) {
-    proc.kill()
+    if (firefox && proc.pid) spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore' })
+    else proc.kill()
     throw new Error('the extension did not connect to the hub in 30s')
   }
 
@@ -83,7 +88,9 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
       }
     },
     async stop() {
-      proc.kill()
+      // web-ext starts Firefox as a child of a shell: the whole tree has to go
+      if (firefox && proc.pid) spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore' })
+      else proc.kill()
       await hub.stop()
       site.close()
       await new Promise((r) => setTimeout(r, 400))
