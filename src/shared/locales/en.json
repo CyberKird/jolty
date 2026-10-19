@@ -828,5 +828,8 @@
  "PC-ul intră în sleep": "The PC goes to sleep",
  "PC-ul intră în hibernare": "The PC hibernates",
  "Sesiunea se închide": "The session ends",
- "PC-ul se blochează": "The PC locks"
+ "PC-ul se blochează": "The PC locks",
+ "Trage ca să schimbi mărimea; dublu clic revine la mărimea inițială": "Drag to resize; double-click to go back to the default size",
+ "Înălțimea consumului live": "Height of live usage",
+ "Lățimea barei laterale": "Sidebar width"
 }

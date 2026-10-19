@@ -697,13 +697,13 @@ export function ChatView({ session }: { session: SessionMeta }) {
         <span className="meta-chip" title={session.cwd}>
           {basename(session.cwd)}
         </span>
-        <span className="meta-chip">{profile?.name || tr("profil șters")}</span>
+        <span className="meta-chip" title={profile?.name}>{profile?.name || tr("profil șters")}</span>
         <div className="spacer" />
         <ContextMeter sessionId={session.id} running={running} />
         <MiniLimits profileId={session.profileId} />
         <ReviewButton session={session} running={running} items={items} />
         <HandoffMenu session={session} profiles={profiles} />
-        <button className="btn ghost small icon" onClick={() => setLiveOpen(!liveOpen)} title={liveOpen ? 'Ascunde panoul Live' : tr("Arată panoul Live")}>
+        <button className="btn ghost small icon" onClick={() => setLiveOpen(!liveOpen)} title={liveOpen ? tr("Închide panoul Live") : tr("Arată panoul Live")}>
           {liveOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
         </button>
       </div>

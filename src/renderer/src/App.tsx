@@ -67,7 +67,26 @@ function TitleBar() {
 }
 
 export function App() {
-  const { page, sessions, activeId, toasts, sidebarOpen, loadProfiles, loadSessions, loadUsage, onEvent } = useStore()
+  const { page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent } = useStore()
+
+  // Below 1180 px (with the sidebar shown) the live panel is a drawer over the chat. Making the window
+  // that narrow closes it, so it never lands on top of the conversation; widening it again brings it back.
+  useEffect(() => {
+    const narrow = window.matchMedia('(max-width: 1180px)')
+    let closedBySize = false
+    const onChange = (): void => {
+      const s = useStore.getState()
+      if (narrow.matches && s.sidebarOpen && s.liveOpen) {
+        closedBySize = true
+        s.setLiveOpen(false)
+      } else if (!narrow.matches && closedBySize) {
+        closedBySize = false
+        s.setLiveOpen(true)
+      }
+    }
+    narrow.addEventListener('change', onChange)
+    return () => narrow.removeEventListener('change', onChange)
+  }, [])
 
   useEffect(() => {
     void loadProfiles()
@@ -121,6 +140,8 @@ export function App() {
         </Suspense>
       </main>
       {isChat ? <LivePanel session={session} /> : <div />}
+      {/* shown only while the live panel is a drawer (CSS): dims the chat, a click closes the drawer */}
+      {isChat && liveOpen && <div className="live-scrim" onClick={() => setLiveOpen(false)} aria-hidden />}
       <ContextMenu />
       <PowerBar />
       <div className="toast-stack" role="status" aria-live="polite">

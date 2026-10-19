@@ -828,5 +828,8 @@
  "PC-ul intră în sleep": "Le PC se met en veille",
  "PC-ul intră în hibernare": "Le PC passe en hibernation",
  "Sesiunea se închide": "La session se ferme",
- "PC-ul se blochează": "Le PC se verrouille"
+ "PC-ul se blochează": "Le PC se verrouille",
+ "Trage ca să schimbi mărimea; dublu clic revine la mărimea inițială": "Faites glisser pour redimensionner ; double-clic pour revenir à la taille par défaut",
+ "Înălțimea consumului live": "Hauteur de la consommation en direct",
+ "Lățimea barei laterale": "Largeur de la barre latérale"
 }

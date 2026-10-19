@@ -1,5 +1,5 @@
-import { ExternalLink, RotateCw, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Code2, ExternalLink, Eye, FileDiff as DiffIcon, FolderTree, Globe, ListChecks, RotateCw, SquareTerminal, X, type LucideIcon } from 'lucide-react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
 import { clock, etaLabel, timeLeft, type Clock } from '@shared/eta'
 import { api, basename, useStore, type Draft } from '../store'
@@ -93,22 +93,25 @@ function Signal({ phase }: { phase: Phase }) {
     return () => ro.disconnect()
   }, [])
   const H = 64
+  const total = w + phase.period * 2
   const d = useMemo(() => wavePath(phase.wave, phase.amp, phase.period, w, H / 2), [phase.wave, phase.amp, phase.period, w])
+  // the wave scrolls as an HTML layer: the compositor moves it, nothing is repainted per frame
   return (
-    <div ref={ref}>
-      <svg className="state-line" viewBox={`0 0 ${w} ${H}`} preserveAspectRatio="none" aria-hidden>
-        <line x1={0} x2={w} y1={H / 2} y2={H / 2} stroke="rgba(255,255,255,.06)" />
-        <g
-          key={phase.key}
-          style={{
-            animation: phase.on ? `signal-${phase.key} ${phase.speed}s linear infinite` : undefined,
-            filter: phase.on ? 'drop-shadow(0 0 4px rgba(212,255,0,.45))' : undefined
-          }}
-        >
-          <path d={d} stroke={phase.color} />
-        </g>
-        <style>{`@keyframes signal-${phase.key} { to { transform: translateX(-${phase.period}px) } }`}</style>
-      </svg>
+    <div ref={ref} className="state-line" aria-hidden>
+      <div
+        key={phase.key}
+        className="state-wave"
+        style={{
+          width: total,
+          animation: phase.on ? `signal-${phase.key} ${phase.speed}s linear infinite` : undefined,
+          filter: phase.on ? 'drop-shadow(0 0 4px rgba(212,255,0,.45))' : undefined
+        }}
+      >
+        <svg width={total} height="100%" viewBox={`0 0 ${total} ${H}`} preserveAspectRatio="none">
+          <path d={d} stroke={phase.color} vectorEffect="non-scaling-stroke" />
+        </svg>
+      </div>
+      <style>{`@keyframes signal-${phase.key} { to { transform: translateX(-${phase.period}px) } }`}</style>
     </div>
   )
 }
@@ -511,6 +514,56 @@ function PreviewView({ source, cwd, drafts }: { source: Source; cwd: string; dra
 }
 
 type Tab = 'changes' | 'plan' | 'terminal' | 'code' | 'preview' | 'browser' | 'files'
+type TabDef = { id: Tab; label: string; icon: LucideIcon; count?: string }
+
+/** The tab strip: when the labels do not fit, the tabs not in use keep only their icon; a volt bar slides to the one in use. */
+function LiveTabs({ tabs, tab, onPick }: { tabs: TabDef[]; tab: Tab; onPick: (t: Tab) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const full = useRef(0)
+  const [compact, setCompact] = useState(false)
+  const [bar, setBar] = useState<{ x: number; w: number }>()
+  const labels = tabs.map((t) => t.label + (t.count || '')).join('|')
+  // new labels or counts: measure again with every label shown (layout effects run before paint, no flicker)
+  useLayoutEffect(() => setCompact(false), [labels])
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fit = (): void => {
+      if (!compact) {
+        full.current = el.scrollWidth
+        if (el.scrollWidth > el.clientWidth + 1) return setCompact(true)
+      } else if (el.clientWidth >= full.current) return setCompact(false)
+      const on = el.querySelector<HTMLElement>('.live-tab.on')
+      if (on) setBar((b) => (b?.x === on.offsetLeft && b.w === on.offsetWidth ? b : { x: on.offsetLeft, w: on.offsetWidth }))
+      // the one in use (also when the model switches it) is never left off the edge
+      if (el.clientWidth && el.scrollWidth > el.clientWidth) on?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [compact, labels, tab])
+  return (
+    <div ref={ref} className={`live-tabs ${compact ? 'compact' : ''}`} role="tablist" aria-label={tr("Panouri")}>
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          role="tab"
+          aria-selected={tab === t.id}
+          aria-label={t.count ? `${t.label} ${t.count}` : t.label}
+          title={compact && tab !== t.id ? t.label : undefined}
+          className={`live-tab ${tab === t.id ? 'on' : ''}`}
+          onClick={() => onPick(t.id)}
+        >
+          <t.icon size={13} strokeWidth={1.8} />
+          <span className="live-tab-label">{t.label}</span>
+          {t.count && <span className="live-tab-count">{t.count}</span>}
+        </button>
+      ))}
+      {bar && <span className="live-tab-bar" style={{ width: bar.w, transform: `translateX(${bar.x}px)` }} aria-hidden />}
+    </div>
+  )
+}
 
 const WIDTH_KEY = 'jolty.liveWidth'
 function savedWidth(): number {
@@ -561,25 +614,24 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   else if (phase.key === 'plan' && plan?.length) auto.current = 'plan'
   else if (phase.key === 'idle' && changes.length) auto.current = 'changes'
   const tab = picked || auto.current
-  // seven tabs do not all fit: the one in use (also when the model switches it) is never left off the edge
-  useEffect(() => {
-    document.querySelector('.live-tab.on')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
-  }, [tab, open])
 
   const [width, setWidth] = useState(savedWidth)
   const [resizing, setResizing] = useState(false)
+  const panel = useRef<HTMLElement>(null)
   const startResize = (e: React.PointerEvent): void => {
     setResizing(true)
     const x0 = e.clientX
     const w0 = width
     let w = w0
+    // the drag sets the width on the element itself; React renders the panel once, on release
     const move = (ev: PointerEvent): void => {
       // the panel sits on the left in right-to-left layouts, so dragging right widens it there
       const pull = document.documentElement.dir === 'rtl' ? ev.clientX - x0 : x0 - ev.clientX
       w = Math.max(300, Math.min(window.innerWidth * 0.55, w0 + pull))
-      setWidth(w)
+      if (panel.current) panel.current.style.width = `${w}px`
     }
     const up = (): void => {
+      setWidth(w)
       setResizing(false)
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
@@ -593,18 +645,18 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
     window.addEventListener('pointerup', up)
   }
 
-  const TABS: { id: Tab; label: string; count?: string }[] = [
-    { id: 'changes', label: tr("Modificări"), count: changes.length ? String(changes.length) : undefined },
-    { id: 'plan', label: tr("Plan"), count: plan?.length ? `${planDone}/${plan.length}` : undefined },
-    { id: 'terminal', label: tr("Terminal"), count: runs ? String(runs) : undefined },
-    { id: 'code', label: tr("Cod live"), count: drafts.some((d) => !d.done) ? '●' : undefined },
-    { id: 'preview', label: tr("Previzualizare"), count: previewable && drafts.some((d) => !d.done) ? '●' : undefined },
-    { id: 'browser', label: tr("Browser"), count: browsing ? '●' : undefined },
-    { id: 'files', label: tr("Fișiere"), count: fileCount ? String(fileCount) : undefined }
+  const TABS: TabDef[] = [
+    { id: 'changes', label: tr("Modificări"), icon: DiffIcon, count: changes.length ? String(changes.length) : undefined },
+    { id: 'plan', label: tr("Plan"), icon: ListChecks, count: plan?.length ? `${planDone}/${plan.length}` : undefined },
+    { id: 'terminal', label: tr("Terminal"), icon: SquareTerminal, count: runs ? String(runs) : undefined },
+    { id: 'code', label: tr("Cod live"), icon: Code2, count: drafts.some((d) => !d.done) ? '●' : undefined },
+    { id: 'preview', label: tr("Previzualizare"), icon: Eye, count: previewable && drafts.some((d) => !d.done) ? '●' : undefined },
+    { id: 'browser', label: tr("Browser"), icon: Globe, count: browsing ? '●' : undefined },
+    { id: 'files', label: tr("Fișiere"), icon: FolderTree, count: fileCount ? String(fileCount) : undefined }
   ]
 
   return (
-    <aside className={`live ${open ? '' : 'closed'} ${resizing ? 'resizing' : ''}`} style={open ? { width } : undefined} aria-label={tr("Ce face modelul acum")}>
+    <aside ref={panel} className={`live ${open ? '' : 'closed'} ${resizing ? 'resizing' : ''}`} style={open ? { width } : undefined} aria-label={tr("Ce face modelul acum")}>
       {open && <div className="live-resize" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label={tr("Lățimea panoului")} />}
       <div className="live-section live-status">
         <div className="live-label">
@@ -621,16 +673,17 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
         </div>
         {phase.detail && <div className={`state-detail ${phase.code ? 'code' : ''}`}>{phase.detail}</div>}
         <div className="counters">
+          {/* a number that changes ticks once (the key remounts it) */}
           <div className="counter">
-            <div className="v">{reads}</div>
+            <div className="v tick" key={reads}>{reads}</div>
             <div className="k">{tr("citite")}</div>
           </div>
           <div className="counter">
-            <div className="v">{edits}</div>
+            <div className="v tick" key={edits}>{edits}</div>
             <div className="k">{tr("modificate")}</div>
           </div>
           <div className="counter">
-            <div className="v">{runs}</div>
+            <div className="v tick" key={runs}>{runs}</div>
             <div className="k">{tr("comenzi")}</div>
           </div>
           <div className="counter" title={tr("Cât lucrează la mesajul curent")}>
@@ -639,15 +692,8 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
           </div>
         </div>
       </div>
-      <div className="live-tabs" role="tablist" aria-label={tr("Panouri")}>
-        {TABS.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} className={`live-tab ${tab === t.id ? 'on' : ''}`} onClick={() => setPicked(t.id)}>
-            {t.label}
-            {t.count && <span className="live-tab-count">{t.count}</span>}
-          </button>
-        ))}
-      </div>
-      <div className="live-pane" role="tabpanel">
+      <LiveTabs tabs={TABS} tab={tab} onPick={setPicked} />
+      <div className="live-pane" role="tabpanel" key={tab}>
         {tab === 'changes' && <ChangesView changes={changes} cwd={cwd} />}
         {tab === 'plan' &&
           (plan?.length ? <PlanView steps={plan} timer={timer} running={running} now={now} /> :<div className="faint small">{tr("Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.")}</div>)}

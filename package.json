@@ -1,10 +1,10 @@
 {
   "name": "jolty",
   "productName": "Jolty",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Desktop app for Claude Code and Codex: multiple profiles, API keys, model picker, usage dashboard",
   "author": "CyberKird",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "main": "out/main/index.js",
   "scripts": {

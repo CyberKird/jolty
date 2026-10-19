@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { flushSync } from 'react-dom'
 import { tick, type Clock } from '@shared/eta'
 import type {
   ChatEvent,
@@ -102,6 +103,13 @@ function upsert(list: ChatItem[], item: ChatItem): ChatItem[] {
   return next
 }
 
+/** Page switches cross-fade the main column (View Transitions); instant with Reduce motion. */
+function swapPage(update: () => void): void {
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown }
+  if (!doc.startViewTransition || document.documentElement.classList.contains('reduce-motion')) return update()
+  doc.startViewTransition(() => flushSync(update))
+}
+
 export const useStore = create<State>((set, get) => ({
   page: 'chat',
   profiles: [],
@@ -127,7 +135,9 @@ export const useStore = create<State>((set, get) => ({
   liveOpen: window.innerWidth >= 1180,
   sidebarOpen: true,
 
-  setPage: (page) => set({ page }),
+  setPage: (page) => {
+    if (get().page !== page) swapPage(() => set({ page }))
+  },
   setLiveOpen: (liveOpen) => set({ liveOpen }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
 

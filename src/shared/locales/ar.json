@@ -828,5 +828,8 @@
  "PC-ul intră în sleep": "ينتقل الكمبيوتر إلى وضع السكون",
  "PC-ul intră în hibernare": "يدخل الكمبيوتر في وضع الإسبات",
  "Sesiunea se închide": "تنتهي الجلسة",
- "PC-ul se blochează": "يُقفل الكمبيوتر"
+ "PC-ul se blochează": "يُقفل الكمبيوتر",
+ "Trage ca să schimbi mărimea; dublu clic revine la mărimea inițială": "اسحب لتغيير الحجم، وانقر نقرًا مزدوجًا للعودة إلى الحجم الافتراضي",
+ "Înălțimea consumului live": "ارتفاع الاستهلاك المباشر",
+ "Lățimea barei laterale": "عرض الشريط الجانبي"
 }

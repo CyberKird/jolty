@@ -74,3 +74,7 @@ Interface texts go through `tr()` from `src/shared/i18n.ts`, with the dictionari
 | `src/shared` | shared types, translations, request complexity estimates |
 | `build` | the icon and the installer script |
 | `test` | end to end, interface and packaged app tests |
+
+## License
+
+Copyright (c) 2026 Joltarise. All rights reserved. The code is public to read, not to reuse: see [LICENSE](LICENSE).

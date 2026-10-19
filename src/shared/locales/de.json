@@ -828,5 +828,8 @@
  "PC-ul intră în sleep": "Der PC wechselt in den Energiesparmodus",
  "PC-ul intră în hibernare": "Der PC wechselt in den Ruhezustand",
  "Sesiunea se închide": "Die Sitzung wird beendet",
- "PC-ul se blochează": "Der PC wird gesperrt"
+ "PC-ul se blochează": "Der PC wird gesperrt",
+ "Trage ca să schimbi mărimea; dublu clic revine la mărimea inițială": "Ziehen, um die Größe zu ändern; Doppelklick stellt die Standardgröße wieder her",
+ "Înălțimea consumului live": "Höhe von Verbrauch live",
+ "Lățimea barei laterale": "Breite der Seitenleiste"
 }

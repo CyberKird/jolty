@@ -10,6 +10,80 @@ function money(n: number, currency = 'USD'): string {
   return currency === 'USD' ? `$${v}` : `${v} ${currency}`
 }
 
+/**
+ * Drag handle for the sidebar's width and for the split between conversations and live usage.
+ * While dragging the size goes straight to a CSS variable (no React render per move); it is remembered,
+ * and a double click returns to the default.
+ */
+function Resizer({ axis, label, storeKey, cssVar, host, size, min, max }: {
+  axis: 'x' | 'y'
+  label: string
+  storeKey: string
+  cssVar: string
+  host: () => HTMLElement | null
+  size: () => number
+  min: number
+  max: () => number
+}) {
+  useEffect(() => {
+    try {
+      const v = Number(localStorage.getItem(storeKey))
+      if (v) host()?.style.setProperty(cssVar, `${v}px`)
+    } catch {
+      // remembering the size is a convenience only
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const save = (v: number | null): void => {
+    try {
+      if (v) localStorage.setItem(storeKey, String(v))
+      else localStorage.removeItem(storeKey)
+    } catch {
+      // remembering the size is a convenience only
+    }
+  }
+  const start = (e: React.PointerEvent): void => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const from = size()
+    const top = max()
+    const x0 = e.clientX
+    const y0 = e.clientY
+    const flip = document.documentElement.dir === 'rtl' ? -1 : 1
+    let v = from
+    const root = document.documentElement
+    root.classList.add('resizing', `resizing-${axis}`)
+    const move = (ev: PointerEvent): void => {
+      // the width grows toward the chat; the usage list grows upward
+      const d = axis === 'x' ? (ev.clientX - x0) * flip : y0 - ev.clientY
+      v = Math.round(Math.max(min, Math.min(top, from + d)))
+      host()?.style.setProperty(cssVar, `${v}px`)
+    }
+    const up = (): void => {
+      root.classList.remove('resizing', `resizing-${axis}`)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      save(v)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  return (
+    <div
+      className={`resizer resizer-${axis}`}
+      role="separator"
+      aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
+      aria-label={label}
+      title={tr("Trage ca să schimbi mărimea; dublu clic revine la mărimea inițială")}
+      onPointerDown={start}
+      onDoubleClick={() => {
+        host()?.style.removeProperty(cssVar)
+        save(null)
+      }}
+    />
+  )
+}
+
 function isMiMoProfile(p: { auth: string; baseUrl?: string }): boolean {
   return p.auth === 'endpoint' && /^https:\/\/(?:api|token-plan-cn)\.xiaomimimo\.com(?:[:/]|$)/i.test(p.baseUrl || '')
 }
@@ -27,6 +101,17 @@ function UsageMeter() {
   const dragProps = useProfileDrag(rows.map((p) => p.id))
   return (
     <section className="meter" aria-label={tr("Consum live")}>
+      <Resizer
+        axis="y"
+        label={tr("Înălțimea consumului live")}
+        storeKey="jolty.meterHeight"
+        cssVar="--meter-h"
+        host={() => document.querySelector('.sidebar')}
+        size={() => document.querySelector('.meter')?.getBoundingClientRect().height || 0}
+        min={64}
+        // the conversation list keeps at least about two rows
+        max={() => (document.querySelector('.meter')?.getBoundingClientRect().height || 0) + (document.querySelector('.session-list')?.getBoundingClientRect().height || 0) - 64}
+      />
       <div className="meter-head">
         <span className={`dot ${running ? 'running' : ''}`} style={{ background: running ? 'var(--volt)' : 'var(--grey-2)' }} />
         <span className="label">{tr("Consum live")}</span>
@@ -140,12 +225,25 @@ export function Sidebar() {
     toast(tr("Conversația a fost scoasă din Jolty"))
   }
 
+  const at = NAV.findIndex((n) => n.id === page)
   return (
     <nav className="sidebar" aria-label={tr("Navigare")}>
+      <Resizer
+        axis="x"
+        label={tr("Lățimea barei laterale")}
+        storeKey="jolty.sideWidth"
+        cssVar="--side-w"
+        host={() => document.querySelector('.app')}
+        size={() => document.querySelector('.sidebar')?.getBoundingClientRect().width || 248}
+        min={200}
+        max={() => Math.min(440, window.innerWidth * 0.3)}
+      />
       <button className="btn primary new-chat" onClick={() => void openSession(undefined)}>
         <Plus size={14} strokeWidth={2.5} /> {tr("Conversație nouă")}
       </button>
       <div className="nav">
+        {/* one highlight that slides to the page in use */}
+        <span className={`nav-glow ${at < 0 ? 'off' : ''}`} style={{ '--i': Math.max(at, 0) } as React.CSSProperties} aria-hidden />
         {NAV.map((n) => (
           <button key={n.id} className={`nav-item ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)}>
             <n.icon size={15} strokeWidth={1.6} /> {n.label}

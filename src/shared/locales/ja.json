@@ -828,5 +828,8 @@
  "PC-ul intră în sleep": "PC がスリープします",
  "PC-ul intră în hibernare": "PC が休止状態になります",
  "Sesiunea se închide": "サインアウトします",
- "PC-ul se blochează": "PC がロックされます"
+ "PC-ul se blochează": "PC がロックされます",
+ "Trage ca să schimbi mărimea; dublu clic revine la mărimea inițială": "ドラッグでサイズを変更、ダブルクリックで既定のサイズに戻ります",
+ "Înălțimea consumului live": "ライブ使用量の高さ",
+ "Lățimea barei laterale": "サイドバーの幅"
 }

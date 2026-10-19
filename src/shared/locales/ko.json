@@ -828,5 +828,8 @@
  "PC-ul intră în sleep": "PC가 절전 모드로 들어갑니다",
  "PC-ul intră în hibernare": "PC가 최대 절전 모드로 들어갑니다",
  "Sesiunea se închide": "로그아웃됩니다",
- "PC-ul se blochează": "PC가 잠깁니다"
+ "PC-ul se blochează": "PC가 잠깁니다",
+ "Trage ca să schimbi mărimea; dublu clic revine la mărimea inițială": "드래그하여 크기 조절, 더블클릭하면 기본 크기로 돌아갑니다",
+ "Înălțimea consumului live": "실시간 사용량 높이",
+ "Lățimea barei laterale": "사이드바 너비"
 }

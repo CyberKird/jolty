@@ -1,0 +1,20 @@
+Jolty
+Copyright (c) 2026 Joltarise. All rights reserved.
+
+Jolty, its source code, design, name and logos are the property of Joltarise.
+The source code is published for reading only. No license to it is granted.
+
+Without prior written permission from Joltarise you may not copy, modify,
+merge, publish, distribute, sublicense or sell this software or any part of it,
+in source or compiled form, and you may not create works based on it.
+
+You may download the official Jolty installer from
+https://github.com/CyberKird/jolty/releases and run it for your own use.
+
+Third-party components that ship with Jolty (among them Electron, Claude Code,
+Codex and the packages listed in package.json) remain under their own licenses
+and are not covered by this notice.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY ARISING FROM THE USE OF THE SOFTWARE.

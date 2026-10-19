@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.5
+
+- The window can be any size without parts landing on each other. On a narrow window (with the sidebar shown) the Live panel opens as a drawer over a dimmed chat: a click on the chat closes it, making the window that narrow closes it by itself, and widening the window brings it back. With the sidebar hidden there is room again and the panel sits next to the chat. However wide you drag the panel, the chat keeps at least 480 px.
+- The sidebar can be resized: drag its edge. The line between Conversations and Live usage can be dragged up or down too. Both sizes are remembered, and a double click on a handle goes back to the default size.
+- The Live panel's tabs have icons. When their names do not fit, the tabs not in use show only the icon (the name on hover), and a volt bar slides to the tab in use.
+- The composer bar no longer overlaps itself in long languages or in a narrow chat: the model and mode names shorten with an ellipsis, a narrow composer keeps only the folder icon, and the power and browser buttons keep their size.
+- The welcome headline is sized to the chat column instead of the whole window, and the folder and account chips in the chat header end with an ellipsis instead of being cut mid-letter. The Live panel button's tooltip is now translated.
+- Smoother: the Live signal now moves on the GPU. Before, it was redrawn on every frame while the model worked (about 48 ms of main thread work per second, now about 3). Dragging the Live panel's edge no longer re-renders the whole panel on every mouse move.
+- Motion: pages cross-fade when you switch them, the highlight in the sidebar slides to the page in use, a Live tab's content slides in, and the read, changed and commands counters tick when they change. Reduce motion in Settings still turns all of it off.
+- Jolty now has a proprietary license: the code is public to read, all rights reserved (see LICENSE).
+
 ## 0.5.4
 
 - Live preview of what the model is building: the Live panel has a new Preview tab. When the model makes an HTML page, Jolty serves the project folder on your own PC (127.0.0.1 only, no dot-files, nothing outside the project) and shows the page rendered, reloading by itself every time a file changes. A page still being written already shows while the model types it, so a client who is waiting sees the page take shape instead of a progress snake. When the model starts a dev server (Next.js, Vite, `serve`), the tab shows that server instead, and its own hot reload keeps it current. A server started in the background is found on the usual ports (3000, 5173, 8080 and a few more), and sites that forbid being framed (X-Frame-Options, frame-ancestors) still show up, because Jolty drops those two headers for pages from your own PC inside its window. The tab opens by itself while the model writes or edits, and has buttons to reload and to open the page in your browser.
