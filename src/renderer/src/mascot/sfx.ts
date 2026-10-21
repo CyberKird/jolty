@@ -47,7 +47,7 @@ function noise(a: AudioContext, len: number, vol: number, filter: BiquadFilterTy
   src.start(t)
 }
 
-export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape'
+export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape' | 'zap' | 'arrive'
 
 /** strength 0..1 scales the impact sounds */
 export function play(sound: Sound, strength = 0.5): void {
@@ -88,6 +88,15 @@ export function play(sound: Sound, strength = 0.5): void {
       return
     case 'click':
       return noise(a, 0.02, 0.05, 'highpass', 2500, out)
+    case 'zap':
+      // the teleport: a bright zip that sweeps up and a falling buzz under it
+      noise(a, 0.16, 0.07, 'bandpass', 700, out, 0, 6000)
+      return tone(a, { type: 'sawtooth', from: 1500, to: 260, len: 0.15, vol: 0.03 }, out)
+    case 'arrive':
+      // and where he lands: a short snap with a little crackle
+      noise(a, 0.05, 0.08, 'highpass', 3000, out)
+      tone(a, { from: 520, to: 180, len: 0.1, vol: 0.05 }, out)
+      return noise(a, 0.03, 0.04, 'highpass', 3800, out, 0.06)
     case 'scrape':
       return noise(a, 0.28, 0.025, 'bandpass', 900, out, 0, 400)
   }

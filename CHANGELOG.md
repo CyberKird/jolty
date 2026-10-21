@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.3
+
+### Fixes
+
+- The teleport zap has a sound now: a bright zip that sweeps up when he vanishes and a short snap with a little crackle where he lands. Like his other sounds it stays quiet while Jolty is not the window you are using.
+
 ## 0.7.2
 
 ### Fixes

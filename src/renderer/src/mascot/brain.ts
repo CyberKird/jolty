@@ -157,11 +157,13 @@ export class Brain {
     const dy = top === undefined ? 0 : ty - top
     this.mode = 'dash'
     this.set('dash', 'open')
+    play('zap')
     streak(this.x, this.y - 40, tx, ty - 40)
     this.face(tx < this.x ? -1 : 1)
     this.later(() => {
       const now = el ? visible(el)?.top : undefined
       this.place(el, tx, now === undefined ? ty : now + dy)
+      play('arrive')
       this.landed(0)
     }, 170)
   }
