@@ -9,6 +9,9 @@ export function soundsOn(v: boolean): void {
   on = v
 }
 
+// out of focus = nothing may sound, also what was already scheduled
+window.addEventListener('blur', () => void ctx?.suspend())
+
 type Note = { type?: OscillatorType; from: number; to?: number; at?: number; len: number; vol: number }
 
 function tone(a: AudioContext, n: Note, out: AudioNode): void {

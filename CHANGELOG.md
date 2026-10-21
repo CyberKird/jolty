@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.2
+
+### New
+
+- Notifications in Settings, each with its own switch: when a task finishes or stops with an error, when a model waits for you (a permission or a plan approval), and the Windows sound that goes with them. They only appear while Jolty is not in front, and clicking one brings it back.
+
+### Fixes
+
+- Jolty's sounds are cut the moment the window loses focus, including anything already scheduled, so nothing is heard while you work elsewhere.
+
 ## 0.6.1
 
 ### New

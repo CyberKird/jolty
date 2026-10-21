@@ -856,5 +856,13 @@
  "Nu am acces la microfon.": "माइक्रोफ़ोन तक पहुँच नहीं है।",
  "Oprește și scrie textul (Esc renunță)": "रोकें और टेक्स्ट लिखें (Esc छोड़ देता है)",
  "Sunetele lui Jolty": "Jolty की आवाज़ें",
- "Sunete scurte și încete când sare, aterizează, e aruncat sau se bucură. Tac cât lucrezi în altă fereastră.": "जब वह कूदता, उतरता, फेंका जाता या खुश होता है तो छोटी, धीमी आवाज़ें। दूसरी विंडो में काम करते समय चुप।"
+ "Sunete scurte și încete când sare, aterizează, e aruncat sau se bucură. Tac cât lucrezi în altă fereastră.": "जब वह कूदता, उतरता, फेंका जाता या खुश होता है तो छोटी, धीमी आवाज़ें। दूसरी विंडो में काम करते समय चुप।",
+ "Notificare la sfârșitul unei sarcini": "काम पूरा होने पर सूचना",
+ "Primești o notificare Windows când un model termină sau se oprește cu o eroare, cât timp Jolty nu e în față.": "जब Jolty सामने नहीं होता, तब कोई मॉडल काम पूरा करे या त्रुटि के साथ रुके तो आपको Windows सूचना मिलती है।",
+ "Notificare când ai de făcut ceva": "आपकी कार्रवाई चाहिए तो सूचना",
+ "Primești o notificare când un model așteaptă o permisiune sau aprobarea unui plan, cât timp Jolty nu e în față.": "जब Jolty सामने नहीं होता, तब कोई मॉडल अनुमति या योजना की मंज़ूरी का इंतज़ार करे तो आपको सूचना मिलती है।",
+ "Sunet la notificări": "सूचना की आवाज़",
+ "Sunetul Windows care însoțește notificările de mai sus.": "ऊपर की सूचनाओं के साथ बजने वाली Windows की आवाज़।",
+ "Jolty: planul așteaptă aprobarea ta": "Jolty: योजना आपकी मंज़ूरी का इंतज़ार कर रही है",
+ "Jolty: are nevoie de acordul tău": "Jolty: को आपकी अनुमति चाहिए"
 }

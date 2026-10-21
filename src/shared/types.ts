@@ -289,6 +289,12 @@ export interface AppSettings {
   mascot?: boolean
   /** Jolty's soft sounds; on unless false */
   mascotSounds?: boolean
+  /** Windows notification when a task finishes or stops with an error while Jolty is not in front; on unless false */
+  notifyDone?: boolean
+  /** notification when a model waits for you (permission, plan approval) while Jolty is not in front; on unless false */
+  notifyAttention?: boolean
+  /** the system's sound with those notifications; on unless false */
+  notifySound?: boolean
   /** the version What's new was last shown for: it opens once after each update */
   seenVersion?: string
   /** interface language code (see shared/i18n.ts); unset follows the system */

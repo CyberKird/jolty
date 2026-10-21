@@ -856,5 +856,13 @@
  "Nu am acces la microfon.": "No hay acceso al micrófono.",
  "Oprește și scrie textul (Esc renunță)": "Detener y escribir el texto (Esc lo descarta)",
  "Sunetele lui Jolty": "Sonidos de Jolty",
- "Sunete scurte și încete când sare, aterizează, e aruncat sau se bucură. Tac cât lucrezi în altă fereastră.": "Sonidos cortos y suaves cuando salta, aterriza, lo lanzas o celebra. Callan mientras trabajas en otra ventana."
+ "Sunete scurte și încete când sare, aterizează, e aruncat sau se bucură. Tac cât lucrezi în altă fereastră.": "Sonidos cortos y suaves cuando salta, aterriza, lo lanzas o celebra. Callan mientras trabajas en otra ventana.",
+ "Notificare la sfârșitul unei sarcini": "Avisar al terminar una tarea",
+ "Primești o notificare Windows când un model termină sau se oprește cu o eroare, cât timp Jolty nu e în față.": "Recibes una notificación de Windows cuando un modelo termina o se detiene con un error mientras Jolty no está en primer plano.",
+ "Notificare când ai de făcut ceva": "Avisar cuando tengas que actuar",
+ "Primești o notificare când un model așteaptă o permisiune sau aprobarea unui plan, cât timp Jolty nu e în față.": "Recibes una notificación cuando un modelo espera un permiso o la aprobación de un plan mientras Jolty no está en primer plano.",
+ "Sunet la notificări": "Sonido de las notificaciones",
+ "Sunetul Windows care însoțește notificările de mai sus.": "El sonido de Windows que acompaña las notificaciones anteriores.",
+ "Jolty: planul așteaptă aprobarea ta": "Jolty: el plan espera tu aprobación",
+ "Jolty: are nevoie de acordul tău": "Jolty: necesita tu permiso"
 }

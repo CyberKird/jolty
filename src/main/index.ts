@@ -66,16 +66,20 @@ const preview = new Preview()
 function send(e: ChatEvent): void {
   if (!win || win.isDestroyed()) return
   win.webContents.send('jolty:event', e)
-  // a finished turn while the user is elsewhere: a Windows notification that brings Jolty back
-  if (e.type === 'status' && e.status !== 'running' && !win.isFocused() && Notification.isSupported() && !process.env.JOLTY_TEST) {
-    const title = jolty.sessions().find((s) => s.id === e.sessionId)?.title || tr("Conversație")
-    const n = new Notification({ title: e.status === 'error' ? tr("Jolty: s-a oprit cu o eroare") : tr("Jolty: gata"), body: title, silent: false })
-    n.on('click', () => {
-      win?.show()
-      win?.focus()
-    })
-    n.show()
-  }
+  // while the user is elsewhere: a Windows notification that brings Jolty back (each kind has its own switch in Settings)
+  if (win.isFocused() || !Notification.isSupported() || process.env.JOLTY_TEST) return
+  const st = store.loadSettings()
+  let head: string | undefined
+  if (e.type === 'status' && e.status !== 'running' && st.notifyDone !== false) head = e.status === 'error' ? tr("Jolty: s-a oprit cu o eroare") : tr("Jolty: gata")
+  else if (e.type === 'permission' && st.notifyAttention !== false) head = e.request.plan ? tr("Jolty: planul așteaptă aprobarea ta") : tr("Jolty: are nevoie de acordul tău")
+  if (!head || (e.type !== 'status' && e.type !== 'permission')) return
+  const title = jolty.sessions().find((s) => s.id === e.sessionId)?.title || tr("Conversație")
+  const n = new Notification({ title: head, body: title, silent: st.notifySound === false })
+  n.on('click', () => {
+    win?.show()
+    win?.focus()
+  })
+  n.show()
 }
 
 function createWindow(): void {

@@ -139,6 +139,21 @@ export function SettingsPage() {
             </span>
           </span>
         </label>
+        {(
+          [
+            ['notifyDone', tr("Notificare la sfârșitul unei sarcini"), tr("Primești o notificare Windows când un model termină sau se oprește cu o eroare, cât timp Jolty nu e în față.")],
+            ['notifyAttention', tr("Notificare când ai de făcut ceva"), tr("Primești o notificare când un model așteaptă o permisiune sau aprobarea unui plan, cât timp Jolty nu e în față.")],
+            ['notifySound', tr("Sunet la notificări"), tr("Sunetul Windows care însoțește notificările de mai sus.")]
+          ] as const
+        ).map(([key, title, hint]) => (
+          <label key={key} className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
+            <input type="checkbox" checked={s[key] !== false} onChange={async (e) => setS(await api.app.saveSettings({ [key]: e.target.checked }))} />
+            <span>
+              <b>{title}</b>
+              <span className="muted small" style={{ display: 'block' }}>{hint}</span>
+            </span>
+          </label>
+        ))}
         <div className="card row" style={{ marginBottom: 14 }}>
           <Sparkles size={16} color="var(--volt)" />
           <span style={{ flex: 1 }}>
