@@ -89,20 +89,29 @@ class H(BaseHTTPRequestHandler):
             sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})
             sse(self, "message_delta", {"type": "message_delta", "delta": {"stop_reason": "tool_use", "stop_sequence": None}, "usage": {"output_tokens": 30}})
         elif want_write:
-            content = "\n".join(f"line {i}: jolty live code" for i in range(1, 41))
+            # WRITE_LINES=n / WRITE_NAME=page.html: a big file, streamed in small pieces like a real model
+            lines = re.search(r"WRITE_LINES=(\d+)", tail)
+            lines = int(lines.group(1)) if lines else 40
+            name = re.search(r"WRITE_NAME=(\S+)", tail)
+            name = name.group(1) if name else "live_demo.txt"
+            if name.endswith(".html"):
+                content = "<!doctype html>\n<html><body>\n" + "\n".join(f'  <div class="card"><h2>Card {i}</h2><p>Un paragraf de text pentru pagina.</p></div>' for i in range(1, lines + 1)) + "\n</body></html>"
+            else:
+                content = "\n".join(f"line {i}: jolty live code" for i in range(1, lines + 1))
             # real models write absolute paths (Claude Code's file checkpoints track those)
             sys_text = flatten(req.get("system")) if isinstance(req.get("system"), list) else str(req.get("system") or "")
             wd = re.search(r"[Ww]orking directory: *([^\r\n]+)", sys_text)
-            target = os.path.join(wd.group(1).strip(), "live_demo.txt") if wd else "live_demo.txt"
+            target = os.path.join(wd.group(1).strip(), name) if wd else name
             forced = re.search(r"WRITE_TO=(\S+)", tail)
             if forced:
                 target = forced.group(1)
             payload = json.dumps({"file_path": target, "content": content})
             sse(self, "content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "toolu_w" + mid, "name": "Write", "input": {}}})
-            step = max(1, len(payload) // 12)
+            big = len(payload) > 20000
+            step = 600 if big else max(1, len(payload) // 12)
             for k in range(0, len(payload), step):
                 sse(self, "content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": payload[k:k + step]}})
-                time.sleep(0.08)
+                time.sleep(0.02 if big else 0.08)
             sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})
             sse(self, "message_delta", {"type": "message_delta", "delta": {"stop_reason": "tool_use", "stop_sequence": None}, "usage": {"output_tokens": 50}})
         elif want_tool:

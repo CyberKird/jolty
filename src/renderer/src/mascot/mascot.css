@@ -1,0 +1,109 @@
+/* Jolty the mascot: a three.js canvas (Rig3D) moved around by brain.ts; data-pose / data-eyes say what he does. */
+.mascot {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 60px;
+  height: 81.6px;
+  z-index: 60;
+  pointer-events: none;
+  will-change: transform;
+  contain: layout style;
+}
+.m-canvas,
+.m-glow {
+  position: absolute;
+  transition: transform 130ms ease-in, opacity 130ms ease-in;
+}
+/* the volt parts' halo, drawn by Rig3D; blur and brightness are set inline (they scale with him) */
+.m-glow {
+  pointer-events: none;
+  mix-blend-mode: plus-lighter;
+}
+/* zipping away as a spark */
+.mascot[data-pose='dash'] .m-canvas,
+.mascot[data-pose='dash'] .m-glow {
+  transform: scale(0.25, 1.6);
+  transform-origin: 50% 80%;
+  opacity: 0;
+}
+.m-hit {
+  position: absolute;
+  left: 8px;
+  top: 2px;
+  width: 44px;
+  height: 78px;
+  pointer-events: auto;
+  cursor: grab;
+}
+.mascot[data-pose='held'] .m-hit {
+  cursor: grabbing;
+}
+
+/* speech bubble, sparks and the dash streak */
+.mascot-bubble {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  margin-bottom: 2px;
+  translate: -50% 0;
+  min-width: 22px;
+  padding: 1px 7px 0;
+  border-radius: 10px;
+  background: var(--volt);
+  color: #000;
+  font-family: var(--display);
+  font-size: 15px;
+  line-height: 20px;
+  text-align: center;
+  animation: m-pop 300ms var(--ease) both;
+}
+.mascot-bubble:empty { display: none; }
+@keyframes m-pop {
+  from { transform: scale(0.3) translateY(8px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.mascot[data-pose='sleep'] .mascot-bubble {
+  background: transparent;
+  color: var(--volt);
+  animation: m-zz 2.4s ease-in-out infinite;
+}
+@keyframes m-zz {
+  0% { transform: translate(4px, 6px) scale(0.6); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(16px, -14px) scale(1.1); opacity: 0; }
+}
+.mascot-spark {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 7px;
+  height: 14px;
+  z-index: 61;
+  pointer-events: none;
+  background: var(--volt);
+  clip-path: polygon(25% 0, 85% 0, 60% 40%, 100% 38%, 25% 100%, 40% 55%, 0 57%);
+  animation: m-spark 520ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+@keyframes m-spark {
+  from { transform: translate(var(--x0), var(--y0)) rotate(var(--r)) scale(1); opacity: 1; }
+  to { transform: translate(var(--x1), var(--y1)) rotate(var(--r)) scale(0.4); opacity: 0; }
+}
+.mascot-streak {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 3px;
+  z-index: 59;
+  pointer-events: none;
+  transform-origin: 0 50%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--volt));
+  box-shadow: 0 0 10px rgba(212, 255, 0, 0.6);
+  animation: m-streak 300ms ease-out forwards;
+}
+@keyframes m-streak {
+  from { opacity: 1; clip-path: inset(0 100% 0 0); }
+  45% { opacity: 1; clip-path: inset(0 0 0 0); }
+  to { opacity: 0; clip-path: inset(0 0 0 100%); }
+}

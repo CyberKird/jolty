@@ -186,6 +186,7 @@ function registerIpc(): void {
     jolty.handoff(id, target, typeof model === 'string' ? model : undefined, typeof effort === 'string' ? effort : undefined)
   )
   handle('sessions:remove', (id: string) => jolty.removeSession(id))
+  handle('sessions:rename', (id: string, title: string) => jolty.renameSession(String(id), String(title)))
   handle('sessions:review', (id: string) => jolty.review(String(id)))
 
   handle('usage:summary', () => jolty.usageSummary())

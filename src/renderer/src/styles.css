@@ -356,6 +356,18 @@ a {
   text-overflow: ellipsis;
   font-size: 13.5px;
 }
+.session-item .title-edit {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--grey-2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  outline: none;
+}
 .session-item .when {
   font-family: var(--label);
   font-weight: 500;
@@ -1854,6 +1866,11 @@ a {
   font-size: 11.5px;
   line-height: 1.65;
   white-space: pre;
+}
+/* while a file is written only its tail is in the page; this says how much is above it */
+.code-above {
+  color: var(--grey-2);
+  font-style: italic;
 }
 .caret {
   display: inline-block;

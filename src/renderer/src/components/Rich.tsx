@@ -22,6 +22,11 @@ export function highlight(code: string, lang?: string): string {
   return escapeHtml(code)
 }
 
+/** Colouring for a file the model is still writing: auto-detecting the language is slow, so without a known one it stays plain text. */
+export function highlightLive(code: string, lang?: string): string {
+  return lang && hljs.getLanguage(lang) ? highlight(code, lang) : escapeHtml(code)
+}
+
 const marked = new Marked({
   gfm: true,
   breaks: false,

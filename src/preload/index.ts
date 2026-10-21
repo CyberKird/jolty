@@ -41,6 +41,7 @@ const api: JoltyApi = {
     respond: (id, requestId, decision) => call('sessions:respond', id, requestId, decision),
     handoff: (id, target, model, effort) => call('sessions:handoff', id, target, model, effort),
     remove: (id) => call('sessions:remove', id),
+    rename: (id, title) => call('sessions:rename', id, title),
     review: (id) => call('sessions:review', id),
     onEvent: (cb) => {
       const listener = (_e: unknown, ev: ChatEvent): void => cb(ev)

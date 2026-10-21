@@ -4,7 +4,7 @@ import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } fro
 import { clock, etaLabel, timeLeft, type Clock } from '@shared/eta'
 import { api, basename, useStore, type Draft } from '../store'
 import { toolKind } from './Messages'
-import { DiffView, highlight, langOf } from './Rich'
+import { DiffView, highlight, highlightLive, langOf } from './Rich'
 import { useNow } from './Tasks'
 import { tr } from '@shared/i18n'
 
@@ -212,14 +212,32 @@ function looksLikeDiff(s: string): boolean {
   return /^(@@|---|\+\+\+|diff )/m.test(s)
 }
 
+/**
+ * A file being written arrives whole every 60 ms. Putting all of it in the page each time (parse, colour,
+ * then the layout the scroll to the bottom forces) grew with the file and kept the page busy, so clicks
+ * stopped landing. While it is written only its last lines, the ones in view, are shown; all of it once done.
+ */
+const LIVE_TAIL = 150
+
+function tailOf(text: string): { above: number; tail: string } {
+  let cut = text.length
+  for (let i = 0; i < LIVE_TAIL && cut > 0; i++) cut = text.lastIndexOf('\n', cut - 1)
+  if (cut <= 0) return { above: 0, tail: text }
+  let above = 1
+  for (let i = text.indexOf('\n'); i !== -1 && i < cut; i = text.indexOf('\n', i + 1)) above++
+  return { above, tail: text.slice(cut + 1) }
+}
+
 function LiveCode({ drafts }: { drafts: Draft[] }) {
   const [pinned, setPinned] = useState<string>()
   const preRef = useRef<HTMLPreElement>(null)
   const current = drafts.find((d) => d.toolId === pinned) || drafts[drafts.length - 1]
   const html = useMemo(() => {
     if (!current) return ''
+    const { above, tail } = current.done ? { above: 0, tail: current.content } : tailOf(current.content)
+    const more = above ? `<span class="code-above">${tr("… încă {v0} rânduri mai sus", { v0: above }).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>\n` : ''
     if (looksLikeDiff(current.content)) {
-      return current.content
+      return more + tail
         .split('\n')
         .map((l) => {
           const esc = l.replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -228,7 +246,7 @@ function LiveCode({ drafts }: { drafts: Draft[] }) {
         })
         .join('')
     }
-    return highlight(current.content, langOf(current.path))
+    return current.done ? highlight(tail, langOf(current.path)) : more + highlightLive(tail, langOf(current.path))
   }, [current])
   useEffect(() => {
     if (preRef.current && current && !current.done) preRef.current.scrollTop = preRef.current.scrollHeight

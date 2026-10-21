@@ -4,6 +4,8 @@ import { ChatView, NewChat } from './components/Chat'
 import wordmark from './assets/joltarise-wordmark-volt.svg'
 import { ContextMenu } from './components/ContextMenu'
 import { LivePanel } from './components/LivePanel'
+import { Mascot } from './mascot/Mascot'
+import { WhatsNewHost } from './components/WhatsNew'
 import { PowerBar } from './components/PowerBar'
 import { Sidebar } from './components/Sidebar'
 import { api, useStore } from './store'
@@ -144,6 +146,8 @@ export function App() {
       {isChat && liveOpen && <div className="live-scrim" onClick={() => setLiveOpen(false)} aria-hidden />}
       <ContextMenu />
       <PowerBar />
+      <Mascot />
+      <WhatsNewHost />
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.error ? 'error' : ''}`}>

@@ -1,8 +1,10 @@
-import { ExternalLink, Eye, FolderOpen, Globe, KeyRound, Languages, Save, ShieldCheck } from 'lucide-react'
+import { ExternalLink, Eye, FolderOpen, Globe, KeyRound, Languages, Save, ShieldCheck, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { BrowserSettings } from './BrowserSettings'
 import { api, errMsg, timeAgo, useStore } from '../store'
+import { setMascot } from '../mascot/Mascot'
+import { openWhatsNew } from '../components/WhatsNew'
 import { getLang, LANGUAGES, tr } from '@shared/i18n'
 
 export function SettingsPage() {
@@ -104,6 +106,34 @@ export function SettingsPage() {
             </span>
           </span>
         </label>
+        <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={s.mascot !== false}
+            onChange={async (e) => {
+              await setMascot(e.target.checked)
+              setS(await api.app.settings())
+            }}
+          />
+          <span>
+            <b>{tr("Mascota Jolty")}</b>
+            <span className="muted small" style={{ display: 'block' }}>
+             {tr("Jolty umblă prin interfață: tastează cât lucrează modelul, arată spre cererile de aprobare, sare de bucurie la final. Îl poți prinde de glugă și arunca.")}
+            </span>
+          </span>
+        </label>
+        <div className="card row" style={{ marginBottom: 14 }}>
+          <Sparkles size={16} color="var(--volt)" />
+          <span style={{ flex: 1 }}>
+            <b>{tr("Ce e nou în Jolty")}</b>
+            <span className="muted small" style={{ display: 'block' }}>
+              {tr("Ce s-a schimbat în fiecare versiune, de la cea mai nouă. Se deschide singur o dată după fiecare actualizare.")}
+            </span>
+          </span>
+          <button className="btn small" onClick={openWhatsNew}>
+            {tr("Vezi noutățile")}
+          </button>
+        </div>
         <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
           <input
             type="checkbox"

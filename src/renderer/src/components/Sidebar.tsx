@@ -1,4 +1,4 @@
-import { BarChart3, CalendarClock, Cpu, Download, FolderOpen, KeyRound, Link, MessageSquare, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { BarChart3, CalendarClock, Cpu, Download, FolderOpen, KeyRound, Link, MessageSquare, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { copyItem, pathItems, showMenu } from './ContextMenu'
@@ -210,6 +210,7 @@ const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
 export function Sidebar() {
   const { page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast } = useStore()
   const [q, setQ] = useState('')
+  const [renaming, setRenaming] = useState<string>()
   const saved = useMemo(() => sessions.filter((s) => !s.temporary), [sessions])
   const groups = useMemo(() => {
     const filtered = saved.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.cwd.toLowerCase().includes(q.toLowerCase()))
@@ -223,6 +224,13 @@ export function Sidebar() {
     if (activeId === id) await openSession(undefined)
     await loadSessions()
     toast(tr("Conversația a fost scoasă din Jolty"))
+  }
+
+  const rename = async (id: string, title: string): Promise<void> => {
+    setRenaming(undefined)
+    if (!title.trim()) return
+    await api.sessions.rename(id, title)
+    await loadSessions()
   }
 
   const at = NAV.findIndex((n) => n.id === page)
@@ -275,6 +283,7 @@ export function Sidebar() {
                   onContextMenu={(e) =>
                     showMenu(e, [
                       { label: tr("Deschide conversația"), icon: MessageSquare, run: () => void openSession(s.id) },
+                      { label: tr("Redenumește"), icon: Pencil, run: () => setRenaming(s.id) },
                       copyItem(tr("Copiază titlul"), s.title),
                       'sep',
                       { label: tr("Arată folderul în Explorer"), icon: FolderOpen, run: () => void api.app.revealPath(s.cwd) },
@@ -287,7 +296,25 @@ export function Sidebar() {
                   tabIndex={0}
                 >
                   <span className={`dot ${status[s.id] === 'running' ? 'running' : ''}`} style={{ background: profile?.color }} />
-                  <span className="title">{s.title}</span>
+                  {renaming === s.id ? (
+                    <input
+                      className="title-edit"
+                      autoFocus
+                      defaultValue={s.title}
+                      maxLength={80}
+                      aria-label={tr("Titlul conversației")}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        e.stopPropagation()
+                        if (e.key === 'Enter') void rename(s.id, e.currentTarget.value)
+                        if (e.key === 'Escape') setRenaming(undefined)
+                      }}
+                      onBlur={(e) => void rename(s.id, e.currentTarget.value)}
+                    />
+                  ) : (
+                    <span className="title" onDoubleClick={() => setRenaming(s.id)}>{s.title}</span>
+                  )}
                   <span className="when">{timeAgo(s.updatedAt)}</span>
                   <button
                     className="del"

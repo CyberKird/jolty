@@ -560,6 +560,7 @@ export class Jolty {
       s.meta.title = text.replace(/\s+/g, ' ').trim().slice(0, 60) || attachments[0]?.name || s.meta.title
       this.saveMeta(s.meta)
       this.send({ type: 'meta', sessionId, meta: s.meta })
+      void this.autoTitle(sessionId, text)
     }
     const userId = randomUUID()
     this.onEngineEvent({
@@ -840,6 +841,39 @@ export class Jolty {
       swept.add(l.engineSessionId)
     }
     store.saveTempLeftovers(store.loadTempLeftovers().filter((l) => !swept.has(l.engineSessionId)))
+  }
+
+  /** the title in the sidebar and in the search tool: the user's own words win over the auto-namer */
+  renameSession(sessionId: string, title: string): void {
+    const t = title.replace(/\s+/g, ' ').trim().slice(0, 80)
+    if (t) this.setTitle(sessionId, t)
+  }
+
+  private setTitle(sessionId: string, title: string): void {
+    const meta = this.live.get(sessionId)?.meta ?? this.meta(sessionId)
+    meta.title = title
+    meta.titled = true
+    this.saveMeta(meta)
+    this.send({ type: 'meta', sessionId, meta })
+  }
+
+  /** The first words of a message make a poor title; a cheap model names the chat after what it is about, so it is easy to find later. */
+  private async autoTitle(sessionId: string, text: string): Promise<void> {
+    const meta = this.live.get(sessionId)?.meta
+    const vp = meta?.temporary || process.env.JOLTY_TEST ? undefined : this.visionProfile()
+    if (!meta || !vp) return
+    const prompt = `Name this conversation so the user can find it later in a list. Reply with the title only: 3 to 7 words, in the language of the message, naming the concrete subject (project, feature, bug, topic), no quotes, no final punctuation.
+
+Project folder: ${path.basename(meta.cwd)}
+First message:
+${text.slice(0, 1500)}`
+    try {
+      const out = await this.driver(vp.engine).describe(vp, [], prompt, vp.engine === 'claude' && vp.auth !== 'endpoint' ? 'haiku' : undefined)
+      const title = (out.split('\n').find((l) => l.trim()) || '').replace(/^[\s"'„“`*#-]+|[\s"'”“`*.]+$/g, '').slice(0, 60)
+      if (title && !this.live.get(sessionId)?.meta.titled) this.setTitle(sessionId, title)
+    } catch {
+      // the first words stay as the title
+    }
   }
 
   async removeSession(sessionId: string): Promise<void> {

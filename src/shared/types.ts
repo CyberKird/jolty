@@ -105,6 +105,8 @@ export interface SessionMeta {
   engine: EngineKind
   cwd: string
   title: string
+  /** the title was named (by the user or by the auto-namer): the first words of a message no longer replace it */
+  titled?: boolean
   model?: string
   effort?: string
   permissionMode: PermissionMode
@@ -283,6 +285,10 @@ export interface AppSettings {
   lastModels?: Record<string, { model: string; effort?: string }>
   /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
   reduceMotion?: boolean
+  /** Jolty the mascot runs around the interface; on unless false */
+  mascot?: boolean
+  /** the version What's new was last shown for: it opens once after each update */
+  seenVersion?: string
   /** interface language code (see shared/i18n.ts); unset follows the system */
   language?: string
   /** Chrome profile folder for Jolty in Chrome ("Default", "Profile 1"); the last used one when empty */
@@ -456,6 +462,7 @@ export interface JoltyApi {
     /** a read-only review of the current changes by a model from the other family */
     review(sessionId: string): Promise<void>
     remove(sessionId: string): Promise<void>
+    rename(sessionId: string, title: string): Promise<void>
     onEvent(cb: (e: ChatEvent) => void): () => void
   }
   usage: {
