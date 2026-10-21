@@ -295,6 +295,8 @@ if (!app.requestSingleInstanceLock()) {
       for (const p of jolty.profiles()) if (p.engine === 'claude' && p.auth === 'subscription') void jolty.models(p.id).catch(() => undefined)
     }
     void jolty.sweepTemps().catch(() => undefined)
+    // automated runs start with What's new already seen, unless the run sets an older seenVersion itself
+    if (process.env.JOLTY_TEST && !store.loadSettings().seenVersion) store.saveSettings({ seenVersion: __JOLTY_VERSION__ })
     if (!process.env.JOLTY_TEST) {
       setTimeout(() => void store.shrinkTranscripts(), 10000)
       setTimeout(scanModels, 30000)
