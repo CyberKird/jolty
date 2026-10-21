@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.9
+
+### Fixes
+
+- Jolty no longer stands over buttons. On top of the composer he covered the right end of whatever sat above it, like the update banner's close button and the queue's buttons, and clicks there went to him. When the chat column has room he now stands beside the composer, on the column's floor, and strolls only in that margin. The end of the chat also keeps room for him, so he never stands over the last lines.
+- His eyes follow the cursor across his visor instead of the whole body turning after it.
+- Dropped at the very bottom of the window he no longer sinks out of it; he stays inside its edges with room for his legs.
+- Lighter at rest: while nothing moves he draws 12 frames a second instead of 24, and he turns to what you click and glances up when you scroll or an answer arrives.
+
 ## 0.5.8
 
 ### New

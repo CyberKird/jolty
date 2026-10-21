@@ -71,6 +71,7 @@ export class Rig3D implements Puppet {
   /** when the laptop came out of the pocket, and when it went back in */
   private laptopSince = -1e9
   private laptopAway = -1e9
+  private lookedAt = 0
   /** a face the pose wears for a moment (a glance at you, an idea), over the one the brain asked for */
   private moment: Eyes | undefined
   private glow: HTMLCanvasElement
@@ -119,6 +120,7 @@ export class Rig3D implements Puppet {
     this.dir = dir
   }
   look(x: number, y: number): void {
+    if (Math.abs(x - this.lookX) + Math.abs(y - this.lookY) > 0.02) this.lookedAt = performance.now()
     this.lookX = x
     this.lookY = y
   }
@@ -193,8 +195,9 @@ export class Rig3D implements Puppet {
     const lx = this.lookX
     const ly = this.lookY
     const lookAt = (body: number, head: number): void => {
-      o.rootRY = lx * body
-      o.headRY = lx * head
+      // the eyes do most of the following now (apply); body and head only lean into it
+      o.rootRY = lx * body * 0.4
+      o.headRY = lx * head * 0.6
       o.headRX = -ly * 0.22
     }
     switch (this.pose) {
@@ -381,7 +384,8 @@ export class Rig3D implements Puppet {
   private tick = (now: number): void => {
     this.raf = requestAnimationFrame(this.tick)
     const busy = !QUIET.has(this.pose) || now - this.since < 500 || now < this.blinkUntil + 60 || now < this.zapUntil + 200
-    if (!busy && now - this.drawn < 1000 / 24) return
+    // at rest: 24 fps while his eyes follow something, 12 when nothing moves (breathing reads the same)
+    if (!busy && now - this.drawn < 1000 / (now - this.lookedAt < 1500 ? 24 : 12)) return
     const dt = Math.min(0.1, (now - this.last) / 1000)
     this.last = now
     this.drawn = now
@@ -430,8 +434,9 @@ export class Rig3D implements Puppet {
     j.legR.rotation.x = c.legRRX
     j.eyes.scale.y = c.eyesSY
     const eye = (v: number): number => Math.max(-1, Math.min(1, v))
-    j.eyes.position.x = eye(this.lookX + c.eyeX) * 2.4
-    j.eyes.position.y = eye(this.lookY + c.eyeY) * -1.6
+    // across most of the visor: at ±2 the eyes barely moved and he seemed to turn instead of look
+    j.eyes.position.x = eye(this.lookX + c.eyeX) * 6
+    j.eyes.position.y = eye(this.lookY + c.eyeY) * -4.5
     const face = this.moment ?? this.eyes
     for (const [name, g] of Object.entries(j.faces)) g.visible = name === face
     this.placeLaptop(now)

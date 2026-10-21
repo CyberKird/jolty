@@ -11,6 +11,8 @@ const H = 82
 const FOOT = 132 * 0.6
 /** px from the feet to the hood top, where a cursor holds him */
 const GRIP = 71
+/** the lowest he stands: the window's bottom less room for his legs when he sits */
+const FLOOR = (): number => innerHeight - 16
 const GRAVITY = 2600
 const WALK = 95
 const RUN = 270
@@ -29,17 +31,19 @@ const calm = (): boolean => document.documentElement.classList.contains('reduce-
  */
 export class Brain {
   private x = innerWidth - 80
-  private y = innerHeight - 1
+  private y = FLOOR()
   private dir: 1 | -1 = -1
   private mode: Mode = 'ground'
   private anchor: Element | null = null
   private anchorDx = 0
+  /** feet below the anchor's top (0: on it; beside the composer he stands on the chat column's floor) */
+  private anchorDy = 0
   private pose: Pose = 'idle'
   private vx = 0
   private vy = 0
   private walkTo = 0
   private walkSpeed = WALK
-  private jump?: { x0: number; y0: number; el: Element | null; tx: number; t0: number; ms: number; lift: number }
+  private jump?: { x0: number; y0: number; el: Element | null; tx: number; dy: number; t0: number; ms: number; lift: number }
   private floors: { el: Element; r: DOMRect }[] = []
   private floorsAt = 0
   private busyUntil = 0
@@ -69,7 +73,7 @@ export class Brain {
       this.x = bolt.left + bolt.width / 2
       this.y = bolt.top + FOOT * 0.6
       this.face(1)
-      this.leap(home.el, home.x)
+      this.leap(home.el, home.x, home.y)
     }, 600)
     this.blink()
     this.idleLoop()
@@ -118,17 +122,19 @@ export class Brain {
       this.set(this.walkSpeed === RUN ? 'run' : 'walk', g.pose === 'idle' ? 'open' : g.eyes)
     } else if (dist < 560) {
       this.face(dx < 0 ? -1 : 1)
-      this.leap(to.el, to.x)
+      this.leap(to.el, to.x, to.y)
     } else {
       this.dash(to.el, to.x, to.y)
     }
   }
 
-  private leap(el: Element | null, tx: number): void {
-    const ty = el ? (visible(el)?.top ?? innerHeight - 1) : innerHeight - 1
+  private leap(el: Element | null, tx: number, at?: number): void {
+    const top = el ? visible(el)?.top : undefined
+    const dy = top !== undefined && at !== undefined ? at - top : 0
+    const ty = top !== undefined ? top + dy : FLOOR()
     const dist = Math.hypot(tx - this.x, ty - this.y)
     this.mode = 'jump'
-    this.jump = { x0: this.x, y0: this.y, el, tx, t0: performance.now(), ms: clamp(380 + dist * 0.55, 420, 760), lift: 46 + Math.max(0, this.y - ty) * 0.6 }
+    this.jump = { x0: this.x, y0: this.y, el, tx, dy, t0: performance.now(), ms: clamp(380 + dist * 0.55, 420, 760), lift: 46 + Math.max(0, this.y - ty) * 0.6 }
     this.set('jump', 'happy')
   }
 
@@ -158,6 +164,7 @@ export class Brain {
     this.y = y
     const r = el?.getBoundingClientRect()
     this.anchorDx = r ? x - r.left : 0
+    this.anchorDy = r ? y - r.top : 0
     this.mode = 'ground'
     this.resize.disconnect()
     if (el) this.resize.observe(el)
@@ -200,18 +207,18 @@ export class Brain {
 
   private follow(): void {
     if (!this.anchor) {
-      this.y = innerHeight - 1
+      this.y = FLOOR()
       this.x = clamp(this.x, 30, innerWidth - 30)
       return
     }
     // the card was answered or the composer replaced: hop to where he is needed; scrolled away: fall off
     if (!this.anchor.isConnected) {
       const home = spot(goal())
-      return calm() ? this.place(home.el, home.x, home.y) : this.leap(home.el, home.x)
+      return calm() ? this.place(home.el, home.x, home.y) : this.leap(home.el, home.x, home.y)
     }
     const r = visible(this.anchor)
     if (!r) return this.fall(0, 0)
-    this.y = r.top
+    this.y = r.top + this.anchorDy
     this.x = clamp(r.left + this.anchorDx, r.left + 14, r.right - 14)
   }
 
@@ -234,7 +241,8 @@ export class Brain {
     const j = this.jump
     if (!j) return
     const t = Math.min(1, (now - j.t0) / j.ms)
-    const ty = j.el ? (visible(j.el)?.top ?? innerHeight - 1) : innerHeight - 1
+    const top = j.el ? visible(j.el)?.top : undefined
+    const ty = top !== undefined ? top + j.dy : FLOOR()
     this.x = j.x0 + (j.tx - j.x0) * t
     this.y = j.y0 + (ty - j.y0) * t - j.lift * 4 * t * (1 - t)
     if (t > 0.55 && this.pose === 'jump') this.set('fall', 'happy')
@@ -274,8 +282,8 @@ export class Brain {
         return this.landed(this.vy)
       }
     }
-    if (this.y >= innerHeight - 1) {
-      this.place(null, this.x, innerHeight - 1)
+    if (this.y >= FLOOR()) {
+      this.place(null, this.x, FLOOR())
       this.landed(this.vy)
     }
   }
@@ -347,6 +355,8 @@ export class Brain {
           const item = list[list.length - 1]
           if (item.kind === 'notice' && item.level === 'error') this.react('trip', 'dizzy', 1800)
           else if (item.kind === 'tool') this.zap()
+          // a new answer: he glances up at it
+          else if (item.kind === 'assistant') this.body.look(this.dir * 0.2, -1)
           // your message is off: a little hop, then he gets to work
           else if (item.kind === 'user') this.react('cheer', 'happy', 450)
         }
@@ -393,7 +403,9 @@ export class Brain {
     const roll = Math.random()
     if (roll < 0.35) {
       const r = this.anchor?.getBoundingClientRect()
-      const lo = r ? r.left + 30 : 40
+      // beside the composer he strolls in the margin only, never over the box
+      const box = this.anchor?.matches('.composer-wrap') ? this.anchor.querySelector('.composer')?.getBoundingClientRect() : undefined
+      const lo = box ? box.right + 30 : r ? r.left + 30 : 40
       const hi = r ? r.right - 30 : innerWidth - 40
       const to = clamp(this.x + rand(60, 200) * (Math.random() < 0.5 ? -1 : 1), lo, hi)
       if (Math.abs(to - this.x) < 30) return
@@ -441,6 +453,18 @@ export class Brain {
       if (el.closest('.search')) this.react('search', 'focus', 1400)
       else if (el.closest('.composer') && this.mode === 'ground' && WORK.has(goal().pose) === false) this.react('idle', 'focus', 1100)
     })
+    // aware of the page: he turns to what you click and glances up at what scrolls by
+    on('pointerdown', (e) => {
+      if (this.mode !== 'ground' || (e.target as Element | null)?.closest?.('.mascot')) return
+      if (this.pose === 'idle' || this.pose === 'sit') this.face(e.clientX < this.x ? -1 : 1)
+    })
+    let scrolledAt = 0
+    on('scroll', (e) => {
+      const now = performance.now()
+      if (now - scrolledAt < 400 || !(e.target as Element | null)?.closest?.('.messages')) return
+      scrolledAt = now
+      this.body.look(this.dir * 0.3, -1)
+    })
     on('dragenter', (e) => {
       if (e.dataTransfer?.types.includes('Files')) this.react('point', 'happy', 1600, '+')
     })
@@ -471,7 +495,7 @@ export class Brain {
       p.vy = p.vy * 0.5 + ((e.clientY + GRIP - this.y) / dt) * 0.5
       p.lt = e.timeStamp
       this.x = clamp(e.clientX, 30, innerWidth - 30)
-      this.y = clamp(e.clientY + GRIP, H, innerHeight - 1)
+      this.y = clamp(e.clientY + GRIP, H, FLOOR())
     }
     const down = (e: PointerEvent): void => {
       if (e.button !== 0) return
@@ -491,7 +515,7 @@ export class Brain {
       }
       this.freeUntil = performance.now() + 9000
       if (calm()) {
-        this.place(null, this.x, innerHeight - 1)
+        this.place(null, this.x, FLOOR())
         return this.landed(0)
       }
       this.fall(clamp(p.vx, -1800, 1800), clamp(p.vy, -1800, 1800))

@@ -40,6 +40,11 @@
   cursor: grabbing;
 }
 
+/* he stands on the composer's top edge, about 85 px tall: the last message scrolls up clear of him */
+.has-mascot .messages {
+  padding-bottom: 110px;
+}
+
 /* speech bubble, sparks and the dash streak */
 .mascot-bubble {
   position: absolute;

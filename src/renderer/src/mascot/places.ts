@@ -89,7 +89,12 @@ const PAGE_POSE: Partial<Record<string, Pose>> = { usage: 'search', system: 'sea
 
 export function spot(g: Goal): { el: Element | null; x: number; y: number } {
   const r = g.el && visible(g.el)
-  if (!r) return { el: null, x: innerWidth - 70, y: innerHeight - 1 }
+  if (!r) return { el: null, x: innerWidth - 70, y: innerHeight - 16 }
+  // beside the composer, on the chat column's floor, when the margin fits him: on top of it he stood over
+  // the right ends of what sits above it (the update banner's close, the queue's buttons) and blocked them
+  const wrap = g.at === 'right' && g.el?.matches('.composer') ? g.el.closest('.composer-wrap') : null
+  const w = wrap?.getBoundingClientRect()
+  if (wrap && w && w.right - r.right >= 64) return { el: wrap, x: r.right + 34, y: r.bottom }
   const x = g.at === 'right' ? r.right - 46 : r.left + 46
   return { el: g.el, x: clamp(x, r.left + 24, r.right - 24), y: r.top }
 }

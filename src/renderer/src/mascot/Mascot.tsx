@@ -55,5 +55,7 @@ export function Mascot() {
     window.addEventListener(EVENT, onToggle)
     return () => window.removeEventListener(EVENT, onToggle)
   }, [])
+  // the end of the chat keeps room for him, so he never stands over the last lines (mascot.css)
+  useEffect(() => void document.documentElement.classList.toggle('has-mascot', on), [on])
   return on ? <Body /> : null
 }
