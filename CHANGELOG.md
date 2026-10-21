@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0
+
+### New
+
+- Jolty is a full active ragdoll now, in the spirit of Euphoria: a physical skeleton (head, trunk, pelvis, thighs, shins, upper arms and forearms, each with its own mass) driven by muscles at every joint. Take him by the hood and he hangs from your cursor, his hands reaching for it and his legs kicking; swing him around and he swings with it. Let go and he flails through the air, braces his arms and tucks his head toward whatever he is about to hit, bounces off the walls, the composer and the cards, tumbles, and lies dazed for a moment before he pushes himself up with his hands and stands again.
+- Legs cannot go through his chest or head, or a hand through a thigh: the parts of him that could meet collide. Joints stop where a real one would.
+- An error in a chat knocks him backwards on the spot and he staggers or goes down, instead of a canned fall. With Reduce motion on he keeps the old keyframed fall.
+
+### Improvements
+
+- Hits sound as hard as they were, from a soft step to a thud with an oof.
+
 ## 0.6.3
 
 ### New

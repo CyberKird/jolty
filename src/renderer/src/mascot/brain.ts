@@ -2,9 +2,10 @@ import { useStore } from '../store'
 import { sparks, streak } from './fx'
 import { play, type Sound } from './sfx'
 import { FLOORS, goal, spot, visible, WORK, type Eyes, type Goal, type Pose } from './places'
+import { HIP_Y, Ragdoll, type Ledge } from './ragdoll'
 import type { Puppet } from './Rig3D'
 
-type Mode = 'ground' | 'walk' | 'jump' | 'air' | 'held' | 'dash'
+type Mode = 'ground' | 'walk' | 'jump' | 'air' | 'held' | 'dash' | 'rag'
 
 const W = 60
 const H = 82
@@ -15,6 +16,8 @@ const GRIP = 71
 /** the window's floor: his feet on its bottom edge (seated there he sits on the ground, Rig3D) */
 const FLOOR = (): number => innerHeight - 1
 const GRAVITY = 2600
+/** px from the pelvis down to the feet when he stands (the rig's hip height at 0.6 px a unit) */
+const HIP = HIP_Y * 0.6
 const WALK = 95
 const RUN = 270
 
@@ -58,6 +61,9 @@ export class Brain {
   private pointer = { x: -1, y: -1 }
   private press?: { x: number; y: number; t: number; dragged: boolean; vx: number; vy: number; lt: number }
   private raf = 0
+  /** the physical body while he is held, flung or down (ragdoll.ts); undefined on the animation */
+  private rag?: Ragdoll
+  private ragWorldAt = 0
   private last = performance.now()
   private timers = new Set<number>()
   private off: (() => void)[] = []
@@ -160,7 +166,87 @@ export class Brain {
     }, 170)
   }
 
+  /** into the ragdoll: from where he stands, with this speed, or already held by the cursor */
+  private ragdoll(vx: number, vy: number, stand = false): Ragdoll | undefined {
+    if (calm()) return undefined
+    try {
+      const rag = new Ragdoll(this.x, this.y - HIP, this.dir, { impact: (s) => this.hit(s) }, this.body.stance(), vx, vy)
+      if (stand) rag.state = 'stand'
+      this.rag = rag
+      this.mode = 'rag'
+      this.anchor = null
+      this.jump = undefined
+      this.resize.disconnect()
+      this.body.floor(false)
+      this.ragWorld(true)
+      this.frame()
+      return rag
+    } catch {
+      return undefined
+    }
+  }
+
+  /** the window and the platforms around him, as the ragdoll's world */
+  private ragWorld(force = false): void {
+    const now = performance.now()
+    if (!this.rag || (!force && now - this.ragWorldAt < 120)) return
+    this.ragWorldAt = now
+    const ledges: Ledge[] = [...document.querySelectorAll(FLOORS)].flatMap((el) => {
+      const r = visible(el)
+      return r ? [{ key: el, left: r.left, right: r.right, top: r.top }] : []
+    })
+    this.rag.setWorld(innerWidth, FLOOR(), ledges)
+  }
+
+  /** something hit him: a sound as hard as the blow */
+  private hit(s: number): void {
+    play(s > 1.2 ? 'thud' : 'land', Math.min(1, s / 2))
+    if (s > 1.2) play('oof')
+  }
+
+  /** the ragdoll frame: the physics, and the body that wears it */
+  private stepRag(dt: number): void {
+    const rag = this.rag
+    if (!rag) return void (this.mode = 'ground')
+    this.ragWorld()
+    rag.step(dt)
+    const p = rag.pose()
+    this.x = p.x
+    this.y = p.y + HIP
+    this.body.ragdoll(p)
+    const s = rag.state
+    const eyes: Eyes = s === 'held' ? 'worried' : s === 'lie' ? 'dizzy' : s === 'getup' ? 'worried' : s === 'air' ? 'worried' : 'open'
+    const pose: Pose = s === 'held' ? 'held' : 'trip'
+    if (this.pose !== pose || this.el.dataset.eyes !== eyes) this.set(pose, eyes)
+    if (this.press?.dragged) return
+    if (rag.up) this.stand(rag)
+  }
+
+  /** he is on his feet again: back to the animation, standing on whatever is under him */
+  private stand(rag: Ragdoll): void {
+    const feet = rag.feetY()
+    const x = this.x
+    const floor = [...document.querySelectorAll(FLOORS)].flatMap((el) => {
+      const r = visible(el)
+      return r && Math.abs(r.top - feet) < 8 && x > r.left + 12 && x < r.right - 12 ? [{ el, top: r.top }] : []
+    })[0]
+    this.rag = undefined
+    this.body.ragdoll(null)
+    this.place(floor?.el ?? null, x, floor?.top ?? FLOOR())
+    this.set('idle', 'open')
+    this.later(this.decide, 150)
+  }
+
+  /** a knock (an error, a shove): he staggers on the spot, and goes down if it is hard */
+  private knock(vx: number): boolean {
+    if (this.mode !== 'ground') return false
+    const rag = this.ragdoll(0, 0, true)
+    rag?.shove(vx)
+    return Boolean(rag)
+  }
+
   private fall(vx: number, vy: number): void {
+    if (this.ragdoll(vx, vy)) return this.set('fall', 'worried')
     this.mode = 'air'
     this.anchor = null
     this.vx = vx
@@ -209,15 +295,16 @@ export class Brain {
     else if (this.mode === 'walk') this.stepWalk(dt)
     else if (this.mode === 'jump') this.stepJump(now)
     else if (this.mode === 'air') this.stepAir(dt)
+    else if (this.mode === 'rag') this.stepRag(dt)
     this.look()
     this.apply()
     // standing still costs nothing: the loop only runs while he moves, events wake it for one frame
-    if (this.mode === 'walk' || this.mode === 'jump' || this.mode === 'air') this.frame()
+    if (this.mode === 'walk' || this.mode === 'jump' || this.mode === 'air' || this.mode === 'rag') this.frame()
   }
 
   private frame(): void {
     if (this.raf) return
-    if (this.mode !== 'walk' && this.mode !== 'jump' && this.mode !== 'air') this.last = performance.now()
+    if (this.mode !== 'walk' && this.mode !== 'jump' && this.mode !== 'air' && this.mode !== 'rag') this.last = performance.now()
     this.raf = requestAnimationFrame(this.tick)
   }
 
@@ -390,14 +477,14 @@ export class Brain {
         if (was === 'running' && now === 'idle') {
           this.react('cheer', 'happy', 1400)
           sparks(this.x, this.y - 70)
-        } else if (now === 'error' && was !== 'error') this.react('trip', 'dizzy', 1800)
+        } else if (now === 'error' && was !== 'error') this.hurt()
         else if (now !== was) this.later(this.decide, 120)
         if ((s.permissions[id]?.length ?? 0) !== (p.permissions[id]?.length ?? 0)) this.later(this.decide, 120)
         const list = s.transcripts[id]
         const before = p.transcripts[id]
         if (list && list !== before && list.length > (before?.length ?? 0)) {
           const item = list[list.length - 1]
-          if (item.kind === 'notice' && item.level === 'error') this.react('trip', 'dizzy', 1800)
+          if (item.kind === 'notice' && item.level === 'error') this.hurt()
           else if (item.kind === 'tool') this.zap()
           // a new answer: he glances up at it
           else if (item.kind === 'assistant') this.body.look(this.dir * 0.2, -1)
@@ -408,6 +495,11 @@ export class Brain {
         if (now === 'running' && (list !== before || s.drafts[id] !== p.drafts[id])) this.soon()
       })
     )
+  }
+
+  /** an error: knocked backwards */
+  private hurt(): void {
+    if (!this.knock(-this.dir * 520)) this.react('trip', 'dizzy', 1800)
   }
 
   private zap(): void {
@@ -559,12 +651,23 @@ export class Brain {
       if (!p) return
       if (!p.dragged && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 5) {
         p.dragged = true
-        this.mode = 'held'
-        this.anchor = null
-        this.jump = undefined
-        this.set('held', 'worried')
+        // by the hood: a ragdoll that hangs from the cursor (swing him, spin him, he swings with it)
+        const rag = this.rag ?? this.ragdoll(0, 0)
+        if (rag) {
+          rag.grab(e.clientX, e.clientY)
+          this.set('held', 'worried')
+        } else {
+          this.mode = 'held'
+          this.anchor = null
+          this.jump = undefined
+          this.set('held', 'worried')
+        }
       }
       if (!p.dragged) return
+      if (this.rag) {
+        this.rag.pull(e.clientX, e.clientY)
+        return this.frame()
+      }
       const dt = Math.max(1, e.timeStamp - p.lt) / 1000
       p.vx = p.vx * 0.5 + ((e.clientX - this.x) / dt) * 0.5
       p.vy = p.vy * 0.5 + ((e.clientY + GRIP - this.y) / dt) * 0.5
@@ -589,6 +692,10 @@ export class Brain {
         return sparks(this.x, this.y - 70)
       }
       this.freeUntil = performance.now() + 9000
+      if (this.rag) {
+        this.rag.release()
+        return this.frame()
+      }
       if (calm()) {
         this.place(null, this.x, FLOOR())
         return this.landed(0)

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { loadJolty, lightStudio, SEARCH_ARM, type Joints } from './model'
 import type { Eyes, Pose } from './places'
+import { HIP_Y, type Joints as RagJoints, type RagPose } from './ragdoll'
 
 /** What the brain can ask of the body. */
 export interface Puppet {
@@ -9,6 +10,10 @@ export interface Puppet {
   /** where the cursor is, -1..1 on each axis around his head */
   look(x: number, y: number): void
   tilt(deg: number): void
+  /** the ragdoll's pose to wear instead of the animation (null: back to the animation) */
+  ragdoll(p: RagPose | null): void
+  /** the joints as they are now, in the ragdoll's terms: where a ragdoll starts from */
+  stance(): RagJoints
   blink(): void
   zap(): void
   /** standing on the window's floor (true) or on an element's edge he can sit on */
@@ -77,6 +82,8 @@ export class Rig3D implements Puppet {
   private lookX = 0
   private lookY = 0
   private tiltDeg = 0
+  /** a physical pose in charge of the joints (ragdoll.ts); null while the animation is */
+  private phys: RagPose | null = null
   private cur: T = { ...REST }
   /** the walking cycle's phase, driven by his speed over the ground */
   private gait = 0
@@ -169,6 +176,14 @@ export class Rig3D implements Puppet {
   tilt(deg: number): void {
     this.tiltDeg = deg
   }
+  ragdoll(p: RagPose | null): void {
+    if (this.phys && !p) this.cur.rootRZ = this.phys.tilt
+    this.phys = p
+  }
+  stance(): RagJoints {
+    const c = this.cur
+    return { spine: -(c.torsoRX + c.chestRX), neck: -c.headRX, hipL: -c.legLRX, hipR: -c.legRRX, kneeL: -c.kneeL, kneeR: -c.kneeR, shL: -c.armLRX, shR: -c.armRRX, elL: -c.elbL, elR: -c.elbR }
+  }
   blink(): void {
     this.blinkUntil = performance.now() + 120
   }
@@ -240,6 +255,7 @@ export class Rig3D implements Puppet {
     const d = this.dir
     const o: T = { ...REST }
     this.moment = undefined
+    if (this.phys) return this.physical(o)
     const lx = this.lookX
     const ly = this.lookY
     const lookAt = (body: number, head: number): void => {
@@ -498,11 +514,23 @@ export class Rig3D implements Puppet {
     return o
   }
 
+  /** the ragdoll's joints as the rig's: in the side view the planar angles are turns about his own x axis */
+  private physical(o: T): T {
+    const p = this.phys!
+    Object.assign(o, {
+      rootRY: this.dir * 1.3, rootRZ: p.tilt, rootX: HIP_Y * Math.sin(p.tilt), rootY: HIP_Y * (1 - Math.cos(p.tilt)),
+      torsoRX: -p.spine * 0.5, chestRX: -p.spine * 0.5, headRX: -p.neck,
+      legLRX: -p.hipL, legRRX: -p.hipR, kneeL: -p.kneeL, kneeR: -p.kneeR,
+      armLRX: -p.shL, armRRX: -p.shR, elbL: -p.elL, elbR: -p.elR, armLK: 1, armLRZ: 0, armRRZ: 0, gx: this.lookX, gy: this.lookY
+    })
+    return o
+  }
+
   private tick = (now: number): void => {
     this.raf = requestAnimationFrame(this.tick)
     const s = this.spr
     const springs = Math.abs(s.sw) + Math.abs(s.up) + Math.abs(s.hang) + Math.abs(s.swv) + Math.abs(s.upv) > 0.02
-    const busy = springs || now - this.mv.at < 120 || !QUIET.has(this.pose) || now - this.since < 500 || now < this.blinkUntil + 60 || now < this.zapUntil + 200
+    const busy = springs || this.phys !== null || now - this.mv.at < 120 || !QUIET.has(this.pose) || now - this.since < 500 || now < this.blinkUntil + 60 || now < this.zapUntil + 200
     // at rest: every frame while his eyes follow something, 30 fps when nothing moves (12 looked choppy)
     if (!busy && !this.fullRate && now - this.lookedAt > 1500 && now - this.drawn < 1000 / 30) return
     const dt = Math.min(0.1, (now - this.last) / 1000)
@@ -512,6 +540,7 @@ export class Rig3D implements Puppet {
     if (this.pose === 'walk' || this.pose === 'run') this.gait += (dt * TAU * Math.max(this.mv.speed, 30)) / STRIDE[this.pose]
     const goal = this.target(now)
     for (const k in goal) this.cur[k] += (goal[k] - this.cur[k]) * (1 - Math.exp(-dt * (EASE[k] ?? BLEND)))
+    if (this.phys) Object.assign(this.cur, goal)
     if (this.pose === 'land') Object.assign(this.cur, { rootSY: goal.rootSY, rootSX: goal.rootSX })
     // a tumble follows the spin exactly: eased, the fast turn would wobble
     if (this.pose === 'fall') Object.assign(this.cur, { rootRZ: goal.rootRZ, rootX: goal.rootX, rootY: goal.rootY })
@@ -581,6 +610,8 @@ export class Rig3D implements Puppet {
     const j = this.j!
     j.root.position.set(c.rootX, c.rootY, 0)
     j.root.scale.set(c.rootSX, c.rootSY, c.rootSX)
+    // a physical tilt is about the screen's depth axis whatever way he faces: z applied after the turn
+    j.root.rotation.order = this.phys ? 'ZYX' : 'XYZ'
     j.root.rotation.set(0, c.rootRY, c.rootRZ)
     j.hang.rotation.z = c.hangRZ
     j.torso.rotation.x = c.torsoRX
@@ -591,8 +622,8 @@ export class Rig3D implements Puppet {
     // his left hand lives in the hoodie pocket (as in the render): it only half follows the pose, unless at work
     // secondary motion over the pose: limbs lag the way he speeds up, a jolt throws the arms out, a fast
     // flight sets them flailing
-    const { sw, up } = this.spr
-    const flail = this.pose === 'fall' || this.pose === 'held' ? Math.min(1, this.mv.speed / 1200) : 0
+    const { sw, up } = this.phys ? { sw: 0, up: 0 } : this.spr
+    const flail = !this.phys && (this.pose === 'fall' || this.pose === 'held') ? Math.min(1, this.mv.speed / 1200) : 0
     const t = now / 1000
     j.armL.rotation.set(c.armLRX * c.armLK + sw + 0.4 * flail * Math.sin(t * 19), 0, c.armLRZ * c.armLK - up * 0.8 - 0.3 * flail * Math.sin(t * 23))
     j.armR.rotation.set(c.armRRX + sw + 0.4 * flail * Math.sin(t * 17 + 1), 0, c.armRRZ + up * 0.8 + 0.3 * flail * Math.sin(t * 21 + 2))
@@ -619,7 +650,7 @@ export class Rig3D implements Puppet {
     this.placeLaptop(now)
     j.glass.visible = this.pose === 'search'
     const grounded = this.pose !== 'jump' && this.pose !== 'fall' && this.pose !== 'held' && this.pose !== 'dash'
-    j.shadow.visible = grounded
+    j.shadow.visible = grounded && !this.phys
     const m = j.shadow.material as THREE.MeshBasicMaterial
     m.opacity = this.pose === 'cheer' ? Math.max(0.25, 1 - c.rootY / 30) : 1
     j.sync()
