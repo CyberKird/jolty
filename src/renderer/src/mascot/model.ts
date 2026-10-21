@@ -27,6 +27,8 @@ export interface Joints {
   lid: THREE.Group
   /** a magnifying glass in the right glove, shown while the model searches */
   glass: THREE.Group
+  /** a stool he slides out of the composer to sit on when he is on the floor */
+  stool: THREE.Group
   shadow: THREE.Mesh
   /** copies the joint groups' turns onto the bones */
   sync(): void
@@ -222,7 +224,20 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   lens.add(mesh(new THREE.CircleGeometry(6, 32), new THREE.MeshPhysicalMaterial({ color: '#cfeeff', roughness: 0.05, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })))
   glass.visible = false
 
-  return { root, hang, ...groups, eyes, faces, laptop, lid, glass, shadow, sync }
+  // the stool: a charcoal seat with a volt edge on three splayed legs, its top at 17 where his hips sit
+  const stool = joint(scene, 0, 0)
+  // lighter than his fleece, so it reads under him on the dark app
+  const steel = new THREE.MeshStandardMaterial({ color: '#6b7280', roughness: 0.35, metalness: 0.6 })
+  stool.add(mesh(new RoundedBoxGeometry(34, 3.4, 22, 2, 1.2), steel, 0, 15.4, 2))
+  stool.add(mesh(new RoundedBoxGeometry(35, 1.6, 23, 1, 0.6), new THREE.MeshBasicMaterial({ color: VOLT, toneMapped: false }), 0, 13.4, 2))
+  for (const [x, z] of [[-10, -4], [10, -4], [0, 9]]) {
+    const leg = mesh(new THREE.CylinderGeometry(1.2, 1.5, 14, 10), steel, x * 1.25, 7, z)
+    leg.rotation.set(z * 0.012, 0, -x * 0.012)
+    stool.add(leg)
+  }
+  stool.visible = false
+
+  return { root, hang, ...groups, eyes, faces, laptop, lid, glass, stool, shadow, sync }
 }
 
 export function lightStudio(scene: THREE.Scene, renderer: THREE.WebGLRenderer): void {

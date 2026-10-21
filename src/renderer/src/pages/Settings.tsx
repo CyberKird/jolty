@@ -5,6 +5,7 @@ import { BrowserSettings } from './BrowserSettings'
 import { api, errMsg, timeAgo, useStore } from '../store'
 import { setMascot } from '../mascot/Mascot'
 import { openWhatsNew } from '../components/WhatsNew'
+import { soundsOn } from '../mascot/sfx'
 import { getLang, LANGUAGES, tr } from '@shared/i18n'
 
 export function SettingsPage() {
@@ -119,6 +120,22 @@ export function SettingsPage() {
             <b>{tr("Mascota Jolty")}</b>
             <span className="muted small" style={{ display: 'block' }}>
              {tr("Jolty umblă prin interfață: tastează cât lucrează modelul, arată spre cererile de aprobare, sare de bucurie la final. Îl poți prinde de glugă și arunca.")}
+            </span>
+          </span>
+        </label>
+        <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={s.mascotSounds !== false}
+            onChange={async (e) => {
+              soundsOn(e.target.checked)
+              setS(await api.app.saveSettings({ mascotSounds: e.target.checked }))
+            }}
+          />
+          <span>
+            <b>{tr("Sunetele lui Jolty")}</b>
+            <span className="muted small" style={{ display: 'block' }}>
+              {tr("Sunete scurte și încete când sare, aterizează, e aruncat sau se bucură. Tac cât lucrezi în altă fereastră.")}
             </span>
           </span>
         </label>

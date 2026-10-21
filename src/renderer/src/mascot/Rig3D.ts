@@ -11,6 +11,10 @@ export interface Puppet {
   tilt(deg: number): void
   blink(): void
   zap(): void
+  /** standing on the window's floor (true) or on an element's edge he can sit on */
+  floor(on: boolean): void
+  /** how fast he moves on screen (px/s): limbs lag, a throw spins him */
+  motion(vx: number, vy: number): void
   destroy(): void
 }
 
@@ -29,6 +33,7 @@ const REST: T = {
 /** turning and settling into a seat are slower than limbs */
 const EASE: T = { rootRY: 9, rootY: 16, headRY: 10 }
 const QUIET = new Set<Pose>(['idle', 'sit', 'sleep'])
+const SEATED = new Set<Pose>(['sit', 'sleep', 'type', 'read'])
 /** poses with the laptop out of the hoodie pocket */
 const LAPTOP = new Set<Pose>(['type', 'read'])
 /** the laptop's way out: from the kangaroo pocket to his lap, then the lid opens (seconds) */
@@ -72,6 +77,17 @@ export class Rig3D implements Puppet {
   private laptopSince = -1e9
   private laptopAway = -1e9
   private lookedAt = 0
+  private onFloor = false
+  /** on-screen velocity from the brain, and when it last said */
+  private mv = { x: 0, y: 0, at: 0, px: 0, py: 0, speed: 0 }
+  /** secondary motion, springs driven by how he speeds up: limbs swinging, a jolt up or down, the hood pendulum */
+  private spr = { sw: 0, swv: 0, up: 0, upv: 0, hang: 0, hangv: 0 }
+  /** tumbling through the air after a throw, and the side he lands on */
+  private spin = 0
+  private rot = 0
+  private side: 1 | -1 = 1
+  /** when he slid the stool out of the composer (floor seats) */
+  private stoolSince = -1e9
   /** a face the pose wears for a moment (a glance at you, an idea), over the one the brain asked for */
   private moment: Eyes | undefined
   private glow: HTMLCanvasElement
@@ -112,6 +128,18 @@ export class Rig3D implements Puppet {
     // the laptop comes out once for a run of laptop work, and goes back in when that ends
     if (LAPTOP.has(pose) && !LAPTOP.has(this.pose)) this.laptopSince = now
     if (!LAPTOP.has(pose) && LAPTOP.has(this.pose)) this.laptopAway = now
+    if (pose === 'fall' && this.pose !== 'fall') {
+      // thrown: spin with the throw (a drop from a jump barely turns)
+      this.spin = Math.max(-14, Math.min(14, this.mv.x / (this.pose === 'held' ? 160 : 600)))
+      this.rot = this.cur.rootRZ
+    }
+    if (this.pose === 'fall' && pose !== 'fall') {
+      // landed: on the side he was turning to; the turns he made fold back into one
+      const r = Math.atan2(Math.sin(this.rot), Math.cos(this.rot))
+      this.side = (Math.abs(r) > 0.3 ? -Math.sign(r) : this.spin > 0 ? -1 : 1) as 1 | -1
+      this.cur.rootRZ = r
+    }
+    if (SEATED.has(pose) && !SEATED.has(this.pose)) this.stoolSince = now
     if (pose !== this.pose) this.since = now
     this.pose = pose
     this.eyes = eyes
@@ -129,6 +157,12 @@ export class Rig3D implements Puppet {
   }
   blink(): void {
     this.blinkUntil = performance.now() + 120
+  }
+  floor(on: boolean): void {
+    this.onFloor = on
+  }
+  motion(vx: number, vy: number): void {
+    Object.assign(this.mv, { x: vx, y: vy, at: performance.now() })
   }
   zap(): void {
     this.zapUntil = performance.now() + 260
@@ -231,7 +265,10 @@ export class Rig3D implements Puppet {
         o.armRRZ = 1.8 + 0.35 * Math.sin(s * 28 + 1)
         o.legLRX = 0.45 * Math.sin(s * 24)
         o.legRRX = -0.45 * Math.sin(s * 24)
-        o.rootRZ = (-this.tiltDeg * Math.PI) / 180
+        // the spin turns him about his middle (60 up), not his feet
+        o.rootRZ = this.rot
+        o.rootX = 60 * Math.sin(this.rot)
+        o.rootY = 60 * (1 - Math.cos(this.rot))
         o.rootRY = d * 0.4
         break
       case 'land': {
@@ -366,15 +403,30 @@ export class Rig3D implements Puppet {
         break
       }
       case 'trip':
-        Object.assign(o, { rootRZ: 1.47, rootX: 52, rootY: 27, armLRZ: -1.1, legRRX: 0.6 })
+        // flat on his side after a bounce off the floor; limbs settle with the springs
+        Object.assign(o, { rootRZ: 1.47 * this.side, rootX: 52 * this.side, rootY: 27 + 12 * Math.exp(-t * 5) * Math.abs(Math.cos(t * 11)), armLRZ: -1.1, legRRX: 0.6 })
         break
       case 'held':
-        o.hangRZ = 0.13 * Math.sin((s * TAU) / 2.2)
+        o.hangRZ = 0.05 * Math.sin((s * TAU) / 2.2)
         o.legLRX = 0.32 * Math.sin((s * TAU) / 1)
         o.legRRX = 0.32 * Math.sin((s * TAU) / 1 + Math.PI)
         Object.assign(o, { armLRZ: -0.5, armRRZ: 0.5 })
         lookAt(0.3, 0.3)
         break
+    }
+    // on the floor there is no edge to sit on: he sits on the ground with his legs out in front, instead of
+    // dangling them through it (sat on nothing, half out of the window)
+    // on the floor there is no edge to sit on: he slides a stool out of the composer and sits on it, feet on
+    // the ground (on an edge he sits as before, legs dangling)
+    if (this.onFloor && SEATED.has(this.pose)) {
+      if ((now - this.stoolSince) / 1000 < 0.55) {
+        // reaching into the composer beside him for it
+        Object.assign(o, { rootY: 0, armLRX: -0.5, armLRZ: -0.9, armLK: 1, rootRY: -0.6, torsoRX: 0.1 })
+      } else {
+        o.rootY += 17
+        o.legLRX = -0.45 + 0.08 * Math.sin((s * TAU) / 1.6)
+        o.legRRX = -0.45 + 0.08 * Math.sin((s * TAU) / 1.6 + 2)
+      }
     }
     if (now < this.blinkUntil && (this.eyes === 'open' || this.eyes === 'worried')) o.eyesSY = 0.12
     if (now < this.zapUntil) o.boltS = 1.3
@@ -383,15 +435,20 @@ export class Rig3D implements Puppet {
 
   private tick = (now: number): void => {
     this.raf = requestAnimationFrame(this.tick)
-    const busy = !QUIET.has(this.pose) || now - this.since < 500 || now < this.blinkUntil + 60 || now < this.zapUntil + 200
+    const s = this.spr
+    const springs = Math.abs(s.sw) + Math.abs(s.up) + Math.abs(s.hang) + Math.abs(s.swv) + Math.abs(s.upv) > 0.02
+    const busy = springs || now - this.mv.at < 120 || !QUIET.has(this.pose) || now - this.since < 500 || now < this.blinkUntil + 60 || now < this.zapUntil + 200
     // at rest: 24 fps while his eyes follow something, 12 when nothing moves (breathing reads the same)
     if (!busy && now - this.drawn < 1000 / (now - this.lookedAt < 1500 ? 24 : 12)) return
     const dt = Math.min(0.1, (now - this.last) / 1000)
     this.last = now
     this.drawn = now
+    this.physics(dt, now)
     const goal = this.target(now)
     for (const k in goal) this.cur[k] += (goal[k] - this.cur[k]) * (1 - Math.exp(-dt * (EASE[k] ?? 22)))
     if (this.pose === 'land') Object.assign(this.cur, { rootSY: goal.rootSY, rootSX: goal.rootSX })
+    // a tumble follows the spin exactly: eased, the fast turn would wobble
+    if (this.pose === 'fall') Object.assign(this.cur, { rootRZ: goal.rootRZ, rootX: goal.rootX, rootY: goal.rootY })
     this.apply(now)
     this.drawGlow()
     this.renderer.render(this.scene, this.camera)
@@ -415,6 +472,44 @@ export class Rig3D implements Puppet {
     else laptop.visible = false
   }
 
+  /** springs fed by how his on-screen speed changes; a throw's tumble turns on */
+  private physics(dt: number, now: number): void {
+    if (dt <= 0) return
+    const live = now - this.mv.at < 90
+    const vx = live ? this.mv.x : 0
+    const vy = live ? this.mv.y : 0
+    const ax = (vx - this.mv.px) / dt
+    const ay = (vy - this.mv.py) / dt
+    this.mv.px = vx
+    this.mv.py = vy
+    this.mv.speed = Math.hypot(vx, vy)
+    const push = (v: number): number => Math.max(-400, Math.min(400, v))
+    const step = (x: number, v: number, input: number, k: number, damp: number): [number, number] => {
+      const nv = v + (-k * x - damp * v + input) * dt
+      return [Math.max(-0.9, Math.min(0.9, x + nv * dt)), nv]
+    }
+    const s = this.spr
+    ;[s.sw, s.swv] = step(s.sw, s.swv, push((-ax * this.dir) / 200), 60, 7)
+    ;[s.up, s.upv] = step(s.up, s.upv, push(-ay / 200), 60, 7)
+    // held by the hood: a pendulum, slower and looser
+    ;[s.hang, s.hangv] = step(s.hang, s.hangv, push(-ax / 260), 22, 2.5)
+    if (this.pose === 'fall') {
+      this.rot += this.spin * dt
+      this.spin *= Math.exp(-0.4 * dt)
+    }
+  }
+
+  /** the stool he pulls out of the composer to sit on the floor */
+  private placeStool(now: number): void {
+    const stool = this.j!.stool
+    const on = this.onFloor && SEATED.has(this.pose)
+    stool.visible = on
+    if (!on) return
+    // slides out from the composer's side (his left on screen), then stays put
+    const k = Math.min(1, (now - this.stoolSince) / 550)
+    stool.position.x = -40 * Math.pow(1 - k, 3)
+  }
+
   private apply(now: number): void {
     const c = this.cur
     const j = this.j!
@@ -428,10 +523,18 @@ export class Rig3D implements Puppet {
     j.bolt.rotation.set(c.boltRX, 0, c.boltRZ)
     j.bolt.scale.setScalar(c.boltS)
     // his left hand lives in the hoodie pocket (as in the render): it only half follows the pose, unless at work
-    j.armL.rotation.set(c.armLRX * c.armLK, 0, c.armLRZ * c.armLK)
-    j.armR.rotation.set(c.armRRX, 0, c.armRRZ)
-    j.legL.rotation.x = c.legLRX
-    j.legR.rotation.x = c.legRRX
+    // secondary motion over the pose: limbs lag the way he speeds up, a jolt throws the arms out, a fast
+    // flight sets them flailing
+    const { sw, up } = this.spr
+    const flail = this.pose === 'fall' || this.pose === 'held' ? Math.min(1, this.mv.speed / 1200) : 0
+    const t = now / 1000
+    j.armL.rotation.set(c.armLRX * c.armLK + sw + 0.4 * flail * Math.sin(t * 19), 0, c.armLRZ * c.armLK - up * 0.8 - 0.3 * flail * Math.sin(t * 23))
+    j.armR.rotation.set(c.armRRX + sw + 0.4 * flail * Math.sin(t * 17 + 1), 0, c.armRRZ + up * 0.8 + 0.3 * flail * Math.sin(t * 21 + 2))
+    j.legL.rotation.x = c.legLRX - sw * 0.6 + 0.45 * flail * Math.sin(t * 15)
+    j.legR.rotation.x = c.legRRX - sw * 0.6 - 0.45 * flail * Math.sin(t * 16 + 1)
+    j.head.rotation.x += sw * 0.35 + up * 0.5
+    if (this.pose === 'held') j.hang.rotation.z = c.hangRZ + this.spr.hang
+    this.placeStool(now)
     j.eyes.scale.y = c.eyesSY
     const eye = (v: number): number => Math.max(-1, Math.min(1, v))
     // across most of the visor: at ±2 the eyes barely moved and he seemed to turn instead of look

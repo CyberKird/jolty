@@ -4,6 +4,7 @@ import { tr } from '@shared/i18n'
 import { api } from '../store'
 import { showMenu } from '../components/ContextMenu'
 import { Brain } from './brain'
+import { soundsOn } from './sfx'
 import './mascot.css'
 
 const EVENT = 'jolty:mascot'
@@ -50,7 +51,10 @@ function Body() {
 export function Mascot() {
   const [on, setOn] = useState(false)
   useEffect(() => {
-    void api.app.settings().then((s) => setOn(s.mascot !== false))
+    void api.app.settings().then((s) => {
+      setOn(s.mascot !== false)
+      soundsOn(s.mascotSounds !== false)
+    })
     const onToggle = (e: Event): void => setOn(Boolean((e as CustomEvent<boolean>).detail))
     window.addEventListener(EVENT, onToggle)
     return () => window.removeEventListener(EVENT, onToggle)

@@ -287,6 +287,8 @@ export interface AppSettings {
   reduceMotion?: boolean
   /** Jolty the mascot runs around the interface; on unless false */
   mascot?: boolean
+  /** Jolty's soft sounds; on unless false */
+  mascotSounds?: boolean
   /** the version What's new was last shown for: it opens once after each update */
   seenVersion?: string
   /** interface language code (see shared/i18n.ts); unset follows the system */

@@ -1,5 +1,6 @@
 import { useStore } from '../store'
 import { sparks, streak } from './fx'
+import { play, type Sound } from './sfx'
 import { FLOORS, goal, spot, visible, WORK, type Eyes, type Goal, type Pose } from './places'
 import type { Puppet } from './Rig3D'
 
@@ -11,8 +12,8 @@ const H = 82
 const FOOT = 132 * 0.6
 /** px from the feet to the hood top, where a cursor holds him */
 const GRIP = 71
-/** the lowest he stands: the window's bottom less room for his legs when he sits */
-const FLOOR = (): number => innerHeight - 16
+/** the window's floor: his feet on its bottom edge (seated there he sits on the ground, Rig3D) */
+const FLOOR = (): number => innerHeight - 1
 const GRAVITY = 2600
 const WALK = 95
 const RUN = 270
@@ -38,6 +39,8 @@ export class Brain {
   private anchorDx = 0
   /** feet below the anchor's top (0: on it; beside the composer he stands on the chat column's floor) */
   private anchorDy = 0
+  /** measured from the anchor's bottom instead: the composer's area grows upward as you type, its floor stays */
+  private byBottom = false
   private pose: Pose = 'idle'
   private vx = 0
   private vy = 0
@@ -164,7 +167,9 @@ export class Brain {
     this.y = y
     const r = el?.getBoundingClientRect()
     this.anchorDx = r ? x - r.left : 0
-    this.anchorDy = r ? y - r.top : 0
+    this.byBottom = Boolean(r && Math.abs(y - r.bottom) < Math.abs(y - r.top))
+    this.anchorDy = r ? y - (this.byBottom ? r.bottom : r.top) : 0
+    this.body.floor(!el || el.matches('.composer-wrap'))
     this.mode = 'ground'
     this.resize.disconnect()
     if (el) this.resize.observe(el)
@@ -172,7 +177,10 @@ export class Brain {
 
   private landed(speed: number): void {
     this.mode = 'ground'
-    if (speed > 1500) return this.react('trip', 'dizzy', 1600)
+    play(speed > 1100 ? 'thud' : 'land', speed / 1800)
+    if (speed > 1100) play('oof')
+    // a hard landing knocks him flat (Rig3D bounces him and picks the side he spun to), then he gets up
+    if (speed > 1100) return this.react('trip', 'dizzy', 1700)
     this.react('land', 'open', 260)
   }
 
@@ -218,7 +226,7 @@ export class Brain {
     }
     const r = visible(this.anchor)
     if (!r) return this.fall(0, 0)
-    this.y = r.top + this.anchorDy
+    this.y = (this.byBottom ? r.bottom : r.top) + this.anchorDy
     this.x = clamp(r.left + this.anchorDx, r.left + 14, r.right - 14)
   }
 
@@ -297,7 +305,15 @@ export class Brain {
   }
 
   private placed = ''
+  private moved = { at: 0, x: 0, y: 0 }
   private apply(): void {
+    // his on-screen velocity, for the body's secondary motion and a throw's spin
+    const now = performance.now()
+    const dt = (now - this.moved.at) / 1000
+    if (dt > 0.004) {
+      if (dt < 0.25) this.body.motion((this.x - this.moved.x) / dt, (this.y - this.moved.y) / dt)
+      Object.assign(this.moved, { at: now, x: this.x, y: this.y })
+    }
     const t = `translate3d(${Math.round(this.x - W / 2)}px, ${Math.round(this.y - FOOT)}px, 0)`
     if (t !== this.placed) this.el.style.transform = this.placed = t
   }
@@ -305,6 +321,16 @@ export class Brain {
   private set(pose: Pose, eyes: Eyes, bubble = ''): void {
     const was = this.pose
     this.pose = pose
+    if (pose !== was) {
+      // a sound for each change of what he does, soft and short (sfx.ts)
+      const cue: Partial<Record<Pose, Sound>> = { jump: 'hop', held: 'grab', cheer: 'cheer', wave: 'hello', point: 'ding', type: 'click', read: 'click' }
+      if (pose === 'fall' && was === 'held') play('whoosh', 0.8)
+      else if (cue[pose]) play(cue[pose]!)
+      // on the floor a seat means the stool sliding out (Rig3D)
+      const seat = pose === 'sit' || pose === 'type' || pose === 'read' || pose === 'sleep'
+      const wasSeat = was === 'sit' || was === 'type' || was === 'read' || was === 'sleep'
+      if (seat && !wasSeat && (!this.anchor || this.anchor.matches('.composer-wrap'))) this.later(() => play('scrape'), 120)
+    }
     if (pose === 'zap' && was !== 'zap' && !calm()) this.later(this.crackle, 500)
     this.el.dataset.pose = pose
     this.el.dataset.eyes = eyes
@@ -334,7 +360,10 @@ export class Brain {
         if (s.power.armed && !p.power.armed) this.react('wave', 'sleepy', 1600, 'z')
         const toast = s.toasts.at(-1)
         if (toast && toast !== p.toasts.at(-1)) {
-          if (toast.error) this.react('idle', 'worried', 1500)
+          if (toast.error) {
+            play('worry')
+            this.react('idle', 'worried', 1500)
+          }
           // a nod: "done" (copied, saved, removed)
           else this.react('land', 'happy', 300)
         }
@@ -385,13 +414,15 @@ export class Brain {
   private crackle = (): void => {
     if (this.pose !== 'zap' || this.mode !== 'ground') return
     this.body.zap()
+    play('crackle')
     sparks(this.x, this.y - 70)
     this.later(this.crackle, rand(650, 1100))
   }
 
   /** what he does when nothing is happening */
   private idleLoop = (): void => {
-    this.later(this.idleLoop, rand(5000, 11000))
+    // unhurried: something every 9 to 17 s, so he lives on the page without pulling at your eye
+    this.later(this.idleLoop, rand(9000, 17000))
     if (this.mode !== 'ground' || performance.now() < this.busyUntil || calm()) return
     if (goal().pose !== 'idle') return
     const now = performance.now()
@@ -415,9 +446,24 @@ export class Brain {
       this.face(to < this.x ? -1 : 1)
       this.freeUntil = performance.now() + 15000
       this.set('walk', 'open')
-    } else if (roll < 0.6) {
+    } else if (roll < 0.47) {
+      // on the floor this brings out his stool (Rig3D)
       this.set('sit', 'open')
-    } else if (roll < 0.75 && Math.hypot(this.pointer.x - this.x, this.pointer.y - this.y) < 320) {
+    } else if (roll < 0.58) {
+      this.react('read', 'focus', 4500) // a look at his laptop
+    } else if (roll < 0.67) {
+      this.react('scout', 'open', 2600) // looks around
+    } else if (roll < 0.74) {
+      this.react('think', 'open', 3000)
+    } else if (roll < 0.82) {
+      // a visit: hops onto the last message on screen, sits there a while, then comes home
+      const msg = [...document.querySelectorAll('.msg-user')].reverse().find((el) => visible(el))
+      const r = msg && visible(msg)
+      if (!msg || !r || msg === this.anchor) return
+      this.freeUntil = performance.now() + 14000
+      this.face(r.left + 60 < this.x ? -1 : 1)
+      this.leap(msg, clamp(r.right - 60, r.left + 30, r.right - 30))
+    } else if (Math.hypot(this.pointer.x - this.x, this.pointer.y - this.y) < 320) {
       this.face(this.pointer.x < this.x ? -1 : 1)
       this.react('wave', 'happy', 1400)
     }
@@ -441,7 +487,10 @@ export class Brain {
     on('click', (e) => {
       const b = (e.target as Element | null)?.closest?.('.permission .btn')
       if (!b) return
-      if (b.classList.contains('danger')) this.react('idle', 'worried', 1200)
+      if (b.classList.contains('danger')) {
+        play('worry')
+        this.react('idle', 'worried', 1200)
+      }
       else this.react('cheer', 'happy', 800)
     })
     on('input', (e) => {
