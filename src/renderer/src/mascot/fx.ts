@@ -11,10 +11,11 @@ function spawn(className: string, style: Record<string, string>): void {
   setTimeout(() => el.remove(), 1500)
 }
 
-export function sparks(x: number, y: number): void {
+/** a burst of bolts from a point, fanned around a direction (up by default) */
+export function sparks(x: number, y: number, dir = -Math.PI / 2): void {
   if (document.documentElement.classList.contains('reduce-motion')) return
   for (let i = 0; i < 9; i++) {
-    const a = -Math.PI / 2 + (i - 4) * 0.36
+    const a = dir + (i - 4) * 0.36
     const d = rand(34, 58)
     spawn('mascot-spark', {
       '--x0': `${x - 3}px`,

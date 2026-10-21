@@ -5,6 +5,7 @@
 ### Fixes
 
 - No more drag in the air: a thrown Jolty keeps his speed (the ragdoll had a little air resistance and a heavy spin damping), and held by the hood he follows the cursor more tightly.
+- The sparks come from where they should: the burst when he cheers or is clicked starts at the bolt on his head, and the charge while a command runs flies from his hands, forward, instead of a fixed point above his feet that did not move with him.
 - He no longer looks like he hovers on tiptoe over nothing when he stands on the window's floor: the floor line is a few pixels up so his shoes are whole, and a faint volt glow under his feet shows where he stands.
 
 ## 0.7.1

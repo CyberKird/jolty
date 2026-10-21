@@ -476,7 +476,7 @@ export class Brain {
         const now = s.status[id]
         if (was === 'running' && now === 'idle') {
           this.react('cheer', 'happy', 1400)
-          sparks(this.x, this.y - 70)
+          this.spark('bolt')
         } else if (now === 'error' && was !== 'error') this.hurt()
         else if (now !== was) this.later(this.decide, 120)
         if ((s.permissions[id]?.length ?? 0) !== (p.permissions[id]?.length ?? 0)) this.later(this.decide, 120)
@@ -502,6 +502,12 @@ export class Brain {
     if (!this.knock(-this.dir * 520)) this.react('trip', 'dizzy', 1800)
   }
 
+  /** a burst from a part of him: the bolt on his head (up), or a hand (the way he faces) */
+  private spark(part: 'bolt' | 'handL' | 'handR'): void {
+    const a = this.body.anchor(part)
+    sparks(this.x + a.x, this.y + a.y, part === 'bolt' ? -Math.PI / 2 : this.dir > 0 ? -0.35 : Math.PI + 0.35)
+  }
+
   private zap(): void {
     this.body.zap()
   }
@@ -522,7 +528,8 @@ export class Brain {
     if (this.pose !== 'zap' || this.mode !== 'ground') return
     this.body.zap()
     play('crackle')
-    sparks(this.x, this.y - 70)
+    // thrown from his hands, forward: that is where the charge is
+    this.spark(Math.random() < 0.5 ? 'handL' : 'handR')
     this.later(this.crackle, rand(650, 1100))
   }
 
@@ -689,7 +696,7 @@ export class Brain {
         if (this.mode !== 'ground') return
         this.face(this.pointer.x < this.x ? -1 : 1)
         this.react('wave', 'happy', 1300)
-        return sparks(this.x, this.y - 70)
+        return this.spark('bolt')
       }
       this.freeUntil = performance.now() + 9000
       if (this.rag) {

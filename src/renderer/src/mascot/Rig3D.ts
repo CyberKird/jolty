@@ -15,6 +15,8 @@ export interface Puppet {
   /** the joints as they are now, in the ragdoll's terms: where a ragdoll starts from */
   stance(): RagJoints
   blink(): void
+  /** where a part of him is on the screen, px from his feet point (x right, y down) */
+  anchor(part: 'bolt' | 'handL' | 'handR'): { x: number; y: number }
   zap(): void
   /** standing on the window's floor (true) or on an element's edge he can sit on */
   floor(on: boolean): void
@@ -90,6 +92,7 @@ export class Rig3D implements Puppet {
   private blinkUntil = 0
   private zapUntil = 0
   private raf = 0
+  private pxu: number
   private last = performance.now()
   private drawn = 0
   /** when the laptop came out of the pocket, and when it went back in */
@@ -117,6 +120,7 @@ export class Rig3D implements Puppet {
   private swaps: { o: THREE.Mesh | THREE.Sprite; normal: THREE.Material; glow: THREE.Material }[] = []
 
   constructor(canvas: HTMLCanvasElement, pxPerUnit: number) {
+    this.pxu = pxPerUnit
     this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' })
     this.renderer.setPixelRatio(Math.min(2, devicePixelRatio))
     this.renderer.setSize((VIEW.right - VIEW.left) * pxPerUnit, (VIEW.top - VIEW.bottom) * pxPerUnit)
@@ -192,6 +196,18 @@ export class Rig3D implements Puppet {
   }
   motion(vx: number, vy: number): void {
     Object.assign(this.mv, { x: vx, y: vy, at: performance.now() })
+  }
+  anchor(part: 'bolt' | 'handL' | 'handR'): { x: number; y: number } {
+    const at = { x: 0, y: 0 }
+    const j = this.j
+    if (!j) return at
+    const bone = j.root.getObjectByName(part === 'bolt' ? 'bolt' : part === 'handL' ? 'foreL' : 'foreR')
+    if (!bone) return at
+    // a hand is the tail of the forearm bone
+    const p = (bone.children[0] && part !== 'bolt' ? bone.children[0] : bone).getWorldPosition(new THREE.Vector3())
+    const o = new THREE.Vector3(0, 0, 0)
+    for (const v of [p, o]) v.project(this.camera)
+    return { x: ((p.x - o.x) * (VIEW.right - VIEW.left) * this.pxu) / 2, y: (-(p.y - o.y) * (VIEW.top - VIEW.bottom) * this.pxu) / 2 }
   }
   zap(): void {
     this.zapUntil = performance.now() + 260
