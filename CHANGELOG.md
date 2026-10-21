@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2
+
+### Fixes
+
+- No more drag in the air: a thrown Jolty keeps his speed (the ragdoll had a little air resistance and a heavy spin damping), and held by the hood he follows the cursor more tightly.
+- He no longer looks like he hovers on tiptoe over nothing when he stands on the window's floor: the floor line is a few pixels up so his shoes are whole, and a faint volt glow under his feet shows where he stands.
+
 ## 0.7.1
 
 ### Fixes

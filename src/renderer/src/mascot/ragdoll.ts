@@ -224,7 +224,7 @@ export class Ragdoll {
     for (const n of order) {
       const part = PARTS[n]
       const f = frames[n]
-      const body = this.world.createBody({ type: 'dynamic', position: V(f.x, f.y), angle: f.ang, allowSleep: false, linearDamping: 0.05, angularDamping: 0.6 })
+      const body = this.world.createBody({ type: 'dynamic', position: V(f.x, f.y), angle: f.ang, allowSleep: false, linearDamping: 0, angularDamping: 0.15 })
       const fix = { density: part.density, friction: 0.9, restitution: 0.12, filterCategoryBits: CAT[n], filterMaskBits: MASK[CAT[n]] }
       body.createFixture(planck.Box(part.box[0] * U, part.box[1] * U), fix)
       if (part.foot) body.createFixture(planck.Box(part.foot.box[0] * U, part.foot.box[1] * U, V((part.foot.c[0] - part.centre[0]) * U, (part.foot.c[1] - part.centre[1]) * U), 0), fix)
@@ -334,7 +334,7 @@ export class Ragdoll {
     this.since = this.t
     const head = this.bodies.head
     const hood = head.getWorldPoint(V(0, (101 - 79) * U))
-    this.mouse = this.world.createJoint(planck.MouseJoint({ maxForce: this.mass * 900, frequencyHz: 9, dampingRatio: 0.7 }, this.ground, head, hood)) ?? undefined
+    this.mouse = this.world.createJoint(planck.MouseJoint({ maxForce: this.mass * 900, frequencyHz: 14, dampingRatio: 0.6 }, this.ground, head, hood)) ?? undefined
     this.pull(px, py)
   }
   /** the cursor moves: where the hood should be (screen px of the hood top) */

@@ -159,7 +159,7 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   // not tone mapped, or ACES washes the volt out to pale yellow
   boltMesh.material = new THREE.MeshStandardMaterial({ color: VOLT, emissive: VOLT, emissiveIntensity: 0.35, roughness: 0.4, toneMapped: false })
 
-  const shadow = mesh(new THREE.PlaneGeometry(64, 16), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(0,0,0,0.7)', 'rgba(0,0,0,0)'), transparent: true, depthWrite: false }), 0, 0.2, 0)
+  const shadow = mesh(new THREE.PlaneGeometry(64, 16), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(212,255,0,0.2)', 'rgba(212,255,0,0)'), transparent: true, depthWrite: false }), 0, 0.2, 0)
   shadow.rotation.x = -Math.PI / 2
   scene.add(shadow)
 

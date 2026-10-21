@@ -14,7 +14,7 @@ const FOOT = 132 * 0.6
 /** px from the feet to the hood top, where a cursor holds him */
 const GRIP = 71
 /** the window's floor: his feet on its bottom edge (seated there he sits on the ground, Rig3D) */
-const FLOOR = (): number => innerHeight - 1
+const FLOOR = (): number => innerHeight - 7
 const GRAVITY = 2600
 /** px from the pelvis down to the feet when he stands (the rig's hip height at 0.6 px a unit) */
 const HIP = HIP_Y * 0.6
