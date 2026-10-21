@@ -4,6 +4,8 @@ A Windows desktop app that runs **Claude Code** and **Codex** in one place, with
 
 Jolty does not replace the official engines: it bundles them and starts them exactly the way the Anthropic and OpenAI apps do. You sign in with your own accounts, and Jolty shows everything in one interface.
 
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/joltarise)
+
 ## What it does
 
 - **Several profiles**: two (or any number of) Claude subscriptions, the Codex account, Anthropic or OpenAI API keys, plus any compatible provider (DeepSeek, Xiaomi MiMo, Kimi, GLM, OpenRouter, LiteLLM).
