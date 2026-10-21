@@ -1,0 +1,38 @@
+# Builds whisper.cpp's whisper-cli for Windows with the Vulkan backend (any GPU: AMD, NVIDIA, Intel; CPU when
+# there is none) and attaches it to a prerelease, never Latest, so the app updater ignores it.
+# scripts/fetch-redist.mjs downloads it into the installer. Run by hand when whisper.cpp needs an update.
+name: whisper
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: whisper.cpp tag
+        default: v1.9.5
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: ggml-org/whisper.cpp
+          ref: ${{ inputs.ref }}
+      - uses: humbletim/install-vulkan-sdk@v1.2
+        with:
+          version: latest
+          cache: true
+      - name: Build
+        run: |
+          cmake -B build -DGGML_VULKAN=ON -DGGML_NATIVE=OFF -DBUILD_SHARED_LIBS=OFF -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_SERVER=OFF
+          cmake --build build --config Release -j 4 --target whisper-cli
+      - name: Publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir out && cp build/bin/Release/whisper-cli.exe out/ && cp LICENSE out/LICENSE-whisper.cpp.txt
+          (cd out && 7z a ../whisper-vulkan-win-x64.zip .)
+          tag="whisper-${{ inputs.ref }}"
+          gh release view "$tag" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create "$tag" -R "$GITHUB_REPOSITORY" --prerelease --latest=false --title "whisper.cpp ${{ inputs.ref }} (Vulkan) for Jolty" --notes "whisper-cli built with Vulkan, used by Jolty's voice input. MIT, see LICENSE-whisper.cpp.txt."
+          gh release upload "$tag" whisper-vulkan-win-x64.zip -R "$GITHUB_REPOSITORY" --clobber
