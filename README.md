@@ -4,7 +4,7 @@ A Windows desktop app that runs **Claude Code** and **Codex** in one place, with
 
 Jolty does not replace the official engines: it bundles them and starts them exactly the way the Anthropic and OpenAI apps do. You sign in with your own accounts, and Jolty shows everything in one interface.
 
-[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/joltarise)
+[![Support me on Ko-fi](https://raw.githubusercontent.com/CyberKird/.github/main/assets/ko-fi-button.svg)](https://ko-fi.com/joltarise)
 
 ## What it does
 
