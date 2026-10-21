@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.3
+
+### New
+
+- A thud when Jolty is thrown into a wall or the top of the window, as hard as he hit it.
+- When he looks up at the cursor his head goes back, and down it dips, instead of only swiveling left and right. In What's new his head follows the cursor too, not just his eyes.
+- A real wave: the arm goes out and up and the forearm swings side to side in view (before it only bent toward you, so it hardly moved).
+
+### Improvements
+
+- Smoother and less stiff: at rest he now draws 30 frames a second, up from 12, and every frame while you move the cursor. His eyes glide to the cursor instead of snapping, poses blend more softly, he winds up with a crouch before a jump, builds up speed when he starts walking and eases off as he arrives, and his steps keep pace with the ground.
+- Jolty in What's new always runs at full frame rate; at the start of the animation he dropped to 12.
+
+### Fixes
+
+- He no longer floats beside the composer after a long dash: he lands on the window's floor, not on the top of the composer's area.
+
 ## 0.6.2
 
 ### New

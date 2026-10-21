@@ -46,6 +46,8 @@ export class Brain {
   private vy = 0
   private walkTo = 0
   private walkSpeed = WALK
+  /** how fast he is walking now: it builds up from a standstill and eases off near the end */
+  private wv = 0
   private jump?: { x0: number; y0: number; el: Element | null; tx: number; dy: number; t0: number; ms: number; lift: number }
   private floors: { el: Element; r: DOMRect }[] = []
   private floorsAt = 0
@@ -119,6 +121,7 @@ export class Brain {
     const dist = Math.hypot(dx, to.y - this.y)
     if (to.el === this.anchor && Math.abs(to.y - this.y) < 4) {
       this.mode = 'walk'
+      this.wv = 0
       this.walkTo = to.x
       this.walkSpeed = Math.abs(dx) > 200 || g.pose !== 'idle' ? RUN : WALK
       this.face(dx < 0 ? -1 : 1)
@@ -137,17 +140,22 @@ export class Brain {
     const ty = top !== undefined ? top + dy : FLOOR()
     const dist = Math.hypot(tx - this.x, ty - this.y)
     this.mode = 'jump'
-    this.jump = { x0: this.x, y0: this.y, el, tx, dy, t0: performance.now(), ms: clamp(380 + dist * 0.55, 420, 760), lift: 46 + Math.max(0, this.y - ty) * 0.6 }
-    this.set('jump', 'happy')
+    this.jump = { x0: this.x, y0: this.y, el, tx, dy, t0: performance.now() + 150, ms: clamp(380 + dist * 0.55, 420, 760), lift: 46 + Math.max(0, this.y - ty) * 0.6 }
+    // a beat of crouching first, then the spring
+    this.set('crouch', 'happy')
   }
 
   private dash(el: Element | null, tx: number, ty: number): void {
+    // where he stands is measured from the element's top (a wrapper's floor is not its top), re-read on arrival
+    const top = el ? visible(el)?.top : undefined
+    const dy = top === undefined ? 0 : ty - top
     this.mode = 'dash'
     this.set('dash', 'open')
     streak(this.x, this.y - 40, tx, ty - 40)
     this.face(tx < this.x ? -1 : 1)
     this.later(() => {
-      this.place(el, tx, el ? (visible(el)?.top ?? ty) : ty)
+      const now = el ? visible(el)?.top : undefined
+      this.place(el, tx, now === undefined ? ty : now + dy)
       this.landed(0)
     }, 170)
   }
@@ -233,9 +241,12 @@ export class Brain {
   private stepWalk(dt: number): void {
     this.follow()
     if (this.mode !== 'walk') return
-    const step = this.walkSpeed * dt
-    if (Math.abs(this.walkTo - this.x) <= step) {
+    const left = Math.abs(this.walkTo - this.x)
+    this.wv += (this.walkSpeed * clamp(left / 70, 0.3, 1) - this.wv) * (1 - Math.exp(-dt * 7))
+    const step = this.wv * dt
+    if (left <= step + 0.4) {
       this.x = this.walkTo
+      this.wv = 0
       this.place(this.anchor, this.x, this.y)
       this.set('idle', 'open')
       return this.decide()
@@ -247,7 +258,8 @@ export class Brain {
 
   private stepJump(now: number): void {
     const j = this.jump
-    if (!j) return
+    if (!j || now < j.t0) return
+    if (this.pose === 'crouch') this.set('jump', 'happy')
     const t = Math.min(1, (now - j.t0) / j.ms)
     const top = j.el ? visible(j.el)?.top : undefined
     const ty = top !== undefined ? top + j.dy : FLOOR()
@@ -268,10 +280,13 @@ export class Brain {
     this.y += this.vy * dt
     if (this.x < 30 || this.x > innerWidth - 30) {
       this.x = clamp(this.x, 30, innerWidth - 30)
+      // a bump into the wall, by how hard he hit it
+      if (Math.abs(this.vx) > 150) play('thud', Math.abs(this.vx) / 1800)
       this.vx *= -0.5
     }
     if (this.y < H && this.vy < 0) {
       this.y = H
+      if (this.vy < -150) play('thud', -this.vy / 1800)
       this.vy *= -0.3
     }
     this.body.tilt(clamp(this.vx / 28, -40, 40))
@@ -441,6 +456,7 @@ export class Brain {
       const to = clamp(this.x + rand(60, 200) * (Math.random() < 0.5 ? -1 : 1), lo, hi)
       if (Math.abs(to - this.x) < 30) return
       this.mode = 'walk'
+      this.wv = 0
       this.walkTo = to
       this.walkSpeed = WALK
       this.face(to < this.x ? -1 : 1)

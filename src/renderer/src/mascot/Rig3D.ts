@@ -30,10 +30,18 @@ const REST: T = {
   // how much the left arm follows the pose (its hand lives in the pocket), and where the eyes look on their own
   armLK: 0.35, eyeX: 0, eyeY: 0,
   // the upper spine, knees and elbows: a little bent at rest, never locked straight
-  chestRX: 0, kneeL: 0.06, kneeR: 0.06, elbL: -0.14, elbR: -0.14
+  chestRX: 0, kneeL: 0.06, kneeR: 0.06, elbL: -0.14, elbR: -0.14,
+  // the right forearm turned in the screen's plane (a wave: the elbow's own hinge only bends it toward us)
+  foreRZ: 0,
+  // where the eyes look (eased: they glide to the cursor instead of snapping to it)
+  gx: 0, gy: 0
 }
 /** turning and settling into a seat are slower than limbs */
-const EASE: T = { rootRY: 9, rootY: 16, headRY: 10 }
+const EASE: T = { rootRY: 9, rootY: 16, headRY: 10, gx: 15, gy: 15 }
+/** blend rate of the joints toward their pose (1/s): soft enough that a change of pose flows */
+const BLEND = 17
+/** px he covers in one walking or running cycle: the legs keep pace with the ground, so the feet do not skate */
+const STRIDE = { walk: 49, run: 81 }
 const QUIET = new Set<Pose>(['idle', 'sit', 'sleep'])
 const SEATED = new Set<Pose>(['sit', 'sleep', 'type', 'read'])
 /** poses with the laptop out of the hoodie pocket */
@@ -70,6 +78,8 @@ export class Rig3D implements Puppet {
   private lookY = 0
   private tiltDeg = 0
   private cur: T = { ...REST }
+  /** the walking cycle's phase, driven by his speed over the ground */
+  private gait = 0
   private blinkUntil = 0
   private zapUntil = 0
   private raf = 0
@@ -80,6 +90,8 @@ export class Rig3D implements Puppet {
   private laptopAway = -1e9
   private lookedAt = 0
   private onFloor = false
+  /** never drops to the resting frame rates (the What's new stage, where he is the show) */
+  fullRate = false
   /** on-screen velocity from the brain, and when it last said */
   private mv = { x: 0, y: 0, at: 0, px: 0, py: 0, speed: 0 }
   /** secondary motion, springs driven by how he speeds up: limbs swinging, a jolt up or down, the hood pendulum */
@@ -231,10 +243,12 @@ export class Rig3D implements Puppet {
     const lx = this.lookX
     const ly = this.lookY
     const lookAt = (body: number, head: number): void => {
-      // the eyes do most of the following now (apply); body and head only lean into it
-      o.rootRY = lx * body * 0.4
+      // the eyes follow on the visor (apply) and the head goes with them: back to look up, a dip to look down.
+      // looking up the body turns less, or he swivels left and right instead of looking up
+      o.rootRY = lx * body * 0.4 * (1 - 0.5 * Math.abs(ly))
       o.headRY = lx * head * 0.6
-      o.headRX = -ly * 0.22
+      o.headRX = ly < 0 ? ly * 0.55 : ly * 0.3
+      o.chestRX += ly * 0.07
     }
     switch (this.pose) {
       case 'idle':
@@ -251,9 +265,11 @@ export class Rig3D implements Puppet {
       case 'walk':
       case 'run': {
         const run = this.pose === 'run'
-        const c = (s * TAU) / (run ? 0.3 : 0.52)
-        const leg = run ? 0.95 : 0.5
-        const arm = run ? 1.1 : 0.55
+        const c = this.gait
+        // slowing down or starting off, the steps get shorter
+        const pace = Math.max(0.55, Math.min(1.2, this.mv.speed / (run ? 270 : 95)))
+        const leg = (run ? 0.95 : 0.5) * pace
+        const arm = (run ? 1.1 : 0.55) * pace
         o.legLRX = leg * Math.sin(c)
         o.legRRX = -leg * Math.sin(c)
         o.armLRX = -arm * Math.sin(c)
@@ -270,6 +286,10 @@ export class Rig3D implements Puppet {
         o.rootRY = d * (run ? 1.2 : 1.05)
         break
       }
+      case 'crouch':
+        // winding up for a jump: down in the knees, the arms back
+        Object.assign(o, { rootSX: 1.05, rootSY: 0.9, rootY: -3, legLRX: -0.5, legRRX: -0.5, kneeL: 1, kneeR: 1, armLRX: 0.45, armRRX: 0.45, elbL: -0.3, elbR: -0.3, torsoRX: 0.14, headRX: -0.1, rootRY: d * 0.6 })
+        break
       case 'jump':
         Object.assign(o, { rootSX: 0.93, rootSY: 1.08, armLRZ: -2.1, armRRZ: 2.1, legLRX: -0.7, legRRX: -0.35, kneeL: 1.1, kneeR: 0.8, elbL: -0.4, elbR: -0.4, rootRY: d * 0.6 })
         break
@@ -411,9 +431,13 @@ export class Rig3D implements Puppet {
         break
       }
       case 'wave':
-        o.armRRZ = 2.1
-        // the forearm waves from the elbow
-        o.elbR = -0.55 - 0.45 * Math.sin((s * TAU) / 0.62)
+        // the arm out and up, the forearm standing up from the elbow and swinging side to side in view
+        const w = (s * TAU) / 0.75
+        o.armRRZ = 2.0 + 0.08 * Math.sin(w - 1)
+        o.armRRX = -0.15
+        o.elbR = -0.1
+        o.foreRZ = 0.95 + 0.5 * Math.sin(w)
+        o.rootRZ = 0.015 * Math.sin(w)
         o.headRZ = -0.1
         lookAt(0.5, 0.4)
         break
@@ -427,6 +451,9 @@ export class Rig3D implements Puppet {
       case 'cheer': {
         const c = (s * TAU) / 0.55
         o.rootY = 22 * Math.max(0, Math.sin(c))
+        // the head still follows the cursor
+        o.headRY = lx * 0.45
+        o.headRX = ly < 0 ? ly * 0.5 : ly * 0.25
         o.armLRZ = -2.2 - 0.22 * Math.sin(2 * c)
         o.armRRZ = 2.2 + 0.22 * Math.sin(2 * c)
         // springing from bent knees at the bottom of each hop, arms up with soft elbows
@@ -466,6 +493,8 @@ export class Rig3D implements Puppet {
     }
     if (now < this.blinkUntil && (this.eyes === 'open' || this.eyes === 'worried')) o.eyesSY = 0.12
     if (now < this.zapUntil) o.boltS = 1.3
+    o.gx = lx
+    o.gy = ly
     return o
   }
 
@@ -474,14 +503,15 @@ export class Rig3D implements Puppet {
     const s = this.spr
     const springs = Math.abs(s.sw) + Math.abs(s.up) + Math.abs(s.hang) + Math.abs(s.swv) + Math.abs(s.upv) > 0.02
     const busy = springs || now - this.mv.at < 120 || !QUIET.has(this.pose) || now - this.since < 500 || now < this.blinkUntil + 60 || now < this.zapUntil + 200
-    // at rest: 24 fps while his eyes follow something, 12 when nothing moves (breathing reads the same)
-    if (!busy && now - this.drawn < 1000 / (now - this.lookedAt < 1500 ? 24 : 12)) return
+    // at rest: every frame while his eyes follow something, 30 fps when nothing moves (12 looked choppy)
+    if (!busy && !this.fullRate && now - this.lookedAt > 1500 && now - this.drawn < 1000 / 30) return
     const dt = Math.min(0.1, (now - this.last) / 1000)
     this.last = now
     this.drawn = now
     this.physics(dt, now)
+    if (this.pose === 'walk' || this.pose === 'run') this.gait += (dt * TAU * Math.max(this.mv.speed, 30)) / STRIDE[this.pose]
     const goal = this.target(now)
-    for (const k in goal) this.cur[k] += (goal[k] - this.cur[k]) * (1 - Math.exp(-dt * (EASE[k] ?? 22)))
+    for (const k in goal) this.cur[k] += (goal[k] - this.cur[k]) * (1 - Math.exp(-dt * (EASE[k] ?? BLEND)))
     if (this.pose === 'land') Object.assign(this.cur, { rootSY: goal.rootSY, rootSX: goal.rootSX })
     // a tumble follows the spin exactly: eased, the fast turn would wobble
     if (this.pose === 'fall') Object.assign(this.cur, { rootRZ: goal.rootRZ, rootX: goal.rootX, rootY: goal.rootY })
@@ -574,6 +604,7 @@ export class Rig3D implements Puppet {
     j.shinR.rotation.x = c.kneeR + give + 0.35 * flail * Math.sin(t * 14 + 2)
     j.foreL.rotation.x = (c.elbL + sw * 0.5 - 0.3 * flail * Math.sin(t * 18)) * c.armLK
     j.foreR.rotation.x = c.elbR + sw * 0.5 - 0.3 * flail * Math.sin(t * 20 + 1)
+    j.foreR.rotation.z = c.foreRZ
     j.chest.rotation.x = c.chestRX + sw * 0.15
     j.head.rotation.x += sw * 0.35 + up * 0.5
     if (this.pose === 'held') j.hang.rotation.z = c.hangRZ + this.spr.hang
@@ -581,8 +612,8 @@ export class Rig3D implements Puppet {
     j.eyes.scale.y = c.eyesSY
     const eye = (v: number): number => Math.max(-1, Math.min(1, v))
     // across most of the visor: at ±2 the eyes barely moved and he seemed to turn instead of look
-    j.eyes.position.x = eye(this.lookX + c.eyeX) * 6
-    j.eyes.position.y = eye(this.lookY + c.eyeY) * -4.5
+    j.eyes.position.x = eye(c.gx + c.eyeX) * 6
+    j.eyes.position.y = eye(c.gy + c.eyeY) * -4.5
     const face = this.moment ?? this.eyes
     for (const [name, g] of Object.entries(j.faces)) g.visible = name === face
     this.placeLaptop(now)

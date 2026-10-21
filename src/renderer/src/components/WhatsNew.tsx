@@ -49,13 +49,15 @@ function HeroJolty() {
         timer = window.setTimeout(next, ms)
       }
       rig.face(-1)
+      rig.fullRate = true
       if (calm) rig.set('idle', 'happy')
       else next()
       const look = (e: PointerEvent): void => {
         const r = canvas.current?.getBoundingClientRect()
         if (!r) return
         const clamp = (v: number): number => Math.max(-1, Math.min(1, v))
-        rig.look(clamp(((e.clientX - r.left) / r.width) * 2 - 1), clamp(((e.clientY - r.top) / r.height) * 2 - 1.2))
+        // as in the app: the cursor's distance from his head, in steps of 260 px
+        rig.look(clamp((e.clientX - (r.left + r.width / 2)) / 260), clamp((e.clientY - (r.top + r.height * 0.3)) / 260))
       }
       window.addEventListener('pointermove', look)
       const blink = window.setInterval(() => rig.blink(), 3400)

@@ -4,7 +4,7 @@ import { toolKind } from '../components/Messages'
 
 /** Where Jolty belongs right now, read from the store and the page. */
 export type Pose =
-  | 'idle' | 'walk' | 'run' | 'jump' | 'fall' | 'land' | 'sit' | 'wave' | 'point' | 'cheer' | 'trip' | 'held' | 'sleep' | 'dash'
+  | 'idle' | 'walk' | 'run' | 'crouch' | 'jump' | 'fall' | 'land' | 'sit' | 'wave' | 'point' | 'cheer' | 'trip' | 'held' | 'sleep' | 'dash'
   // what he does while the model works, after what it is doing (see activity)
   | 'type' | 'read' | 'think' | 'search' | 'zap' | 'scout'
 
