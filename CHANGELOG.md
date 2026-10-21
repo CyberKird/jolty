@@ -4,8 +4,9 @@
 
 ### New
 
+- Jolty has a proper rig now, with knees, elbows and a spine in two: he lifts his feet when he walks, lands in his knees, really sits (thighs level, shins down), types with bent elbows and waves from the elbow, and at rest his joints stay a little soft as he shifts his weight from foot to foot.
 - Jolty has weight, like a ragdoll held up by muscles. His arms, legs and head lag behind when he speeds up or stops, a jolt throws his arms out, held by the hood he swings like a pendulum as you move the cursor, and thrown he tumbles with the throw, flails, lands on the side he was turning to with a bounce, then gets up.
-- He pulls a little wooden three-legged stool out of the composer when he sits down on the window's floor, instead of sitting on nothing.
+- He pulls a little wooden three-legged stool out of the composer when he sits down on the window's floor and sits on it with his feet on the ground, instead of sitting on nothing. Sitting he turns side-on, so the bent knees read.
 - He lives on the page more, without pulling at your eye: every 9 to 17 seconds he strolls, sits on his stool, checks his laptop, looks around, thinks, or hops onto your last message for a while and comes back.
 - Soft sounds for what he does: a hop, a landing (a thud when it is hard), a whoosh when thrown, a squeak when picked up, a crackle on commands, a laptop click, the stool sliding, a little chime when he cheers. They stay quiet while you work in another window, and have their own switch in Settings.
 

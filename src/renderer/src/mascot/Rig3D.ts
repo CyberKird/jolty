@@ -28,7 +28,9 @@ const REST: T = {
   headRX: 0, headRY: 0, headRZ: 0, boltRZ: 0, boltRX: 0, boltS: 1, eyesSY: 1,
   armLRX: 0, armLRZ: 0, armRRX: 0, armRRZ: 0, legLRX: 0, legRRX: 0,
   // how much the left arm follows the pose (its hand lives in the pocket), and where the eyes look on their own
-  armLK: 0.35, eyeX: 0, eyeY: 0
+  armLK: 0.35, eyeX: 0, eyeY: 0,
+  // the upper spine, knees and elbows: a little bent at rest, never locked straight
+  chestRX: 0, kneeL: 0.06, kneeR: 0.06, elbL: -0.14, elbR: -0.14
 }
 /** turning and settling into a seat are slower than limbs */
 const EASE: T = { rootRY: 9, rootY: 16, headRY: 10 }
@@ -39,7 +41,7 @@ const LAPTOP = new Set<Pose>(['type', 'read'])
 /** the laptop's way out: from the kangaroo pocket to his lap, then the lid opens (seconds) */
 const DRAW = { reach: 0.3, fly: 0.75, open: 1.05 }
 const POCKET = { y: 38, z: 18 }
-const LAP = { y: 31, z: 30 }
+const LAP = { y: 36, z: 25 }
 const LID_OPEN = 0.28
 const LID_SHUT = -1.45
 const easeOutBack = (k: number): number => 1 + 2.4 * Math.pow(k - 1, 3) + 1.4 * Math.pow(k - 1, 2)
@@ -237,7 +239,12 @@ export class Rig3D implements Puppet {
     switch (this.pose) {
       case 'idle':
         o.torsoSY = 1 + 0.014 * Math.sin((s * TAU) / 3.2)
+        o.chestRX = 0.02 * Math.sin((s * TAU) / 3.2)
         o.boltRZ = 0.09 * Math.sin((s * TAU) / 2.6)
+        // weight shifting from one foot to the other: the loaded knee straightens, the other softens
+        o.rootRZ = 0.018 * Math.sin((s * TAU) / 5)
+        o.kneeL = 0.07 + 0.06 * Math.max(0, Math.sin((s * TAU) / 5))
+        o.kneeR = 0.07 + 0.06 * Math.max(0, -Math.sin((s * TAU) / 5))
         lookAt(0.4, 0.45)
         o.rootRY += 0.18 * d
         break
@@ -251,20 +258,30 @@ export class Rig3D implements Puppet {
         o.legRRX = -leg * Math.sin(c)
         o.armLRX = -arm * Math.sin(c)
         o.armRRX = arm * Math.sin(c)
+        // the knee bends while its leg swings forward, lifting the foot; elbows bent, more when running
+        const kb = run ? 1.25 : 0.65
+        o.kneeL = 0.05 + kb * Math.max(0, -Math.cos(c))
+        o.kneeR = 0.05 + kb * Math.max(0, Math.cos(c))
+        o.elbL = o.elbR = run ? -1.25 : -0.4
+        o.chestRX = run ? 0.1 : 0.03
         o.rootY = (run ? 5 : 3) * Math.abs(Math.sin(c))
-        o.torsoRX = run ? 0.28 : 0.08
+        o.torsoRX = run ? 0.2 : 0.06
         o.boltRX = run ? -0.4 : 0
         o.rootRY = d * (run ? 1.2 : 1.05)
         break
       }
       case 'jump':
-        Object.assign(o, { rootSX: 0.93, rootSY: 1.08, armLRZ: -2.1, armRRZ: 2.1, legLRX: -0.5, legRRX: -0.2, rootRY: d * 0.6 })
+        Object.assign(o, { rootSX: 0.93, rootSY: 1.08, armLRZ: -2.1, armRRZ: 2.1, legLRX: -0.7, legRRX: -0.35, kneeL: 1.1, kneeR: 0.8, elbL: -0.4, elbR: -0.4, rootRY: d * 0.6 })
         break
       case 'fall':
         o.armLRZ = -1.8 - 0.35 * Math.sin(s * 28)
         o.armRRZ = 1.8 + 0.35 * Math.sin(s * 28 + 1)
         o.legLRX = 0.45 * Math.sin(s * 24)
         o.legRRX = -0.45 * Math.sin(s * 24)
+        o.kneeL = 0.6 + 0.4 * Math.sin(s * 19)
+        o.kneeR = 0.6 + 0.4 * Math.sin(s * 21 + 1)
+        o.elbL = -0.5 + 0.4 * Math.sin(s * 17)
+        o.elbR = -0.5 + 0.4 * Math.sin(s * 23 + 2)
         // the spin turns him about his middle (60 up), not his feet
         o.rootRZ = this.rot
         o.rootX = 60 * Math.sin(this.rot)
@@ -273,8 +290,11 @@ export class Rig3D implements Puppet {
         break
       case 'land': {
         const k = Math.exp(-t * 9) * Math.cos(t * 18)
-        o.rootSY = 1 - 0.24 * k
-        o.rootSX = 1 + 0.2 * k
+        o.rootSY = 1 - 0.14 * k
+        o.rootSX = 1 + 0.12 * k
+        // absorbed in the knees: thighs forward, shins back, the arms dip
+        const bend = Math.max(0, k)
+        Object.assign(o, { legLRX: -0.5 * bend, legRRX: -0.5 * bend, kneeL: 0.06 + 1 * bend, kneeR: 0.06 + 1 * bend, rootY: -5 * bend, elbL: -0.14 - 0.4 * bend, elbR: -0.14 - 0.4 * bend })
         lookAt(0.3, 0.3)
         break
       }
@@ -282,11 +302,16 @@ export class Rig3D implements Puppet {
       case 'sleep': {
         const slow = this.pose === 'sleep' ? 3.4 : 1.7
         o.rootY = -24
-        o.legLRX = -0.5 + 0.22 * Math.sin((s * TAU) / slow)
-        o.legRRX = -0.5 + 0.22 * Math.sin((s * TAU) / slow + Math.PI)
-        Object.assign(o, { armLRZ: -0.55, armRRZ: 0.55, armLRX: -0.25, armRRX: -0.25 })
+        // thighs on the edge, shins hanging over it and swinging from the knee; turned well to the side, as
+        // from the front level thighs point at us and the seat reads as standing
+        o.legLRX = o.legRRX = -1.3
+        o.kneeL = 1.2 + 0.3 * Math.sin((s * TAU) / slow)
+        o.kneeR = 1.2 + 0.3 * Math.sin((s * TAU) / slow + Math.PI)
+        Object.assign(o, { armLRZ: -0.45, armRRZ: 0.45, armLRX: -0.35, armRRX: -0.35, elbL: -0.5, elbR: -0.5, chestRX: 0.06 })
         if (this.pose === 'sleep') Object.assign(o, { headRX: 0.32, headRZ: 0.14, torsoSY: 1 + 0.025 * Math.sin((s * TAU) / 4) })
         else lookAt(0.3, 0.45)
+        // lookAt set the body's turn: the side-on seat goes on top of it
+        o.rootRY += 0.8 * d
         break
       }
       case 'type':
@@ -294,18 +319,20 @@ export class Rig3D implements Puppet {
         o.rootY = -24
         o.armLK = 1
         Object.assign(o, { armLRZ: -0.1, armRRZ: 0.1, rootRY: 0.12 })
-        // legs swinging off the edge he sits on
-        o.legLRX = -0.35 + 0.12 * Math.sin((s * TAU) / 1.3)
-        o.legRRX = -0.35 + 0.12 * Math.sin((s * TAU) / 1.3 + 2.2)
+        // thighs on the edge he sits on, shins swinging off it; elbows bent to the laptop
+        o.legLRX = o.legRRX = -1.3
+        o.kneeL = 1.2 + 0.22 * Math.sin((s * TAU) / 1.3)
+        o.kneeR = 1.2 + 0.22 * Math.sin((s * TAU) / 1.3 + 2.2)
+        Object.assign(o, { elbL: -1.15, elbR: -1.15, chestRX: 0.1 })
         const k = (now - this.laptopSince) / 1000
         if (k < DRAW.fly) {
           // into the hoodie pocket, then out with the laptop
           o.armRRX = k < DRAW.reach ? -0.55 : -0.55 - 0.5 * clamp01((k - DRAW.reach) / (DRAW.fly - DRAW.reach))
-          Object.assign(o, { armRRZ: -0.5, armLRX: -0.4, headRX: 0.35, torsoRX: 0.12 })
+          Object.assign(o, { armRRZ: -0.5, armLRX: -0.4, elbR: -0.7, headRX: 0.35, torsoRX: 0.12 })
           break
         }
         if (k < DRAW.open) {
-          Object.assign(o, { armLRX: -0.9, armRRX: -0.9, headRX: 0.3 })
+          Object.assign(o, { armLRX: -0.45, armRRX: -0.45, headRX: 0.3 })
           break
         }
         if (this.pose === 'read') {
@@ -314,24 +341,26 @@ export class Rig3D implements Puppet {
           o.headRX = 0.24 + 0.025 * (Math.floor(s / 1.4) % 5)
           o.headRY = -0.12 + 0.24 * line
           o.eyeX = -0.8 + 1.6 * line
-          o.armLRX = -1
-          o.armRRX = s % 2.6 < 0.25 ? -1.25 : -1
+          o.armLRX = o.armRRX = -0.45
+          o.elbR = s % 2.6 < 0.25 ? -1.45 : -1.15
           break
         }
         // typing with gusto: taps on a fast beat, the head bobbing to it, a hard Enter now and then, a glance at you
         const beat = (s * TAU) / 0.42
-        o.armLRX = -1.05 + 0.13 * Math.max(0, Math.sin((s * TAU) / 0.17))
-        o.armRRX = -1.05 + 0.13 * Math.max(0, Math.sin((s * TAU) / 0.21 + 1))
+        // taps from the elbows, wrists low over the keys
+        o.armLRX = o.armRRX = -0.45
+        o.elbL = -1.15 + 0.18 * Math.max(0, Math.sin((s * TAU) / 0.17))
+        o.elbR = -1.15 + 0.18 * Math.max(0, Math.sin((s * TAU) / 0.21 + 1))
         o.headRX = 0.26 + 0.05 * Math.sin(beat)
         o.headRZ = 0.06 * Math.sin(beat / 2)
         o.rootY = -24 + 1.4 * Math.abs(Math.sin(beat))
         o.torsoRX = 0.08 + 0.03 * Math.sin(beat)
         o.boltRZ = 0.12 * Math.sin(beat)
         const enter = s % 3.6
-        if (enter > 3 && enter < 3.35) Object.assign(o, { armRRX: enter < 3.18 ? -1.8 : -0.9, headRX: 0.1, boltS: 1.15 })
+        if (enter > 3 && enter < 3.35) Object.assign(o, { armRRX: enter < 3.18 ? -1.2 : -0.4, elbR: enter < 3.18 ? -1.7 : -0.8, headRX: 0.1, boltS: 1.15 })
         const glance = s % 7.3
         if (glance > 6.2 && glance < 6.9) {
-          Object.assign(o, { headRX: -0.08, rootRY: 0.4, armLRX: -1, armRRX: -1 })
+          Object.assign(o, { headRX: -0.08, rootRY: 0.4, chestRX: -0.04 })
           this.moment = 'happy'
         }
         break
@@ -340,10 +369,10 @@ export class Rig3D implements Puppet {
         // hand on the chin, head tilted, eyes wandering up while he works it out; now and then an idea, finger up
         const sway = Math.sin((s * TAU) / 3.4)
         const side = Math.floor(s / 2.4) % 2 ? 1 : -1
-        Object.assign(o, { armRRX: -2.05, armRRZ: -0.75, headRX: -0.1, headRZ: 0.16 + 0.05 * sway, rootRZ: 0.03 * sway, torsoRX: 0.04 })
+        Object.assign(o, { armRRX: -1.25, armRRZ: -0.35, elbR: -1.95, elbL: -0.5, armLRX: -0.5, armLRZ: -0.3, headRX: -0.1, headRZ: 0.16 + 0.05 * sway, rootRZ: 0.03 * sway, torsoRX: 0.04, chestRX: 0.04 })
         Object.assign(o, { eyeX: 0.6 * side, eyeY: -0.7, headRY: 0.18 * side })
         if (s % 6.5 > 5.8) {
-          Object.assign(o, { boltS: 1.25, armRRX: -2.7, armRRZ: 0.15, headRX: -0.18, eyeY: -0.3 })
+          Object.assign(o, { boltS: 1.25, armRRX: -2.7, armRRZ: 0.15, elbR: -0.1, headRX: -0.18, eyeY: -0.3 })
           this.moment = 'happy'
         }
         break
@@ -351,7 +380,7 @@ export class Rig3D implements Puppet {
       case 'search': {
         // the magnifying glass up to his face, leaning in, sweeping slowly from side to side and shuffling along
         const sweep = Math.sin((s * TAU) / 3.2)
-        Object.assign(o, { armRRX: SEARCH_ARM.x, armRRZ: SEARCH_ARM.z, torsoRX: 0.16, headRX: 0.12 })
+        Object.assign(o, { armRRX: SEARCH_ARM.x, armRRZ: SEARCH_ARM.z, elbR: 0, chestRX: 0.12, torsoRX: 0.08, headRX: 0.12, kneeL: 0.15, kneeR: 0.15 })
         Object.assign(o, { rootRY: 0.55 * sweep, headRY: 0.25 * sweep, eyeX: 0.5 * sweep })
         o.legLRX = 0.14 * Math.sin((s * TAU) / 0.8)
         o.legRRX = -o.legLRX
@@ -366,7 +395,7 @@ export class Rig3D implements Puppet {
           break
         }
         const buzz = Math.sin(s * 140)
-        Object.assign(o, { armLRX: -1.45 + 0.06 * buzz, armRRX: -1.45 - 0.06 * buzz, armLRZ: -0.15, armRRZ: 0.15, torsoRX: 0.12, headRX: 0.08 })
+        Object.assign(o, { armLRX: -1.45 + 0.06 * buzz, armRRX: -1.45 - 0.06 * buzz, armLRZ: -0.15, armRRZ: 0.15, elbL: -0.2, elbR: -0.2, kneeL: 0.25, kneeR: 0.25, torsoRX: 0.12, headRX: 0.08 })
         o.boltS = 1 + 0.22 * Math.abs(Math.sin(s * 9))
         o.boltRZ = 0.1 * buzz
         o.rootX = 0.8 * Math.sin(s * 90)
@@ -375,21 +404,23 @@ export class Rig3D implements Puppet {
       case 'scout': {
         // a hand shading his eyes, scanning the distance left and right, up on his toes now and then
         const turn = Math.sin((s * TAU) / 4)
-        Object.assign(o, { armRRX: -2.65, armRRZ: -0.62, headRX: -0.08 })
+        Object.assign(o, { armRRX: -1.9, armRRZ: -0.55, elbR: -1.3, headRX: -0.08 })
         Object.assign(o, { headRY: 0.5 * turn, rootRY: 0.25 * turn, eyeX: 0.7 * turn })
         const hop = s % 4
         o.rootY = hop < 0.3 ? 4 * Math.sin((hop / 0.3) * Math.PI) : 0
         break
       }
       case 'wave':
-        o.armRRZ = 2.25 + 0.32 * Math.sin((s * TAU) / 0.62)
+        o.armRRZ = 2.1
+        // the forearm waves from the elbow
+        o.elbR = -0.55 - 0.45 * Math.sin((s * TAU) / 0.62)
         o.headRZ = -0.1
         lookAt(0.5, 0.4)
         break
       case 'point': {
         const hop = (s % 1.2) / 1.2
         o.armRRZ = 0.85 + 0.25 * (0.5 + 0.5 * Math.sin((s * TAU) / 0.6))
-        Object.assign(o, { armRRX: -0.7, armLRZ: -0.3, headRX: 0.18, rootRY: d * 0.55 })
+        Object.assign(o, { armRRX: -0.7, armLRZ: -0.3, elbR: 0, headRX: 0.18, rootRY: d * 0.55 })
         o.rootY = hop > 0.7 && hop < 0.9 ? 7 * Math.sin(((hop - 0.7) / 0.2) * Math.PI) : 0
         break
       }
@@ -398,24 +429,26 @@ export class Rig3D implements Puppet {
         o.rootY = 22 * Math.max(0, Math.sin(c))
         o.armLRZ = -2.2 - 0.22 * Math.sin(2 * c)
         o.armRRZ = 2.2 + 0.22 * Math.sin(2 * c)
-        o.legLRX = 0.2
-        o.legRRX = -0.2
+        // springing from bent knees at the bottom of each hop, arms up with soft elbows
+        const crouch = Math.max(0, -Math.sin(c))
+        Object.assign(o, { legLRX: 0.2 - 0.5 * crouch, legRRX: -0.2 - 0.5 * crouch, kneeL: 0.1 + 1 * crouch, kneeR: 0.1 + 1 * crouch, elbL: -0.3, elbR: -0.3 })
         break
       }
       case 'trip':
         // flat on his side after a bounce off the floor; limbs settle with the springs
-        Object.assign(o, { rootRZ: 1.47 * this.side, rootX: 52 * this.side, rootY: 27 + 12 * Math.exp(-t * 5) * Math.abs(Math.cos(t * 11)), armLRZ: -1.1, legRRX: 0.6 })
+        Object.assign(o, { rootRZ: 1.47 * this.side, rootX: 52 * this.side, rootY: 27 + 12 * Math.exp(-t * 5) * Math.abs(Math.cos(t * 11)), armLRZ: -1.1, legRRX: 0.6, kneeL: 0.7, kneeR: 0.35, elbL: -0.8, elbR: -0.5 })
         break
       case 'held':
         o.hangRZ = 0.05 * Math.sin((s * TAU) / 2.2)
         o.legLRX = 0.32 * Math.sin((s * TAU) / 1)
         o.legRRX = 0.32 * Math.sin((s * TAU) / 1 + Math.PI)
-        Object.assign(o, { armLRZ: -0.5, armRRZ: 0.5 })
+        // legs kicking from the knees while he dangles
+        o.kneeL = 0.3 + 0.3 * Math.sin((s * TAU) / 1 + 1)
+        o.kneeR = 0.3 + 0.3 * Math.sin((s * TAU) / 1 + 1 + Math.PI)
+        Object.assign(o, { armLRZ: -0.5, armRRZ: 0.5, elbL: -0.45, elbR: -0.45 })
         lookAt(0.3, 0.3)
         break
     }
-    // on the floor there is no edge to sit on: he sits on the ground with his legs out in front, instead of
-    // dangling them through it (sat on nothing, half out of the window)
     // on the floor there is no edge to sit on: he slides a stool out of the composer and sits on it, feet on
     // the ground (on an edge he sits as before, legs dangling)
     if (this.onFloor && SEATED.has(this.pose)) {
@@ -423,9 +456,12 @@ export class Rig3D implements Puppet {
         // reaching into the composer beside him for it
         Object.assign(o, { rootY: 0, armLRX: -0.5, armLRZ: -0.9, armLK: 1, rootRY: -0.6, torsoRX: 0.1 })
       } else {
-        o.rootY += 17
-        o.legLRX = -0.45 + 0.08 * Math.sin((s * TAU) / 1.6)
-        o.legRRX = -0.45 + 0.08 * Math.sin((s * TAU) / 1.6 + 2)
+        // sat on the stool (seat at 15): thighs level, knees bent, feet on the floor, turned three-quarters
+        o.rootY += 14
+        o.rootRY = 0.8 * d
+        o.legLRX = o.legRRX = -1.45
+        o.kneeL = 1.45 + 0.08 * Math.sin((s * TAU) / 1.6)
+        o.kneeR = 1.4 + 0.08 * Math.sin((s * TAU) / 1.6 + 2)
       }
     }
     if (now < this.blinkUntil && (this.eyes === 'open' || this.eyes === 'worried')) o.eyesSY = 0.12
@@ -532,6 +568,13 @@ export class Rig3D implements Puppet {
     j.armR.rotation.set(c.armRRX + sw + 0.4 * flail * Math.sin(t * 17 + 1), 0, c.armRRZ + up * 0.8 + 0.3 * flail * Math.sin(t * 21 + 2))
     j.legL.rotation.x = c.legLRX - sw * 0.6 + 0.45 * flail * Math.sin(t * 15)
     j.legR.rotation.x = c.legRRX - sw * 0.6 - 0.45 * flail * Math.sin(t * 16 + 1)
+    // knees give under a jolt, elbows flop with the swing; the left forearm follows its arm into the pocket
+    const give = Math.max(0, up) * 0.9
+    j.shinL.rotation.x = c.kneeL + give + 0.35 * flail * Math.sin(t * 13)
+    j.shinR.rotation.x = c.kneeR + give + 0.35 * flail * Math.sin(t * 14 + 2)
+    j.foreL.rotation.x = (c.elbL + sw * 0.5 - 0.3 * flail * Math.sin(t * 18)) * c.armLK
+    j.foreR.rotation.x = c.elbR + sw * 0.5 - 0.3 * flail * Math.sin(t * 20 + 1)
+    j.chest.rotation.x = c.chestRX + sw * 0.15
     j.head.rotation.x += sw * 0.35 + up * 0.5
     if (this.pose === 'held') j.hang.rotation.z = c.hangRZ + this.spr.hang
     this.placeStool(now)

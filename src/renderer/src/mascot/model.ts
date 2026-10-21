@@ -14,9 +14,16 @@ export interface Joints {
   root: THREE.Group
   hang: THREE.Group
   torso: THREE.Group
+  /** the upper spine: arms and head hang from it */
+  chest: THREE.Group
   head: THREE.Group
   bolt: THREE.Group
   armL: THREE.Group
+  /** forearms (elbows) and shins (knees) */
+  foreL: THREE.Group
+  foreR: THREE.Group
+  shinL: THREE.Group
+  shinR: THREE.Group
   armR: THREE.Group
   legL: THREE.Group
   legR: THREE.Group
@@ -68,8 +75,8 @@ function joint(parent: THREE.Object3D, x: number, y: number, z = 0): THREE.Group
  * shoulder at (17.7, 53) and an arm of about 24). The lens is turned by the inverse, so it then faces us.
  */
 export const SEARCH_ARM = { x: -2.15, z: -0.62 }
-/** shoulder to glove, in app units (rig.py's arm bones) */
-const ARM = 23.5
+/** elbow to glove, in app units (rig.py's forearm bones); the search keeps the elbow straight */
+const FORE = 11.7
 
 const BOLT = [[-0.5, 26], [13, 26], [7, 15.5], [17, 16], [0, -1], [3, 11.5], [-6.5, 11]]
 
@@ -178,7 +185,7 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   const faces = buildEyes(eyes, (r.x - l.x) / 2)
 
   // each bone gets the turn of its group, taken in the model's axes: q = local · world⁻¹ · turn · world
-  const names = ['torso', 'head', 'bolt', 'armL', 'armR', 'legL', 'legR'] as const
+  const names = ['torso', 'chest', 'head', 'bolt', 'armL', 'armR', 'foreL', 'foreR', 'legL', 'legR', 'shinL', 'shinR'] as const
   const groups = Object.fromEntries(names.map((n) => [n, new THREE.Group()])) as Record<(typeof names)[number], THREE.Group>
   const bones = names.map((n) => {
     const b = node(n)
@@ -209,10 +216,10 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
 
   // the magnifying glass rides on the right arm bone, from the glove on along the arm; its lens is turned so
   // that with the arm raised to his face (SEARCH_ARM) it faces us
-  // the glove is at the bone's tail: glTF bones run along their +y, and the arm is about ARM long
-  const shoulder = node('armR')
+  // the glove is at the forearm bone's tail: glTF bones run along their +y, FORE long
+  const shoulder = node('foreR')
   const glass = new THREE.Group()
-  glass.position.copy(at('armR')).add(new THREE.Vector3(0, ARM, 0).applyQuaternion(shoulder.getWorldQuaternion(new THREE.Quaternion())))
+  glass.position.copy(at('foreR')).add(new THREE.Vector3(0, FORE, 0).applyQuaternion(shoulder.getWorldQuaternion(new THREE.Quaternion())))
   root.add(glass)
   root.updateMatrixWorld(true)
   shoulder.attach(glass)
@@ -224,14 +231,14 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   lens.add(mesh(new THREE.CircleGeometry(6, 32), new THREE.MeshPhysicalMaterial({ color: '#cfeeff', roughness: 0.05, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })))
   glass.visible = false
 
-  // the stool: a plain wooden three-legged one, warm wood so it reads against the dark app, seat top at 17
+  // the stool: a plain wooden three-legged one, warm wood so it reads against the dark app, seat top at 15, set back under him
   const stool = joint(scene, 0, 0)
   const wood = new THREE.MeshStandardMaterial({ color: '#b07a45', roughness: 0.75, metalness: 0 })
   const woodDark = new THREE.MeshStandardMaterial({ color: '#8a5a30', roughness: 0.8, metalness: 0 })
-  stool.add(mesh(new THREE.CylinderGeometry(13, 12.5, 3.4, 28), wood, 0, 15.3, 2))
+  stool.add(mesh(new THREE.CylinderGeometry(12, 11.5, 3.4, 28), wood, 0, 13.3, -4))
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2 + Math.PI / 6
-    const leg = mesh(new THREE.CylinderGeometry(1.3, 1.6, 15, 10), woodDark, Math.cos(a) * 9, 7, 2 + Math.sin(a) * 9)
+    const leg = mesh(new THREE.CylinderGeometry(1.3, 1.6, 13, 10), woodDark, Math.cos(a) * 8.5, 6.4, -4 + Math.sin(a) * 8.5)
     // splayed outward, like a milking stool
     leg.rotation.set(Math.sin(a) * 0.18, 0, -Math.cos(a) * 0.18)
     stool.add(leg)
