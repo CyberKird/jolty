@@ -4,7 +4,8 @@
 
 ### New
 
-- Jolty, the mascot, in 3D. The hooded character from the approved render now lives in the app as a real 3D model, turned into a mesh and rigged in Blender. He walks along the composer, types while a model works, points at approval cards, cheers when a turn ends, can be picked up by his hood and thrown, and his eyes blink and follow the cursor. His volt parts (eyes, bolt, drawstrings, soles) glow. Hide him from his own right-click menu or in Settings.
+- Jolty, the mascot, in 3D. The hooded character from the approved render now lives in the app as a real 3D model, turned into a mesh and rigged in Blender. His volt parts (eyes, bolt, drawstrings, soles) glow, his eyes blink and follow the cursor, he cheers when a turn ends, points at approval cards, and can be picked up by his hood and thrown. Hide him from his own right-click menu or in Settings.
+- Jolty does what the model does. When it writes code he pulls a laptop out of his hoodie pocket, opens it and types away, with a hard Enter now and then. He reads on it while files are read, holds up a magnifying glass for searches, charges a command with both hands and sparks off his bolt, shades his eyes to look around while the model is on the web, and puts a hand on his chin while it thinks.
 - What's new: after an update Jolty shows this window once, with what changed in every version, newest first. Open it again any time from Settings.
 - Better conversation titles: after your first message a small model names the chat after what it is about (3 to 7 words, in your language), so it is easy to find in the sidebar and in conversation search. Right-click a chat and pick Rename, or double-click its title, to name it yourself. Your own title is never replaced.
 
