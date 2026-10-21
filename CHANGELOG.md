@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+
+### Fixes
+
+- The stool you can actually see: it was a 12-unit seat hidden under his thighs, so only a speck of wood showed. It is now a taller, wider and lighter wooden stool, and he sits up on it with his shoes dangling and swinging, so the legs of the stool show below him.
+
 ## 0.7.0
 
 ### New

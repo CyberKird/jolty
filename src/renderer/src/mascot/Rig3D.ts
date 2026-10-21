@@ -499,12 +499,12 @@ export class Rig3D implements Puppet {
         // reaching into the composer beside him for it
         Object.assign(o, { rootY: 0, armLRX: -0.5, armLRZ: -0.9, armLK: 1, rootRY: -0.6, torsoRX: 0.1 })
       } else {
-        // sat on the stool (seat at 15): thighs level, knees bent, feet on the floor, turned three-quarters
-        o.rootY += 14
+        // sat on the stool (seat at 22): thighs level, the shins hanging and swinging, turned three-quarters
+        o.rootY += 21
         o.rootRY = 0.8 * d
-        o.legLRX = o.legRRX = -1.45
-        o.kneeL = 1.45 + 0.08 * Math.sin((s * TAU) / 1.6)
-        o.kneeR = 1.4 + 0.08 * Math.sin((s * TAU) / 1.6 + 2)
+        o.legLRX = o.legRRX = -1.4
+        o.kneeL = 1.2 + 0.3 * Math.sin((s * TAU) / 1.7)
+        o.kneeR = 1.2 + 0.3 * Math.sin((s * TAU) / 1.7 + Math.PI)
       }
     }
     if (now < this.blinkUntil && (this.eyes === 'open' || this.eyes === 'worried')) o.eyesSY = 0.12

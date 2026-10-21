@@ -231,16 +231,18 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   lens.add(mesh(new THREE.CircleGeometry(6, 32), new THREE.MeshPhysicalMaterial({ color: '#cfeeff', roughness: 0.05, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })))
   glass.visible = false
 
-  // the stool: a plain wooden three-legged one, warm wood so it reads against the dark app, seat top at 15, set back under him
+  // the stool: a plain wooden three-legged one, seat top at 22: tall enough that he sits on it with his legs dangling and the stool shows below him. Big and light enough to read against the dark app
+  // at his size (at 0.6 px a unit a 12-unit seat was a speck hidden under his thighs); a little self-light so
+  // the dark scene does not swallow it
   const stool = joint(scene, 0, 0)
-  const wood = new THREE.MeshStandardMaterial({ color: '#b07a45', roughness: 0.75, metalness: 0 })
-  const woodDark = new THREE.MeshStandardMaterial({ color: '#8a5a30', roughness: 0.8, metalness: 0 })
-  stool.add(mesh(new THREE.CylinderGeometry(12, 11.5, 3.4, 28), wood, 0, 13.3, -4))
+  const wood = new THREE.MeshStandardMaterial({ color: '#d99a52', roughness: 0.7, metalness: 0, emissive: '#5a3510', emissiveIntensity: 0.55 })
+  const woodDark = new THREE.MeshStandardMaterial({ color: '#b9783a', roughness: 0.75, metalness: 0, emissive: '#3d230a', emissiveIntensity: 0.5 })
+  stool.add(mesh(new THREE.CylinderGeometry(19, 18.5, 4.6, 36), wood, 0, 19.7, -3))
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2 + Math.PI / 6
-    const leg = mesh(new THREE.CylinderGeometry(1.3, 1.6, 13, 10), woodDark, Math.cos(a) * 8.5, 6.4, -4 + Math.sin(a) * 8.5)
+    const leg = mesh(new THREE.CylinderGeometry(2.3, 3, 20, 12), woodDark, Math.cos(a) * 13, 9.6, -3 + Math.sin(a) * 13)
     // splayed outward, like a milking stool
-    leg.rotation.set(Math.sin(a) * 0.18, 0, -Math.cos(a) * 0.18)
+    leg.rotation.set(Math.sin(a) * 0.16, 0, -Math.cos(a) * 0.16)
     stool.add(leg)
   }
   stool.visible = false
