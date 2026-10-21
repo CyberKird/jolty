@@ -18,10 +18,12 @@ jobs:
         with:
           repository: ggml-org/whisper.cpp
           ref: ${{ inputs.ref }}
-      - uses: humbletim/install-vulkan-sdk@v1.2
+      # the official LunarG SDK: headers, the loader library and glslc for ggml's shaders
+      - uses: jakoch/install-vulkan-sdk-action@v1
         with:
-          version: latest
+          install_runtime: false
           cache: true
+          stripdown: true
       - name: Build
         run: |
           cmake -B build -DGGML_VULKAN=ON -DGGML_NATIVE=OFF -DBUILD_SHARED_LIBS=OFF -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_SERVER=OFF
