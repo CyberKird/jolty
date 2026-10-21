@@ -465,6 +465,16 @@ export class Brain {
       scrolledAt = now
       this.body.look(this.dir * 0.3, -1)
     })
+    // dictation: a hand to his ear while you talk
+    const voice = (e: Event): void => {
+      if ((e as CustomEvent<string>).detail === 'listen') this.react('scout', 'focus', 120000)
+      else {
+        this.busyUntil = 0
+        this.decide()
+      }
+    }
+    window.addEventListener('jolty:voice', voice)
+    this.off.push(() => window.removeEventListener('jolty:voice', voice))
     on('dragenter', (e) => {
       if (e.dataTransfer?.types.includes('Files')) this.react('point', 'happy', 1600, '+')
     })

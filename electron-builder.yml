@@ -31,6 +31,9 @@ extraResources:
     to: browser-extension-firefox
   - from: build/icon.ico
     to: icon.ico
+  # whisper-cli (Vulkan) for voice input, fetched by scripts/fetch-redist.mjs
+  - from: build/whisper
+    to: whisper
   # Microsoft Visual C++ runtime, installed by the setup when missing (downloaded by CI, see README)
   - from: build/redist/vc_redist.x64.exe
     to: redist/vc_redist.x64.exe

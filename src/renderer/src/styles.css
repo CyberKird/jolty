@@ -3569,3 +3569,25 @@ a {
 [dir='rtl'] .meter-row[data-drop] {
   box-shadow: inset -2px 0 0 var(--volt);
 }
+
+/* dictation (VoiceButton): the ring breathes with your voice while it records */
+.btn.voice.rec {
+  width: auto;
+  padding: 0 10px;
+  gap: 6px;
+  border-color: var(--volt-line);
+  color: var(--volt);
+  box-shadow: 0 0 0 calc(var(--lvl, 0) * 5px) rgba(212, 255, 0, 0.22);
+  transition: box-shadow 0.08s linear;
+}
+.btn.voice.busy,
+.btn.voice:disabled {
+  width: auto;
+  padding: 0 10px;
+  gap: 6px;
+}
+.voice-time {
+  font-family: var(--code);
+  font-size: 11px;
+  letter-spacing: 0;
+}

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+### New
+
+- Dictation in the composer. Click the microphone, talk, click again, and your words land at the cursor (Esc drops the recording). It is transcribed on your own PC by Whisper large-v3 turbo through whisper.cpp, on the graphics card when there is one (any brand, through Vulkan) and on the processor otherwise, so nothing you say leaves the PC. The ring around the button follows your voice while it records, and Jolty puts a hand to his ear and listens. The model (574 MB) is downloaded once, the first time you use it. On a Radeon RX 6800 XT ten seconds of speech are written in about two seconds.
+
 ## 0.5.9
 
 ### Fixes

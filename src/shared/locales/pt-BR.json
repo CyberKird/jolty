@@ -848,5 +848,11 @@
  "Versiuni mai vechi": "Versões anteriores",
  "Gata": "Pronto",
  "Ce s-a schimbat în fiecare versiune, de la cea mai nouă. Se deschide singur o dată după fiecare actualizare.": "O que mudou em cada versão, da mais nova para a mais antiga. Abre sozinho uma vez depois de cada atualização.",
- "Vezi noutățile": "Ver novidades"
+ "Vezi noutățile": "Ver novidades",
+ "Dictarea nu e inclusă în această versiune Jolty.": "O ditado não está incluído nesta versão do Jolty.",
+ "Dictarea transcrie pe PC-ul tău cu Whisper large-v3 turbo. Modelul are {v0} MB și se descarcă o singură dată. Îl descarc acum?": "O ditado transcreve no seu PC com o Whisper large-v3 turbo. O modelo tem {v0} MB e é baixado uma única vez. Baixar agora?",
+ "Dictează": "Ditar",
+ "Dictează: vorbește, apoi apasă din nou": "Ditar: fale e clique de novo",
+ "Nu am acces la microfon.": "Sem acesso ao microfone.",
+ "Oprește și scrie textul (Esc renunță)": "Parar e escrever o texto (Esc descarta)"
 }

@@ -13,6 +13,7 @@ import { withQuote } from '@shared/quote'
 import { QuoteBar, SelectionPopup } from './Quote'
 import { LimitStrip, TaskStrip, UpdateStrip, VerificationStrip, WorkClock } from './Tasks'
 import { tr } from '@shared/i18n'
+import { VoiceButton } from './VoiceButton'
 import { Trans } from './Trans'
 
 const EMPTY: ChatItem[] = []
@@ -390,6 +391,19 @@ function Composer(p: ComposerProps) {
           <button className="btn ghost small icon" title={tr("Atașează imagini, videouri sau fișiere")} onClick={() => fileRef.current?.click()}>
             <Paperclip size={15} />
           </button>
+          <VoiceButton
+            onText={(said) => {
+              // at the cursor, with a space if it lands right after a word
+              const ta = taRef.current
+              const at = ta?.selectionStart ?? text.length
+              const before = text.slice(0, at) + (at && !/\s$/.test(text.slice(0, at)) ? ' ' : '') + said
+              setText(before + text.slice(at))
+              requestAnimationFrame(() => {
+                ta?.focus()
+                ta?.setSelectionRange(before.length, before.length)
+              })
+            }}
+          />
           <input ref={fileRef} type="file" multiple hidden onChange={(e) => { void addFiles([...(e.target.files || [])]); e.target.value = '' }} />
           {p.onCwd && (
             <button className="picker-btn cwd-btn" onClick={p.onCwd} title={p.cwd}>

@@ -848,5 +848,11 @@
  "Versiuni mai vechi": "Versi lebih lama",
  "Gata": "Selesai",
  "Ce s-a schimbat în fiecare versiune, de la cea mai nouă. Se deschide singur o dată după fiecare actualizare.": "Apa yang berubah di setiap versi, dari yang terbaru. Terbuka sendiri sekali setelah setiap pembaruan.",
- "Vezi noutățile": "Lihat yang baru"
+ "Vezi noutățile": "Lihat yang baru",
+ "Dictarea nu e inclusă în această versiune Jolty.": "Dikte tidak disertakan dalam versi Jolty ini.",
+ "Dictarea transcrie pe PC-ul tău cu Whisper large-v3 turbo. Modelul are {v0} MB și se descarcă o singură dată. Îl descarc acum?": "Dikte menyalin di PC-mu dengan Whisper large-v3 turbo. Modelnya {v0} MB dan diunduh sekali saja. Unduh sekarang?",
+ "Dictează": "Dikte",
+ "Dictează: vorbește, apoi apasă din nou": "Dikte: bicaralah, lalu klik lagi",
+ "Nu am acces la microfon.": "Tidak ada akses ke mikrofon.",
+ "Oprește și scrie textul (Esc renunță)": "Berhenti dan tulis teksnya (Esc membatalkan)"
 }

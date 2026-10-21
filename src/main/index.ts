@@ -9,6 +9,7 @@ import type { ChatEvent } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browsers, cleanToken } from './browser'
 import { BrowserLive } from './browser-live'
 import { allowFraming, listening, Preview } from './preview'
+import * as voice from './voice'
 import { nativeBrowser } from './jbrowser/native'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
@@ -178,6 +179,22 @@ function registerIpc(): void {
   handle('browser:live', (on: boolean) => (on === true ? browserLive.start() : browserLive.stop()))
   handle('preview:open', (cwd: string) => (typeof cwd === 'string' ? preview.open(cwd) : ''))
   handle('preview:probe', (ports: unknown) => listening(Array.isArray(ports) ? ports.filter((p): p is number => Number.isInteger(p) && p > 0 && p < 65536) : []))
+  // voice input: the model is fetched once on request, recordings are checked before whisper sees them
+  handle('voice:status', () => voice.status())
+  handle('voice:download', () =>
+    voice.download((completed, total) => send({ type: 'pull', tag: 'whisper', status: 'download', completed, total })).then(
+      () => send({ type: 'pull', tag: 'whisper', status: 'gata', done: true }),
+      (err) => {
+        send({ type: 'pull', tag: 'whisper', status: 'eroare', error: String(err), done: true })
+        throw err
+      }
+    )
+  )
+  handle('voice:transcribe', (wav: unknown, lang: unknown) => {
+    // a 16 kHz mono 16-bit WAV: 50 MB is about 26 minutes
+    if (!(wav instanceof Uint8Array) || wav.length < 44 || wav.length > 50e6) return ''
+    return voice.transcribe(wav, typeof lang === 'string' && /^(auto|[a-z]{2,3})$/.test(lang) ? lang : 'auto')
+  })
   handle('preview:draft', (rel: string, html: string | null) => {
     if (typeof rel === 'string' && (typeof html === 'string' || html === null)) preview.draft(rel, html)
   })

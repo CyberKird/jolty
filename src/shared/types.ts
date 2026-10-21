@@ -471,6 +471,13 @@ export interface JoltyApi {
     /** undefined when the provider has no documented balance endpoint */
     balance(profileId: string): Promise<ProviderBalance | undefined>
   }
+  /** dictation in the composer: whisper.cpp on this PC */
+  voice: {
+    status(): Promise<{ engine: boolean; model: boolean; sizeMB: number }>
+    /** fetches the speech model once; progress comes as 'pull' events with tag 'whisper' */
+    download(): Promise<void>
+    transcribe(wav: Uint8Array, lang?: string): Promise<string>
+  }
   local: {
     hardware(): Promise<HardwareInfo>
     status(): Promise<OllamaStatus>

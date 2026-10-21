@@ -848,5 +848,11 @@
  "Versiuni mai vechi": "إصدارات أقدم",
  "Gata": "تم",
  "Ce s-a schimbat în fiecare versiune, de la cea mai nouă. Se deschide singur o dată după fiecare actualizare.": "ما الذي تغيّر في كل إصدار، بدءًا من الأحدث. تفتح تلقائيًا مرة واحدة بعد كل تحديث.",
- "Vezi noutățile": "عرض الجديد"
+ "Vezi noutățile": "عرض الجديد",
+ "Dictarea nu e inclusă în această versiune Jolty.": "الإملاء غير مضمَّن في هذا الإصدار من Jolty.",
+ "Dictarea transcrie pe PC-ul tău cu Whisper large-v3 turbo. Modelul are {v0} MB și se descarcă o singură dată. Îl descarc acum?": "يحوّل الإملاء كلامك إلى نص على جهازك باستخدام Whisper large-v3 turbo. حجم النموذج {v0} ميغابايت ويُنزَّل مرة واحدة. هل أنزّله الآن؟",
+ "Dictează": "إملاء",
+ "Dictează: vorbește, apoi apasă din nou": "إملاء: تكلّم ثم اضغط مرة أخرى",
+ "Nu am acces la microfon.": "لا يمكن الوصول إلى الميكروفون.",
+ "Oprește și scrie textul (Esc renunță)": "أوقف واكتب النص (Esc يلغي)"
 }

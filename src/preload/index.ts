@@ -54,6 +54,11 @@ const api: JoltyApi = {
     balance: (id) => call('usage:balance', id),
     refreshLimits: (id) => call('usage:refreshLimits', id)
   },
+  voice: {
+    status: () => call('voice:status'),
+    download: () => call('voice:download'),
+    transcribe: (wav, lang) => call('voice:transcribe', wav, lang)
+  },
   local: {
     hardware: () => call('local:hardware'),
     status: () => call('local:status'),
