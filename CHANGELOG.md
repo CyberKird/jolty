@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.8
+
+### New
+
+- Jolty reacts to what you do in the app. He reads along while you type, hops when your message goes out, cheers when you approve a request and looks worried when you refuse one, points at the chat when you drag files over the window and celebrates when you drop them, nods at a confirmation, worries at an error, waves when you start a new conversation, points up when an update is ready and waves a sleepy goodbye when you arm a shutdown. On the other pages he does what the page is about: inspects Usage and System check with his magnifying glass, thinks over Settings and Schedules, reads through Import. While a model works with its context window nearly full, he looks worried.
+
+### Fixes
+
+- A small bolt flickered in the top-left corner of the window while a command ran: the sparks off Jolty's bolt showed at the window's corner before their animation started. They are hidden until they fly now, and removed even when the window is minimised.
+- Jolty is easier to see on the dark app: two cold rim lights from behind draw his edges and the light from below lifts his hoodie and trousers, without changing how he looks.
+
 ## 0.5.7
 
 ### New

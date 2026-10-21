@@ -84,7 +84,7 @@ export class Rig3D implements Puppet {
     this.renderer.setSize((VIEW.right - VIEW.left) * pxPerUnit, (VIEW.top - VIEW.bottom) * pxPerUnit)
     this.renderer.setClearColor(0x000000, 0)
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.15
+    this.renderer.toneMappingExposure = 1.38
     this.glow = document.createElement('canvas')
     this.glow.className = 'm-glow'
     this.glow.width = Math.ceil(canvas.width / 2)

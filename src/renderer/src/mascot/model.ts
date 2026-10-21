@@ -142,7 +142,7 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   const hoodTop = skin.geometry.boundingBox!.max.y * UNIT
   // the scan's lighting is in its texture already; the env light only adds a soft sheen
   const fleece = skin.material as THREE.MeshStandardMaterial
-  fleece.envMapIntensity = 0.6
+  fleece.envMapIntensity = 0.9
   fleece.emissiveIntensity = 1.4
   skin.frustumCulled = false
   const boltMesh = node('Bolt') as THREE.Mesh
@@ -239,10 +239,13 @@ export function lightStudio(scene: THREE.Scene, renderer: THREE.WebGLRenderer): 
   scene.environmentIntensity = 0.55
   pmrem.dispose()
 
-  scene.add(new THREE.HemisphereLight('#c3cfe0', '#0b0b0d', 0.7))
-  const key = new THREE.DirectionalLight('#ffffff', 2.4)
+  scene.add(new THREE.HemisphereLight('#c3cfe0', '#2a2e36', 1))
+  const key = new THREE.DirectionalLight('#ffffff', 2.6)
   key.position.set(-120, 220, 240)
-  const rimLight = new THREE.DirectionalLight('#9fc2ff', 3)
-  rimLight.position.set(180, 120, -220)
-  scene.add(key, rimLight)
+  // two cold rims from behind, one per side: they draw his edges, so charcoal reads on a near-black app
+  const rimR = new THREE.DirectionalLight('#b8d2ff', 6)
+  rimR.position.set(200, 140, -180)
+  const rimL = new THREE.DirectionalLight('#dfe8ff', 4.5)
+  rimL.position.set(-200, 110, -160)
+  scene.add(key, rimR, rimL)
 }

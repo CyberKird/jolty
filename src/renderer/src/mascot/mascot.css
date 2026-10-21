@@ -83,7 +83,10 @@
   pointer-events: none;
   background: var(--volt);
   clip-path: polygon(25% 0, 85% 0, 60% 40%, 100% 38%, 25% 100%, 40% 55%, 0 57%);
-  animation: m-spark 520ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  /* hidden unless animating; `both` holds the start frame through the delay (with `forwards` the spark sat
+     visible at 0,0, the window's top-left corner, until its delay ran out or for good in a paused window) */
+  opacity: 0;
+  animation: m-spark 520ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 @keyframes m-spark {
   from { transform: translate(var(--x0), var(--y0)) rotate(var(--r)) scale(1); opacity: 1; }
@@ -100,7 +103,8 @@
   border-radius: 2px;
   background: linear-gradient(90deg, transparent, var(--volt));
   box-shadow: 0 0 10px rgba(212, 255, 0, 0.6);
-  animation: m-streak 300ms ease-out forwards;
+  opacity: 0;
+  animation: m-streak 300ms ease-out both;
 }
 @keyframes m-streak {
   from { opacity: 1; clip-path: inset(0 100% 0 0); }

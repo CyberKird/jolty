@@ -7,6 +7,8 @@ function spawn(className: string, style: Record<string, string>): void {
   for (const [k, v] of Object.entries(style)) el.style.setProperty(k, v)
   document.body.appendChild(el)
   el.addEventListener('animationend', () => el.remove())
+  // a hidden or minimised window pauses animations and animationend may never come
+  setTimeout(() => el.remove(), 1500)
 }
 
 export function sparks(x: number, y: number): void {

@@ -321,6 +321,16 @@ export class Brain {
         const p = prev
         prev = s
         const id = s.activeId
+        // the app's own moments, each with a reaction that fits it
+        if (s.update?.state === 'ready' && p.update?.state !== 'ready') this.react('point', 'happy', 2600, '↑')
+        if (s.power.armed && !p.power.armed) this.react('wave', 'sleepy', 1600, 'z')
+        const toast = s.toasts.at(-1)
+        if (toast && toast !== p.toasts.at(-1)) {
+          if (toast.error) this.react('idle', 'worried', 1500)
+          // a nod: "done" (copied, saved, removed)
+          else this.react('land', 'happy', 300)
+        }
+        if (s.page === 'chat' && !id && p.activeId) this.react('wave', 'happy', 900)
         if (s.page !== p.page || id !== p.activeId) return void this.later(this.decide, 120)
         if (!id) return
         const was = p.status[id]
@@ -337,7 +347,8 @@ export class Brain {
           const item = list[list.length - 1]
           if (item.kind === 'notice' && item.level === 'error') this.react('trip', 'dizzy', 1800)
           else if (item.kind === 'tool') this.zap()
-          else if (item.kind === 'user') this.later(this.decide, 60)
+          // your message is off: a little hop, then he gets to work
+          else if (item.kind === 'user') this.react('cheer', 'happy', 450)
         }
         // a step starts or ends, a file starts being written: he switches to what the model does now
         if (now === 'running' && (list !== before || s.drafts[id] !== p.drafts[id])) this.soon()
@@ -409,6 +420,33 @@ export class Brain {
   // the cursor: eyes follow it, a click says hello, a drag picks him up by the hood
 
   private listen(): void {
+    // what you do in the page: approving or refusing, typing, searching, dropping files
+    const on = <K extends keyof WindowEventMap>(type: K, fn: (e: WindowEventMap[K]) => void): void => {
+      window.addEventListener(type, fn, true)
+      this.off.push(() => window.removeEventListener(type, fn, true))
+    }
+    let typedAt = 0
+    on('click', (e) => {
+      const b = (e.target as Element | null)?.closest?.('.permission .btn')
+      if (!b) return
+      if (b.classList.contains('danger')) this.react('idle', 'worried', 1200)
+      else this.react('cheer', 'happy', 800)
+    })
+    on('input', (e) => {
+      const el = e.target as Element | null
+      const now = performance.now()
+      if (now - typedAt < 700 || !el?.closest) return
+      typedAt = now
+      // the search box: out comes the magnifying glass; the composer: he reads along as you type
+      if (el.closest('.search')) this.react('search', 'focus', 1400)
+      else if (el.closest('.composer') && this.mode === 'ground' && WORK.has(goal().pose) === false) this.react('idle', 'focus', 1100)
+    })
+    on('dragenter', (e) => {
+      if (e.dataTransfer?.types.includes('Files')) this.react('point', 'happy', 1600, '+')
+    })
+    on('drop', (e) => {
+      if (e.dataTransfer?.types.includes('Files')) this.react('cheer', 'happy', 800)
+    })
     const hit = this.el.querySelector('.m-hit') as SVGElement | null
     const wake = (): void => {
       if (this.pose === 'sleep' && this.mode === 'ground') this.react('land', 'open', 300)

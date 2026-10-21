@@ -69,11 +69,23 @@ export function goal(): Goal {
     if (s.permissions[id]?.length && card && visible(card)) return { el: card, at: 'left', pose: 'point', eyes: 'worried', bubble: '!' }
     if (s.status[id] === 'running') {
       const writing = Object.values(s.drafts[id] || {}).some((d) => !d.done)
-      return { el: composer, at: 'right', ...activity(s.transcripts[id], writing) }
+      const work = activity(s.transcripts[id], writing)
+      // the context window nearly full: he works on, but worried
+      const ctx = s.contexts[id]
+      if (ctx?.window && ctx.used / ctx.window > 0.85) work.eyes = 'worried'
+      return { el: composer, at: 'right', ...work }
     }
+  }
+  if (s.page !== 'chat') {
+    // the other pages: on their first card, doing what the page is about
+    const card = [...document.querySelectorAll('.main .card')].find((c) => visible(c)) ?? null
+    return { el: card, at: 'right', pose: PAGE_POSE[s.page] ?? 'idle', eyes: 'focus' }
   }
   return { el: composer, at: 'right', pose: 'idle', eyes: 'open' }
 }
+
+/** usage and the system check are inspected, settings and schedules thought over, imports read */
+const PAGE_POSE: Partial<Record<string, Pose>> = { usage: 'search', system: 'search', settings: 'think', schedules: 'think', local: 'think', import: 'read' }
 
 export function spot(g: Goal): { el: Element | null; x: number; y: number } {
   const r = g.el && visible(g.el)
