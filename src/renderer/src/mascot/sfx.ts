@@ -47,7 +47,7 @@ function noise(a: AudioContext, len: number, vol: number, filter: BiquadFilterTy
   src.start(t)
 }
 
-export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape' | 'zap' | 'arrive'
+export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape' | 'zap' | 'arrive' | 'knock'
 
 /** strength 0..1 scales the impact sounds */
 export function play(sound: Sound, strength = 0.5): void {
@@ -98,6 +98,14 @@ export function play(sound: Sound, strength = 0.5): void {
       tone(a, { from: 520, to: 180, len: 0.1, vol: 0.05 }, out)
       return noise(a, 0.03, 0.04, 'highpass', 3800, out, 0.06)
     case 'scrape':
-      return noise(a, 0.28, 0.025, 'bandpass', 900, out, 0, 400)
+      // the stool dragged across the floor under him: a rough wooden scrape that slows down, with creaks in it
+      noise(a, 0.5, 0.075, 'bandpass', 620, out, 0, 240)
+      noise(a, 0.5, 0.03, 'lowpass', 300, out)
+      for (const [at, f, len] of [[0.04, 210, 0.09], [0.2, 170, 0.12], [0.34, 240, 0.08]] as const) tone(a, { type: 'sawtooth', from: f, to: f * 0.78, len, vol: 0.022, at }, out)
+      return
+    case 'knock':
+      // it stops against him: a dull knock of wood
+      noise(a, 0.07, 0.07, 'lowpass', 420, out)
+      return tone(a, { type: 'triangle', from: 190, to: 80, len: 0.12, vol: 0.08 }, out)
   }
 }

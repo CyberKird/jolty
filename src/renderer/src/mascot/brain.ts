@@ -433,7 +433,10 @@ export class Brain {
       // on the floor a seat means the stool sliding out (Rig3D)
       const seat = pose === 'sit' || pose === 'type' || pose === 'read' || pose === 'sleep'
       const wasSeat = was === 'sit' || was === 'type' || was === 'read' || was === 'sleep'
-      if (seat && !wasSeat && (!this.anchor || this.anchor.matches('.composer-wrap'))) this.later(() => play('scrape'), 120)
+      if (seat && !wasSeat && (!this.anchor || this.anchor.matches('.composer-wrap'))) {
+        this.later(() => play('scrape'), 120)
+        this.later(() => play('knock'), 600)
+      }
     }
     if (pose === 'zap' && was !== 'zap' && !calm()) this.later(this.crackle, 500)
     this.el.dataset.pose = pose

@@ -4,6 +4,7 @@
 
 ### Fixes
 
+- The stool makes noise: a rough wooden scrape with creaks while he drags it under him, and a dull knock when it stops, instead of a barely audible hiss.
 - The teleport zap has a sound now: a bright zip that sweeps up when he vanishes and a short snap with a little crackle where he lands. Like his other sounds it stays quiet while Jolty is not the window you are using.
 
 ## 0.7.2
