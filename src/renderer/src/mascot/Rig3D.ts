@@ -12,6 +12,8 @@ export interface Puppet {
   tilt(deg: number): void
   /** the ragdoll's pose to wear instead of the animation (null: back to the animation) */
   ragdoll(p: RagPose | null): void
+  /** the animation gets him up from lying where the ragdoll left him (tilt on the screen) */
+  getup(tilt: number): void
   /** the joints as they are now, in the ragdoll's terms: where a ragdoll starts from */
   stance(): RagJoints
   blink(): void
@@ -86,6 +88,9 @@ export class Rig3D implements Puppet {
   private tiltDeg = 0
   /** a physical pose in charge of the joints (ragdoll.ts); null while the animation is */
   private phys: RagPose | null = null
+  /** the lying tilt a get-up starts from */
+  private getupTilt = 0
+  private probe = new THREE.Vector3()
   private cur: T = { ...REST }
   /** the walking cycle's phase, driven by his speed over the ground */
   private gait = 0
@@ -183,6 +188,12 @@ export class Rig3D implements Puppet {
   ragdoll(p: RagPose | null): void {
     if (this.phys && !p) this.cur.rootRZ = this.phys.tilt
     this.phys = p
+  }
+  getup(tilt: number): void {
+    this.phys = null
+    this.getupTilt = Math.atan2(Math.sin(tilt), Math.cos(tilt))
+    this.cur.rootRZ = this.getupTilt
+    this.cur.rootX = HIP_Y * Math.sin(this.getupTilt)
   }
   stance(): RagJoints {
     const c = this.cur
@@ -322,6 +333,28 @@ export class Rig3D implements Puppet {
         // winding up for a jump: down in the knees, the arms back
         Object.assign(o, { rootSX: 1.05, rootSY: 0.9, rootY: -3, legLRX: -0.5, legRRX: -0.5, kneeL: 1, kneeR: 1, armLRX: 0.45, armRRX: 0.45, elbL: -0.3, elbR: -0.3, torsoRX: 0.14, headRX: -0.1, rootRY: d * 0.6 })
         break
+      case 'getup': {
+        // as a person gets up after a fall: the knees come up, the arm props him and pushes the floor until he
+        // sits, he leans forward with the hands reaching, hips lift into a squat, then he stands. The body turns
+        // about his hip; the floor under his lowest point is kept in apply()
+        const sm = (x: number): number => x * x * (3 - 2 * x)
+        const tuck = sm(clamp01(t / 0.3))
+        const prop = sm(clamp01((t - 0.15) / 0.75))
+        const sq = sm(clamp01((t - 1) / 0.5))
+        const up = sm(clamp01((t - 1.6) / 0.7))
+        const rz = this.getupTilt * (1 - prop)
+        const push = prop * (1 - sm(clamp01((t - 1) / 0.3)))
+        const reach = sm(clamp01((t - 1) / 0.4)) * (1 - up)
+        const bent = (tuck * (1 - sq) + 0.73 * sq) * (1 - up)
+        const knee = (1.2 * tuck * (1 - sq) + 1.5 * sq) * (1 - up)
+        Object.assign(o, {
+          rootRZ: rz, rootX: HIP_Y * Math.sin(rz), rootRY: d * 1.3 - d * 0.5 * up,
+          armLRX: d * rz + 0.6 * push - 0.9 * reach, armRRX: d * rz + 0.6 * push - 0.9 * reach, armLRZ: -0.15, armRRZ: 0.15, armLK: 1, elbL: -0.15 - 0.3 * reach, elbR: -0.15 - 0.3 * reach,
+          legLRX: -1.3 * bent, legRRX: -1.3 * bent, kneeL: knee, kneeR: knee,
+          torsoRX: 0.5 * sq * (1 - up), chestRX: 0.2 * sq * (1 - up), headRX: -0.25 * sq * (1 - up)
+        })
+        break
+      }
       case 'jump':
         Object.assign(o, { rootSX: 0.93, rootSY: 1.08, armLRZ: -2.1, armRRZ: 2.1, legLRX: -0.7, legRRX: -0.35, kneeL: 1.1, kneeR: 0.8, elbL: -0.4, elbR: -0.4, rootRY: d * 0.6 })
         break
@@ -555,7 +588,7 @@ export class Rig3D implements Puppet {
     this.physics(dt, now)
     if (this.pose === 'walk' || this.pose === 'run') this.gait += (dt * TAU * Math.max(this.mv.speed, 30)) / STRIDE[this.pose]
     const goal = this.target(now)
-    for (const k in goal) this.cur[k] += (goal[k] - this.cur[k]) * (1 - Math.exp(-dt * (EASE[k] ?? BLEND)))
+    for (const k in goal) this.cur[k] += (goal[k] - this.cur[k]) * (1 - Math.exp(-dt * (EASE[k] ?? (this.pose === 'getup' ? 12 : BLEND))))
     if (this.phys) Object.assign(this.cur, goal)
     if (this.pose === 'land') Object.assign(this.cur, { rootSY: goal.rootSY, rootSX: goal.rootSX })
     // a tumble follows the spin exactly: eased, the fast turn would wobble
@@ -627,7 +660,7 @@ export class Rig3D implements Puppet {
     j.root.position.set(c.rootX, c.rootY, 0)
     j.root.scale.set(c.rootSX, c.rootSY, c.rootSX)
     // a physical tilt is about the screen's depth axis whatever way he faces: z applied after the turn
-    j.root.rotation.order = this.phys ? 'ZYX' : 'XYZ'
+    j.root.rotation.order = this.phys || this.pose === 'getup' ? 'ZYX' : 'XYZ'
     j.root.rotation.set(0, c.rootRY, c.rootRZ)
     j.hang.rotation.z = c.hangRZ
     j.torso.rotation.x = c.torsoRX
@@ -670,5 +703,18 @@ export class Rig3D implements Puppet {
     const m = j.shadow.material as THREE.MeshBasicMaterial
     m.opacity = this.pose === 'cheer' ? Math.max(0.25, 1 - c.rootY / 30) : 1
     j.sync()
+    // getting up from the floor: his lowest point rests on it, whatever the limbs are doing
+    if (this.pose === 'getup') {
+      j.root.updateMatrixWorld(true)
+      // (the mesh's own bounding box is the bind pose's, so the skinned vertices are measured, every 4th one)
+      j.skin.skeleton.update()
+      const pos = j.skin.geometry.attributes.position
+      let low = Infinity
+      for (let i = 0; i < pos.count; i += 4) {
+        j.skin.getVertexPosition(i, this.probe)
+        low = Math.min(low, this.probe.applyMatrix4(j.skin.matrixWorld).y)
+      }
+      if (low < Infinity) j.root.position.y -= low
+    }
   }
 }

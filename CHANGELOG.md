@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.4
+
+### Fixes
+
+- Held by the hood he is glued to the cursor again, with his arms, legs and hood flopping about with how you move him, like before. The physical ragdoll takes over only when you let go: he flies, braces, bounces and tumbles with the speed of your hand, and that is where the spin went too far.
+- Getting up is an animation now, the way a person gets up after a fall: the knees come up, he props himself on his arm and pushes the floor until he sits, leans forward with his hands reaching, lifts into a squat and stands. It starts from the exact pose he lay in and his lowest point stays on the floor, so it no longer looks like a clip pasted in. The physical get-up could leave him stuck lying on the floor until you hid and showed him again: that cannot happen any more, and a pile that will not settle gets him up by itself after a few seconds.
+- If you let go of the button where Jolty cannot see it (a screenshot tool, another window taking focus) he lets go too, instead of staying stuck to the cursor.
+
 ## 0.7.3
 
 ### Fixes

@@ -11,6 +11,8 @@ import glbUrl from './jolty.glb?inline'
  * turns to the skeleton's bones. The eyes are drawn here, not in the texture, so they can blink and change.
  */
 export interface Joints {
+  /** the skinned body, to measure where its lowest point is */
+  skin: THREE.SkinnedMesh
   root: THREE.Group
   hang: THREE.Group
   torso: THREE.Group
@@ -247,7 +249,7 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   }
   stool.visible = false
 
-  return { root, hang, ...groups, eyes, faces, laptop, lid, glass, stool, shadow, sync }
+  return { skin, root, hang, ...groups, eyes, faces, laptop, lid, glass, stool, shadow, sync }
 }
 
 export function lightStudio(scene: THREE.Scene, renderer: THREE.WebGLRenderer): void {

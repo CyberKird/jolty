@@ -169,10 +169,10 @@ export class Brain {
   }
 
   /** into the ragdoll: from where he stands, with this speed, or already held by the cursor */
-  private ragdoll(vx: number, vy: number, stand = false): Ragdoll | undefined {
+  private ragdoll(vx: number, vy: number, stand = false, spin = 0): Ragdoll | undefined {
     if (calm()) return undefined
     try {
-      const rag = new Ragdoll(this.x, this.y - HIP, this.dir, { impact: (s) => this.hit(s) }, this.body.stance(), vx, vy)
+      const rag = new Ragdoll(this.x, this.y - HIP, this.dir, { impact: (s) => this.hit(s) }, this.body.stance(), vx, vy, 0, this.dir * spin)
       if (stand) rag.state = 'stand'
       this.rag = rag
       this.mode = 'rag'
@@ -216,25 +216,43 @@ export class Brain {
     this.x = p.x
     this.y = p.y + HIP
     this.body.ragdoll(p)
-    const s = rag.state
-    const eyes: Eyes = s === 'held' ? 'worried' : s === 'lie' ? 'dizzy' : s === 'getup' ? 'worried' : s === 'air' ? 'worried' : 'open'
-    const pose: Pose = s === 'held' ? 'held' : 'trip'
-    if (this.pose !== pose || this.el.dataset.eyes !== eyes) this.set(pose, eyes)
-    if (this.press?.dragged) return
-    if (rag.up) this.stand(rag)
+    const eyes: Eyes = rag.state === 'lie' ? 'dizzy' : rag.state === 'air' ? 'worried' : 'open'
+    if (this.pose !== 'trip' || this.el.dataset.eyes !== eyes) this.set('trip', eyes)
+    if (rag.down) this.getUp(rag)
+    else if (rag.up) this.stand(rag)
+  }
+
+  /** where the floor is under him and which element it belongs to (null: the window's own floor) */
+  private floorUnder(x: number, y: number): { el: Element | null; y: number } {
+    const f = [...document.querySelectorAll(FLOORS)].flatMap((el) => {
+      const r = visible(el)
+      return r && Math.abs(r.top - y) < 10 && x > r.left + 12 && x < r.right - 12 ? [{ el, y: r.top }] : []
+    })[0]
+    return f ?? { el: null, y: FLOOR() }
+  }
+
+  /** lying and quiet: the animation gets him up (arms push, legs tuck, a squat, then up), from where he lies */
+  private getUp(rag: Ragdoll): void {
+    const p = rag.pose()
+    const floor = this.floorUnder(p.x, p.y + rag.groundGap())
+    this.rag = undefined
+    this.body.getup(p.tilt)
+    this.place(floor.el, p.x, floor.y)
+    this.set('getup', 'worried')
+    this.busyUntil = performance.now() + 2600
+    this.later(() => {
+      if (this.pose === 'getup') this.set('idle', 'open')
+      this.decide()
+    }, 2600)
   }
 
   /** he is on his feet again: back to the animation, standing on whatever is under him */
   private stand(rag: Ragdoll): void {
-    const feet = rag.feetY()
     const x = this.x
-    const floor = [...document.querySelectorAll(FLOORS)].flatMap((el) => {
-      const r = visible(el)
-      return r && Math.abs(r.top - feet) < 8 && x > r.left + 12 && x < r.right - 12 ? [{ el, top: r.top }] : []
-    })[0]
+    const floor = this.floorUnder(x, rag.feetY())
     this.rag = undefined
     this.body.ragdoll(null)
-    this.place(floor?.el ?? null, x, floor?.top ?? FLOOR())
+    this.place(floor.el, x, floor.y)
     this.set('idle', 'open')
     this.later(this.decide, 150)
   }
@@ -248,7 +266,8 @@ export class Brain {
   }
 
   private fall(vx: number, vy: number): void {
-    if (this.ragdoll(vx, vy)) return this.set('fall', 'worried')
+    // thrown: the physical body takes over with the speed of the hand (a throw turns him like a tossed doll)
+    if (this.ragdoll(vx, vy, false, clamp(-vx / 1100, -5, 5))) return this.set('trip', 'worried')
     this.mode = 'air'
     this.anchor = null
     this.vx = vx
@@ -656,6 +675,12 @@ export class Brain {
     }
     const move = (e: PointerEvent): void => {
       this.pointer = { x: e.clientX, y: e.clientY }
+      // the button was released where we could not see it (a screenshot tool, another window took the focus):
+      // let go, or he stays glued to the cursor
+      if (this.press && (e.buttons & 1) === 0) {
+        up()
+        return this.frame()
+      }
       this.frame()
       this.lastActive = performance.now()
       if (Math.hypot(e.clientX - this.x, e.clientY - this.y) < 200) wake()
@@ -663,23 +688,18 @@ export class Brain {
       if (!p) return
       if (!p.dragged && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 5) {
         p.dragged = true
-        // by the hood: a ragdoll that hangs from the cursor (swing him, spin him, he swings with it)
-        const rag = this.rag ?? this.ragdoll(0, 0)
-        if (rag) {
-          rag.grab(e.clientX, e.clientY)
-          this.set('held', 'worried')
-        } else {
-          this.mode = 'held'
-          this.anchor = null
-          this.jump = undefined
-          this.set('held', 'worried')
+        // by the hood, glued to the cursor: his limbs and the hood swing with how you move him (Rig3D). A
+        // ragdoll lying on the floor is picked up from where it is
+        if (this.rag) {
+          this.rag = undefined
+          this.body.ragdoll(null)
         }
+        this.mode = 'held'
+        this.anchor = null
+        this.jump = undefined
+        this.set('held', 'worried')
       }
       if (!p.dragged) return
-      if (this.rag) {
-        this.rag.pull(e.clientX, e.clientY)
-        return this.frame()
-      }
       const dt = Math.max(1, e.timeStamp - p.lt) / 1000
       p.vx = p.vx * 0.5 + ((e.clientX - this.x) / dt) * 0.5
       p.vy = p.vy * 0.5 + ((e.clientY + GRIP - this.y) / dt) * 0.5
@@ -704,10 +724,6 @@ export class Brain {
         return this.spark('bolt')
       }
       this.freeUntil = performance.now() + 9000
-      if (this.rag) {
-        this.rag.release()
-        return this.frame()
-      }
       if (calm()) {
         this.place(null, this.x, FLOOR())
         return this.landed(0)
@@ -728,6 +744,8 @@ export class Brain {
     hit?.addEventListener('pointerdown', down, opts)
     hit?.addEventListener('pointerup', up, opts)
     hit?.addEventListener('pointercancel', up, opts)
+    hit?.addEventListener('lostpointercapture', up, opts)
+    window.addEventListener('blur', up, opts)
     hit?.addEventListener('contextmenu', menu, opts)
     window.addEventListener('pointermove', move, { ...opts, passive: true })
     window.addEventListener('keydown', key, { ...opts, passive: true })

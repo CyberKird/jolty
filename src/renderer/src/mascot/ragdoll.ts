@@ -75,7 +75,7 @@ const ALL_BODY = 0xfffe
 /** muscle strength, N·m: what a joint can hold against his own weight */
 const S = { limp: 30, soft: 200, firm: 900, strong: 2800 }
 
-export type RagState = 'held' | 'air' | 'lie' | 'getup' | 'stand'
+export type RagState = 'air' | 'lie' | 'stand'
 
 /** a platform to stand on, in screen px: its top edge is what counts */
 export interface Ledge {
@@ -117,7 +117,6 @@ export class Ragdoll {
   private ground: planck.Body
   private ledges = new Map<unknown, planck.Body>()
   private walls: planck.Body[] = []
-  private mouse?: planck.MouseJoint
   state: RagState = 'air'
   private t = 0
   private since = 0
@@ -127,13 +126,9 @@ export class Ragdoll {
   private lastHit = -1
   private mass = 0
   private bounds = { w: 0, h: 0 }
-  /** how the arms and legs are asked to move while he is held or flung (a phase that runs with time) */
-  private phase = 0
   private seed = Math.random() * 6.28
   /** standing up from the ground (recovered, steadied) as opposed to knocked while on his feet */
   fresh = true
-  /** the pelvis height while getting up, as a fraction of standing height */
-  private liftH = 0
 
   /**
    * @param x,y pelvis on the screen (px)
@@ -248,7 +243,10 @@ export class Ragdoll {
 
   /** the angle of a body in the world */
   private ang(n: PartName): number {
-    return this.bodies[n].getAngle()
+    // wrapped: after being spun around by the cursor a body can be turns over, and every "toward upright" below
+    // would then try to undo the turns (he lay stuck on the floor)
+    const a = this.bodies[n].getAngle()
+    return Math.atan2(Math.sin(a), Math.cos(a))
   }
 
   /**
@@ -321,32 +319,6 @@ export class Ragdoll {
       if (seen.has(k)) continue
       this.world.destroyBody(b)
       this.ledges.delete(k)
-    }
-  }
-
-  // -------------------------------------------------------------------------------------------
-  // being held
-
-  /** takes him by the hood: he hangs from the cursor */
-  grab(px: number, py: number): void {
-    this.release()
-    this.state = 'held'
-    this.since = this.t
-    const head = this.bodies.head
-    const hood = head.getWorldPoint(V(0, (101 - 79) * U))
-    this.mouse = this.world.createJoint(planck.MouseJoint({ maxForce: this.mass * 900, frequencyHz: 14, dampingRatio: 0.6 }, this.ground, head, hood)) ?? undefined
-    this.pull(px, py)
-  }
-  /** the cursor moves: where the hood should be (screen px of the hood top) */
-  pull(px: number, py: number): void {
-    this.mouse?.setTarget(V(this.sx(px), this.sy(py)))
-  }
-  release(): void {
-    if (this.mouse) {
-      this.world.destroyJoint(this.mouse)
-      this.mouse = undefined
-      this.state = 'air'
-      this.since = this.t
     }
   }
 
@@ -437,26 +409,6 @@ export class Ragdoll {
     const k = stun ? 0.12 : 1
     const c = this.com()
     switch (this.state) {
-      case 'held': {
-        // hanging from the hood: loose, the legs kicking a little, the arms swinging out
-        const kick = Math.sin(t * 7 + this.seed)
-        const w = 0.35 * k
-        this.aimWorld('hipL', 0.35 + 0.5 * kick, S.soft * w)
-        this.aimWorld('hipR', 0.35 - 0.5 * kick, S.soft * w)
-        this.aimRel('kneeL', -0.7 - 0.5 * kick, S.soft * w)
-        this.aimRel('kneeR', -0.7 + 0.5 * kick, S.soft * w)
-        // the hands reach for the hand that holds him, so the arms follow where the cursor swings him
-        const hood = this.bodies.head.getWorldPoint(V(0, (101 - 79) * U))
-        const sh = this.bodies.torso.getWorldPoint(V(0, (49.5 - 43) * U))
-        const reach = Ragdoll.pointing(hood.x - sh.x, hood.y - sh.y)
-        this.aimWorld('shL', reach + 0.1 * Math.sin(t * 6), S.firm * w * 1.6)
-        this.aimWorld('shR', reach - 0.1 * Math.sin(t * 6), S.firm * w * 1.6)
-        this.aimRel('elL', 0.15, S.soft * w)
-        this.aimRel('elR', 0.15, S.soft * w)
-        this.aimRel('spine', 0, S.limp)
-        this.aimRel('neck', 0, S.limp)
-        break
-      }
       case 'air': {
         const hit = this.toImpact()
         const bracing = hit.t < 0.3 && this.t - this.since > 0.12
@@ -503,47 +455,6 @@ export class Ragdoll {
       case 'lie': {
         // dazed: loose and slowly stirring, then he decides to get up
         this.eachLimp(0.25)
-        if (this.t - this.since > 0.9 && !stun) this.go('getup')
-        break
-      }
-      case 'getup': {
-        const e = this.t - this.since
-        const side = this.lean() > 0 ? 1 : -1
-        // 1) the arms push the ground away and the legs tuck under him, 2) he is lifted at the chest while the
-        // legs come down beneath, 3) the body straightens and the strength comes back
-        const ramp = clamp(e / 0.5, 0, 1)
-        const rise = clamp((e - 0.35) / 0.9, 0, 1)
-        // pushing with the arms against the ground: pointing down
-        this.aimWorld('shL', Ragdoll.pointing(0.25 * side, -1), S.strong, 12)
-        this.aimWorld('shR', Ragdoll.pointing(0.25 * side, -1), S.strong, 12)
-        this.aimRel('elL', 0.25, S.firm)
-        this.aimRel('elR', 0.25, S.firm)
-        // the legs: first bent under, then straight down
-        const bend = 1 - rise
-        this.aimWorld('hipL', 0.0 + 1.1 * bend * side, S.firm, 10)
-        this.aimWorld('hipR', 0.0 + 1.1 * bend * side, S.firm, 10)
-        this.aimRel('kneeL', -1.5 * bend, S.firm)
-        this.aimRel('kneeR', -1.5 * bend, S.firm)
-        // the trunk comes up: world angle toward 0 as the lift builds
-        this.aimWorld('spine', 0, S.firm * (0.3 + 0.7 * rise), 8)
-        this.aimWorld('neck', 0, S.firm, 8)
-        // the lift: at the chest and hips, as much as it takes to bring the pelvis to standing height, then it lets go
-        const height = this.groundHeight()
-        const want = (PARTS.pelvis.centre[1] - 1) * U
-        const g = 2600 / PXM
-        const lean = this.lean()
-        // lifted by the belly he would hang horizontal: the lift is full only with the trunk coming up
-        const upright = 0.25 + 0.75 * Math.max(0, Math.cos(lean))
-        const f = clamp(0.9 + 3 * (want - height) - 0.3 * this.bodies.pelvis.getLinearVelocity().y, 0, 1.6) * upright * this.mass * g * clamp((e - 0.3) / 0.35, 0, 1)
-        this.bodies.torso.applyForceToCenter(V(0, f * 0.6), true)
-        this.bodies.pelvis.applyForceToCenter(V(0, f * 0.4), true)
-        // and the trunk is brought upright: a torque with damping, the arms pushing on the ground behind it
-        const torque = clamp(-(3500 * lean + 450 * this.bodies.torso.getAngularVelocity()), -5200, 5200) * ramp
-        this.bodies.torso.applyTorque(torque, true)
-        this.liftH = height / want
-        // once he is up on his legs the same restoring push as when standing keeps him from overshooting
-        if (rise > 0.5) this.assist(c, 1, 0.5)
-        if (e > 4) this.go('lie')
         break
       }
       case 'stand': {
@@ -653,7 +564,6 @@ export class Ragdoll {
     const c = this.com()
     const speed = Math.hypot(c.vx, c.vy)
     const e = this.t - this.since
-    if (this.state === 'getup') return e > 1 && this.liftH > 0.9 && Math.abs(this.lean()) < 0.45 && speed < 1.5 && this.feetDown()
     if (this.state !== 'stand') return false
     return e > 0.45 && Math.abs(this.lean()) < 0.25 && speed < 0.5 && this.feetDown()
   }
@@ -667,7 +577,7 @@ export class Ragdoll {
       x: this.px(hip.x),
       y: this.py(hip.y),
       // on the screen a mirrored (left-facing) body turns the other way
-      tilt: this.dir * p.getAngle(),
+      tilt: this.dir * Math.atan2(Math.sin(p.getAngle()), Math.cos(p.getAngle())),
       spine: rel('spine'),
       neck: rel('neck'),
       hipL: rel('hipL'),
@@ -688,14 +598,22 @@ export class Ragdoll {
     return low
   }
 
-  /** the hood top on screen, for the cursor's grip */
-  hood(): { x: number; y: number } {
-    const p = this.bodies.head.getWorldPoint(V(0, (101 - 79) * U))
-    return { x: this.px(p.x), y: this.py(p.y) }
+  /**
+   * Lying and quiet for a moment (or tumbling for far too long, which is a stuck pile): time to hand him to the
+   * animation, which gets him up by keyframes. Not the physics, that was never reliable at it.
+   */
+  get down(): boolean {
+    const c = this.com()
+    const quiet = Math.hypot(c.vx, c.vy) < 0.6
+    return (this.state === 'lie' && this.t - this.since > 0.7 && quiet) || (this.t > 7 && quiet)
+  }
+
+  /** px from the pelvis to what is under it, straight down */
+  groundGap(): number {
+    return this.groundHeight() * PXM
   }
 
   destroy(): void {
     // the world is dropped with the object; nothing outside holds on to it
-    this.mouse = undefined
   }
 }
