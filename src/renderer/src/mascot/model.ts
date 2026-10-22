@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 // inlined: the page is a file:// URL in the packaged app, where fetch cannot read it
 import glbUrl from './jolty.glb?inline'
+import { polishGeometry } from './smooth'
 
 /**
  * Jolty in 3D: the approved render turned into a mesh (docs/mascot/v3: finish.py adds the bolt, rig.py paints
@@ -138,6 +139,45 @@ function buildEyes(eyes: THREE.Group, half: number): Record<string, THREE.Group>
   }
 }
 
+/**
+ * The scan's colour map has its lighting baked in, with cold blue-grey blotches on the hood and creases that read
+ * as stains. The reference is matte charcoal fabric: here the dull pixels lose most of their colour and a good part
+ * of their contrast (the volt ones, drawstrings and shoe outlines, are left alone).
+ */
+function calmTexture(tex: THREE.Texture): THREE.Texture {
+  const img = tex.image as ImageBitmap
+  const c = document.createElement('canvas')
+  c.width = img.width
+  c.height = img.height
+  const g = c.getContext('2d', { willReadFrequently: true })!
+  g.drawImage(img, 0, 0)
+  const d = g.getImageData(0, 0, c.width, c.height)
+  const px = d.data
+  for (let i = 0; i < px.length; i += 4) {
+    const r = px[i]
+    const gr = px[i + 1]
+    const b = px[i + 2]
+    // volt: strongly green-yellow
+    if (gr > 110 && gr > b * 1.6 && r > b * 1.2) continue
+    const l = (r + gr + b) / 3
+    // toward a neutral charcoal, and the light/dark swings pulled in around a dark middle
+    const t = 0.22 + 0.78 * Math.min(1, l / 120) * 0.0
+    const lc = 34 + (l - 34) * 0.62
+    px[i] = lc + (r - l) * 0.28 * (1 - t * 0)
+    px[i + 1] = lc + (gr - l) * 0.28
+    px[i + 2] = lc + (b - l) * 0.28
+  }
+  g.putImageData(d, 0, 0)
+  const out = new THREE.CanvasTexture(c)
+  out.colorSpace = tex.colorSpace
+  out.flipY = tex.flipY
+  out.wrapS = tex.wrapS
+  out.wrapT = tex.wrapT
+  out.anisotropy = tex.anisotropy
+  tex.dispose()
+  return out
+}
+
 export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   const gltf = await new GLTFLoader().parseAsync(glb(), '')
   const model = gltf.scene
@@ -151,9 +191,12 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   const skin = model.getObjectByProperty('type', 'SkinnedMesh') as THREE.SkinnedMesh
   skin.geometry.computeBoundingBox()
   const hoodTop = skin.geometry.boundingBox!.max.y * UNIT
+  // smooth cloth instead of a faceted scan, and a round hood top instead of a pinch under the bolt
+  polishGeometry(skin.geometry, (hoodTop / UNIT) * 0.8, hoodTop / UNIT)
   // the scan's lighting is in its texture already; the env light only adds a soft sheen
   const fleece = skin.material as THREE.MeshStandardMaterial
   fleece.envMapIntensity = 0.9
+  if (fleece.map) fleece.map = calmTexture(fleece.map)
   fleece.emissiveIntensity = 1.4
   skin.frustumCulled = false
   const boltMesh = node('Bolt') as THREE.Mesh
@@ -185,6 +228,24 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   const eyes = new THREE.Group()
   mount.add(eyes)
   const faces = buildEyes(eyes, (r.x - l.x) / 2)
+
+  // the slot the bolt comes out of, as in the reference: a dark opening in the hood top with a thin volt glow
+  // around the bolt's foot (the scan only has the bolt pushed into the cloth)
+  {
+    const foot = boltMesh.localToWorld(new THREE.Vector3(-0.023, hoodTop / UNIT - 0.004, 0.042))
+    const slot = new THREE.Group()
+    slot.position.copy(foot)
+    const dark = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.5, 40), new THREE.MeshStandardMaterial({ color: '#030304', roughness: 0.55, metalness: 0 }))
+    dark.scale.set(9, 1, 5.2)
+    const glow = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.9, 40), new THREE.MeshBasicMaterial({ color: VOLT, transparent: true, opacity: 0.55, toneMapped: false, side: THREE.DoubleSide }))
+    glow.rotation.x = -Math.PI / 2
+    glow.position.y = 0.3
+    glow.scale.set(9, 5.2, 1)
+    slot.add(dark, glow)
+    root.add(slot)
+    root.updateMatrixWorld(true)
+    node('head').attach(slot)
+  }
 
   // each bone gets the turn of its group, taken in the model's axes: q = local · world⁻¹ · turn · world
   const names = ['torso', 'chest', 'head', 'bolt', 'armL', 'armR', 'foreL', 'foreR', 'legL', 'legR', 'shinL', 'shinR'] as const

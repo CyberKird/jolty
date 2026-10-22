@@ -47,7 +47,7 @@ function noise(a: AudioContext, len: number, vol: number, filter: BiquadFilterTy
   src.start(t)
 }
 
-export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape' | 'zap' | 'arrive' | 'knock'
+export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape' | 'zap' | 'arrive' | 'knock' | 'step' | 'effort' | 'rustle' | 'key' | 'blip' | 'snore'
 
 /** strength 0..1 scales the impact sounds */
 export function play(sound: Sound, strength = 0.5): void {
@@ -97,6 +97,29 @@ export function play(sound: Sound, strength = 0.5): void {
       noise(a, 0.05, 0.08, 'highpass', 3000, out)
       tone(a, { from: 520, to: 180, len: 0.1, vol: 0.05 }, out)
       return noise(a, 0.03, 0.04, 'highpass', 3800, out, 0.06)
+    case 'step':
+      // a soft sole on the floor, a little different each time
+      noise(a, 0.045, 0.045 + Math.random() * 0.02, 'lowpass', 700 + Math.random() * 500, out)
+      return tone(a, { type: 'triangle', from: 170 + Math.random() * 40, to: 90, len: 0.06, vol: 0.03 }, out)
+    case 'effort':
+      // a small "hup": a short breathy voiced push, rising then dropping
+      noise(a, 0.12, 0.03, 'bandpass', 1400, out)
+      return tone(a, { type: 'triangle', from: 300, to: 220, len: 0.14, vol: 0.03, at: 0.01 }, out)
+    case 'rustle':
+      // cloth on the floor as he moves
+      noise(a, 0.32, 0.03, 'bandpass', 2200, out, 0, 1100)
+      return noise(a, 0.2, 0.02, 'highpass', 3000, out, 0.12)
+    case 'key':
+      // one key of the laptop: a short tick, higher or lower
+      noise(a, 0.014, 0.035, 'highpass', 2800 + Math.random() * 1200, out)
+      return tone(a, { type: 'square', from: 900 + Math.random() * 500, to: 600, len: 0.02, vol: 0.008 }, out)
+    case 'blip':
+      // an idea starting to form
+      tone(a, { from: 520, to: 700, len: 0.07, vol: 0.03 }, out)
+      return tone(a, { from: 700, to: 920, len: 0.09, vol: 0.03, at: 0.08 }, out)
+    case 'snore':
+      // asleep: a low breath that swells and fades
+      return noise(a, 0.9, 0.035, 'lowpass', 320, out, 0, 160)
     case 'scrape':
       // the stool dragged across the floor under him: a rough wooden scrape that slows down, with creaks in it
       noise(a, 0.5, 0.075, 'bandpass', 620, out, 0, 240)

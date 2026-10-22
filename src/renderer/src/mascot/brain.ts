@@ -51,6 +51,7 @@ export class Brain {
   private walkSpeed = WALK
   /** how fast he is walking now: it builds up from a standstill and eases off near the end */
   private wv = 0
+  private stride = 0
   private jump?: { x0: number; y0: number; el: Element | null; tx: number; dy: number; t0: number; ms: number; lift: number }
   private floors: { el: Element; r: DOMRect }[] = []
   private floorsAt = 0
@@ -240,6 +241,15 @@ export class Brain {
     this.body.getup(p.tilt)
     this.place(floor.el, p.x, floor.y)
     this.set('getup', 'worried')
+    // what it sounds like: cloth on the floor, a push, a second push as he comes up, the feet settling
+    play('rustle')
+    this.later(() => play('effort'), 700)
+    this.later(() => play('rustle'), 1500)
+    this.later(() => play('effort'), 2300)
+    this.later(() => {
+      play('step')
+      dust(this.x, this.y - 1, 0.5)
+    }, 3000)
     this.busyUntil = performance.now() + 3200
     this.later(() => {
       if (this.pose === 'getup') this.set('idle', 'open')
@@ -363,6 +373,12 @@ export class Brain {
       return this.decide()
     }
     this.x += step * Math.sign(this.walkTo - this.x)
+    // a footfall every half stride (Rig3D's STRIDE is a whole one: 49 px a walk, 81 a run)
+    this.stride += step
+    if (this.stride >= (this.walkSpeed === RUN ? 40 : 24)) {
+      this.stride = 0
+      play('step')
+    }
     const r = this.anchor?.getBoundingClientRect()
     this.anchorDx = r ? this.x - r.left : 0
   }
@@ -453,6 +469,11 @@ export class Brain {
     if (pose !== was) {
       // a sound for each change of what he does, soft and short (sfx.ts)
       const cue: Partial<Record<Pose, Sound>> = { jump: 'hop', held: 'grab', cheer: 'cheer', wave: 'hello', point: 'ding', type: 'click', read: 'click' }
+      if (pose === 'type' && was !== 'type') this.keys(++this.keying)
+      if (pose === 'think') play('blip')
+      if (pose === 'sleep') this.snore(++this.snoring)
+      if (pose === 'stretch') this.later(() => play('effort'), 500)
+      if (pose === 'shrug') this.later(() => play('rustle'), 100)
       if (pose === 'fall' && was === 'held') play('whoosh', 0.8)
       else if (cue[pose]) play(cue[pose]!)
       // on the floor a seat means the stool sliding out (Rig3D)
@@ -608,6 +629,10 @@ export class Brain {
       this.freeUntil = performance.now() + 14000
       this.face(r.left + 60 < this.x ? -1 : 1)
       this.leap(msg, clamp(r.right - 60, r.left + 30, r.right - 30))
+    } else if (roll < 0.88) {
+      this.react('stretch', 'sleepy', 2100)
+    } else if (roll < 0.94) {
+      this.react('shrug', 'open', 1300)
     } else if (Math.hypot(this.pointer.x - this.x, this.pointer.y - this.y) < 320) {
       this.face(this.pointer.x < this.x ? -1 : 1)
       this.react('wave', 'happy', 1400)
@@ -617,6 +642,24 @@ export class Brain {
   private blink = (): void => {
     this.later(this.blink, rand(2400, 6200))
     this.body.blink()
+    // now and then twice in a row
+    if (Math.random() < 0.2) this.later(() => this.body.blink(), 240)
+  }
+
+  private keying = 0
+  private snoring = 0
+  /** the laptop's keys while he types: short bursts of ticks, as long as he types */
+  private keys = (id: number): void => {
+    if (id !== this.keying || this.pose !== 'type') return
+    const n = 2 + Math.floor(Math.random() * 4)
+    for (let i = 0; i < n; i++) this.later(() => play('key'), i * rand(70, 110))
+    this.later(() => this.keys(id), rand(420, 900))
+  }
+  /** and the slow breath while he sleeps */
+  private snore = (id: number): void => {
+    if (id !== this.snoring || this.pose !== 'sleep') return
+    play('snore')
+    this.later(() => this.snore(id), 3000)
   }
 
   // -------------------------------------------------------------------------------------------

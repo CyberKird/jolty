@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.5
+
+### New
+
+- Jolty has more life when nothing is going on: his eyes wander about on their own now and then, he sometimes blinks twice, stretches (one arm up, leaning away, up on his toes, a yawn) and shrugs.
+- Sound where it was missing: soft footsteps while he walks and runs, a small "hup" and cloth rustle as he gets up, laptop keys while he types, a blip when he starts thinking, and a slow breath while he sleeps.
+
+### Improvements
+
+- The model is closer to the reference render. The scan's flat-shaded faces are smoothed (folds stay sharp), the hood top is rounded instead of a pinch of creases, the bolt comes out of a dark slot with a thin volt glow around it, and the cold blue stains baked into the hood are gone, so it is matte charcoal fabric.
+
 ## 0.7.4
 
 ### Improvements

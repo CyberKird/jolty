@@ -104,6 +104,7 @@ export class Rig3D implements Puppet {
   private laptopSince = -1e9
   private laptopAway = -1e9
   private lookedAt = 0
+  private wander = { x: 0, y: 0, until: 0 }
   private onFloor = false
   /** never drops to the resting frame rates (the What's new stage, where he is the show) */
   fullRate = false
@@ -304,6 +305,13 @@ export class Rig3D implements Puppet {
         o.kneeR = 0.07 + 0.06 * Math.max(0, -Math.sin((s * TAU) / 5))
         lookAt(0.4, 0.45)
         o.rootRY += 0.18 * d
+        // nobody is moving the cursor: the eyes wander about on their own now and then
+        if (now - this.lookedAt > 2500) {
+          if (now > this.wander.until) this.wander = { x: (Math.random() - 0.5) * 1.5, y: (Math.random() - 0.5) * 0.9, until: now + 1400 + Math.random() * 2600 }
+          o.eyeX = this.wander.x
+          o.eyeY = this.wander.y
+          o.headRY += this.wander.x * 0.12
+        }
         break
       case 'walk':
       case 'run': {
@@ -368,6 +376,30 @@ export class Rig3D implements Puppet {
           torsoRX: (0.2 * pull + 0.3 * lean) * (1 - drive) - 0.1 * (1 - out), chestRX: 0.25 * lean * (1 - drive),
           headRX: -0.3 * lean * (1 - drive) + 0.25 * lift - 0.1 * sg(2.5, 2.8) * (1 - sg(2.8, 3.2))
         })
+        break
+      }
+      case 'stretch': {
+        // one arm reaching up (the other hand stays in the hoodie pocket), leaning away from it, up on the toes,
+        // a shiver at the top, then it lets go
+        const k = Math.sin(clamp01(t / 2) * Math.PI)
+        const u = Math.min(1, k * 1.6)
+        Object.assign(o, {
+          armRRZ: 2.75 * u, elbR: -0.1 * u, armLRX: -0.2 * u, rootRZ: 0.07 * u, rootRY: 0.18 * d * (1 - u),
+          torsoRX: -0.12 * u, chestRX: -0.1 * u, headRX: -0.3 * u, headRZ: -0.15 * u, rootY: 2.5 * u,
+          kneeL: 0.06 * (1 - u), kneeR: 0.06 * (1 - u), boltRZ: 0.12 * Math.sin(t * 28) * u
+        })
+        o.armRRX = 0.12 * u * Math.sin(t * 26)
+        break
+      }
+      case 'shrug': {
+        // palms out, forearms up, shoulders and head tilting: "who knows"
+        const b = Math.sin(clamp01(t / 1.2) * Math.PI)
+        const u = Math.min(1, b * 1.8)
+        Object.assign(o, {
+          armLK: 1, armLRZ: -0.75 * u, armRRZ: 0.75 * u, elbL: -1.0 * u, elbR: -1.0 * u, armLRX: -0.3 * u, armRRX: -0.3 * u,
+          headRZ: 0.18 * u * d, headRX: 0.05 * u, rootY: 1.5 * u, torsoRX: 0.04 * u
+        })
+        lookAt(0.3, 0.4)
         break
       }
       case 'jump':
