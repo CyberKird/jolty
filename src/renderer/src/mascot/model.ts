@@ -4,6 +4,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 // inlined: the page is a file:// URL in the packaged app, where fetch cannot read it
 import glbUrl from './jolty.glb?inline'
 import { polishGeometry } from './smooth'
+import { Hand } from './hand'
 
 /**
  * Jolty in 3D: the approved render turned into a mesh (docs/mascot/v3: finish.py adds the bolt, rig.py paints
@@ -12,6 +13,8 @@ import { polishGeometry } from './smooth'
  * turns to the skeleton's bones. The eyes are drawn here, not in the texture, so they can blink and change.
  */
 export interface Joints {
+  /** the right hand: a glove with every finger on its own joints (hand.ts) */
+  handR: Hand
   /** the skinned body, to measure where its lowest point is */
   skin: THREE.SkinnedMesh
   root: THREE.Group
@@ -137,6 +140,39 @@ function buildEyes(eyes: THREE.Group, half: number): Record<string, THREE.Group>
       return g
     })
   }
+}
+
+/** along the forearm, in app units, where the sleeve ends and the hand begins */
+const WRIST = 11.2
+
+/** drops every triangle that touches a vertex of the hand (the forearm bone's, farther than `from` along it) */
+function cutHand(skin: THREE.SkinnedMesh, bone: string, elbow: THREE.Vector3, along: THREE.Vector3, from: number): void {
+  const geo = skin.geometry
+  const bi = skin.skeleton.bones.findIndex((b) => b.name === bone)
+  const si = geo.attributes.skinIndex
+  const sw = geo.attributes.skinWeight
+  const pos = geo.attributes.position
+  const hand = new Uint8Array(pos.count)
+  const p = new THREE.Vector3()
+  for (let i = 0; i < pos.count; i++) {
+    let best = 0
+    let bw = -1
+    for (let k = 0; k < 4; k++) {
+      if (sw.getComponent(i, k) > bw) {
+        bw = sw.getComponent(i, k)
+        best = si.getComponent(i, k)
+      }
+    }
+    if (best !== bi) continue
+    p.set(pos.getX(i) * UNIT, pos.getY(i) * UNIT, pos.getZ(i) * UNIT)
+    if (p.sub(elbow).dot(along) >= from) hand[i] = 1
+  }
+  const src = geo.index ? Array.from(geo.index.array) : Array.from({ length: pos.count }, (_, i) => i)
+  const keep: number[] = []
+  for (let t = 0; t < src.length; t += 3) {
+    if (!hand[src[t]] && !hand[src[t + 1]] && !hand[src[t + 2]]) keep.push(src[t], src[t + 1], src[t + 2])
+  }
+  geo.setIndex(keep)
 }
 
 /**
@@ -277,6 +313,19 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   lid.add(mesh(logo, new THREE.MeshBasicMaterial({ color: VOLT, toneMapped: false }), -1.2, 5.6, 0.8))
   laptop.visible = false
 
+  // the right hand: the scan's mitten is cut off at the wrist and a glove with real fingers takes its place
+  const foreRBone = node('foreR')
+  const elbowR = foreRBone.getWorldPosition(new THREE.Vector3())
+  const alongR = new THREE.Vector3(0, 1, 0).applyQuaternion(foreRBone.getWorldQuaternion(new THREE.Quaternion()))
+  cutHand(skin, 'foreR', elbowR, alongR, WRIST)
+  const handR = new Hand(1)
+  handR.group.position.copy(elbowR).addScaledVector(alongR, WRIST - 0.5)
+  handR.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), alongR)
+  root.add(handR.group)
+  root.updateMatrixWorld(true)
+  foreRBone.attach(handR.group)
+  handR.snap('relaxed')
+
   // the magnifying glass rides on the right arm bone, from the glove on along the arm; its lens is turned so
   // that with the arm raised to his face (SEARCH_ARM) it faces us
   // the glove is at the forearm bone's tail: glTF bones run along their +y, FORE long
@@ -310,7 +359,7 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   }
   stool.visible = false
 
-  return { skin, root, hang, ...groups, eyes, faces, laptop, lid, glass, stool, shadow, sync }
+  return { handR, skin, root, hang, ...groups, eyes, faces, laptop, lid, glass, stool, shadow, sync }
 }
 
 export function lightStudio(scene: THREE.Scene, renderer: THREE.WebGLRenderer): void {

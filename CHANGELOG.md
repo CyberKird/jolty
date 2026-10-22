@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.6
+
+### New
+
+- Jolty's right hand is a real glove now, with every finger on its own joints (three phalanges each, and a thumb), instead of the scan's mitten. It changes shape with what he does: an open hand to wave and cheer, a pointing finger when he thinks (and for the "aha" when an idea comes), a fist around the magnifying glass, a flat hand shading his eyes, a claw for a running command, fingers that tap on the keys when he types and flap loosely when he is held or flung.
+- A thumbs-up at you now and then when a task is done, instead of always the cheer.
+
 ## 0.7.5
 
 ### New

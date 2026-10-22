@@ -526,7 +526,11 @@ export class Brain {
         const was = p.status[id]
         const now = s.status[id]
         if (was === 'running' && now === 'idle') {
-          this.react('cheer', 'happy', 1400)
+          // done: a cheer, or now and then a thumbs-up at you
+          if (Math.random() < 0.4) {
+            this.react('like', 'happy', 1600)
+            play('hello')
+          } else this.react('cheer', 'happy', 1400)
           this.spark()
         } else if (now === 'error' && was !== 'error') this.hurt()
         else if (now !== was) this.later(this.decide, 120)

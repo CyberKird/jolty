@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { loadJolty, lightStudio, SEARCH_ARM, type Joints } from './model'
 import type { Eyes, Pose } from './places'
 import { HIP_Y, type Joints as RagJoints, type RagPose } from './ragdoll'
+import type { HandShape } from './hand'
 
 /** What the brain can ask of the body. */
 export interface Puppet {
@@ -63,6 +64,7 @@ const LID_OPEN = 0.28
 const LID_SHUT = -1.45
 const easeOutBack = (k: number): number => 1 + 2.4 * Math.pow(k - 1, 3) + 1.4 * Math.pow(k - 1, 2)
 const clamp01 = (k: number): number => Math.max(0, Math.min(1, k))
+const sm01 = (x: number): number => x * x * (3 - 2 * x)
 
 /**
  * Renders Jolty with three.js on a small transparent canvas and animates his joints from the pose the brain
@@ -98,6 +100,11 @@ export class Rig3D implements Puppet {
   private zapUntil = 0
   private raf = 0
   private pxu: number
+  /** what the right hand is doing now, and how much it types or flutters (hand.ts) */
+  private handShape: HandShape = 'relaxed'
+  private handTap = 0
+  private handFlutter = 0
+  private handAt = 0
   private last = performance.now()
   private drawn = 0
   /** when the laptop came out of the pocket, and when it went back in */
@@ -391,6 +398,16 @@ export class Rig3D implements Puppet {
         o.armRRX = 0.12 * u * Math.sin(t * 26)
         break
       }
+      case 'like': {
+        // a thumbs-up at you: the arm comes forward and up, a little hop of pleasure, a nod
+        const u = Math.min(1, t / 0.25) * (1 - sm01(clamp01((t - 1.1) / 0.4)))
+        Object.assign(o, {
+          armRRX: -1.45 * u, armRRZ: 0.3 * u, elbR: -0.5 * u, headRZ: -0.1 * u, headRX: -0.1 * Math.sin(t * 9) * u,
+          rootRY: 0.75 * d * u, rootY: 1.6 * Math.abs(Math.sin(t * 8)) * u, torsoRX: -0.05 * u
+        })
+        lookAt(0.2, 0.2)
+        break
+      }
       case 'shrug': {
         // palms out, forearms up, shoulders and head tilting: "who knows"
         const b = Math.sin(clamp01(t / 1.2) * Math.PI)
@@ -645,6 +662,57 @@ export class Rig3D implements Puppet {
     this.renderer.render(this.scene, this.camera)
   }
 
+  /** what the right hand does with the pose: open to wave, a pointing finger to think, taps on the keys, a fist on the glass */
+  private moveHand(now: number): void {
+    let shape: HandShape = 'relaxed'
+    let tap = 0
+    let flutter = 0
+    switch (this.pose) {
+      case 'wave':
+      case 'cheer':
+      case 'jump':
+      case 'stretch':
+      case 'shrug':
+      case 'getup':
+        shape = 'open'
+        break
+      case 'like':
+        shape = 'thumbsup'
+        break
+      case 'point':
+      case 'think':
+        shape = 'point'
+        break
+      case 'zap':
+        shape = 'claw'
+        break
+      case 'scout':
+        shape = 'flat'
+        break
+      case 'search':
+        shape = 'fist'
+        break
+      case 'type':
+        tap = 1
+        break
+      case 'read':
+        tap = 0.15
+        break
+      case 'held':
+        shape = 'open'
+        flutter = 1
+        break
+      case 'fall':
+      case 'trip':
+        shape = 'open'
+        flutter = this.phys ? 0.6 : 0.3
+        break
+    }
+    const dt = Math.min(0.1, Math.max(0.001, (now - this.handAt) / 1000))
+    this.handAt = now
+    this.j!.handR.update(shape, dt, now / 1000, tap, flutter)
+  }
+
   /** out of the pocket and open while there is laptop work, back into the pocket when it ends */
   private placeLaptop(now: number): void {
     const { laptop, lid } = this.j!
@@ -744,6 +812,7 @@ export class Rig3D implements Puppet {
     const face = this.moment ?? this.eyes
     for (const [name, g] of Object.entries(j.faces)) g.visible = name === face
     this.placeLaptop(now)
+    this.moveHand(now)
     j.glass.visible = this.pose === 'search'
     const grounded = this.pose !== 'jump' && this.pose !== 'fall' && this.pose !== 'held' && this.pose !== 'dash'
     j.shadow.visible = grounded && !this.phys
