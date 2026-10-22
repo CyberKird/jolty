@@ -327,6 +327,9 @@ export class Rig3D implements Puppet {
         o.torsoRX = run ? 0.2 : 0.06
         o.boltRX = run ? -0.4 : 0
         o.rootRY = d * (run ? 1.2 : 1.05)
+        // leaning into the pace, the head a little ahead of the chest
+        o.torsoRX += 0.05 * (pace - 0.55)
+        o.headRX = -0.04 * pace
         break
       }
       case 'crouch':
@@ -334,24 +337,36 @@ export class Rig3D implements Puppet {
         Object.assign(o, { rootSX: 1.05, rootSY: 0.9, rootY: -3, legLRX: -0.5, legRRX: -0.5, kneeL: 1, kneeR: 1, armLRX: 0.45, armRRX: 0.45, elbL: -0.3, elbR: -0.3, torsoRX: 0.14, headRX: -0.1, rootRY: d * 0.6 })
         break
       case 'getup': {
-        // as a person gets up after a fall: the knees come up, the arm props him and pushes the floor until he
-        // sits, he leans forward with the hands reaching, hips lift into a squat, then he stands. The body turns
-        // about his hip; the floor under his lowest point is kept in apply()
+        // as a person gets up after a fall, in beats: 1) a breath, the head lifts; 2) he props himself on a straight
+        // arm and pushes the floor until he sits, legs out in front; 3) the heels are drawn in, the weight goes
+        // forward and the hands reach down in front; 4) the hips lift into a squat, the legs drive and the trunk
+        // and arms come up with a little overshoot and settle. The body turns about his hip; the floor under his
+        // lowest point is kept in apply(). Turned three-quarters to us so the arms and legs read.
         const sm = (x: number): number => x * x * (3 - 2 * x)
-        const tuck = sm(clamp01(t / 0.3))
-        const prop = sm(clamp01((t - 0.15) / 0.75))
-        const sq = sm(clamp01((t - 1) / 0.5))
-        const up = sm(clamp01((t - 1.6) / 0.7))
+        const sg = (a: number, b: number): number => sm(clamp01((t - a) / (b - a)))
+        const L = (a: number, b: number, u: number): number => a + (b - a) * u
+        const lift = sg(0.1, 0.4) * (1 - sg(0.5, 0.9))
+        const prop = sg(0.35, 1.2)
+        const out = sg(0.3, 1)
+        const pull = sg(1.2, 1.7)
+        const lean = sg(1.6, 2.15)
+        const drive = sg(2.05, 2.7)
         const rz = this.getupTilt * (1 - prop)
-        const push = prop * (1 - sm(clamp01((t - 1) / 0.3)))
-        const reach = sm(clamp01((t - 1) / 0.4)) * (1 - up)
-        const bent = (tuck * (1 - sq) + 0.73 * sq) * (1 - up)
-        const knee = (1.2 * tuck * (1 - sq) + 1.5 * sq) * (1 - up)
+        // the arm planted behind him until the weight is off it, then both hands reach down in front
+        const plant = prop * (1 - sg(1.2, 1.6))
+        const reach = sg(1.3, 1.8) * (1 - drive)
+        const thigh = L(L(L(0.3, 1.45, out), 1.3, pull), 0.95, lean) * (1 - drive)
+        const knee = L(L(L(0.5, 0.2, out), 2, pull), 1.55, lean) * (1 - drive)
+        // a settle after the stand: down a touch, then back
+        const settle = Math.sin(clamp01((t - 2.65) / 0.5) * Math.PI) * 0.04
+        const arm = d * rz * (1 - reach) + 0.35 * plant - 1.45 * reach
         Object.assign(o, {
-          rootRZ: rz, rootX: HIP_Y * Math.sin(rz), rootRY: d * 1.3 - d * 0.5 * up,
-          armLRX: d * rz + 0.6 * push - 0.9 * reach, armRRX: d * rz + 0.6 * push - 0.9 * reach, armLRZ: -0.15, armRRZ: 0.15, armLK: 1, elbL: -0.15 - 0.3 * reach, elbR: -0.15 - 0.3 * reach,
-          legLRX: -1.3 * bent, legRRX: -1.3 * bent, kneeL: knee, kneeR: knee,
-          torsoRX: 0.5 * sq * (1 - up), chestRX: 0.2 * sq * (1 - up), headRX: -0.25 * sq * (1 - up)
+          rootRZ: rz, rootX: HIP_Y * Math.sin(rz), rootRY: d * 0.95 - d * 0.15 * drive, rootSY: 1 - settle,
+          armLRX: arm, armRRX: arm + 0.1 * reach, armLRZ: -0.2 * (1 - drive), armRRZ: 0.2 * (1 - drive), armLK: 1,
+          elbL: -0.05 - 0.5 * reach * (1 - plant) - 0.3 * drive, elbR: -0.05 - 0.5 * reach * (1 - plant) - 0.3 * drive,
+          legLRX: -thigh, legRRX: -thigh, kneeL: knee, kneeR: knee,
+          torsoRX: (0.2 * pull + 0.3 * lean) * (1 - drive) - 0.1 * (1 - out), chestRX: 0.25 * lean * (1 - drive),
+          headRX: -0.3 * lean * (1 - drive) + 0.25 * lift - 0.1 * sg(2.5, 2.8) * (1 - sg(2.8, 3.2))
         })
         break
       }

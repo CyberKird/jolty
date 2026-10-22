@@ -107,7 +107,8 @@ export interface RagPose extends Joints {
 
 export interface RagHooks {
   /** a hit: how hard (0..1+) */
-  impact(strength: number): void
+  /** a hit: how hard (0..1+) and where, on the screen (px) */
+  impact(strength: number, x: number, y: number): void
 }
 
 export class Ragdoll {
@@ -154,7 +155,7 @@ export class Ragdoll {
       b.setLinearVelocity(V((this.dir * vx) / PXM, -vy / PXM))
       b.setAngularVelocity(spin)
     }
-    this.world.on('post-solve', (_c, impulse) => {
+    this.world.on('post-solve', (contact, impulse) => {
       let n = 0
       for (let i = 0; i < impulse.normalImpulses.length; i++) n += impulse.normalImpulses[i]
       // impulse relative to his weight: a landing on his feet is gentle, a face plant is not
@@ -163,7 +164,8 @@ export class Ragdoll {
         this.lastHit = this.t
         // a hit takes the strength out of the muscles for a moment, the harder the longer
         this.stun = Math.max(this.stun, clamp(s * 0.5, 0.1, 0.9))
-        this.hooks.impact(s)
+        const pt = contact.getWorldManifold(null)?.points[0]
+        this.hooks.impact(s, pt ? this.px(pt.x) : 0, pt ? this.py(pt.y) : 0)
       }
     })
   }

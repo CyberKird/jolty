@@ -1,5 +1,5 @@
 import { useStore } from '../store'
-import { sparks, streak } from './fx'
+import { dust, sparks, streak } from './fx'
 import { play, type Sound } from './sfx'
 import { FLOORS, goal, spot, visible, WORK, type Eyes, type Goal, type Pose } from './places'
 import { HIP_Y, Ragdoll, type Ledge } from './ragdoll'
@@ -172,7 +172,7 @@ export class Brain {
   private ragdoll(vx: number, vy: number, stand = false, spin = 0): Ragdoll | undefined {
     if (calm()) return undefined
     try {
-      const rag = new Ragdoll(this.x, this.y - HIP, this.dir, { impact: (s) => this.hit(s) }, this.body.stance(), vx, vy, 0, this.dir * spin)
+      const rag = new Ragdoll(this.x, this.y - HIP, this.dir, { impact: (s, x, y) => this.hit(s, x, y) }, this.body.stance(), vx, vy, 0, this.dir * spin)
       if (stand) rag.state = 'stand'
       this.rag = rag
       this.mode = 'rag'
@@ -201,9 +201,10 @@ export class Brain {
   }
 
   /** something hit him: a sound as hard as the blow */
-  private hit(s: number): void {
+  private hit(s: number, x: number, y: number): void {
     play(s > 1.2 ? 'thud' : 'land', Math.min(1, s / 2))
     if (s > 1.2) play('oof')
+    if (s > 0.4) dust(x, y, Math.min(2, s))
   }
 
   /** the ragdoll frame: the physics, and the body that wears it */
@@ -239,11 +240,11 @@ export class Brain {
     this.body.getup(p.tilt)
     this.place(floor.el, p.x, floor.y)
     this.set('getup', 'worried')
-    this.busyUntil = performance.now() + 2600
+    this.busyUntil = performance.now() + 3200
     this.later(() => {
       if (this.pose === 'getup') this.set('idle', 'open')
       this.decide()
-    }, 2600)
+    }, 3200)
   }
 
   /** he is on his feet again: back to the animation, standing on whatever is under him */
@@ -292,6 +293,8 @@ export class Brain {
 
   private landed(speed: number): void {
     this.mode = 'ground'
+    // every landing kicks up a little dust at his feet, more for a harder one
+    dust(this.x, this.y - 1, speed > 1100 ? 1.6 : 0.45)
     play(speed > 1100 ? 'thud' : 'land', speed / 1800)
     if (speed > 1100) play('oof')
     // a hard landing knocks him flat (Rig3D bounces him and picks the side he spun to), then he gets up
@@ -437,7 +440,10 @@ export class Brain {
       if (dt < 0.25) this.body.motion((this.x - this.moved.x) / dt, (this.y - this.moved.y) / dt)
       Object.assign(this.moved, { at: now, x: this.x, y: this.y })
     }
-    const t = `translate3d(${Math.round(this.x - W / 2)}px, ${Math.round(this.y - FOOT)}px, 0)`
+    // to the device pixel, not the css one: whole css pixels made a slow walk step along the screen
+    const dpr = devicePixelRatio || 1
+    const snap = (v: number): number => Math.round(v * dpr) / dpr
+    const t = `translate3d(${snap(this.x - W / 2)}px, ${snap(this.y - FOOT)}px, 0)`
     if (t !== this.placed) this.el.style.transform = this.placed = t
   }
 
@@ -500,7 +506,7 @@ export class Brain {
         const now = s.status[id]
         if (was === 'running' && now === 'idle') {
           this.react('cheer', 'happy', 1400)
-          this.spark('bolt')
+          this.spark()
         } else if (now === 'error' && was !== 'error') this.hurt()
         else if (now !== was) this.later(this.decide, 120)
         if ((s.permissions[id]?.length ?? 0) !== (p.permissions[id]?.length ?? 0)) this.later(this.decide, 120)
@@ -526,10 +532,10 @@ export class Brain {
     if (!this.knock(-this.dir * 520)) this.react('trip', 'dizzy', 1800)
   }
 
-  /** a burst from a part of him: the bolt on his head (up), or a hand (the way he faces) */
-  private spark(part: 'bolt' | 'handL' | 'handR'): void {
-    const a = this.body.anchor(part)
-    sparks(this.x + a.x, this.y + a.y, part === 'bolt' ? -Math.PI / 2 : this.dir > 0 ? -0.35 : Math.PI + 0.35)
+  /** a burst from the bolt on his head: up and fanned, or (radial) outward in every direction from that point */
+  private spark(radial = false): void {
+    const a = this.body.anchor('bolt')
+    sparks(this.x + a.x, this.y + a.y, radial ? rand(0, 6.28) : -Math.PI / 2, radial)
   }
 
   private zap(): void {
@@ -552,8 +558,8 @@ export class Brain {
     if (this.pose !== 'zap' || this.mode !== 'ground') return
     this.body.zap()
     play('crackle')
-    // thrown from his hands, forward: that is where the charge is
-    this.spark(Math.random() < 0.5 ? 'handL' : 'handR')
+    // the charge crackles off the bolt, outward from that one point
+    this.spark(true)
     this.later(this.crackle, rand(650, 1100))
   }
 
@@ -721,7 +727,7 @@ export class Brain {
         if (this.mode !== 'ground') return
         this.face(this.pointer.x < this.x ? -1 : 1)
         this.react('wave', 'happy', 1300)
-        return this.spark('bolt')
+        return this.spark()
       }
       this.freeUntil = performance.now() + 9000
       if (calm()) {

@@ -2,6 +2,13 @@
 
 ## 0.7.4
 
+### Improvements
+
+- The get-up is staged like a real one, in beats with ease in and out: a breath, the arm props him and pushes the floor until he sits with his legs out in front, the heels are drawn in, the weight goes forward with his hands reaching down, the hips lift into a squat, the legs drive, and he settles with a small overshoot. He is turned three-quarters to you so the arms and legs read, and his lowest point always rests on the floor.
+- Dust puffs where he hits something, by how hard: a landing, a bump into a wall, a tumble.
+- Smoother walking: he is placed to the device pixel instead of whole css pixels, so a slow stroll no longer steps along the screen, and he leans into his pace.
+- The sparks while a command runs crackle off the bolt on his head, outward in every direction from that one point (the burst for a click or a cheer still fans up from the bolt).
+
 ### Fixes
 
 - Held by the hood he is glued to the cursor again, with his arms, legs and hood flopping about with how you move him, like before. The physical ragdoll takes over only when you let go: he flies, braces, bounces and tumbles with the speed of your hand, and that is where the spin went too far.

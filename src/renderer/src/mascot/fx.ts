@@ -11,12 +11,12 @@ function spawn(className: string, style: Record<string, string>): void {
   setTimeout(() => el.remove(), 1500)
 }
 
-/** a burst of bolts from a point, fanned around a direction (up by default) */
-export function sparks(x: number, y: number, dir = -Math.PI / 2): void {
+/** a burst of bolts from a point: fanned around a direction (up by default), or all the way around (radial) */
+export function sparks(x: number, y: number, dir = -Math.PI / 2, radial = false): void {
   if (document.documentElement.classList.contains('reduce-motion')) return
   for (let i = 0; i < 9; i++) {
-    const a = dir + (i - 4) * 0.36
-    const d = rand(34, 58)
+    const a = radial ? dir + (i / 9) * Math.PI * 2 : dir + (i - 4) * 0.36
+    const d = rand(radial ? 26 : 34, radial ? 46 : 58)
     spawn('mascot-spark', {
       '--x0': `${x - 3}px`,
       '--y0': `${y}px`,
@@ -24,6 +24,24 @@ export function sparks(x: number, y: number, dir = -Math.PI / 2): void {
       '--y1': `${y + Math.sin(a) * d}px`,
       '--r': `${rand(-30, 30)}deg`,
       'animation-delay': `${i * 18}ms`
+    })
+  }
+}
+
+/** a puff of dust where something hit, thrown out along the surface and up; harder hits throw more */
+export function dust(x: number, y: number, strength: number): void {
+  if (document.documentElement.classList.contains('reduce-motion')) return
+  const n = Math.min(9, 3 + Math.round(strength * 3))
+  for (let i = 0; i < n; i++) {
+    const side = i % 2 ? 1 : -1
+    const d = rand(10, 24 + strength * 14)
+    const size = rand(4, 8 + strength * 3)
+    spawn('mascot-dust', {
+      '--x0': `${x - size / 2}px`,
+      '--y0': `${y - size / 2}px`,
+      '--x1': `${x - size / 2 + side * d}px`,
+      '--y1': `${y - size / 2 - rand(3, 12)}px`,
+      '--s': `${size}px`
     })
   }
 }
