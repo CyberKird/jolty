@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.10
+
+### New
+
+- Hard jobs can go to Opus 5.5. A new box in the card for sessions started by a chat: when the chat starts a session for a hard job it runs on Opus 5.5, with the thinking level you pick next to the box. The chat's own account is used if it has Opus, otherwise another connected one that is not at its limit. It comes before the model set for hard tasks and before the automatic choice.
+
 ## 0.7.9
 
 ### New

@@ -902,5 +902,8 @@
  "Gemini (prin browserul Jolty)": "Gemini (Jolty 브라우저 이용)",
  "Gemini folosește contul tău Google din browserul Jolty, e mai lent (cam un minut) și, dacă nu merge, imaginea e descrisă de profilul automat.": "Gemini는 Jolty 브라우저의 Google 계정을 사용하며 더 느립니다 (약 1분). 실패하면 자동 프로필이 이미지를 설명합니다.",
  "Alege modelul automat, după ce are Jolty": "Jolty에 있는 모델 중에서 자동으로 선택",
- "Acolo unde mai sus e „Același model ca chatul”, Jolty alege din conturile și furnizorii conectați, după scorul din selector: cel mai puternic pentru sarcini grele, cel mai rapid care e destul de bun pentru cele simple. Conturile aproape de limită sunt sărite.": "위에서 '채팅과 같은 모델'로 된 곳은 Jolty가 연결된 계정과 제공업체 중에서 선택기의 점수에 따라 고릅니다. 어려운 작업에는 가장 강한 모델, 간단한 작업에는 충분히 좋은 모델 중 가장 빠른 모델입니다. 한도에 가까운 계정은 건너뜁니다."
+ "Acolo unde mai sus e „Același model ca chatul”, Jolty alege din conturile și furnizorii conectați, după scorul din selector: cel mai puternic pentru sarcini grele, cel mai rapid care e destul de bun pentru cele simple. Conturile aproape de limită sunt sărite.": "위에서 '채팅과 같은 모델'로 된 곳은 Jolty가 연결된 계정과 제공업체 중에서 선택기의 점수에 따라 고릅니다. 어려운 작업에는 가장 강한 모델, 간단한 작업에는 충분히 좋은 모델 중 가장 빠른 모델입니다. 한도에 가까운 계정은 건너뜁니다.",
+ "Sarcinile grele merg la Opus 5.5": "어려운 작업은 Opus 5.5로",
+ "Când chatul pornește o sesiune pentru o sarcină grea, ea rulează pe Opus 5.5, cu nivelul de gândire ales aici. Se folosește contul chatului, dacă are Opus. Are prioritate față de „Sarcini grele” de mai sus.": "채팅이 어려운 작업을 위해 세션을 시작하면 여기서 고른 사고 수준으로 Opus 5.5에서 실행됩니다. 채팅의 계정에 Opus가 있으면 그것을 씁니다. 위의 '어려운 작업'보다 우선합니다.",
+ "Gândire pentru Opus": "Opus 사고 수준"
 }

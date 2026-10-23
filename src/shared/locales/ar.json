@@ -902,5 +902,8 @@
  "Gemini (prin browserul Jolty)": "Gemini (عبر متصفح Jolty)",
  "Gemini folosește contul tău Google din browserul Jolty, e mai lent (cam un minut) și, dacă nu merge, imaginea e descrisă de profilul automat.": "يستخدم Gemini حساب Google الخاص بك في متصفح Jolty وهو أبطأ (نحو دقيقة)؛ وإذا فشل، يصف الملف التلقائي الصورة.",
  "Alege modelul automat, după ce are Jolty": "اختيار النموذج تلقائيًا من بين ما لدى Jolty",
- "Acolo unde mai sus e „Același model ca chatul”, Jolty alege din conturile și furnizorii conectați, după scorul din selector: cel mai puternic pentru sarcini grele, cel mai rapid care e destul de bun pentru cele simple. Conturile aproape de limită sunt sărite.": "حيث يظهر أعلاه «النموذج نفسه المستخدم في المحادثة»، يختار Jolty من الحسابات والمزوّدين المتصلين بحسب الدرجة في المحدد: الأقوى للمهام الصعبة، والأسرع بما يكفي من الجودة للمهام البسيطة. تُتخطّى الحسابات القريبة من حدّها."
+ "Acolo unde mai sus e „Același model ca chatul”, Jolty alege din conturile și furnizorii conectați, după scorul din selector: cel mai puternic pentru sarcini grele, cel mai rapid care e destul de bun pentru cele simple. Conturile aproape de limită sunt sărite.": "حيث يظهر أعلاه «النموذج نفسه المستخدم في المحادثة»، يختار Jolty من الحسابات والمزوّدين المتصلين بحسب الدرجة في المحدد: الأقوى للمهام الصعبة، والأسرع بما يكفي من الجودة للمهام البسيطة. تُتخطّى الحسابات القريبة من حدّها.",
+ "Sarcinile grele merg la Opus 5.5": "المهام الصعبة تذهب إلى Opus 5.5",
+ "Când chatul pornește o sesiune pentru o sarcină grea, ea rulează pe Opus 5.5, cu nivelul de gândire ales aici. Se folosește contul chatului, dacă are Opus. Are prioritate față de „Sarcini grele” de mai sus.": "عندما تبدأ المحادثة جلسة لمهمة صعبة، تعمل على Opus 5.5 بمستوى التفكير المختار هنا. يُستخدم حساب المحادثة إذا كان لديه Opus. وتكون له الأولوية على «مهام صعبة» أعلاه.",
+ "Gândire pentru Opus": "مستوى التفكير لـ Opus"
 }

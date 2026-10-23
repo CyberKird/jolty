@@ -296,6 +296,9 @@ export interface AppSettings {
   childModels?: { simple?: ChildModel; hard?: ChildModel }
   /** a job's model is chosen from the models Jolty has (by score), where Settings gives none; off unless true */
   childAutoModel?: boolean
+  /** hard jobs go to Opus 5.5 at the thinking level below (the lead's own account first); off unless true */
+  childOpus?: boolean
+  childOpusEffort?: string
   claudePath?: string
   codexPath?: string
   /** no longer used: the model watch keeps what it has seen in model-watch.json */

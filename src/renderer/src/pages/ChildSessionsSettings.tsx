@@ -15,6 +15,8 @@ export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: A
     const next = { ...s.childModels, [kind]: value ? { profileId, model: rest.join('|') } : undefined }
     setS(await api.app.saveSettings({ childModels: next }))
   }
+  const opus = groups.flatMap((g) => g.models).find((m) => /opus/i.test(`${m.id} ${m.label}`))
+  const efforts = opus?.efforts?.length ? opus.efforts : ['low', 'medium', 'high', 'max']
   const modelSelect = (kind: 'simple' | 'hard', label: string) => (
     <div className="field" style={{ marginTop: 10 }}>
       <label>{label}</label>
@@ -57,6 +59,27 @@ export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: A
       </p>
       {modelSelect('simple', tr("Sarcini simple"))}
       {modelSelect('hard', tr("Sarcini grele"))}
+      <label className="row" style={{ marginTop: 10, cursor: 'pointer' }}>
+        <input type="checkbox" checked={s.childOpus === true} onChange={async (e) => setS(await api.app.saveSettings({ childOpus: e.target.checked }))} />
+        <span>
+          {tr("Sarcinile grele merg la Opus 5.5")}
+          <span className="muted small" style={{ display: 'block' }}>
+            {tr("Când chatul pornește o sesiune pentru o sarcină grea, ea rulează pe Opus 5.5, cu nivelul de gândire ales aici. Se folosește contul chatului, dacă are Opus. Are prioritate față de „Sarcini grele” de mai sus.")}
+          </span>
+        </span>
+      </label>
+      {s.childOpus === true && (
+        <div className="field" style={{ marginTop: 8 }}>
+          <label>{tr("Gândire pentru Opus")}</label>
+          <select className="select" value={s.childOpusEffort || 'high'} onChange={async (e) => setS(await api.app.saveSettings({ childOpusEffort: e.target.value }))}>
+            {efforts.map((x) => (
+              <option key={x} value={x}>
+                {x}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <label className="row" style={{ marginTop: 10, cursor: 'pointer' }}>
         <input type="checkbox" checked={s.childAutoModel === true} onChange={async (e) => setS(await api.app.saveSettings({ childAutoModel: e.target.checked }))} />
         <span>

@@ -778,7 +778,12 @@ export class Jolty {
     const st = store.loadSettings()
     // a model chosen in Settings for simple or hard jobs; anything else keeps the model of the lead
     const kind = input.complexity === 'simple' || input.complexity === 'hard' ? input.complexity : undefined
-    let pick: { profileId: string; model: string; label?: string } | undefined = kind ? st.childModels?.[kind] : undefined
+    let pick: { profileId: string; model: string; label?: string; effort?: string } | undefined = kind ? st.childModels?.[kind] : undefined
+    if (kind === 'hard' && st.childOpus) {
+      const opus = await this.opusModel(lead.profileId)
+      if (opus) pick = { ...opus, effort: st.childOpusEffort || 'high' }
+      else note += ' Opus 5.5 is not available now (not signed in, or at its limit): this one uses the other model settings.'
+    }
     if (kind && !pick && st.childAutoModel) pick = await this.autoModel(kind)
     const own = pick && store.loadProfiles().some((p) => p.id === pick.profileId) ? pick : undefined
     if (own?.label) note += ` Model chosen by Jolty for a ${kind} job: ${own.label}.`
@@ -786,7 +791,7 @@ export class Jolty {
       profileId: own?.profileId ?? lead.profileId,
       cwd,
       model: own ? own.model : lead.model,
-      effort: own ? undefined : lead.effort,
+      effort: own ? own.effort : lead.effort,
       permissionMode: st.childMode ?? 'full',
       browser: st.childBrowser !== false && lead.engine !== 'hermes',
       title: input.title
@@ -807,6 +812,16 @@ export class Jolty {
 
   /** The best model for a simple or hard job among the usable accounts and providers (logged in, key set, not at its limit). */
   private async autoModel(kind: 'simple' | 'hard'): Promise<Candidate | undefined> {
+    return pickAuto(kind, await this.usableModels())
+  }
+
+  /** Opus 5.5 on the lead's own account when it has it, else on any other usable account. */
+  private async opusModel(leadProfileId: string): Promise<Candidate | undefined> {
+    const opus = (await this.usableModels()).filter((c) => /opus/i.test(`${c.model} ${c.label}`))
+    return opus.find((c) => c.profileId === leadProfileId) ?? opus[0]
+  }
+
+  private async usableModels(): Promise<Candidate[]> {
     const limits = store.loadLimits()
     const lists = await Promise.all(
       store
@@ -823,7 +838,7 @@ export class Jolty {
           }
         })
     )
-    return pickAuto(kind, lists.flat())
+    return lists.flat()
   }
 
   private async sendToChild(leadId: string, id: string, text: string): Promise<void> {
