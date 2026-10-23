@@ -23,7 +23,7 @@ import type {
   TurnUsage,
   UsageSummary
 } from '@shared/types'
-import { hasJoltyBrowser, isAcp } from '@shared/types'
+import { hasEffort, hasJoltyBrowser, isAcp } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browserMode, browsers } from './browser'
 import { nativeBrowser } from './jbrowser/native'
 import { PowerGuard, systemShutdown } from './power'
@@ -437,7 +437,7 @@ export class Jolty {
       cwd: input.cwd,
       title: input.title || tr("Conversație nouă"),
       model: input.model,
-      effort: isAcp(p.engine) ? undefined : input.effort,
+      effort: hasEffort(p.engine) ? input.effort : undefined,
       permissionMode: input.permissionMode,
       browser: input.browser || undefined,
       temporary: input.temporary || undefined,
@@ -871,7 +871,7 @@ export class Jolty {
   }
 
   async setEffort(sessionId: string, effort: string): Promise<void> {
-    if (effort && isAcp(this.meta(sessionId).engine)) throw new Error(tr("{agent} folosește efortul din configurația proprie.", { agent: ENGINE_NAMES[this.meta(sessionId).engine] }))
+    if (effort && !hasEffort(this.meta(sessionId).engine)) throw new Error(tr("{agent} folosește efortul din configurația proprie.", { agent: ENGINE_NAMES[this.meta(sessionId).engine] }))
     const s = this.live.get(sessionId)
     if (s) await s.setEffort(effort)
     const meta = s?.meta || this.meta(sessionId)
@@ -1019,7 +1019,7 @@ export class Jolty {
     meta.profileId = to.id
     meta.engine = to.engine
     meta.model = model
-    meta.effort = isAcp(to.engine) ? undefined : model ? effort : meta.effort
+    meta.effort = !hasEffort(to.engine) ? undefined : model ? effort : meta.effort
     if (isAcp(to.engine)) {
       if (meta.permissionMode === 'auto' || (meta.permissionMode === 'plan' && to.engine === 'hermes')) meta.permissionMode = 'ask'
       if (!hasJoltyBrowser(to.engine)) meta.browser = undefined

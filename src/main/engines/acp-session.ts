@@ -86,6 +86,7 @@ export class AcpSession implements EngineSession {
       this.meta.engineSessionId = this.sessionId
       if (this.meta.model && this.meta.model !== currentModel) await this.agent.setModel(rpc, this.sessionId, this.meta.model)
       else if (!this.meta.model) this.meta.model = currentModel || undefined
+      await this.applyEffort(rpc)
       await this.agent.setMode(rpc, this.sessionId, modeId)
       this.host.emit({ type: 'meta', sessionId: this.meta.id, meta: this.meta })
       return rpc
@@ -181,7 +182,12 @@ export class AcpSession implements EngineSession {
 
   async setModel(model: string): Promise<void> {
     if (this.busy) throw new Error(tr("Oprește răspunsul {agent} înainte să schimbi modelul.", { agent: this.agent.name }))
-    if (this.sessionId) await this.agent.setModel(await this.ensure(), this.sessionId, model)
+    if (this.sessionId) {
+      const rpc = await this.ensure()
+      await this.agent.setModel(rpc, this.sessionId, model)
+      this.meta.model = model
+      await this.applyEffort(rpc)
+    }
     this.meta.model = model
   }
 
@@ -194,9 +200,16 @@ export class AcpSession implements EngineSession {
     this.meta.permissionMode = mode
   }
 
+  /** A new model starts on its own default level, so the chat's level goes on again; one the model lacks is dropped. */
+  private async applyEffort(rpc: JsonRpcProcess): Promise<void> {
+    if (!this.meta.effort || !this.agent.setEffort || !this.sessionId) return
+    try { await this.agent.setEffort(rpc, this.sessionId, this.meta.effort) } catch { this.meta.effort = undefined }
+  }
+
   async setEffort(effort: string): Promise<void> {
-    if (effort) throw new Error(tr("{agent} folosește efortul din configurația proprie.", { agent: this.agent.name }))
-    this.meta.effort = undefined
+    if (effort && !this.agent.setEffort) throw new Error(tr("{agent} folosește efortul din configurația proprie.", { agent: this.agent.name }))
+    this.meta.effort = effort || undefined
+    if (this.agent.setEffort && this.sessionId) await this.agent.setEffort(await this.ensure(), this.sessionId, effort)
   }
 
   async setBrowser(on: boolean): Promise<void> {

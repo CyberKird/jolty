@@ -7,6 +7,9 @@ export type EngineKind = 'claude' | 'codex' | 'hermes' | 'opencode'
 /** Hermes and OpenCode are external agents Jolty drives over ACP: they keep their own model, key, tools and browser. */
 export const isAcp = (engine?: EngineKind): boolean => engine === 'hermes' || engine === 'opencode'
 
+/** Whether the thinking level can be set from Jolty: Hermes keeps it in its own configuration. */
+export const hasEffort = (engine?: EngineKind): boolean => engine !== 'hermes'
+
 /** Whether the Jolty browser can be attached: every engine but Hermes, which has browser tools of its own. */
 export const hasJoltyBrowser = (engine?: EngineKind): boolean => engine !== 'hermes'
 

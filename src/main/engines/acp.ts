@@ -44,7 +44,7 @@ export class AcpDriver implements EngineDriver {
   async models(_profile: Profile): Promise<ModelOption[]> {
     this.catalog ??= this.probe(async (rpc) => {
       const result = object(await rpc.request('session/new', { cwd: os.homedir(), mcpServers: [] }))
-      return this.agent.models(result)
+      return this.agent.enrich ? this.agent.enrich(this.agent.models(result)) : this.agent.models(result)
     }).catch((error) => { this.catalog = undefined; throw error })
     return this.catalog
   }

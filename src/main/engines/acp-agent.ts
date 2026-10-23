@@ -2,7 +2,7 @@ import type { ModelOption, PermissionMode } from '@shared/types'
 import { tr } from '@shared/i18n'
 import type { JsonRpcProcess } from './jsonrpc'
 import { launchHermes } from './hermes-runtime'
-import { launchOpencode } from './opencode-runtime'
+import { launchOpencode, opencodeVariants } from './opencode-runtime'
 import { list, object, str, type AcpObject } from './acp-events'
 
 /** What differs between the external agents Jolty drives over ACP (Hermes, OpenCode). */
@@ -22,6 +22,10 @@ export interface AcpAgent {
   models(state: AcpObject): ModelOption[]
   setModel(rpc: JsonRpcProcess, sessionId: string, model: string): Promise<unknown>
   setMode(rpc: JsonRpcProcess, sessionId: string, modeId: string): Promise<unknown>
+  /** sets the thinking level of the current model; agents without it keep it in their own configuration */
+  setEffort?(rpc: JsonRpcProcess, sessionId: string, effort: string): Promise<unknown>
+  /** adds what the session response does not list, such as each model's thinking levels */
+  enrich?(models: ModelOption[]): Promise<ModelOption[]>
   /** the project's own compaction command, if it has one */
   compactCommand?: string
 }
@@ -78,7 +82,13 @@ export const OPENCODE: AcpAgent = {
     return [...models.filter((m) => FREE.test(m.id)), ...models.filter((m) => !FREE.test(m.id))]
   },
   setModel: (rpc, sessionId, value) => rpc.request('session/set_config_option', { sessionId, configId: 'model', value }),
-  setMode: (rpc, sessionId, value) => rpc.request('session/set_config_option', { sessionId, configId: 'mode', value })
+  setMode: (rpc, sessionId, value) => rpc.request('session/set_config_option', { sessionId, configId: 'mode', value }),
+  // the level list is per model and only exists once the model is selected; "default" is opencode's own choice
+  setEffort: (rpc, sessionId, effort) => rpc.request('session/set_config_option', { sessionId, configId: 'effort', value: effort || 'default' }),
+  async enrich(models) {
+    const levels = await opencodeVariants().catch(() => new Map<string, string[]>())
+    return models.map((m) => (levels.get(m.id)?.length ? { ...m, efforts: levels.get(m.id) } : m))
+  }
 }
 
 export const AGENTS = { hermes: HERMES, opencode: OPENCODE } as const

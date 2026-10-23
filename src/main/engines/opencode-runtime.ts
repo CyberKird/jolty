@@ -1,3 +1,4 @@
+import { execFile } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -63,6 +64,28 @@ function browserInstructions(): string {
   const file = path.join(dataDir(), 'opencode-browser.md')
   fs.writeFileSync(file, browserPrompt() + '\n')
   return file
+}
+
+/**
+ * The thinking levels of each model ("variants" in opencode's own words): they differ per model, some have
+ * low/high/max, some five levels, some none. ACP only reports them once a model is selected, so the picker
+ * reads them in one go from `opencode models --verbose`.
+ */
+export function opencodeVariants(): Promise<Map<string, string[]>> {
+  const exe = opencodeExecutable()
+  if (!exe) return Promise.reject(new Error(tr("OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.")))
+  return new Promise((resolve, reject) => {
+    execFile(exe, ['models', '--verbose'], { windowsHide: true, timeout: 60000, maxBuffer: 64 * 1024 * 1024, env: { ...process.env, OPENCODE_CONFIG_CONTENT: '{"autoupdate":false}' } }, (error, stdout) => {
+      if (error) return reject(error)
+      const out = new Map<string, string[]>()
+      // each model is its id on a line of its own, then its JSON
+      const parts = stdout.split(/^(\S+\/\S+)\r?\n/m)
+      for (let i = 1; i < parts.length; i += 2) {
+        try { out.set(parts[i], Object.keys(JSON.parse(parts[i + 1]).variants || {})) } catch { /* a model with unreadable details just has no levels */ }
+      }
+      resolve(out)
+    })
+  })
 }
 
 export function launchOpencode(mode: PermissionMode = 'ask', browser = false): JsonRpcProcess {
