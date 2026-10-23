@@ -69,7 +69,7 @@ export function browserPrompt(): string {
     mode === 'jolty'
       ? " Tabs you open appear in a separate browser window kept for you, so the user's own tabs stay untouched; take over the tab the user has open (browser_use_current_tab) only when they ask you to work on it. Read pages with browser_snapshot (refs like e12 stay valid until the page changes), use browser_find for things off screen, browser_scroll to move, and browser_take_screenshot only when you need to see layout or images."
       : ''
-  return `${who}${how} ${BROWSER_RULES}`
+  return `${who}${how} Gemini (gemini.google.com) can be used through this browser when the user is signed in to Google there; it reads video, audio and very long documents natively, so use it for those when asked or when you cannot do it yourself. ${BROWSER_RULES}`
 }
 
 export interface StdioServer {

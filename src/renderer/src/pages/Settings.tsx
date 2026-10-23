@@ -8,6 +8,7 @@ import { setMascot } from '../mascot/Mascot'
 import { openWhatsNew } from '../components/WhatsNew'
 import { soundsOn } from '../mascot/sfx'
 import { getLang, LANGUAGES, tr } from '@shared/i18n'
+import { GEMINI_BROWSER } from '@shared/gemini'
 
 export function SettingsPage() {
   const profiles = useStore((s) => s.profiles)
@@ -66,7 +67,11 @@ export function SettingsPage() {
                 {p.name}
               </option>
             ))}
+            <option value={GEMINI_BROWSER}>{tr("Gemini (prin browserul Jolty)")}</option>
           </select>
+          <p className="muted small" style={{ marginBottom: 0 }}>
+            {tr("Gemini folosește contul tău Google din browserul Jolty, e mai lent (cam un minut) și, dacă nu merge, imaginea e descrisă de profilul automat.")}
+          </p>
         </div>
         <div className="card" style={{ marginBottom: 14 }}>
           <div className="row" style={{ marginBottom: 10 }}>
