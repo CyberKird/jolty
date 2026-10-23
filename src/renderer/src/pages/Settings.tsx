@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { isAcp } from '@shared/types'
 import { BrowserSettings } from './BrowserSettings'
+import { ComputerSettings } from './ComputerSettings'
 import { ChildSessionsSettings } from './ChildSessionsSettings'
 import { api, errMsg, timeAgo, useStore } from '../store'
 import { setMascot } from '../mascot/Mascot'
@@ -98,6 +99,7 @@ export function SettingsPage() {
           </p>
         </div>
         <BrowserSettings s={s} setS={setS} />
+        <ComputerSettings s={s} setS={setS} />
         <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
           <input
             type="checkbox"

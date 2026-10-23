@@ -9,6 +9,7 @@ import { activeBrowser, browsers } from '../browser'
 import { dataDir, getSecret, loadSettings, setSecret } from '../store'
 import { tr } from '@shared/i18n'
 import { handleJoltyTools } from '../jolty-tools'
+import { nativeComputer } from '../computer/native'
 import { BrowserHub } from './hub'
 import { BrowserService } from './service'
 
@@ -53,6 +54,7 @@ class NativeBrowser {
     bundledVersion: (agent) => versionOf(bundledDir(kindOfAgent(agent))),
     mcp: (sid, m) => this.service.handle(sid, m),
     tools: handleJoltyTools,
+    computer: (sid, m) => nativeComputer.handle(sid, m),
     log: (m) => process.env.JOLTY_DEBUG && console.error('[jbrowser]', m)
   })
   readonly service = new BrowserService(this.hub, {
@@ -152,6 +154,12 @@ class NativeBrowser {
   toolsMcp(sid: string): { url: string; headers: Record<string, string> } | undefined {
     if (!this.hub.port) return undefined
     return { url: `http://127.0.0.1:${this.hub.port}/jolty/${sid}`, headers: { Authorization: `Bearer ${token()}` } }
+  }
+
+  /** Computer use for the same chat: the screen, the mouse and the keyboard of this PC; undefined while the local server is not up. */
+  computerMcp(sid: string): { url: string; headers: Record<string, string> } | undefined {
+    if (!this.hub.port) return undefined
+    return { url: `http://127.0.0.1:${this.hub.port}/computer/${sid}`, headers: { Authorization: `Bearer ${token()}` } }
   }
 
   release(sid: string): Promise<void> {

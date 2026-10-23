@@ -9,6 +9,8 @@ export const isAcp = (engine?: EngineKind): boolean => engine === 'hermes' || en
 
 /** Whether the Jolty browser can be attached: every engine but Hermes, which has browser tools of its own. */
 export const hasJoltyBrowser = (engine?: EngineKind): boolean => engine !== 'hermes'
+/** Whether the model can be given the PC (screen, mouse, keyboard): the same engines as the browser. */
+export const hasJoltyComputer = hasJoltyBrowser
 
 /**
  * subscription: the official CLI login (claude.ai or ChatGPT) stored in the profile's config dir.
@@ -123,6 +125,8 @@ export interface SessionMeta {
   permissionMode: PermissionMode
   /** Jolty in Chrome: the model may drive the user's Chrome through the Playwright extension */
   browser?: boolean
+  /** Computer use: the model may see the screen and operate the user's PC (mouse, keyboard, windows) */
+  computer?: boolean
   /** temporary chat: lives only in memory, never listed or written to disk, and its engine files are wiped when it ends */
   temporary?: boolean
   /** Claude session id or Codex thread id, once the engine has one */
@@ -341,6 +345,12 @@ export interface AppSettings {
   browserMode?: BrowserMode
   /** page actions of a model in the browser: ask every time, once per site (default), or never */
   siteTrust?: SiteTrust
+  /** how human the mouse and keyboard of computer use look: max (default), normal or fast */
+  computerHuman?: 'max' | 'normal' | 'fast'
+  /** long text may go in through the clipboard instead of being typed key by key; off unless true */
+  computerPaste?: boolean
+  /** programs the user allowed for good (exe names, lower case) */
+  computerTrusted?: string[]
   /** ask before a model reads or edits .env files, keys and similar; on unless false */
   protectSecretFiles?: boolean
   /** every few messages the model saves what it learned to memory and skills (main/learning.ts); on unless false */
@@ -404,6 +414,8 @@ export interface StartSessionInput {
   effort?: string
   permissionMode: PermissionMode
   browser?: boolean
+  /** computer use from the first message (see SessionMeta.computer) */
+  computer?: boolean
   temporary?: boolean
   /** resume an existing Claude session / Codex thread */
   resumeEngineSessionId?: string
@@ -494,6 +506,7 @@ export interface JoltyApi {
     setEffort(sessionId: string, effort: string): Promise<void>
     setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void>
     setBrowser(sessionId: string, on: boolean): Promise<void>
+    setComputer(sessionId: string, on: boolean): Promise<void>
     /** summarize the conversation so far to free context (Claude /compact, Codex thread compaction) */
     compact(sessionId: string): Promise<void>
     /** compacts and resolves when the engine is done; undefined when the context is too small to be worth it */

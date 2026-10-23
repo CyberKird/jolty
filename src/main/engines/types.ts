@@ -33,6 +33,8 @@ export interface EngineSession {
   setEffort(effort: string): Promise<void>
   setPermissionMode(mode: PermissionMode): Promise<void>
   setBrowser(on: boolean): Promise<void>
+  /** computer use: the screen, mouse and keyboard of the PC as MCP tools */
+  setComputer(on: boolean): Promise<void>
   respond(requestId: string, decision: PermissionDecision): void
   close(): Promise<void>
 }

@@ -38,6 +38,8 @@ export interface HubOptions {
   mcp: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
   /** the same for Jolty's own tools (conversation search, scheduled tasks), at /jolty/<chat id> */
   tools?: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
+  /** and for computer use (screen, mouse, keyboard), at /computer/<chat id> */
+  computer?: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
   log?: (m: string) => void
 }
 
@@ -161,8 +163,8 @@ export class BrowserHub extends EventEmitter {
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ app: 'jolty', v: 1 }))
       return
     }
-    const m = /^\/(mcp|jolty)\/([A-Za-z0-9_.-]{1,80})$/.exec(url.pathname)
-    const handler = m?.[1] === 'jolty' ? this.opts.tools : this.opts.mcp
+    const m = /^\/(mcp|jolty|computer)\/([A-Za-z0-9_.-]{1,80})$/.exec(url.pathname)
+    const handler = m?.[1] === 'jolty' ? this.opts.tools : m?.[1] === 'computer' ? this.opts.computer : this.opts.mcp
     if (!m || !handler) {
       res.writeHead(404).end()
       return

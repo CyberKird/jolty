@@ -15,7 +15,7 @@ export class AcpDriver implements EngineDriver {
   constructor(private launch: AcpLaunch = HERMES.launch, private agent: AcpAgent = HERMES) {}
 
   private async probe<T>(run: (rpc: JsonRpcProcess, init: AcpObject) => Promise<T>): Promise<T> {
-    const rpc = this.launch('ask', false)
+    const rpc = this.launch('ask', false, false)
     this.probes.add(rpc)
     rpc.on('request', (r) => rpc.respondError(r.id, tr("Cerere indisponibilă în timpul verificării")))
     try { return await run(rpc, await initializeAcp(rpc)) }

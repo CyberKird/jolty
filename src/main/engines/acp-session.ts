@@ -4,10 +4,10 @@ import type { EngineHost, EngineSession } from './types'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
 import { count, AcpEvents, list, object, str, toolDiffs, type AcpObject } from './acp-events'
 import { HERMES, type AcpAgent } from './acp-agent'
-import { acpBrowserServers } from '../browser-mcp'
+import { acpBrowserServers, acpComputerServers } from '../browser-mcp'
 import { tr } from '@shared/i18n'
 
-export type AcpLaunch = (mode: PermissionMode, browser: boolean) => JsonRpcProcess
+export type AcpLaunch = (mode: PermissionMode, browser: boolean, computer: boolean) => JsonRpcProcess
 
 export async function initializeAcp(rpc: JsonRpcProcess): Promise<AcpObject> {
   return object(await rpc.request('initialize', {
@@ -55,8 +55,10 @@ export class AcpSession implements EngineSession {
   private async connect(): Promise<JsonRpcProcess> {
     const modeId = this.agent.modeId(this.meta.permissionMode)
     if (this.meta.browser && !this.agent.browser) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru {agent}.", { agent: this.agent.name }))
+    if (this.meta.computer && !this.agent.browser) throw new Error(tr("Controlul PC-ului nu este disponibil pentru {agent}.", { agent: this.agent.name }))
     const browser = Boolean(this.meta.browser)
-    const rpc = this.launch(this.meta.permissionMode, browser)
+    const computer = Boolean(this.meta.computer)
+    const rpc = this.launch(this.meta.permissionMode, browser, computer)
     this.rpc = rpc
     rpc.on('request', (r: RpcRequest) => this.onRequest(r))
     rpc.on('notification', (n) => {
@@ -74,7 +76,7 @@ export class AcpSession implements EngineSession {
     this.sessionId = this.meta.engineSessionId
     this.loading = true
     try {
-      const params = { cwd: this.meta.cwd, mcpServers: browser ? acpBrowserServers(this.meta.id) : [] }
+      const params = { cwd: this.meta.cwd, mcpServers: [...(browser ? acpBrowserServers(this.meta.id) : []), ...(computer ? acpComputerServers(this.meta.id) : [])] }
       const response = this.sessionId
         ? await rpc.request('session/load', { ...params, sessionId: this.sessionId })
         : await rpc.request('session/new', params)
@@ -212,6 +214,12 @@ export class AcpSession implements EngineSession {
     }
     if (on) throw new Error(tr("{agent} folosește uneltele proprii de browser; conectarea la browserul Jolty nu este disponibilă.", { agent: this.agent.name }))
     this.meta.browser = undefined
+  }
+
+  async setComputer(on: boolean): Promise<void> {
+    if (on && !this.agent.browser) throw new Error(tr("Controlul PC-ului nu este disponibil pentru {agent}.", { agent: this.agent.name }))
+    if (Boolean(this.meta.computer) !== on) this.stale = true
+    this.meta.computer = on || undefined
   }
 
   async compact(): Promise<void> {
