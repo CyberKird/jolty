@@ -2,27 +2,28 @@ import os from 'os'
 import type { AccountStatus, Attachment, ChatItem, ExternalSession, ModelOption, Profile, SessionMeta } from '@shared/types'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 import { JsonRpcProcess } from './jsonrpc'
-import { collectHistory, HermesEvents, list, object, str, type AcpObject } from './hermes-events'
-import { HermesSession, initializeHermes, type HermesLaunch } from './hermes-session'
-import { launchHermes } from './hermes-runtime'
+import { collectHistory, AcpEvents, list, object, str, type AcpObject } from './acp-events'
+import { AcpSession, initializeAcp, type AcpLaunch } from './acp-session'
+import { HERMES, type AcpAgent } from './acp-agent'
 import { tr } from '@shared/i18n'
 
-export class HermesDriver implements EngineDriver {
+/** Drives an external agent that speaks ACP (Hermes, OpenCode): its own model, key, tools and approvals. */
+export class AcpDriver implements EngineDriver {
   private sessions = new Set<EngineSession>()
   private probes = new Set<JsonRpcProcess>()
   private catalog?: Promise<ModelOption[]>
-  constructor(private launch: HermesLaunch = launchHermes) {}
+  constructor(private launch: AcpLaunch = HERMES.launch, private agent: AcpAgent = HERMES) {}
 
   private async probe<T>(run: (rpc: JsonRpcProcess, init: AcpObject) => Promise<T>): Promise<T> {
-    const rpc = this.launch()
+    const rpc = this.launch('ask', false)
     this.probes.add(rpc)
     rpc.on('request', (r) => rpc.respondError(r.id, tr("Cerere indisponibilă în timpul verificării")))
-    try { return await run(rpc, await initializeHermes(rpc)) }
+    try { return await run(rpc, await initializeAcp(rpc)) }
     finally { this.probes.delete(rpc); rpc.kill() }
   }
 
   createSession(profile: Profile, meta: SessionMeta, host: EngineHost): EngineSession {
-    const session = new HermesSession(meta, profile, host, this.launch)
+    const session = new AcpSession(meta, profile, host, this.launch, this.agent)
     this.sessions.add(session)
     return session
   }
@@ -31,23 +32,19 @@ export class HermesDriver implements EngineDriver {
     try {
       return await this.probe(async (_rpc, init) => {
         const provider = list(init.authMethods).find((a) => a.id !== 'hermes-setup' && a.type !== 'terminal')
-        return { profileId: profile.id, loggedIn: Boolean(provider), detail: provider ? tr("Configurația Hermes existentă ({str})", { str: str(provider.id) }) : undefined,
-          error: provider ? undefined : tr("Configurează furnizorul în Hermes, apoi verifică din nou.") }
+        return { profileId: profile.id, loggedIn: Boolean(provider), detail: provider ? tr("Configurația {agent} existentă ({str})", { agent: this.agent.name, str: str(provider.id) }) : undefined,
+          error: provider ? undefined : tr("Configurează furnizorul în {agent}, apoi verifică din nou.", { agent: this.agent.name }) }
       })
     } catch (e) { return { profileId: profile.id, loggedIn: false, error: e instanceof Error ? e.message : String(e) } }
   }
 
   async login(profile: Profile): Promise<AccountStatus> { return this.status(profile) }
-  async logout(_profile: Profile): Promise<AccountStatus> { throw new Error(tr("Autentificarea se gestionează în Hermes.")) }
+  async logout(_profile: Profile): Promise<AccountStatus> { throw new Error(tr("Autentificarea se gestionează în {agent}.", { agent: this.agent.name })) }
 
   async models(_profile: Profile): Promise<ModelOption[]> {
     this.catalog ??= this.probe(async (rpc) => {
       const result = object(await rpc.request('session/new', { cwd: os.homedir(), mcpServers: [] }))
-      const models = object(result.models)
-      return list(models.availableModels).filter((m) => typeof m.modelId === 'string').map((m) => ({
-        id: m.modelId, label: str(m.name) || m.modelId, description: str(m.description), isDefault: m.modelId === models.currentModelId,
-        vision: true
-      }))
+      return this.agent.models(result)
     }).catch((error) => { this.catalog = undefined; throw error })
     return this.catalog
   }
@@ -62,7 +59,7 @@ export class HermesDriver implements EngineDriver {
         for (const s of list(result.sessions)) {
           if (!str(s.sessionId) || seen.has(s.sessionId)) continue
           seen.add(s.sessionId)
-          sessions.push({ engine: 'hermes', profileId: profile.id, engineSessionId: s.sessionId, title: str(s.title) || tr("Conversație Hermes"), cwd: str(s.cwd), updatedAt: Date.parse(str(s.updatedAt)) || 0 })
+          sessions.push({ engine: this.agent.engine, profileId: profile.id, engineSessionId: s.sessionId, title: str(s.title) || tr("Conversație {agent}", { agent: this.agent.name }), cwd: str(s.cwd), updatedAt: Date.parse(str(s.updatedAt)) || 0 })
         }
         const next = str(result.nextCursor)
         if (!next || next === cursor || sessions.length >= 2000) break
@@ -75,13 +72,13 @@ export class HermesDriver implements EngineDriver {
   async history(_profile: Profile, engineSessionId: string, cwd: string): Promise<ChatItem[]> {
     return this.probe(async (rpc) => {
       const items: ChatItem[] = []
-      const events = new HermesEvents(engineSessionId, (e) => collectHistory(items, e))
+      const events = new AcpEvents(engineSessionId, (e) => collectHistory(items, e), this.agent.name)
       rpc.on('notification', (n) => {
         const p = object(n.params)
         if (n.method === 'session/update' && p.sessionId === engineSessionId) events.update(p.update)
       })
       const result = await rpc.request('session/load', { sessionId: engineSessionId, cwd, mcpServers: [] })
-      if (!result) throw new Error(tr("Conversația nu mai există în Hermes."))
+      if (!result) throw new Error(tr("Conversația nu mai există în {agent}.", { agent: this.agent.name }))
       return items
     })
   }

@@ -2,7 +2,13 @@
 import type { ScheduledTask, TaskInput } from './schedule'
 import type { ModelScore } from './scores'
 
-export type EngineKind = 'claude' | 'codex' | 'hermes'
+export type EngineKind = 'claude' | 'codex' | 'hermes' | 'opencode'
+
+/** Hermes and OpenCode are external agents Jolty drives over ACP: they keep their own model, key, tools and browser. */
+export const isAcp = (engine?: EngineKind): boolean => engine === 'hermes' || engine === 'opencode'
+
+/** Whether the Jolty browser can be attached: every engine but Hermes, which has browser tools of its own. */
+export const hasJoltyBrowser = (engine?: EngineKind): boolean => engine !== 'hermes'
 
 /**
  * subscription: the official CLI login (claude.ai or ChatGPT) stored in the profile's config dir.
@@ -304,6 +310,7 @@ export interface AppSettings {
   /** no longer used: the model watch keeps what it has seen in model-watch.json */
   seenModels?: string[]
   hermesPath?: string
+  opencodePath?: string
   lastCwd?: string
   lastProfileId?: string
   /** the model and thinking level each profile used last: a new chat opens on them, not on the default */

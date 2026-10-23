@@ -4,6 +4,7 @@ import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
 import { usageRisk } from '@shared/usage-risk'
 import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
+import { hasJoltyBrowser, isAcp } from '@shared/types'
 import { sameProvider } from '@shared/provider'
 import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
@@ -239,7 +240,7 @@ function Composer(p: ComposerProps) {
   const submit = async (parallel = false): Promise<void> => {
     const own = text.trim()
     if (!own && !atts.length) return
-    if (parallel && (!own || engine === 'hermes')) return
+    if (parallel && (!own || isAcp(engine))) return
     const store = useStore.getState()
     const quote = p.sessionId ? store.quotes[p.sessionId] : undefined
     const t = own ? withQuote(quote, own) : own
@@ -360,7 +361,7 @@ function Composer(p: ComposerProps) {
             // Shift+Tab cycles the permission mode, like Claude Code
             if (e.key === 'Tab' && e.shiftKey) {
               e.preventDefault()
-              const modes = modesFor(engine).map((m) => m.id).filter((id) => engine === 'hermes' || !OPEN_MODES.includes(id))
+              const modes = modesFor(engine).map((m) => m.id).filter((id) => isAcp(engine) || !OPEN_MODES.includes(id))
               const i = modes.findIndex((mode) => mode === p.mode)
               p.onMode(modes[(i + 1) % modes.length])
               return
@@ -433,7 +434,7 @@ function Composer(p: ComposerProps) {
             otherProfileHint={p.otherProfileHint}
           />
           <ModePicker mode={p.mode} onMode={p.onMode} engine={engine} />
-          {engine !== 'hermes' && (
+          {!isAcp(engine) && (
             <button
               className={`chrome-toggle ${p.mode === 'plan' ? 'on' : ''}`}
               aria-pressed={p.mode === 'plan'}
@@ -446,11 +447,11 @@ function Composer(p: ComposerProps) {
           )}
           <button
             className={`chrome-toggle ${p.browser ? 'on' : ''}`}
-            disabled={engine === 'hermes'}
+            disabled={!hasJoltyBrowser(engine)}
             aria-pressed={Boolean(p.browser)}
             onClick={() => p.onBrowser(!p.browser)}
             title={
-              engine === 'hermes' ? tr("Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.") : p.browser
+              !hasJoltyBrowser(engine) ? tr("Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.") : p.browser
                 ? tr("Jolty în browser e pornit: modelul poate folosi browserul tău (Chrome, Vivaldi, Edge, Brave), cu login-urile tale. Clic ca să-l oprești.")
                 : tr("Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări).")
             }
@@ -458,15 +459,15 @@ function Composer(p: ComposerProps) {
             <Globe size={14} strokeWidth={1.8} />
             {p.browser && tr("Browser")}
           </button>
-          {engine !== 'hermes' && p.browser && <BrowserMenu />}
+          {!isAcp(engine) && p.browser && <BrowserMenu />}
           {(p.onTemporary || p.temporary) && (
             <button
               className={`chrome-toggle ${p.temporary ? 'on' : ''}`}
-              disabled={engine === 'hermes' || !p.onTemporary}
+              disabled={isAcp(engine) || !p.onTemporary}
               aria-pressed={Boolean(p.temporary)}
               onClick={() => p.onTemporary?.(!p.temporary)}
               title={
-                engine === 'hermes' ? tr("Conversația temporară nu este disponibilă pentru Hermes.") : !p.onTemporary
+                isAcp(engine) ? tr("Conversația temporară nu este disponibilă pentru Hermes.") : !p.onTemporary
                   ? tr("Conversație temporară: nu apare în listă și dispare când o părăsești sau închizi Jolty.")
                   : p.temporary
                     ? tr("Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.")
@@ -485,7 +486,7 @@ function Composer(p: ComposerProps) {
               <Square size={12} fill="currentColor" />
             </button>
           )}
-          {engine !== 'hermes' && text.trim() && (
+          {!isAcp(engine) && text.trim() && (
             <button
               className="btn send-btn"
               onClick={() => void submit(true)}
@@ -951,9 +952,10 @@ export function NewChat() {
         model={model}
         onPick={(id, m, e) => {
           restored.current = id
-          if (profiles.find((p) => p.id === id)?.engine === 'hermes') {
-            if (mode === 'plan' || mode === 'auto') setMode('ask')
-            setBrowser(false)
+          const picked = profiles.find((p) => p.id === id)?.engine
+          if (isAcp(picked)) {
+            if (mode === 'auto' || (mode === 'plan' && picked === 'hermes')) setMode('ask')
+            if (!hasJoltyBrowser(picked)) setBrowser(false)
             setTemporary(false)
           }
           if (id !== profileId) {

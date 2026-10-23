@@ -2,25 +2,22 @@ import { randomUUID } from 'crypto'
 import type { Attachment, PermissionDecision, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import type { EngineHost, EngineSession } from './types'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
-import { count, HermesEvents, list, object, str, toolDiffs, type AcpObject } from './hermes-events'
+import { count, AcpEvents, list, object, str, toolDiffs, type AcpObject } from './acp-events'
+import { HERMES, type AcpAgent } from './acp-agent'
+import { acpBrowserServers } from '../browser-mcp'
 import { tr } from '@shared/i18n'
 
-export type HermesLaunch = () => JsonRpcProcess
+export type AcpLaunch = (mode: PermissionMode, browser: boolean) => JsonRpcProcess
 
-export async function initializeHermes(rpc: JsonRpcProcess): Promise<AcpObject> {
+export async function initializeAcp(rpc: JsonRpcProcess): Promise<AcpObject> {
   return object(await rpc.request('initialize', {
     protocolVersion: 1, clientInfo: { name: 'jolty', version: '0.2.1' }, clientCapabilities: {}
   }))
 }
 
-export function hermesMode(mode: PermissionMode): string {
-  if (mode === 'plan') throw new Error(tr("Hermes ACP nu oferă un mod Plan protejat. Alege aprobarea editărilor."))
-  return mode === 'autoEdit' ? 'accept_edits' : mode === 'full' ? 'dont_ask' : 'default'
-}
-
 type Pending = { rpcId: number | string; options: AcpObject[]; timer: NodeJS.Timeout }
 
-export class HermesSession implements EngineSession {
+export class AcpSession implements EngineSession {
   private rpc?: JsonRpcProcess
   private ready?: Promise<JsonRpcProcess>
   private sessionId?: string
@@ -28,15 +25,23 @@ export class HermesSession implements EngineSession {
   private busy = false
   private closed = false
   private cancelled = false
+  /** the process was started with other approvals or browser than the chat has now: the next message restarts it */
+  private stale = false
   private pending = new Map<string, Pending>()
-  private events: HermesEvents
+  private events: AcpEvents
 
-  constructor(readonly meta: SessionMeta, private profile: Profile, private host: EngineHost, private launch: HermesLaunch) {
-    this.events = new HermesEvents(meta.id, (e) => host.emit(e))
+  constructor(readonly meta: SessionMeta, private profile: Profile, private host: EngineHost, private launch: AcpLaunch, private agent: AcpAgent = HERMES) {
+    this.events = new AcpEvents(meta.id, (e) => host.emit(e), agent.name)
   }
 
   private async ensure(): Promise<JsonRpcProcess> {
-    if (this.closed) throw new Error(tr("Conversația Hermes este închisă."))
+    if (this.closed) throw new Error(tr("Conversația {agent} este închisă.", { agent: this.agent.name }))
+    if (this.stale) {
+      this.stale = false
+      this.rpc?.kill()
+      this.rpc = undefined
+      this.ready = undefined
+    }
     if (this.ready) return this.ready
     this.ready = this.connect().catch((error) => {
       this.rpc?.kill()
@@ -48,9 +53,10 @@ export class HermesSession implements EngineSession {
   }
 
   private async connect(): Promise<JsonRpcProcess> {
-    hermesMode(this.meta.permissionMode)
-    if (this.meta.browser) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru Hermes."))
-    const rpc = this.launch()
+    const modeId = this.agent.modeId(this.meta.permissionMode)
+    if (this.meta.browser && !this.agent.browser) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru {agent}.", { agent: this.agent.name }))
+    const browser = Boolean(this.meta.browser)
+    const rpc = this.launch(this.meta.permissionMode, browser)
     this.rpc = rpc
     rpc.on('request', (r: RpcRequest) => this.onRequest(r))
     rpc.on('notification', (n) => {
@@ -63,24 +69,24 @@ export class HermesSession implements EngineSession {
       this.ready = undefined
       this.rpc = undefined
     })
-    const init = await initializeHermes(rpc)
-    if (init.protocolVersion !== 1) throw new Error(tr("Versiunea ACP oferită de Hermes nu este compatibilă."))
+    const init = await initializeAcp(rpc)
+    if (init.protocolVersion !== 1) throw new Error(tr("Versiunea ACP oferită de {agent} nu este compatibilă.", { agent: this.agent.name }))
     this.sessionId = this.meta.engineSessionId
     this.loading = true
     try {
-      const params = { cwd: this.meta.cwd, mcpServers: [] }
+      const params = { cwd: this.meta.cwd, mcpServers: browser ? acpBrowserServers(this.meta.id) : [] }
       const response = this.sessionId
         ? await rpc.request('session/load', { ...params, sessionId: this.sessionId })
         : await rpc.request('session/new', params)
-      if (!response || typeof response !== 'object') throw new Error(tr("Hermes nu a găsit conversația. Reimportă istoricul înainte să continui."))
+      if (!response || typeof response !== 'object') throw new Error(tr("{agent} nu a găsit conversația. Reimportă istoricul înainte să continui.", { agent: this.agent.name }))
       const state = object(response)
       if (!this.sessionId) this.sessionId = str(state.sessionId)
-      if (!this.sessionId) throw new Error(tr("Hermes nu a creat conversația."))
-      const currentModel = str(object(state.models).currentModelId)
+      if (!this.sessionId) throw new Error(tr("{agent} nu a creat conversația.", { agent: this.agent.name }))
+      const currentModel = this.agent.currentModel(state)
       this.meta.engineSessionId = this.sessionId
-      if (this.meta.model && this.meta.model !== currentModel) await rpc.request('session/set_model', { sessionId: this.sessionId, modelId: this.meta.model })
+      if (this.meta.model && this.meta.model !== currentModel) await this.agent.setModel(rpc, this.sessionId, this.meta.model)
       else if (!this.meta.model) this.meta.model = currentModel || undefined
-      await rpc.request('session/set_mode', { sessionId: this.sessionId, modeId: hermesMode(this.meta.permissionMode) })
+      await this.agent.setMode(rpc, this.sessionId, modeId)
       this.host.emit({ type: 'meta', sessionId: this.meta.id, meta: this.meta })
       return rpc
     } finally {
@@ -89,7 +95,7 @@ export class HermesSession implements EngineSession {
   }
 
   async send(text: string, images: Attachment[] = []): Promise<void> {
-    if (this.busy) throw new Error(tr("Hermes lucrează deja în această conversație."))
+    if (this.busy) throw new Error(tr("{agent} lucrează deja în această conversație.", { agent: this.agent.name }))
     this.busy = true
     this.cancelled = false
     this.events.reset()
@@ -103,7 +109,7 @@ export class HermesSession implements EngineSession {
         const usage = object(result.usage)
         const cacheRead = Math.min(count(usage.inputTokens), count(usage.cachedReadTokens))
         this.host.recordUsage({
-          profileId: this.profile.id, engine: 'hermes', model: this.meta.model || 'Hermes',
+          profileId: this.profile.id, engine: this.agent.engine, model: this.meta.model || this.agent.name,
           inputTokens: Math.max(0, count(usage.inputTokens) - cacheRead), outputTokens: count(usage.outputTokens),
           cacheReadTokens: cacheRead, cacheWriteTokens: 0, ts: Date.now()
         })
@@ -139,9 +145,9 @@ export class HermesSession implements EngineSession {
     const timer = setTimeout(() => this.respond(id, 'deny'), 55000)
     this.pending.set(id, { rpcId: request.id, options, timer })
     this.host.emit({ type: 'permission', sessionId: this.meta.id, request: {
-      id, toolName: str(tool.kind) || 'Hermes', title: str(tool.title) || 'Aprobare Hermes',
+      id, toolName: str(tool.kind) || this.agent.name, title: str(tool.title) || tr("Aprobare {agent}", { agent: this.agent.name }),
       detail: typeof tool.rawInput === 'object' ? JSON.stringify(tool.rawInput, null, 2) : undefined,
-      diffs: toolDiffs(tool.content), canAllowForSession: options.some((o) => o.optionId === 'allow_session')
+      diffs: toolDiffs(tool.content), canAllowForSession: options.some(this.agent.sessionAllow)
     } })
   }
 
@@ -151,7 +157,7 @@ export class HermesSession implements EngineSession {
     this.pending.delete(id)
     clearTimeout(pending.timer)
     const selected = decision === 'allowSession'
-      ? pending.options.find((o) => o.optionId === 'allow_session')
+      ? pending.options.find(this.agent.sessionAllow)
       : pending.options.find((o) => o.kind === (decision === 'allow' ? 'allow_once' : 'reject_once'))
     if (this.rpc && !this.rpc.exited) this.rpc.respond(pending.rpcId, { outcome: selected
       ? { outcome: 'selected', optionId: selected.optionId } : { outcome: 'cancelled' } })
@@ -174,30 +180,45 @@ export class HermesSession implements EngineSession {
   }
 
   async setModel(model: string): Promise<void> {
-    if (this.busy) throw new Error(tr("Oprește răspunsul Hermes înainte să schimbi modelul."))
-    if (this.sessionId) await (await this.ensure()).request('session/set_model', { sessionId: this.sessionId, modelId: model })
+    if (this.busy) throw new Error(tr("Oprește răspunsul {agent} înainte să schimbi modelul.", { agent: this.agent.name }))
+    if (this.sessionId) await this.agent.setModel(await this.ensure(), this.sessionId, model)
     this.meta.model = model
   }
 
   async setPermissionMode(mode: PermissionMode): Promise<void> {
-    const modeId = hermesMode(mode)
-    if (this.busy) throw new Error(tr("Oprește răspunsul Hermes înainte să schimbi permisiunile."))
-    if (this.sessionId) await (await this.ensure()).request('session/set_mode', { sessionId: this.sessionId, modeId })
+    const modeId = this.agent.modeId(mode)
+    if (this.busy) throw new Error(tr("Oprește răspunsul {agent} înainte să schimbi permisiunile.", { agent: this.agent.name }))
+    // approvals are set when the process starts: the next message reconnects and loads the same conversation
+    if (this.agent.restartOnMode) this.stale = true
+    else if (this.sessionId) await this.agent.setMode(await this.ensure(), this.sessionId, modeId)
     this.meta.permissionMode = mode
   }
 
   async setEffort(effort: string): Promise<void> {
-    if (effort) throw new Error(tr("Hermes folosește efortul din configurația proprie."))
+    if (effort) throw new Error(tr("{agent} folosește efortul din configurația proprie.", { agent: this.agent.name }))
     this.meta.effort = undefined
   }
 
   async setBrowser(on: boolean): Promise<void> {
-    if (on) throw new Error(tr("Hermes folosește uneltele proprii de browser; conectarea la browserul Jolty nu este disponibilă."))
+    if (on && this.agent.browser) {
+      if (!this.meta.browser) this.stale = true
+      this.meta.browser = true
+      return
+    }
+    if (!on && this.agent.browser) {
+      if (this.meta.browser) this.stale = true
+      this.meta.browser = undefined
+      return
+    }
+    if (on) throw new Error(tr("{agent} folosește uneltele proprii de browser; conectarea la browserul Jolty nu este disponibilă.", { agent: this.agent.name }))
     this.meta.browser = undefined
   }
 
-  async compact(): Promise<void> { await this.send('/compact') }
-  async rewind(): Promise<never> { throw new Error(tr("Hermes nu păstrează copii ale fișierelor pe mesaj. Folosește git pentru a reveni.")) }
+  async compact(): Promise<void> {
+    if (!this.agent.compactCommand) throw new Error(tr("{agent} își comprimă singur conversația.", { agent: this.agent.name }))
+    await this.send(this.agent.compactCommand)
+  }
+  async rewind(): Promise<never> { throw new Error(tr("{agent} nu păstrează copii ale fișierelor pe mesaj. Folosește git pentru a reveni.", { agent: this.agent.name })) }
 
   async close(): Promise<void> {
     this.closed = true

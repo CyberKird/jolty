@@ -2,6 +2,7 @@ import { app, safeStorage } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import type { AppSettings, ChatItem, Profile, RateLimitSnapshot, SessionMeta, TurnUsage } from '@shared/types'
+import { isAcp } from '@shared/types'
 import type { ScheduledTask } from '@shared/schedule'
 import type { SeenFile } from './model-watch-core'
 
@@ -81,7 +82,7 @@ export function reorderProfiles(ids: unknown): Profile[] {
 
 /** Per-profile config folder (CLAUDE_CONFIG_DIR / CODEX_HOME) for non-default profiles. */
 export function profileDir(profile: Profile): string | undefined {
-  if (profile.isDefaultDir || profile.engine === 'hermes') return undefined
+  if (profile.isDefaultDir || isAcp(profile.engine)) return undefined
   return path.join(dataDir(), 'profiles', profile.id, profile.engine)
 }
 

@@ -24,10 +24,12 @@ export class JsonRpcProcess extends EventEmitter {
   private stderrTail = ''
   exited = false
 
-  constructor(exe: string, args: string[], env: Record<string, string>) {
+  constructor(exe: string, args: string[], env: Record<string, string>, private opts: { jsonrpc?: boolean; label?: string } = {}) {
     super()
     this.proc = spawn(exe, args, { env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
     this.processes.track('rpc', this.proc)
+    // a write that lands after the process died is reported by the exit handler, not as an uncaught EPIPE
+    this.proc.stdin.on('error', () => {})
     this.proc.stdout.setEncoding('utf8')
     this.proc.stdout.on('data', (chunk: string) => this.onData(chunk))
     this.proc.stderr.setEncoding('utf8')
@@ -36,7 +38,7 @@ export class JsonRpcProcess extends EventEmitter {
       if (process.env.JOLTY_DEBUG) console.error('[codex]', chunk)
     })
     this.proc.on('error', (err) => this.onExit(err.message))
-    this.proc.on('exit', (code) => this.onExit(`Codex s-a oprit (cod ${code}). ${this.stderrTail.trim().split('\n').slice(-3).join(' ')}`))
+    this.proc.on('exit', (code) => this.onExit(`${this.label} s-a oprit (cod ${code}). ${this.stderrTail.trim().split('\n').slice(-3).join(' ')}`))
   }
 
   private onExit(reason: string): void {
@@ -83,16 +85,18 @@ export class JsonRpcProcess extends EventEmitter {
     }
   }
 
-  private write(obj: unknown): void {
-    if (this.exited) throw new Error(tr("Codex nu mai rulează"))
-    this.proc.stdin.write(JSON.stringify(obj) + '\n')
+  private get label(): string { return this.opts.label || 'Codex' }
+
+  private write(obj: object): void {
+    if (this.exited) throw new Error(tr("{name} nu mai rulează", { name: this.label }))
+    this.proc.stdin.write(JSON.stringify(this.opts.jsonrpc ? { jsonrpc: '2.0', ...obj } : obj) + '\n')
   }
 
   request<T = unknown>(method: string, params: unknown = {}, timeoutMs = 120000): Promise<T> {
     const id = this.nextId++
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
-        if (this.pending.delete(id)) reject(new Error(tr("{method}: fără răspuns de la Codex", { method })))
+        if (this.pending.delete(id)) reject(new Error(tr("{method}: fără răspuns de la {name}", { method, name: this.label })))
       }, timeoutMs)
       this.pending.set(id, {
         method,

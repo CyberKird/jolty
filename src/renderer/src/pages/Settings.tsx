@@ -1,6 +1,7 @@
 import { ExternalLink, Eye, FolderOpen, Globe, KeyRound, Languages, Save, ShieldCheck, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
+import { isAcp } from '@shared/types'
 import { BrowserSettings } from './BrowserSettings'
 import { ChildSessionsSettings } from './ChildSessionsSettings'
 import { api, errMsg, timeAgo, useStore } from '../store'
@@ -20,7 +21,7 @@ export function SettingsPage() {
     void api.app.version().then(setVersion)
   }, [])
   if (!s) return null
-  const visionCandidates = profiles.filter((p) => p.engine !== 'hermes' && (p.auth !== 'endpoint' || p.vision))
+  const visionCandidates = profiles.filter((p) => !isAcp(p.engine) && (p.auth !== 'endpoint' || p.vision))
   return (
     <div className="page">
       <div className="page-inner narrow">
@@ -209,6 +210,10 @@ export function SettingsPage() {
           <div className="field">
             <label>Hermes ACP (hermes-acp.exe)</label>
             <input className="input mono" value={s.hermesPath || ''} placeholder={tr("instalarea existentă")} onChange={(e) => setS({ ...s, hermesPath: e.target.value || undefined })} />
+          </div>
+          <div className="field">
+            <label>OpenCode (opencode.exe)</label>
+            <input className="input mono" value={s.opencodePath || ''} placeholder={tr("instalarea existentă")} onChange={(e) => setS({ ...s, opencodePath: e.target.value || undefined })} />
           </div>
         </div>
         <div className="row">

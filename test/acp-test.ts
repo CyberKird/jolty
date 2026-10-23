@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import { test } from 'node:test'
-import { HermesDriver } from '../src/main/engines/hermes'
+import { AcpDriver } from '../src/main/engines/acp'
+import { OPENCODE } from '../src/main/engines/acp-agent'
+import { opencodePermissions } from '../src/main/engines/opencode-runtime'
 import { JsonRpcProcess, type RpcRequest } from '../src/main/engines/jsonrpc'
 import type { EngineHost, EngineSession } from '../src/main/engines/types'
 import type { ChatEvent, ChatItem, Profile, SessionMeta, TurnUsage } from '../src/shared/types'
@@ -27,7 +29,7 @@ function fixture(extraEnv: Record<string, string> = {}) {
   const processes: JsonRpcProcess[] = []
   const events: ChatEvent[] = []
   const usage: TurnUsage[] = []
-  const driver = new HermesDriver(() => {
+  const driver = new AcpDriver(() => {
     const rpc = new JsonRpcProcess(process.execPath, [mockPath], { ...env, ...extraEnv }, { jsonrpc: true, label: 'Hermes' })
     processes.push(rpc)
     return rpc
@@ -250,4 +252,23 @@ test('permission for an unknown session is rejected without an approval dialog',
     assert.deepEqual(messages.find((message) => message.id === 'unknown-permission')?.result, { outcome: { outcome: 'cancelled' } })
     assert.equal(f.events.some((event) => event.type === 'permission'), false)
   } finally { await f.close() }
+})
+test('OpenCode: free models first, non-chat models dropped, modes and approvals map to its config', () => {
+  const state = { configOptions: [{ id: 'model', currentValue: 'opencode/big-pickle', options: [
+    { value: 'nvidia/black-forest-labs/flux.1-dev', name: 'FLUX' },
+    { value: 'deepseek/deepseek-v4-pro', name: 'DeepSeek V4 Pro' },
+    { value: 'opencode/big-pickle', name: 'Big Pickle' },
+    { value: 'opencode/glm-5.3-flash-free', name: 'GLM Free' },
+    { value: 'opencode/gpt-5.5', name: 'GPT 5.5' }
+  ] }] }
+  const ids = OPENCODE.models(state).map((m) => m.id)
+  assert.deepEqual(ids, ['opencode/big-pickle', 'opencode/glm-5.3-flash-free', 'deepseek/deepseek-v4-pro', 'opencode/gpt-5.5'])
+  assert.equal(OPENCODE.currentModel(state), 'opencode/big-pickle')
+  assert.equal(OPENCODE.modeId('plan'), 'plan')
+  assert.equal(OPENCODE.modeId('autoEdit'), 'build')
+  assert.deepEqual(opencodePermissions('ask'), { edit: 'ask', bash: 'ask' })
+  assert.deepEqual(opencodePermissions('autoEdit'), { edit: 'allow', bash: 'ask' })
+  assert.deepEqual(opencodePermissions('full'), { edit: 'allow', bash: 'allow' })
+  assert.equal(OPENCODE.sessionAllow({ optionId: 'always', kind: 'allow_always' }), true)
+  assert.equal(OPENCODE.sessionAllow({ optionId: 'once', kind: 'allow_once' }), false)
 })

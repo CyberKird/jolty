@@ -1,6 +1,7 @@
 // Estimates how demanding a request is while the user types, and suggests a model tier and an
 // effort level for it. Runs locally on every keystroke, so it is a fast heuristic, not a model call.
 import type { ModelOption, Profile, RateLimitSnapshot } from './types'
+import { isAcp } from './types'
 import { tr } from './i18n'
 
 export type Level = 1 | 2 | 3 | 4
@@ -139,7 +140,7 @@ const text = (m: ModelOption): string => `${m.id} ${m.label} ${m.description || 
 export function capability(profile: Profile, m: ModelOption): Capability {
   const t = text(m)
   if (profile.local) return { grade: 2, tag: 'local', compare: tr("Model local: cel mult la nivelul lui Haiku 4.5 (estimare din catalogul Jolty, nu test propriu).") }
-  if (profile.auth === 'endpoint' || profile.engine === 'hermes')
+  if (profile.auth === 'endpoint' || isAcp(profile.engine))
     return { grade: 3, tag: 'nevalidat', compare: tr("API extern: nu există o comparație verificată cu Claude. Bun pentru sarcini medii; la cele grele un model de top e mai sigur.") }
   if (profile.engine === 'claude') {
     if (/fable/i.test(t)) return { grade: 5, tag: 'top', compare: tr("Cel mai capabil model Claude, pentru sarcinile cele mai grele și lungi.") }
@@ -203,7 +204,7 @@ export function recommend(a: Assessment, groups: ModelGroupLite[], current: Pick
 
   // every model that can do the job, from every account that is connected and not at its limit
   const candidates = groups
-    .filter((g) => !g.error && (g.profile.engine !== 'hermes' || g.profile.id === current.profileId) && limitLoad(limits[g.profile.id]) < 95)
+    .filter((g) => !g.error && (!isAcp(g.profile.engine) || g.profile.id === current.profileId) && limitLoad(limits[g.profile.id]) < 95)
     .flatMap((g) =>
       g.models
         .filter((m) => !EXTRA_COST.test(text(m)) && !/\[1m\]|-1m\b/i.test(m.id))

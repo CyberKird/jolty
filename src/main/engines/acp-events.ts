@@ -21,10 +21,10 @@ function contentText(value: unknown): string {
 }
 
 /** Folds partial ACP tool updates and adjacent streamed chunks into Jolty's transcript. */
-export class HermesEvents {
+export class AcpEvents {
   private tools = new Map<string, AcpObject>()
   private chunk?: { id: string; kind: string; text: string }
-  constructor(private sessionId: string, private emit: (event: ChatEvent) => void) {}
+  constructor(private sessionId: string, private emit: (event: ChatEvent) => void, private agent = 'Hermes') {}
 
   reset(): void { this.chunk = undefined; this.tools.clear() }
 
@@ -56,7 +56,7 @@ export class HermesEvents {
       const output = contentText(merged.content) || (typeof merged.rawOutput === 'string' ? merged.rawOutput : merged.rawOutput == null ? '' : JSON.stringify(merged.rawOutput))
       const input = object(merged.rawInput)
       const item: ChatItem = {
-        kind: 'tool', id, name: str(merged.kind) || 'Hermes', title: str(merged.title) || tr("Unealtă Hermes"),
+        kind: 'tool', id, name: str(merged.kind) || this.agent, title: str(merged.title) || tr("Unealtă {agent}", { agent: this.agent }),
         status: merged.status === 'completed' ? 'done' : merged.status === 'failed' ? 'error' : 'running',
         input: merged.rawInput, output, diffs,
         command: merged.kind === 'execute' ? str(input.command) || output.match(/(?:^|\n)\$ (.+)/)?.[1] || merged.savedCommand : undefined
