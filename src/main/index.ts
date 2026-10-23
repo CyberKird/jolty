@@ -15,6 +15,7 @@ import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
 import * as updater from './updater'
 import * as local from './local'
+import * as modelWatch from './model-watch'
 import * as store from './store'
 import * as system from './system'
 import { getLang, setLang, tr } from '@shared/i18n'
@@ -317,17 +318,18 @@ if (!app.requestSingleInstanceLock()) {
         win?.focus()
       }
     )
-    // model lists refreshed in the background, so a newly released model is announced without opening the picker
-    const scanModels = (): void => {
-      for (const p of jolty.profiles()) if (p.engine === 'claude' && p.auth === 'subscription') void jolty.models(p.id).catch(() => undefined)
-    }
+    // model lists and the scores table refreshed in the background, so a newly released model is announced without opening the picker
+    modelWatch.start({
+      scan: !process.env.JOLTY_TEST,
+      profiles: () => jolty.profiles(),
+      loggedIn: (id) => jolty.status(id).then((s) => s.loggedIn),
+      models: (id) => jolty.models(id)
+    })
     void jolty.sweepTemps().catch(() => undefined)
     // automated runs start with What's new already seen, unless the run sets an older seenVersion itself
     if (process.env.JOLTY_TEST && !store.loadSettings().seenVersion) store.saveSettings({ seenVersion: __JOLTY_VERSION__ })
     if (!process.env.JOLTY_TEST) {
       setTimeout(() => void store.shrinkTranscripts(), 10000)
-      setTimeout(scanModels, 30000)
-      setInterval(scanModels, 4 * 3600e3)
     }
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()

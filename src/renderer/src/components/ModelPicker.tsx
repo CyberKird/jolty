@@ -15,12 +15,14 @@ export interface ModelGroup {
   error?: string
 }
 
-// ponytail: cached for the app's lifetime; the key changes when an endpoint profile's model list does
-const cache = new Map<string, Promise<ModelOption[]>>()
+// ponytail: cached for half an hour (badges and scores come with the list); the key changes when an endpoint profile's model list does
+const CACHE_MS = 30 * 60e3
+const cache = new Map<string, { at: number; pr: Promise<ModelOption[]> }>()
 const key = (p: Profile): string => `${p.id}:${(p.models || []).join(',')}`
 
 function load(p: Profile): Promise<ModelOption[]> {
-  let pr = cache.get(key(p))
+  const hit = cache.get(key(p))
+  let pr = hit && Date.now() - hit.at < CACHE_MS ? hit.pr : undefined
   if (!pr) {
     // a subscription that is not logged in lists its models but cannot run them
     pr = (p.auth === 'subscription'
@@ -29,7 +31,7 @@ function load(p: Profile): Promise<ModelOption[]> {
         })
       : Promise.resolve()
     ).then(() => api.profiles.models(p.id))
-    cache.set(key(p), pr)
+    cache.set(key(p), { at: Date.now(), pr })
     pr.catch(() => cache.delete(key(p)))
   }
   return pr
@@ -161,6 +163,7 @@ export function ModelPicker(p: {
                           {m.label}
                           {sc && <span className={`picker-score ${sc.iq >= 45 ? 'hi' : sc.iq < 25 ? 'lo' : ''}`}>{sc.iq}</span>}
                           {sc?.speed && <span className="picker-speed">{sc.speed}</span>}
+                          {m.badge && <span className={`picker-badge ${m.badge}`}>{m.badge === 'new' ? tr("NOU") : tr("ACTUALIZAT")}</span>}
                         </span>
                         {(m.description || (other && p.otherProfileHint)) && (
                           <span className="picker-opt-desc">{other && p.otherProfileHint ? p.otherProfileHint : m.description}</span>

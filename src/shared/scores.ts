@@ -1,7 +1,8 @@
 // Intelligence and speed shown next to every model in the picker.
 // Intelligence = Artificial Analysis Intelligence Index (higher is better), speed = their median output tokens/s.
 // Snapshot of artificialanalysis.ai/leaderboards/models taken 2026-10-03, at effort "high" where the model has levels.
-// Refresh the table when a new model shows up in the picker without a score.
+// Refresh the table when a new model shows up in the picker without a score. The same data is published as
+// scores.json at the repo root; the app fetches that file and uses it before this table, so a refresh needs no release.
 import type { ModelOption, Profile } from './types'
 import { tr } from './i18n'
 
@@ -42,10 +43,56 @@ const SCORES: [RegExp, number, number | undefined, string][] = [
   [/gpt-oss/, 12, undefined, 'gpt-oss 120B']
 ]
 
-export function modelScore(profile: Profile, m: ModelOption): ModelScore | undefined {
-  const hit = SCORES.find(([re]) => re.test(`${m.id} ${m.label}`.toLowerCase()))
-  if (!hit) return undefined
-  const [, iq, measured, note] = hit
+/** One line of scores.json: every `match` text must appear in "id label" (lowercase substrings, never patterns). */
+export interface RemoteScore {
+  match: string[]
+  iq: number
+  tps?: number
+  note: string
+}
+
+const MAX_ENTRIES = 200
+const MAX_MATCH = 4
+const MAX_TEXT = 64
+const MAX_NOTE = 200
+
+/** scores.json is untrusted: anything off in an entry drops that entry, a file that is not an object or has too many entries is dropped whole. */
+export function parseRemoteScores(raw: unknown): RemoteScore[] | undefined {
+  const list = (raw as { entries?: unknown } | null)?.entries
+  if (!Array.isArray(list) || list.length > MAX_ENTRIES) return undefined
+  const out: RemoteScore[] = []
+  for (const e of list) {
+    const { match, iq, tps, note } = (e && typeof e === 'object' ? e : {}) as Record<string, unknown>
+    if (!Array.isArray(match) || match.length < 1 || match.length > MAX_MATCH) continue
+    const texts = match.map((t) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))
+    if (texts.some((t) => !t || t.length > MAX_TEXT)) continue
+    if (typeof iq !== 'number' || !Number.isFinite(iq) || iq < 0 || iq > 100) continue
+    if (tps !== undefined && (typeof tps !== 'number' || !Number.isFinite(tps) || tps <= 0 || tps > 5000)) continue
+    // eslint-disable-next-line no-control-regex
+    if (typeof note !== 'string' || !note.trim() || note.length > MAX_NOTE || /[\u0000-\u001f]/.test(note)) continue
+    out.push({ match: texts, iq, tps, note })
+  }
+  return out.length ? out : undefined
+}
+
+let remote: RemoteScore[] = []
+
+/** The table fetched from the repo (main process only; the renderer gets the finished score on each ModelOption). */
+export function setRemoteScores(entries: RemoteScore[]): void {
+  remote = entries
+}
+
+function toScore(profile: Profile, iq: number, measured: number | undefined, note: string): ModelScore {
   const tps = profile.local ? undefined : measured
   return { iq, tps, speed: tps === undefined ? undefined : tps >= 100 ? 'rapid' : tps >= 60 ? 'mediu' : 'lent', note }
+}
+
+export function modelScore(profile: Profile, m: ModelOption): ModelScore | undefined {
+  if (m.score) return m.score
+  const text = `${m.id} ${m.label}`.toLowerCase()
+  const r = remote.find((e) => e.match.every((t) => text.includes(t)))
+  // the notes in scores.json are the same Romanian texts as the table, so they translate the same way
+  if (r) return toScore(profile, r.iq, r.tps, tr(r.note))
+  const hit = SCORES.find(([re]) => re.test(text))
+  return hit ? toScore(profile, hit[1], hit[2], hit[3]) : undefined
 }
