@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, Globe, MessageSquareDashed, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
+import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, MessageSquareDashed, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
@@ -105,7 +105,7 @@ const NO_PROFILES: Profile[] = []
 interface ComposerProps {
   sessionId?: string
   running: boolean
-  onSend: (text: string, attachments: Attachment[]) => Promise<void> | void
+  onSend: (text: string, attachments: Attachment[], parallel?: boolean) => Promise<void> | void
   onStop?: () => void
   profiles: Profile[]
   /** models already loaded by the parent; loaded here when not given */
@@ -148,7 +148,7 @@ function Composer(p: ComposerProps) {
   // messages written while the model works wait here and go out, in order, when the turn ends
   // a temporary chat must not leave its queued messages on disk
   const queueStore = p.temporary ? sessionStorage : localStorage
-  const [queue, setQueue] = useState<{ id: string; text: string; atts: Attachment[] }[]>(() => {
+  const [queue, setQueue] = useState<{ id: string; text: string; atts: Attachment[]; parallel?: boolean }[]>(() => {
     if (!p.sessionId) return []
     try {
       const saved = JSON.parse(queueStore.getItem(`jolty:queue:${p.sessionId}`) || '[]')
@@ -184,7 +184,7 @@ function Composer(p: ComposerProps) {
     queuedSent.current = true
     const [next, ...rest] = queue
     setQueue(rest)
-    void p.onSend(next.text, next.atts)
+    void p.onSend(next.text, next.atts, next.parallel)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.running, queue, restoredQueue])
 
@@ -235,9 +235,11 @@ function Composer(p: ComposerProps) {
     [toast, atts.length]
   )
 
-  const submit = async (): Promise<void> => {
+  // parallel: the same message, plus an instruction for the model to split the job into sessions (hidden from the chat)
+  const submit = async (parallel = false): Promise<void> => {
     const own = text.trim()
     if (!own && !atts.length) return
+    if (parallel && (!own || engine === 'hermes')) return
     const store = useStore.getState()
     const quote = p.sessionId ? store.quotes[p.sessionId] : undefined
     const t = own ? withQuote(quote, own) : own
@@ -246,10 +248,10 @@ function Composer(p: ComposerProps) {
     const a = atts
     setAtts([])
     if (p.running) {
-      setQueue((q) => [...q, { id: crypto.randomUUID(), text: t, atts: a }])
+      setQueue((q) => [...q, { id: crypto.randomUUID(), text: t, atts: a, parallel: parallel || undefined }])
       return
     }
-    await p.onSend(t, a)
+    await p.onSend(t, a, parallel || undefined)
   }
 
   const pickMention = (i: Parameters<typeof mentions.apply>[0]): void => {
@@ -276,7 +278,7 @@ function Composer(p: ComposerProps) {
                 className="queued-send"
                 onClick={() => {
                   setQueue((x) => x.filter((item) => item.id !== q.id))
-                  void p.onSend(q.text, q.atts)
+                  void p.onSend(q.text, q.atts, q.parallel)
                 }}
                 aria-label={tr("Trimite acum")}
                 title={tr("Trimite acum, fără să aștepți ca răspunsul curent să se termine")}
@@ -361,6 +363,11 @@ function Composer(p: ComposerProps) {
               const modes = modesFor(engine).map((m) => m.id).filter((id) => engine === 'hermes' || !OPEN_MODES.includes(id))
               const i = modes.findIndex((mode) => mode === p.mode)
               p.onMode(modes[(i + 1) % modes.length])
+              return
+            }
+            if (e.key === 'Enter' && e.ctrlKey && e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              void submit(true)
               return
             }
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -476,6 +483,16 @@ function Composer(p: ComposerProps) {
           {p.running && (
             <button className="btn send-btn" onClick={p.onStop} title={tr("Oprește (Esc)")}>
               <Square size={12} fill="currentColor" />
+            </button>
+          )}
+          {engine !== 'hermes' && text.trim() && (
+            <button
+              className="btn send-btn"
+              onClick={() => void submit(true)}
+              aria-label={tr("Trimite cu sesiuni paralele")}
+              title={tr("Trimite și lucrează cu sesiuni paralele (Ctrl+Shift+Enter)")}
+            >
+              <GitFork size={15} />
             </button>
           )}
           {(!p.running || text.trim() || atts.length > 0) && (
@@ -826,10 +843,10 @@ export function ChatView({ session }: { session: SessionMeta }) {
         temporary={session.temporary}
         onBrowser={(on) => void api.sessions.setBrowser(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         onStop={() => void api.sessions.interrupt(session.id)}
-        onSend={async (text, atts) => {
+        onSend={async (text, atts, parallel) => {
           useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'running' })
           try {
-            await api.sessions.send(session.id, text, atts)
+            await api.sessions.send(session.id, text, atts, parallel)
           } catch (err) {
             useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'error', error: errMsg(err) })
             toast(errMsg(err), true)
@@ -868,7 +885,7 @@ export function NewChat() {
   // the profile whose last model and level were already put in the picker (or that the user picked by hand)
   const restored = useRef<string | undefined>(undefined)
   const launching = useRef(false)
-  const launchQueue = useRef<{ id: string; text: string; atts: Attachment[] }[]>([])
+  const launchQueue = useRef<{ id: string; text: string; atts: Attachment[]; parallel?: boolean }[]>([])
 
   useEffect(() => {
     void api.app.settings().then((s) => {
@@ -957,9 +974,9 @@ export function NewChat() {
         cwd={cwd}
         onCwd={() => void pickCwd()}
         seed={seed}
-        onSend={async (text, atts) => {
+        onSend={async (text, atts, parallel) => {
           if (launching.current) {
-            launchQueue.current.push({ id: crypto.randomUUID(), text, atts })
+            launchQueue.current.push({ id: crypto.randomUUID(), text, atts, parallel })
             toast(tr("Mesajul a intrat în așteptare până pornește conversația."))
             return
           }
@@ -992,7 +1009,7 @@ export function NewChat() {
             }
             useStore.getState().activateSession(meta)
             void loadSessions().catch((err) => toast(errMsg(err), true))
-            await api.sessions.send(meta.id, text, atts)
+            await api.sessions.send(meta.id, text, atts, parallel)
           } catch (err) {
             if (meta) useStore.getState().onEvent({ type: 'status', sessionId: meta.id, status: 'error', error: errMsg(err) })
             toast(errMsg(err), true)

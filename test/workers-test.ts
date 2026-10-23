@@ -5,6 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import { liveRows } from '../src/shared/live'
+import { PARALLEL_INSTRUCTION, withParallelInstruction } from '../src/shared/parallel'
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-workers-data-'))
 process.env.JOLTY_DATA_DIR = data
@@ -86,4 +87,12 @@ test('the Live list: waiting first, then working, then finished; a started sessi
     rows.map((r) => `${r.session.id}:${r.state}:${r.depth}`),
     ['wait:waiting:0', 'run1:running:0', 'kid:running:1', 'kidDone:done:1', 'run2:running:0', 'orphan:running:0', 'done:done:0']
   )
+})
+
+test('the parallel send puts the instruction in front of the prompt and leaves the words as they are', () => {
+  const out = withParallelInstruction('Fix the login and add tests')
+  assert.ok(out.startsWith(PARALLEL_INSTRUCTION))
+  assert.ok(out.endsWith('\n\nFix the login and add tests'))
+  assert.match(PARALLEL_INSTRUCTION, /start_session/)
+  assert.match(PARALLEL_INSTRUCTION, /wait_for_sessions/)
 })
