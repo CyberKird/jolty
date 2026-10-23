@@ -790,6 +790,7 @@ export class Rig3D implements Puppet {
     const flail = !this.phys && (this.pose === 'fall' || this.pose === 'held') ? Math.min(1, this.mv.speed / 1200) : 0
     const t = now / 1000
     j.armL.rotation.set(c.armLRX * c.armLK + sw + 0.4 * flail * Math.sin(t * 19), 0, c.armLRZ * c.armLK - up * 0.8 - 0.3 * flail * Math.sin(t * 23))
+    // the model's right arm is rigged swung out (rig2.py ARM_OUT): every pose is relative to the arm hanging
     j.armR.rotation.set(c.armRRX + sw + 0.4 * flail * Math.sin(t * 17 + 1), 0, c.armRRZ + up * 0.8 + 0.3 * flail * Math.sin(t * 21 + 2))
     j.legL.rotation.x = c.legLRX - sw * 0.6 + 0.45 * flail * Math.sin(t * 15)
     j.legR.rotation.x = c.legRRX - sw * 0.6 - 0.45 * flail * Math.sin(t * 16 + 1)
