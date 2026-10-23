@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.11
+
+### New
+
+- A new Jolty. The mascot was rebuilt from a clean 3D model: a soft fleece hoodie with real stitching and folds, a glossy black visor with glowing eyes, free sleeves, detailed sneakers with glowing soles, and the lightning bolt coming out of a slot in the hood. Both arms now move on their own, so raised arms (cheering, waving, pointing) no longer tear the hoodie.
+- The right hand is sized to the glove on the left and starts exactly at the cuff.
+
 ## 0.7.10
 
 ### New
