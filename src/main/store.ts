@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import type { AppSettings, ChatItem, Profile, RateLimitSnapshot, SessionMeta, TurnUsage } from '@shared/types'
 import type { ScheduledTask } from '@shared/schedule'
+import type { SeenFile } from './model-watch-core'
 
 /** Root folder for Jolty's own data. JOLTY_DATA_DIR overrides it (used by tests). */
 export function dataDir(): string {
@@ -278,6 +279,25 @@ export function loadSchedules(): ScheduledTask[] {
 
 export function saveSchedules(tasks: ScheduledTask[]): void {
   writeJson('schedules.json', tasks)
+}
+
+// ---------------------------------------------------------------------------
+// Model watch: the models each source listed so far, and the last good scores.json
+// ---------------------------------------------------------------------------
+export function loadModelWatch(): SeenFile {
+  return readJson<SeenFile>('model-watch.json', {})
+}
+
+export function saveModelWatch(seen: SeenFile): void {
+  writeJson('model-watch.json', seen, false)
+}
+
+export function loadScoresCache(): unknown {
+  return readJson<unknown>('scores-cache.json', undefined)
+}
+
+export function saveScoresCache(raw: unknown): void {
+  writeJson('scores-cache.json', raw, false)
 }
 
 // ---------------------------------------------------------------------------

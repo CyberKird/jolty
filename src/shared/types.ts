@@ -1,5 +1,6 @@
 // Types shared by the main process, the preload bridge and the renderer.
 import type { ScheduledTask, TaskInput } from './schedule'
+import type { ModelScore } from './scores'
 
 export type EngineKind = 'claude' | 'codex' | 'hermes'
 
@@ -86,6 +87,10 @@ export interface ModelOption {
   /** effort levels the model accepts, in the engine's own names (low, medium, high, xhigh, max) */
   efforts?: string[]
   defaultEffort?: string
+  /** set by the model watch: first seen in the last 7 days, or the same name now points to a newer model */
+  badge?: 'new' | 'updated'
+  /** intelligence and speed, attached by the main process so the table fetched from the repo reaches the picker */
+  score?: ModelScore
 }
 
 export interface Attachment {
@@ -280,7 +285,7 @@ export interface AppSettings {
   visionProfileId?: string
   claudePath?: string
   codexPath?: string
-  /** model labels already announced, so a new one gets a single notification */
+  /** no longer used: the model watch keeps what it has seen in model-watch.json */
   seenModels?: string[]
   hermesPath?: string
   lastCwd?: string

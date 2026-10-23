@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { Notification, shell } from 'electron'
+import { shell } from 'electron'
 import type {
   CanUseTool,
   EffortLevel,
@@ -37,7 +37,7 @@ import { noThinkingUrl } from '../thinking-proxy'
 import { endpointEfforts, endpointThinking } from './thinking'
 import { editDiff, partialJsonString } from './partial-json'
 import { TaskBoard } from '@shared/tasks'
-import { getSecret, loadSettings, profileDir, saveSettings } from '../store'
+import { getSecret, loadSettings, profileDir } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
 import { ProfileProcesses } from './profile-processes'
@@ -732,21 +732,6 @@ function openLoginWindow(profileId: string, exe: string, args: string[], env: Re
   child.unref()
 }
 
-/** One Windows notification per model label never seen before; the first run only records the list. */
-function announceNewModels(labels: string[]): void {
-  const seen = loadSettings().seenModels
-  if (!seen) {
-    saveSettings({ seenModels: labels })
-    return
-  }
-  const fresh = labels.filter((l) => !seen.includes(l))
-  if (!fresh.length) return
-  saveSettings({ seenModels: [...seen, ...fresh] })
-  if (Notification.isSupported() && !process.env.JOLTY_TEST) {
-    new Notification({ title: tr("Model nou în Jolty: {join}", { join: fresh.join(', ') }), body: tr("Îl găsești în lista de modele din chat.") }).show()
-  }
-}
-
 export class ClaudeDriver implements EngineDriver {
   private modelCache = new Map<string, { at: number; models: ModelOption[] }>()
 
@@ -837,7 +822,6 @@ export class ClaudeDriver implements EngineDriver {
     if (twin) twin.isDefault = true
     const models = twin ? mapped.filter((m) => m !== alias) : mapped
     this.modelCache.set(profile.id, { at: Date.now(), models })
-    announceNewModels(models.filter((m) => m.id !== 'default').map((m) => m.label))
     return models
   }
 

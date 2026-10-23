@@ -46,6 +46,7 @@ import { addWorktree, removeWorktree } from './workers'
 import { learningNudge } from './learning'
 import { forget } from './recall'
 import { Scheduler } from './scheduler'
+import * as modelWatch from './model-watch'
 import type { ScheduledTask } from '@shared/schedule'
 import { tr } from '@shared/i18n'
 
@@ -289,9 +290,9 @@ export class Jolty {
     return this.driver(p.engine).logout(p)
   }
 
-  models(id: string): Promise<ModelOption[]> {
+  async models(id: string): Promise<ModelOption[]> {
     const p = this.profile(id)
-    return this.driver(p.engine).models(p)
+    return modelWatch.decorate(p, await this.driver(p.engine).models(p))
   }
 
   // -------------------------------------------------------------------------

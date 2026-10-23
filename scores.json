@@ -1,0 +1,153 @@
+{
+ "updated": "2026-10-03",
+ "entries": [
+  {
+   "match": ["fable"],
+   "iq": 51,
+   "tps": 54,
+   "note": "Fable 5.1 la efort high (46 la low, 53 la max)"
+  },
+  {
+   "match": ["opus"],
+   "iq": 54,
+   "tps": 74,
+   "note": "Opus 5.5 la efort high (42 la low, 58 la max)"
+  },
+  {
+   "match": ["sonnet"],
+   "iq": 47,
+   "tps": 102,
+   "note": "Sonnet 5.5 la efort high (36 la low, 56 la max)"
+  },
+  {
+   "match": ["haiku"],
+   "iq": 17,
+   "tps": 108,
+   "note": "Haiku 4.5 cu raționament"
+  },
+  {
+   "match": ["gpt-6.1-sol"],
+   "iq": 50,
+   "tps": 58,
+   "note": "GPT-6.1 Sol la efort high (42 la low, 52 la max)"
+  },
+  {
+   "match": ["gpt-6-astra"],
+   "iq": 51,
+   "tps": 45,
+   "note": "GPT-6 Astra la efort high (46 la low, 53 la max)"
+  },
+  {
+   "match": ["gpt-6-sol"],
+   "iq": 42,
+   "tps": 87,
+   "note": "GPT-6 Sol la efort high (34 la low, 48 la max)"
+  },
+  {
+   "match": ["gpt-6-luna"],
+   "iq": 33,
+   "tps": 135,
+   "note": "GPT-6 Luna la efort high (22 la low, 38 la max)"
+  },
+  {
+   "match": ["gpt-5.6-sol"],
+   "iq": 42,
+   "tps": 76,
+   "note": "GPT-5.6 Sol la efort high (33 la low, 47 la max)"
+  },
+  {
+   "match": ["gpt-5.6-terra"],
+   "iq": 34,
+   "tps": 85,
+   "note": "GPT-5.6 Terra la efort high (27 la low, 42 la max)"
+  },
+  {
+   "match": ["gpt-5.6-luna"],
+   "iq": 32,
+   "tps": 109,
+   "note": "GPT-5.6 Luna la efort high (21 la low, 37 la max)"
+  },
+  {
+   "match": ["gpt-5.5"],
+   "iq": 37,
+   "tps": 87,
+   "note": "GPT-5.5 la efort high (31 la low, 38 la xhigh)"
+  },
+  {
+   "match": ["deepseek", "pro"],
+   "iq": 36,
+   "tps": 107,
+   "note": "DeepSeek V4 Pro 0813 la efort max"
+  },
+  {
+   "match": ["deepseek", "flash"],
+   "iq": 39,
+   "tps": 209,
+   "note": "DeepSeek V4.1 Flash la efort max"
+  },
+  {
+   "match": ["mimo-v2.6-pro-ultraspeed"],
+   "iq": 46,
+   "note": "MiMo V2.6 Pro; viteza serviciului ultraspeed nu e măsurată"
+  },
+  {
+   "match": ["mimo-v2.6-pro"],
+   "iq": 46,
+   "tps": 46,
+   "note": "MiMo V2.6 Pro"
+  },
+  {
+   "match": ["mimo-v2.6-flash"],
+   "iq": 38,
+   "tps": 51,
+   "note": "MiMo V2.6 Flash"
+  },
+  {
+   "match": ["mimo-v2.5-pro"],
+   "iq": 26,
+   "tps": 34,
+   "note": "MiMo V2.5 Pro"
+  },
+  {
+   "match": ["mimo-v2.5"],
+   "iq": 25,
+   "tps": 58,
+   "note": "MiMo V2.5"
+  },
+  {
+   "match": ["gemma-4"],
+   "iq": 15,
+   "note": "Gemma 4 (variantele de 12B-31B)"
+  },
+  {
+   "match": ["gemma4"],
+   "iq": 15,
+   "note": "Gemma 4 (variantele de 12B-31B)"
+  },
+  {
+   "match": ["qwen3.5-27b"],
+   "iq": 23,
+   "note": "Qwen3.5 27B"
+  },
+  {
+   "match": ["qwen3.5:27b"],
+   "iq": 23,
+   "note": "Qwen3.5 27B"
+  },
+  {
+   "match": ["qwen3.5"],
+   "iq": 13,
+   "note": "Qwen3.5 9B"
+  },
+  {
+   "match": ["qwen3.6"],
+   "iq": 21,
+   "note": "Qwen3.6 27B"
+  },
+  {
+   "match": ["gpt-oss"],
+   "iq": 12,
+   "note": "gpt-oss 120B"
+  }
+ ]
+}
