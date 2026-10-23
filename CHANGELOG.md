@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.8
+
+### New
+
+- Gemini describes images for models that cannot see. In Settings, in the images card, pick "Gemini (through the Jolty browser)": a small agent opens gemini.google.com in the Jolty browser, attaches the picture and brings back Gemini's description. It uses your own Google account (sign in once in the Jolty browser window), takes about a minute, and when it fails the automatic profile describes the image. Every model that has the browser is also told that Gemini is there for video, audio and very long documents.
+- A send button for parallel work. Next to Send there is a second button (Ctrl+Shift+Enter) that sends the message as written and asks the model to split the job into independent parts and run them in sessions of their own. The chat shows only your words.
+- Sessions a chat starts begin with no permissions and with the Jolty browser, and Settings has a card for it: their permission mode, the browser, and a model of their own for simple jobs and for hard ones (the chat says which when it starts the session). Left on "Same model as the chat", they use the model of the chat.
+- Models that are new or updated get a NEW or UPDATED badge in the model picker for a week. Jolty now checks DeepSeek, MiMo, Codex and Ollama too, every hour, not only the Claude list.
+- The intelligence and speed numbers in the picker come from a table in the Jolty repository that is refreshed every hour, so a new model gets its score without a new release.
+
+### Fixes
+
+- Live usage in the sidebar updates by itself: every minute while Jolty is open, and at once when you come back to the window, with no refresh button.
+
 ## 0.7.7
 
 ### New
