@@ -24,7 +24,7 @@ export interface ToolHost {
   history(sessionId: string): Promise<ChatItem[]>
   scheduler: Scheduler
   /** a new session for one job of a lead session */
-  startChild(leadId: string, input: { title: string; brief: string; isolate: boolean }): Promise<{ meta: SessionMeta; note: string }>
+  startChild(leadId: string, input: { title: string; brief: string; isolate: boolean; complexity?: string }): Promise<{ meta: SessionMeta; note: string }>
   children(leadId: string): SessionMeta[]
   busy(sessionId: string): boolean
   /** the end of the last answer of a session */
@@ -113,6 +113,7 @@ const TOOLS = [
       properties: {
         title: { type: 'string', description: 'short name shown to the user in the sidebar' },
         brief: { type: 'string', description: 'the full, self-contained instructions for the job' },
+        complexity: { type: 'string', enum: ['simple', 'normal', 'hard'], description: 'how demanding the job is: simple (mechanical, clear steps) or hard (needs the strongest model); the user may have set a different model for each in the settings. Default normal: the model of this chat' },
         isolate: { type: 'boolean', description: "false: work in this chat's folder instead of a worktree (default true when the folder is a git repository)" }
       },
       required: ['title', 'brief']
@@ -247,7 +248,7 @@ async function run(h: ToolHost, sid: string, name: string, a: Record<string, unk
     const title = String(a.title || '').replace(/\s+/g, ' ').trim().slice(0, 80)
     const brief = String(a.brief || '').trim()
     if (!title || !brief) return fail('title and brief are both needed')
-    const { meta, note } = await h.startChild(sid, { title, brief, isolate: a.isolate !== false })
+    const { meta, note } = await h.startChild(sid, { title, brief, isolate: a.isolate !== false, complexity: String(a.complexity || '') })
     return ok(`Started "${meta.title}" (id: ${meta.id}). ${note} It is working now: use wait_for_sessions to wait for it.`)
   }
   if (name === 'list_sessions' || name === 'wait_for_sessions') {

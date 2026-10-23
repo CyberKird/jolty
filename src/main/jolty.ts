@@ -721,7 +721,7 @@ export class Jolty {
    * a worktree and a branch, so the sessions never write the same files. Same account, model and effort as the
    * lead; nobody approves its steps one by one, so it starts in the mode from Settings (no permissions unless changed), with the browser.
    */
-  private async startChild(leadId: string, input: { title: string; brief: string; isolate: boolean }): Promise<{ meta: SessionMeta; note: string }> {
+  private async startChild(leadId: string, input: { title: string; brief: string; isolate: boolean; complexity?: string }): Promise<{ meta: SessionMeta; note: string }> {
     const lead = this.meta(leadId)
     if (lead.parentId) throw new Error('A session started by another session cannot start sessions of its own.')
     if (lead.temporary) throw new Error('A temporary chat leaves nothing behind, so it cannot start sessions.')
@@ -740,11 +740,14 @@ export class Jolty {
       } else note = 'The folder is not a git repository with a commit, so it works in the same folder as you: do not give it files you are editing yourself.'
     }
     const st = store.loadSettings()
+    // a model chosen in Settings for simple or hard jobs; anything else keeps the model of the lead
+    const pick = input.complexity === 'simple' || input.complexity === 'hard' ? st.childModels?.[input.complexity] : undefined
+    const own = pick && store.loadProfiles().some((p) => p.id === pick.profileId) ? pick : undefined
     const meta = await this.startSession({
-      profileId: lead.profileId,
+      profileId: own?.profileId ?? lead.profileId,
       cwd,
-      model: lead.model,
-      effort: lead.effort,
+      model: own ? own.model : lead.model,
+      effort: own ? undefined : lead.effort,
       permissionMode: st.childMode ?? 'full',
       browser: st.childBrowser !== false && lead.engine !== 'hermes',
       title: input.title

@@ -273,6 +273,11 @@ export interface UsageSummary {
   limits?: RateLimitSnapshot
 }
 
+export interface ChildModel {
+  profileId: string
+  model: string
+}
+
 export interface AppSettings {
   /** where Jolty keeps profiles, conversations and usage (read-only) */
   dataDir: string
@@ -282,6 +287,8 @@ export interface AppSettings {
   childMode?: PermissionMode
   /** sessions a chat starts get the Jolty browser; on unless false */
   childBrowser?: boolean
+  /** a model of its own for started sessions by how hard the job is; unset means the model of the chat that starts them */
+  childModels?: { simple?: ChildModel; hard?: ChildModel }
   claudePath?: string
   codexPath?: string
   /** model labels already announced, so a new one gets a single notification */

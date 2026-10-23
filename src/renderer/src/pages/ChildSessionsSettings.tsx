@@ -1,13 +1,37 @@
 import { GitFork } from 'lucide-react'
 import type { AppSettings, PermissionMode } from '@shared/types'
-import { MODES } from '../components/ModelPicker'
-import { api } from '../store'
+import { MODES, useAllModels } from '../components/ModelPicker'
+import { api, useStore } from '../store'
 import { tr } from '@shared/i18n'
 
 /** How the sessions a chat starts for the parts of a job begin: their permissions and the browser. */
 export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: AppSettings) => void }) {
   // "plan" and "ask" would leave a session waiting for someone to approve it
   const modes = MODES.filter((m) => m.id !== 'plan' && m.id !== 'ask')
+  const profiles = useStore((x) => x.profiles).filter((p) => p.engine !== 'hermes')
+  const groups = useAllModels(profiles)
+  const setModel = async (kind: 'simple' | 'hard', value: string): Promise<void> => {
+    const [profileId, ...rest] = value.split('|')
+    const next = { ...s.childModels, [kind]: value ? { profileId, model: rest.join('|') } : undefined }
+    setS(await api.app.saveSettings({ childModels: next }))
+  }
+  const modelSelect = (kind: 'simple' | 'hard', label: string) => (
+    <div className="field" style={{ marginTop: 10 }}>
+      <label>{label}</label>
+      <select className="select" value={s.childModels?.[kind] ? `${s.childModels[kind]!.profileId}|${s.childModels[kind]!.model}` : ''} onChange={(e) => void setModel(kind, e.target.value)}>
+        <option value="">{tr("Același model ca chatul")}</option>
+        {groups.map((g) => (
+          <optgroup key={g.profile.id} label={g.profile.name}>
+            {g.models.map((m) => (
+              <option key={m.id} value={`${g.profile.id}|${m.id}`}>
+                {m.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </div>
+  )
   return (
     <div className="card" style={{ marginBottom: 14 }}>
       <div className="row" style={{ marginBottom: 10 }}>
@@ -28,6 +52,11 @@ export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: A
           </option>
         ))}
       </select>
+      <p className="muted small" style={{ marginBottom: 0 }}>
+        {tr("Modelul sesiunilor pornite, după cât de grea e sarcina (chatul alege când pornește sesiunea). Lăsat pe „Același model”, sesiunea folosește modelul chatului.")}
+      </p>
+      {modelSelect('simple', tr("Sarcini simple"))}
+      {modelSelect('hard', tr("Sarcini grele"))}
       <label className="row" style={{ marginTop: 10, cursor: 'pointer' }}>
         <input type="checkbox" checked={s.childBrowser !== false} onChange={async (e) => setS(await api.app.saveSettings({ childBrowser: e.target.checked }))} />
         <span>{tr("Cu acces la browserul Jolty")}</span>
