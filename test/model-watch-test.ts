@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { candidates, pickAuto } from '../src/main/auto-model'
 import { FLAG_DAYS, flagOf, observe, parseOllamaTags, parseProviderList, withBadges } from '../src/main/model-watch-core'
 import { modelScore, parseRemoteScores, setRemoteScores } from '../src/shared/scores'
 import type { ModelOption, Profile } from '../src/shared/types'
@@ -148,3 +149,18 @@ test('scores: substring matching, remote before the built-in table, no patterns 
   assert.equal(modelScore(cloud, { id: 'opus', label: 'Opus 5.5', score: attached }), attached)
   setRemoteScores([])
 })
+
+test('auto choice: the strongest model for a hard job, the fastest good enough one for a simple job', () => {
+  const sub = { id: 'a', name: 'A', engine: 'claude', auth: 'subscription' } as Profile
+  const api = { id: 'b', name: 'B', engine: 'claude', auth: 'endpoint' } as Profile
+  const all = [
+    ...candidates(sub, [{ id: 'opus', label: 'Opus 5.5' }, { id: 'sonnet', label: 'Sonnet 5.5' }, { id: 'haiku', label: 'Haiku 4.5' }]),
+    ...candidates(api, [{ id: 'deepseek-flash', label: 'deepseek-flash' }, { id: 'unknown-model', label: 'unknown-model' }])
+  ]
+  assert.equal(pickAuto('hard', all)?.model, 'opus')
+  // Haiku is faster than Sonnet but too weak (17), DeepSeek Flash is the fastest above the bar
+  assert.equal(pickAuto('simple', all)?.model, 'deepseek-flash')
+  assert.equal(pickAuto('simple', all.filter((c) => c.profileId === 'a'))?.model, 'sonnet')
+  assert.equal(pickAuto('hard', []), undefined)
+})
+

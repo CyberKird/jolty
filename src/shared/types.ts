@@ -294,6 +294,8 @@ export interface AppSettings {
   childBrowser?: boolean
   /** a model of its own for started sessions by how hard the job is; unset means the model of the chat that starts them */
   childModels?: { simple?: ChildModel; hard?: ChildModel }
+  /** a job's model is chosen from the models Jolty has (by score), where Settings gives none; off unless true */
+  childAutoModel?: boolean
   claudePath?: string
   codexPath?: string
   /** no longer used: the model watch keeps what it has seen in model-watch.json */

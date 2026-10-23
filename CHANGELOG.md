@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.9
+
+### New
+
+- Jolty can choose the model of a started session for you. A new box in the card for sessions started by a chat: where the model is left on "Same model as the chat", Jolty picks from the accounts and providers you have connected, by the score in the model picker. A hard job gets the strongest model, a simple one the fastest model that is still good enough. Accounts close to their limit are skipped. It is off until you tick it.
+
 ## 0.7.8
 
 ### New

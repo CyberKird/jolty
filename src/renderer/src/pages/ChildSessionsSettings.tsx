@@ -58,6 +58,15 @@ export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: A
       {modelSelect('simple', tr("Sarcini simple"))}
       {modelSelect('hard', tr("Sarcini grele"))}
       <label className="row" style={{ marginTop: 10, cursor: 'pointer' }}>
+        <input type="checkbox" checked={s.childAutoModel === true} onChange={async (e) => setS(await api.app.saveSettings({ childAutoModel: e.target.checked }))} />
+        <span>
+          {tr("Alege modelul automat, după ce are Jolty")}
+          <span className="muted small" style={{ display: 'block' }}>
+            {tr("Acolo unde mai sus e „Același model ca chatul”, Jolty alege din conturile și furnizorii conectați, după scorul din selector: cel mai puternic pentru sarcini grele, cel mai rapid care e destul de bun pentru cele simple. Conturile aproape de limită sunt sărite.")}
+          </span>
+        </span>
+      </label>
+      <label className="row" style={{ marginTop: 10, cursor: 'pointer' }}>
         <input type="checkbox" checked={s.childBrowser !== false} onChange={async (e) => setS(await api.app.saveSettings({ childBrowser: e.target.checked }))} />
         <span>{tr("Cu acces la browserul Jolty")}</span>
       </label>

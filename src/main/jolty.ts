@@ -49,6 +49,7 @@ import { learningNudge } from './learning'
 import { forget } from './recall'
 import { Scheduler } from './scheduler'
 import * as modelWatch from './model-watch'
+import { candidates, FULL_PERCENT, pickAuto, type Candidate } from './auto-model'
 import type { ScheduledTask } from '@shared/schedule'
 import { tr } from '@shared/i18n'
 import { withParallelInstruction } from '@shared/parallel'
@@ -776,8 +777,11 @@ export class Jolty {
     }
     const st = store.loadSettings()
     // a model chosen in Settings for simple or hard jobs; anything else keeps the model of the lead
-    const pick = input.complexity === 'simple' || input.complexity === 'hard' ? st.childModels?.[input.complexity] : undefined
+    const kind = input.complexity === 'simple' || input.complexity === 'hard' ? input.complexity : undefined
+    let pick: { profileId: string; model: string; label?: string } | undefined = kind ? st.childModels?.[kind] : undefined
+    if (kind && !pick && st.childAutoModel) pick = await this.autoModel(kind)
     const own = pick && store.loadProfiles().some((p) => p.id === pick.profileId) ? pick : undefined
+    if (own?.label) note += ` Model chosen by Jolty for a ${kind} job: ${own.label}.`
     const meta = await this.startSession({
       profileId: own?.profileId ?? lead.profileId,
       cwd,
@@ -799,6 +803,27 @@ export class Jolty {
     const head = `[Session started by Jolty for the lead session "${lead.title}". You have one job, below. ${where} The project ledger (ledger_read, ledger_write) holds what every session learned: read it before you explore, and write there what a later session would need. End with a short summary for the lead: what you did, what is left, anything surprising.]`
     await this.sendMessage(meta.id, `${head}\n\n${input.brief}`, [], input.brief)
     return { meta, note }
+  }
+
+  /** The best model for a simple or hard job among the usable accounts and providers (logged in, key set, not at its limit). */
+  private async autoModel(kind: 'simple' | 'hard'): Promise<Candidate | undefined> {
+    const limits = store.loadLimits()
+    const lists = await Promise.all(
+      store
+        .loadProfiles()
+        .filter((p) => !p.local && p.engine !== 'hermes' && (p.auth !== 'endpoint' || store.getSecret(p.id)) && !limits[p.id]?.windows.some((w) => w.usedPercent >= FULL_PERCENT))
+        .map(async (p) => {
+          try {
+            const d = this.driver(p.engine)
+            if (p.auth === 'subscription' && !(await d.status(p)).loggedIn) return []
+            const models = await Promise.race([d.models(p), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
+            return candidates(p, models)
+          } catch {
+            return []
+          }
+        })
+    )
+    return pickAuto(kind, lists.flat())
   }
 
   private async sendToChild(leadId: string, id: string, text: string): Promise<void> {

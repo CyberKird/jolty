@@ -900,5 +900,7 @@
  "Sarcini grele": "कठिन काम",
  "Cu acces la browserul Jolty": "Jolty ब्राउज़र की पहुँच के साथ",
  "Gemini (prin browserul Jolty)": "Gemini (Jolty ब्राउज़र के ज़रिए)",
- "Gemini folosește contul tău Google din browserul Jolty, e mai lent (cam un minut) și, dacă nu merge, imaginea e descrisă de profilul automat.": "Gemini Jolty ब्राउज़र में आपके Google खाते का इस्तेमाल करता है और धीमा है (लगभग एक मिनट); न चले तो ऑटोमैटिक प्रोफ़ाइल इमेज का वर्णन करती है।"
+ "Gemini folosește contul tău Google din browserul Jolty, e mai lent (cam un minut) și, dacă nu merge, imaginea e descrisă de profilul automat.": "Gemini Jolty ब्राउज़र में आपके Google खाते का इस्तेमाल करता है और धीमा है (लगभग एक मिनट); न चले तो ऑटोमैटिक प्रोफ़ाइल इमेज का वर्णन करती है।",
+ "Alege modelul automat, după ce are Jolty": "Jolty में जो मॉडल हैं, उनमें से अपने आप चुनें",
+ "Acolo unde mai sus e „Același model ca chatul”, Jolty alege din conturile și furnizorii conectați, după scorul din selector: cel mai puternic pentru sarcini grele, cel mai rapid care e destul de bun pentru cele simple. Conturile aproape de limită sunt sărite.": "ऊपर जहाँ “चैट वाला ही मॉडल” है, वहाँ Jolty जुड़े हुए खातों और प्रदाताओं में से चयनकर्ता के स्कोर के आधार पर चुनता है: कठिन कामों के लिए सबसे मज़बूत, आसान कामों के लिए सबसे तेज़ जो काफ़ी अच्छा हो। सीमा के क़रीब वाले खाते छोड़ दिए जाते हैं।"
 }

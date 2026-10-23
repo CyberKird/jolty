@@ -900,5 +900,7 @@
  "Sarcini grele": "難しいタスク",
  "Cu acces la browserul Jolty": "Jolty ブラウザへのアクセスあり",
  "Gemini (prin browserul Jolty)": "Gemini (Jolty ブラウザ経由)",
- "Gemini folosește contul tău Google din browserul Jolty, e mai lent (cam un minut) și, dacă nu merge, imaginea e descrisă de profilul automat.": "Gemini は Jolty ブラウザ内のあなたの Google アカウントを使い、少し遅くなります (約 1 分)。うまくいかない場合は、自動プロファイルが画像を説明します。"
+ "Gemini folosește contul tău Google din browserul Jolty, e mai lent (cam un minut) și, dacă nu merge, imaginea e descrisă de profilul automat.": "Gemini は Jolty ブラウザ内のあなたの Google アカウントを使い、少し遅くなります (約 1 分)。うまくいかない場合は、自動プロファイルが画像を説明します。",
+ "Alege modelul automat, după ce are Jolty": "Jolty にあるモデルから自動で選ぶ",
+ "Acolo unde mai sus e „Același model ca chatul”, Jolty alege din conturile și furnizorii conectați, după scorul din selector: cel mai puternic pentru sarcini grele, cel mai rapid care e destul de bun pentru cele simple. Conturile aproape de limită sunt sărite.": "上で「チャットと同じモデル」になっている場合、Jolty は接続済みのアカウントとプロバイダーから、セレクターのスコアに基づいて選びます。難しいタスクには最も強いモデル、簡単なタスクには十分な性能で最も速いモデルです。上限に近いアカウントは除外されます。"
 }
