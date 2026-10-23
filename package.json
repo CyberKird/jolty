@@ -14,7 +14,7 @@
     "start": "electron-vite preview",
     "dist:win": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish never",
     "dist:release": "node scripts/fetch-redist.mjs && electron-vite build && electron-builder --win --x64 --publish always",
-    "test": "npm run test:store && npm run test:agent && npm run test:power && npm run test:profile-processes && npm run test:codex-lifecycle && npm run test:preview && npm run test:updater && npm run test:eta && npm run test:handoff && npm run test:workers && npm run test:changelog && npm run test:i18n",
+    "test": "npm run test:store && npm run test:agent && npm run test:power && npm run test:profile-processes && npm run test:codex-lifecycle && npm run test:preview && npm run test:updater && npm run test:eta && npm run test:handoff && npm run test:workers && npm run test:changelog && npm run test:gemini && npm run test:i18n",
     "test:store": "esbuild test/store-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --outfile=out-test/store-test.mjs --log-level=warning && node --test out-test/store-test.mjs",
     "test:agent": "esbuild test/agent-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --external:ws --outfile=out-test/agent-test.mjs --log-level=warning && node --test out-test/agent-test.mjs",
     "test:power": "node test/jbrowser/run.mjs test/power-test.ts --test",
@@ -37,6 +37,7 @@
     "test:plan": "electron-vite build && node test/plan-test.mjs",
     "test:livecode": "electron-vite build && node test/livecode-test.mjs",
     "icon": "electron scripts/make-icon.cjs",
+    "test:gemini": "esbuild test/gemini-vision-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/gemini-vision-test.cjs --log-level=warning && node --test out-test/gemini-vision-test.cjs",
     "test:i18n": "node scripts/i18n-check.mjs",
     "test:updater": "esbuild test/updater-test.ts --bundle --platform=node --format=cjs --alias:electron=./test/updater-stubs.ts --alias:electron-updater=./test/updater-stubs.ts --alias:@shared=./src/shared --outfile=out-test/updater-test.cjs --log-level=warning && node --test out-test/updater-test.cjs",
     "test:workers": "esbuild test/workers-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --outfile=out-test/workers-test.mjs --log-level=warning && node --test out-test/workers-test.mjs"

@@ -946,6 +946,50 @@ export class ClaudeDriver implements EngineDriver {
     }
   }
 
+  /**
+   * One-shot agent that can only use the Jolty browser (no files, no shell): the caller's `sid` names the
+   * browser session, so it can release the tabs afterwards. Returns the agent's final text.
+   */
+  async browseOnce(profile: Profile, prompt: string, sid: string, maxTurns = 25, timeoutMs = 150000): Promise<string> {
+    const sdk = await loadSdk()
+    prepareProfileDir(profile)
+    const prefix = `mcp__${BROWSER_SERVER}__`
+    const canUseTool: CanUseTool = async (name, input) =>
+      name.startsWith(prefix) && !BROWSER_BLOCKED_TOOLS.includes(name.slice(prefix.length))
+        ? { behavior: 'allow', updatedInput: input }
+        : { behavior: 'deny', message: 'Only the browser tools are available here.' }
+    // permission callbacks need streaming input, so the one prompt goes in as a stream
+    async function* one(): AsyncGenerator<SDKUserMessage> {
+      yield userMessage(prompt, [])
+    }
+    const q = sdk.query({
+      prompt: one(),
+      options: {
+        ...baseOptions(profile, os.homedir(), 'haiku'),
+        model: 'haiku',
+        settingSources: [],
+        tools: [],
+        maxTurns,
+        mcpServers: { [BROWSER_SERVER]: claudeBrowserServer(sid) },
+        disallowedTools: BROWSER_BLOCKED_TOOLS.map((t) => `${prefix}${t}`),
+        canUseTool
+      }
+    })
+    const timer = setTimeout(() => q.close(), timeoutMs)
+    try {
+      for await (const m of q) {
+        if (m.type === 'result') {
+          if (m.subtype === 'success' && m.result.trim()) return m.result.trim()
+          throw new Error(tr("navigarea a eșuat ({subtype})", { subtype: m.subtype }))
+        }
+      }
+      throw new Error(tr("navigarea nu a primit răspuns"))
+    } finally {
+      clearTimeout(timer)
+      q.close()
+    }
+  }
+
   async shutdown(): Promise<void> {
     // sessions own their processes; nothing global to stop
   }

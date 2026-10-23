@@ -33,6 +33,8 @@ import { hermesExecutable } from './engines/hermes-runtime'
 import { hermesMode } from './engines/hermes-session'
 import type { EngineDriver, EngineHost, EngineSession } from './engines/types'
 import { DESCRIBE_PROMPT } from './engines/claude'
+import { describeWithGemini } from './gemini-vision'
+import { GEMINI_BROWSER } from '@shared/gemini'
 import { endpointCost, fetchBalance } from './balance'
 import * as local from './local'
 import { claudeSettingsOverride } from './runtime'
@@ -558,15 +560,44 @@ export class Jolty {
     )
   }
 
+  /** Gemini through the Jolty browser; undefined when it could not, after telling the user why. */
+  private async describeWithGeminiBrowser(sessionId: string, images: Attachment[]): Promise<string | undefined> {
+    const notice = (text: string, level: 'info' | 'warn'): void =>
+      this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text, level } })
+    const agent = store.loadProfiles().find((p) => p.engine === 'claude' && p.auth === 'subscription')
+    if (!agent) {
+      notice(tr("Gemini prin browserul Jolty are nevoie de un profil Claude cu abonament. Folosesc profilul automat."), 'warn')
+      return undefined
+    }
+    notice(tr("Modelul curent nu vede imagini: le descrie Gemini prin browserul Jolty (durează cam un minut)..."), 'info')
+    const r = await describeWithGemini(images, DESCRIBE_PROMPT, (prompt, sid) => this.claude.browseOnce(agent, prompt, sid), (sid) => nativeBrowser.release(sid))
+    if (r.ok) return r.text
+    notice(
+      r.needLogin
+        ? tr("Gemini nu e conectat. Deschide https://gemini.google.com în fereastra browserului Jolty și conectează-te o dată cu contul Google. Descriu imaginea cu profilul automat.")
+        : tr("Gemini nu a putut descrie imaginea ({reason}). Descriu imaginea cu profilul automat.", { reason: r.reason }),
+      'warn'
+    )
+    return undefined
+  }
+
   private async describeImages(sessionId: string, images: Attachment[]): Promise<string> {
+    if (store.loadSettings().visionProfileId === GEMINI_BROWSER) {
+      const text = await this.describeWithGeminiBrowser(sessionId, images)
+      if (text !== undefined) return this.describedBy(images, 'Gemini', text)
+    }
     const vp = this.visionProfile()
     if (!vp) throw new Error(tr("Niciun profil nu poate citi imagini: adaugă un profil Claude sau un model local cu vision."))
     this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: tr("Modelul curent nu vede imagini: le descrie „{name}”...", { name: vp.name }), level: 'info' } })
     const text = await this.driver(vp.engine).describe(vp, images, DESCRIBE_PROMPT)
-    // for the model, not the user: kept in English whatever the interface language
+    return this.describedBy(images, vp.name, text)
+  }
+
+  /** For the model, not the user: kept in English whatever the interface language. */
+  private describedBy(images: Attachment[], who: string, text: string): string {
     return images.length === 1
-      ? `[Attached image: ${images[0].name}. Your model cannot see it, so here is a description of it by ${vp.name}:]\n${text}\n[End of description]`
-      : `[${images.length} attached images (${images.map((i) => i.name).join(', ')}). Their description, by ${vp.name}:]\n${text}\n[End of description]`
+      ? `[Attached image: ${images[0].name}. Your model cannot see it, so here is a description of it by ${who}:]\n${text}\n[End of description]`
+      : `[${images.length} attached images (${images.map((i) => i.name).join(', ')}). Their description, by ${who}:]\n${text}\n[End of description]`
   }
 
   async sendMessage(sessionId: string, text: string, attachments: Attachment[] = [], display?: string): Promise<void> {
