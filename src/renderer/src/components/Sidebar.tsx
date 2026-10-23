@@ -95,7 +95,19 @@ function UsageMeter() {
   const running = Object.values(status).some((s) => s === 'running')
   const [refreshing, setRefreshing] = useState(false)
   useEffect(() => {
-    for (const p of profiles) refreshLimitsSoon(p)
+    const probe = (): void => {
+      if (!document.hidden) for (const p of profiles) void refreshLimitsSoon(p)
+    }
+    probe()
+    // live without the refresh button: every minute while visible, and at once when the window comes back (refreshLimitsSoon throttles per account)
+    const timer = setInterval(probe, 65e3)
+    document.addEventListener('visibilitychange', probe)
+    window.addEventListener('focus', probe)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', probe)
+      window.removeEventListener('focus', probe)
+    }
   }, [profiles])
   // a profile with empty windows but a note (rate-limited probe) stays visible so the row does not vanish
   const rows = profiles.filter((p) => isMiMoProfile(p) || limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id])

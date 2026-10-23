@@ -107,7 +107,7 @@ const TOOLS = [
   {
     name: 'start_session',
     description:
-      'Starts a new session for one job and returns at once; the session works on its own, with the same account, model and effort as this chat, in Auto mode if this chat uses it and "accept edits" otherwise. In a git repository it gets its own worktree and branch cut from the last commit (your uncommitted changes and untracked files such as node_modules are not in it), so sessions never write the same files; it commits its work on that branch. The session does not see this conversation: the brief must hold everything it needs (goal, the files and decisions that matter, what done looks like). Up to 8 sessions work at once. Then use wait_for_sessions, and merge the branches yourself.',
+      'Starts a new session for one job and returns at once; the session works on its own, with the same account, model and effort as this chat, with the permission mode chosen in the Jolty settings (no permissions unless the user changed it) and the Jolty browser. In a git repository it gets its own worktree and branch cut from the last commit (your uncommitted changes and untracked files such as node_modules are not in it), so sessions never write the same files; it commits its work on that branch. The session does not see this conversation: the brief must hold everything it needs (goal, the files and decisions that matter, what done looks like). Up to 8 sessions work at once. Then use wait_for_sessions, and merge the branches yourself.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -2,6 +2,7 @@ import { ExternalLink, Eye, FolderOpen, Globe, KeyRound, Languages, Save, Shield
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { BrowserSettings } from './BrowserSettings'
+import { ChildSessionsSettings } from './ChildSessionsSettings'
 import { api, errMsg, timeAgo, useStore } from '../store'
 import { setMascot } from '../mascot/Mascot'
 import { openWhatsNew } from '../components/WhatsNew'
@@ -25,6 +26,7 @@ export function SettingsPage() {
         <h1 className="page-title">{tr("Setări")}</h1>
         <p className="lead">Jolty {version}</p>
         <UpdatesCard />
+        <ChildSessionsSettings s={s} setS={setS} />
         <div className="card" style={{ marginBottom: 14 }}>
           <div className="row" style={{ marginBottom: 10 }}>
             <Languages size={16} color="var(--volt)" />

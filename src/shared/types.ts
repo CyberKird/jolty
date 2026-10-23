@@ -278,6 +278,10 @@ export interface AppSettings {
   dataDir: string
   /** profile that describes images for models that cannot see them */
   visionProfileId?: string
+  /** permission mode of sessions a chat starts with start_session; "full" (no permissions) unless set */
+  childMode?: PermissionMode
+  /** sessions a chat starts get the Jolty browser; on unless false */
+  childBrowser?: boolean
   claudePath?: string
   codexPath?: string
   /** model labels already announced, so a new one gets a single notification */

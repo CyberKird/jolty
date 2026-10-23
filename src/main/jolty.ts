@@ -41,7 +41,7 @@ import { handoffPrompt, roughTokens, sameProvider } from './handoff'
 import { gitDiff, reviewerFor, reviewPrompt, transcriptDiff } from './review'
 import * as store from './store'
 import { removeProfileFiles } from './profile-files'
-import { bindJoltyTools, taskMode } from './jolty-tools'
+import { bindJoltyTools } from './jolty-tools'
 import { addWorktree, removeWorktree } from './workers'
 import { learningNudge } from './learning'
 import { forget } from './recall'
@@ -719,7 +719,7 @@ export class Jolty {
   /**
    * One job of a lead session, in a session of its own that starts working at once. In a git repository it gets
    * a worktree and a branch, so the sessions never write the same files. Same account, model and effort as the
-   * lead, and never a freer mode than Auto or "accept edits": nobody approves its steps one by one.
+   * lead; nobody approves its steps one by one, so it starts in the mode from Settings (no permissions unless changed), with the browser.
    */
   private async startChild(leadId: string, input: { title: string; brief: string; isolate: boolean }): Promise<{ meta: SessionMeta; note: string }> {
     const lead = this.meta(leadId)
@@ -739,7 +739,16 @@ export class Jolty {
         note = `Its own worktree: branch ${tree.info.branch}, folder ${tree.info.path}, cut from commit ${tree.info.base.slice(0, 8)}. Merge the branch when it is done.`
       } else note = 'The folder is not a git repository with a commit, so it works in the same folder as you: do not give it files you are editing yourself.'
     }
-    const meta = await this.startSession({ profileId: lead.profileId, cwd, model: lead.model, effort: lead.effort, permissionMode: taskMode(lead.permissionMode), title: input.title })
+    const st = store.loadSettings()
+    const meta = await this.startSession({
+      profileId: lead.profileId,
+      cwd,
+      model: lead.model,
+      effort: lead.effort,
+      permissionMode: st.childMode ?? 'full',
+      browser: st.childBrowser !== false && lead.engine !== 'hermes',
+      title: input.title
+    })
     meta.parentId = leadId
     meta.worktree = tree?.info
     meta.titled = true
