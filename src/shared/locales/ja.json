@@ -864,5 +864,21 @@
  "Sunet la notificări": "通知音",
  "Sunetul Windows care însoțește notificările de mai sus.": "上の通知に付く Windows のサウンドです。",
  "Jolty: planul așteaptă aprobarea ta": "Jolty: プランがあなたの承認を待っています",
- "Jolty: are nevoie de acordul tău": "Jolty: あなたの許可が必要です"
+ "Jolty: are nevoie de acordul tău": "Jolty: あなたの許可が必要です",
+ "Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.": "新しいアカウントやモデルは、キャッシュなしで文脈全体を最初から読みます。圧縮しておけば、要約だけを読みます。",
+ "Compactează înainte ({k}k tokeni acum)": "先に圧縮する (現在 {k}k トークン)",
+ "Același chat, pe celălalt cont. Cu bifa de sus, compactat înainte.": "同じ会話を別のアカウントで続けます。上のチェックがオンなら、先に圧縮します。",
+ "Chat nou cu un rezumat compact al istoricului.": "履歴のコンパクトな要約を持つ新しい会話。",
+ "același chat": "同じ会話",
+ "Chat nou cu doar un rezumat de câțiva mii de tokeni, fără compactare.": "圧縮せず、数千トークンの要約だけを持つ新しい会話。",
+ "rezumat rapid": "簡易要約",
+ "Copiază numele branch-ului": "ブランチ名をコピー",
+ "Arată worktree-ul în Explorer": "ワークツリーをエクスプローラーで表示",
+ "Ascunde din Live": "Live から非表示",
+ "Așteaptă aprobarea ta": "あなたの承認待ち",
+ "Rezumat compact, câțiva mii de tokeni": "コンパクトな要約、数千トークン",
+ "Același chat, cu tot contextul citit de la zero pe celălalt cont": "同じ会話で、別のアカウントが文脈全体を最初から読みます",
+ "Tot contextul ({k}k)": "文脈全体 ({k}k)",
+ "Compactez conversația înainte, ca să nu o recitească tot noul cont sau model.": "新しいアカウントやモデルが全部読まずに済むよう、先に会話を圧縮しています。",
+ "Compactat: de la {before}k la {after}k tokeni.": "圧縮しました: {before}k から {after}k トークンへ。"
 }

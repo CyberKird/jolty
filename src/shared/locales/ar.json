@@ -864,5 +864,21 @@
  "Sunet la notificări": "صوت الإشعارات",
  "Sunetul Windows care însoțește notificările de mai sus.": "صوت Windows الذي يصاحب الإشعارات أعلاه.",
  "Jolty: planul așteaptă aprobarea ta": "Jolty: الخطة تنتظر موافقتك",
- "Jolty: are nevoie de acordul tău": "Jolty: يحتاج إلى موافقتك"
+ "Jolty: are nevoie de acordul tău": "Jolty: يحتاج إلى موافقتك",
+ "Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.": "الحساب أو النموذج الجديد يقرأ السياق كله من الصفر بلا ذاكرة مؤقتة. بعد الضغط يقرأ الملخص فقط.",
+ "Compactează înainte ({k}k tokeni acum)": "اضغط أولاً ({k}k رمز الآن)",
+ "Același chat, pe celălalt cont. Cu bifa de sus, compactat înainte.": "المحادثة نفسها على الحساب الآخر. مع تفعيل المربع أعلاه تُضغط أولاً.",
+ "Chat nou cu un rezumat compact al istoricului.": "محادثة جديدة بملخص مضغوط للسجل.",
+ "același chat": "المحادثة نفسها",
+ "Chat nou cu doar un rezumat de câțiva mii de tokeni, fără compactare.": "محادثة جديدة بملخص من بضعة آلاف رمز فقط، بلا ضغط.",
+ "rezumat rapid": "ملخص سريع",
+ "Copiază numele branch-ului": "نسخ اسم الفرع",
+ "Arată worktree-ul în Explorer": "إظهار worktree في المستكشف",
+ "Ascunde din Live": "إخفاء من Live",
+ "Așteaptă aprobarea ta": "بانتظار موافقتك",
+ "Rezumat compact, câțiva mii de tokeni": "ملخص مضغوط، بضعة آلاف رمز",
+ "Același chat, cu tot contextul citit de la zero pe celălalt cont": "المحادثة نفسها، ويُقرأ السياق كله من الصفر على الحساب الآخر",
+ "Tot contextul ({k}k)": "السياق كله ({k}k)",
+ "Compactez conversația înainte, ca să nu o recitească tot noul cont sau model.": "جارٍ ضغط المحادثة أولاً حتى لا يقرأها الحساب أو النموذج الجديد كلها.",
+ "Compactat: de la {before}k la {after}k tokeni.": "تم الضغط: من {before}k إلى {after}k رمز."
 }

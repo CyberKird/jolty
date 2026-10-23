@@ -25,6 +25,8 @@ export interface EngineSession {
   send(text: string, images?: Attachment[], clientId?: string): Promise<void>
   /** puts the project's files back as they were before the user message `clientId` */
   rewind(clientId: string, dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }>
+  /** the saved conversation of a chat that is resumed: engines that keep a task list pick it up again */
+  restorePlan?(items: ChatItem[]): void
   interrupt(): Promise<void>
   compact(): Promise<void>
   setModel(model: string): Promise<void>

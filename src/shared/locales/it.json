@@ -864,5 +864,21 @@
  "Sunet la notificări": "Suono delle notifiche",
  "Sunetul Windows care însoțește notificările de mai sus.": "Il suono di Windows che accompagna le notifiche qui sopra.",
  "Jolty: planul așteaptă aprobarea ta": "Jolty: il piano attende la tua approvazione",
- "Jolty: are nevoie de acordul tău": "Jolty: ha bisogno del tuo consenso"
+ "Jolty: are nevoie de acordul tău": "Jolty: ha bisogno del tuo consenso",
+ "Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.": "Un nuovo account o modello legge tutto il contesto da zero, senza cache. Compattato, legge solo il riassunto.",
+ "Compactează înainte ({k}k tokeni acum)": "Compatta prima ({k}k token ora)",
+ "Același chat, pe celălalt cont. Cu bifa de sus, compactat înainte.": "La stessa conversazione, sull'altro account. Con la casella sopra spuntata, compattata prima.",
+ "Chat nou cu un rezumat compact al istoricului.": "Una nuova conversazione con un riassunto compatto della cronologia.",
+ "același chat": "stessa conversazione",
+ "Chat nou cu doar un rezumat de câțiva mii de tokeni, fără compactare.": "Una nuova conversazione con solo un riassunto di qualche migliaio di token, senza compattazione.",
+ "rezumat rapid": "riassunto rapido",
+ "Copiază numele branch-ului": "Copia il nome del branch",
+ "Arată worktree-ul în Explorer": "Mostra il worktree in Esplora file",
+ "Ascunde din Live": "Nascondi da Live",
+ "Așteaptă aprobarea ta": "In attesa della tua approvazione",
+ "Rezumat compact, câțiva mii de tokeni": "Riassunto compatto, qualche migliaio di token",
+ "Același chat, cu tot contextul citit de la zero pe celălalt cont": "La stessa conversazione, con tutto il contesto letto da zero sull'altro account",
+ "Tot contextul ({k}k)": "Tutto il contesto ({k}k)",
+ "Compactez conversația înainte, ca să nu o recitească tot noul cont sau model.": "Compatto prima la conversazione, così il nuovo account o modello non la rilegge tutta.",
+ "Compactat: de la {before}k la {after}k tokeni.": "Compattato: da {before}k a {after}k token."
 }

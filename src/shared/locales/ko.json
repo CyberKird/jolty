@@ -864,5 +864,21 @@
  "Sunet la notificări": "알림 소리",
  "Sunetul Windows care însoțește notificările de mai sus.": "위 알림과 함께 나는 Windows 소리입니다.",
  "Jolty: planul așteaptă aprobarea ta": "Jolty: 계획이 승인을 기다리고 있어요",
- "Jolty: are nevoie de acordul tău": "Jolty: 허락이 필요해요"
+ "Jolty: are nevoie de acordul tău": "Jolty: 허락이 필요해요",
+ "Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.": "새 계정이나 모델은 캐시 없이 컨텍스트 전체를 처음부터 읽습니다. 압축해 두면 요약만 읽습니다.",
+ "Compactează înainte ({k}k tokeni acum)": "먼저 압축 (현재 {k}k 토큰)",
+ "Același chat, pe celălalt cont. Cu bifa de sus, compactat înainte.": "같은 대화를 다른 계정에서 이어갑니다. 위 체크가 켜져 있으면 먼저 압축합니다.",
+ "Chat nou cu un rezumat compact al istoricului.": "기록의 간단한 요약이 담긴 새 대화.",
+ "același chat": "같은 대화",
+ "Chat nou cu doar un rezumat de câțiva mii de tokeni, fără compactare.": "압축 없이 수천 토큰 분량의 요약만 담긴 새 대화.",
+ "rezumat rapid": "빠른 요약",
+ "Copiază numele branch-ului": "브랜치 이름 복사",
+ "Arată worktree-ul în Explorer": "탐색기에서 워크트리 보기",
+ "Ascunde din Live": "Live에서 숨기기",
+ "Așteaptă aprobarea ta": "승인을 기다리는 중",
+ "Rezumat compact, câțiva mii de tokeni": "간단한 요약, 수천 토큰",
+ "Același chat, cu tot contextul citit de la zero pe celălalt cont": "같은 대화이며, 다른 계정이 컨텍스트 전체를 처음부터 읽습니다",
+ "Tot contextul ({k}k)": "전체 컨텍스트 ({k}k)",
+ "Compactez conversația înainte, ca să nu o recitească tot noul cont sau model.": "새 계정이나 모델이 전부 읽지 않도록 먼저 대화를 압축하는 중입니다.",
+ "Compactat: de la {before}k la {after}k tokeni.": "압축됨: {before}k에서 {after}k 토큰으로."
 }

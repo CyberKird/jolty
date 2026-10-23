@@ -1,6 +1,6 @@
 // Claude Code's task list: TaskCreate / TaskUpdate / TaskList (current) and TodoWrite (older
 // versions), folded into the plan steps Jolty shows above the composer and in the Plan tab.
-import type { PlanStep } from '@shared/types'
+import type { ChatItem, PlanStep } from './types'
 
 type Status = 'pending' | 'in_progress' | 'completed'
 
@@ -52,6 +52,22 @@ export class TaskBoard {
     this.tasks = new Map(
       list.map((td, i) => [String(i), { subject: String(td?.content ?? ''), activeForm: td?.activeForm, status: td?.status === 'completed' || td?.status === 'in_progress' ? td.status : 'pending' }])
     )
+  }
+
+  /**
+   * The list as the saved conversation left it, for a chat opened again or resumed after a restart: the
+   * session that replays it goes on from the same tasks, so a later TaskUpdate finds them.
+   */
+  replay(items: ChatItem[]): this {
+    for (const i of items) {
+      if (i.kind !== 'tool') continue
+      // like the live list: TodoWrite and TaskUpdate count as called, TaskCreate needs its answer (the new id)
+      const input = i.input as any
+      if (i.name === 'TodoWrite' && Array.isArray(input?.todos)) this.todos(input.todos)
+      else if (i.name === 'TaskCreate' && i.status === 'done') this.created(input, undefined, i.output || '')
+      else if (i.name === 'TaskUpdate') this.updated(input)
+    }
+    return this
   }
 
   steps(): PlanStep[] {

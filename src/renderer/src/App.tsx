@@ -8,7 +8,7 @@ import { Mascot } from './mascot/Mascot'
 import { WhatsNewHost } from './components/WhatsNew'
 import { PowerBar } from './components/PowerBar'
 import { Sidebar } from './components/Sidebar'
-import { api, useStore } from './store'
+import { api, liveRows, useStore } from './store'
 import { getLang, isRtl, tr } from '@shared/i18n'
 
 // secondary pages load when first opened: the chat is on screen sooner
@@ -107,9 +107,18 @@ export function App() {
   // Ctrl+N new conversation, Ctrl+K search conversations, Ctrl+B sidebar, Ctrl+L live panel
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      const s = useStore.getState()
+      // Alt+1..9: the Nth conversation of the Live list
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+        const row = liveRows(s)[Number(e.key) - 1]
+        if (row) {
+          e.preventDefault()
+          void s.openSession(row.session.id)
+        }
+        return
+      }
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return
       const k = e.key.toLowerCase()
-      const s = useStore.getState()
       if (k === 'n') void s.openSession(undefined)
       else if (k === 'k') {
         if (!s.sidebarOpen) s.setSidebarOpen(true)

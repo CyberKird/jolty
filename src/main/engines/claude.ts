@@ -36,7 +36,7 @@ import { modelInfo } from '../local'
 import { noThinkingUrl } from '../thinking-proxy'
 import { endpointEfforts, endpointThinking } from './thinking'
 import { editDiff, partialJsonString } from './partial-json'
-import { TaskBoard } from './tasks'
+import { TaskBoard } from '@shared/tasks'
 import { getSecret, loadSettings, profileDir, saveSettings } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
@@ -299,6 +299,10 @@ class ClaudeSession implements EngineSession {
   private drafts = new Map<number, { id: string; name: string; json: string; last: number }>()
   private tools = new Map<string, Extract<ChatItem, { kind: 'tool' }>>()
   private board = new TaskBoard()
+
+  restorePlan(items: ChatItem[]): void {
+    this.board.replay(items)
+  }
   private contextWindow?: number
   private contextUsed = 0
   private lastCost = 0
@@ -394,6 +398,10 @@ class ClaudeSession implements EngineSession {
           this.host.emit({ type: 'meta', sessionId: sid, meta: this.meta })
         } else if (m.subtype === 'api_retry') {
           this.notice(tr("Serverul nu răspunde, reîncerc..."), 'warn')
+        } else if (m.subtype === 'compact_boundary' && m.compact_metadata.post_tokens) {
+          // a compaction has no assistant message: the meter would keep showing the size from before it
+          this.contextUsed = m.compact_metadata.post_tokens
+          this.host.emit({ type: 'context', sessionId: sid, used: this.contextUsed, window: this.contextWindow })
         }
         return
       }

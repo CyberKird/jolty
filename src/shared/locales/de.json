@@ -864,5 +864,21 @@
  "Sunet la notificări": "Benachrichtigungston",
  "Sunetul Windows care însoțește notificările de mai sus.": "Der Windows-Ton, der die obigen Benachrichtigungen begleitet.",
  "Jolty: planul așteaptă aprobarea ta": "Jolty: Der Plan wartet auf deine Freigabe",
- "Jolty: are nevoie de acordul tău": "Jolty: braucht deine Zustimmung"
+ "Jolty: are nevoie de acordul tău": "Jolty: braucht deine Zustimmung",
+ "Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.": "Ein neues Konto oder Modell liest den ganzen Kontext von vorn, ohne Cache. Komprimiert liest es nur die Zusammenfassung.",
+ "Compactează înainte ({k}k tokeni acum)": "Vorher komprimieren ({k}k Tokens jetzt)",
+ "Același chat, pe celălalt cont. Cu bifa de sus, compactat înainte.": "Dieselbe Unterhaltung auf dem anderen Konto. Mit dem Haken oben vorher komprimiert.",
+ "Chat nou cu un rezumat compact al istoricului.": "Neue Unterhaltung mit einer kompakten Zusammenfassung des Verlaufs.",
+ "același chat": "dieselbe Unterhaltung",
+ "Chat nou cu doar un rezumat de câțiva mii de tokeni, fără compactare.": "Neue Unterhaltung mit nur einer Zusammenfassung von ein paar tausend Tokens, ohne Komprimierung.",
+ "rezumat rapid": "Kurzfassung",
+ "Copiază numele branch-ului": "Branch-Namen kopieren",
+ "Arată worktree-ul în Explorer": "Worktree im Explorer zeigen",
+ "Ascunde din Live": "Aus Live ausblenden",
+ "Așteaptă aprobarea ta": "Wartet auf deine Freigabe",
+ "Rezumat compact, câțiva mii de tokeni": "Kompakte Zusammenfassung, ein paar tausend Tokens",
+ "Același chat, cu tot contextul citit de la zero pe celălalt cont": "Dieselbe Unterhaltung, der ganze Kontext wird auf dem anderen Konto von vorn gelesen",
+ "Tot contextul ({k}k)": "Ganzer Kontext ({k}k)",
+ "Compactez conversația înainte, ca să nu o recitească tot noul cont sau model.": "Die Unterhaltung wird vorher komprimiert, damit das neue Konto oder Modell nicht alles liest.",
+ "Compactat: de la {before}k la {after}k tokeni.": "Komprimiert: von {before}k auf {after}k Tokens."
 }

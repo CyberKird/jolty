@@ -153,6 +153,7 @@ function registerIpc(): void {
   handle('sessions:setEffort', (id: string, effort: string) => jolty.setEffort(id, effort))
   handle('sessions:setPermissionMode', (id: string, mode) => jolty.setPermissionMode(id, mode as never))
   handle('sessions:compact', (id: string) => jolty.compact(id))
+  handle('sessions:compactAndWait', (id: string) => jolty.compactAndWait(String(id)))
   handle('sessions:rewind', (id: string, itemId: string, dryRun?: boolean) => jolty.rewind(id, String(itemId), dryRun === true))
   handle('sessions:setBrowser', (id: string, on: boolean) => jolty.setBrowser(id, on === true))
   handle('schedules:list', () => jolty.scheduler.list())
@@ -203,8 +204,8 @@ function registerIpc(): void {
     if (typeof rel === 'string' && (typeof html === 'string' || html === null)) preview.draft(rel, html)
   })
   handle('sessions:respond', (id: string, requestId: string, decision) => jolty.respond(id, requestId, decision as never))
-  handle('sessions:handoff', (id: string, target: string, model?: string, effort?: string) =>
-    jolty.handoff(id, target, typeof model === 'string' ? model : undefined, typeof effort === 'string' ? effort : undefined)
+  handle('sessions:handoff', (id: string, target: string, model?: string, effort?: string, fresh?: boolean) =>
+    jolty.handoff(id, target, typeof model === 'string' ? model : undefined, typeof effort === 'string' ? effort : undefined, fresh === true)
   )
   handle('sessions:remove', (id: string) => jolty.removeSession(id))
   handle('sessions:rename', (id: string, title: string) => jolty.renameSession(String(id), String(title)))
@@ -292,6 +293,11 @@ if (!app.requestSingleInstanceLock()) {
   app.exit(0)
 } else {
   app.setAppUserModelId(APP_ID)
+  // a window behind other windows (or without focus) keeps painting: the Live panel's browser picture and the
+  // preview must follow the model while the user works in another app, not only when Jolty is on top
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
+  app.commandLine.appendSwitch('disable-renderer-backgrounding')
   app.on('second-instance', () => {
     if (!win || win.isDestroyed()) return
     if (win.isMinimized()) win.restore()

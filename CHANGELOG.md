@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.7.7
+
+### New
+
+- A Live list above your conversations in the sidebar: every chat that is working (with its current step and how long the turn has run), every chat waiting for your approval (with what it asks), and every chat that finished while you were looking elsewhere. Click one to switch to it, or press Alt+1 to Alt+9. A finished one stays until you open it or dismiss it with the cross.
+- Run several sessions at once. A chat can now start sessions of its own for the parts of a job (`start_session`): each gets its own git worktree and branch cut from the last commit, so two of them never write the same file, and a short brief that stands on its own. The lead waits for them (`wait_for_sessions`), reads what they answered (`list_sessions`), sends a follow-up (`send_to_session`) and merges the branches itself. Up to 8 work at once, in Auto or "accept edits" mode, and a started session cannot start more. Sessions started this way show a branch icon, and a right-click copies the branch name or opens the worktree. An unused worktree disappears with its session; one with changes or commits stays on its branch.
+- A shared ledger per project (`ledger_read`, `ledger_write`): one notes file that every session of the project reads when it starts and writes decisions, state and open work to, so a new session does not explore the whole codebase again. It lives in Jolty's data folder, nothing is added to your project.
+- Compact first, then continue on another account or model. A new account or model reads the whole conversation with a cold cache, which was the usage spike of a switch. Now "Continue in" and the model picker compact the chat first, on the model that still has it warm (one switch in the Continue in menu turns it off; small chats are left alone). On the same provider, "quick summary" starts a new chat with a brief of a few thousand tokens instead.
+
+### Improvements
+
+- When an account hits its limit, "Continue on ..." now carries a compact brief by default. The same chat with its whole context is still one click away, with its size next to it.
+- The context meter drops right after a compaction instead of showing the old size until the next message.
+- The clock beside the composer no longer says "estimating" forever. Without a task list it shows only the time worked, and a list left over from an earlier turn is estimated again in the next one.
+- A chat's task list is back after you close and reopen Jolty, in the strip above the composer and in the Plan tab, and a resumed chat goes on updating it.
+- The browser picture and the preview in the Live panel keep following the model while Jolty is behind other windows or without focus. If the browser window stops painting, the picture is taken directly every 2 seconds.
+
 ## 0.7.6
 
 ### New

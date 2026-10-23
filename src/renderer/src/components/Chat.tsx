@@ -4,7 +4,8 @@ import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
 import { usageRisk } from '@shared/usage-risk'
 import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
-import { api, basename, ENGINE_LABEL, errMsg, levelColor, resetIn, useStore } from '../store'
+import { sameProvider } from '@shared/provider'
+import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
 import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODES, useAllModels, type ModelGroup } from './ModelPicker'
 import { MentionMenu, useMentions } from './Mentions'
@@ -606,9 +607,25 @@ function ReviewButton({ session, running, items }: { session: SessionMeta; runni
 
 function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Profile[] }) {
   const [open, setOpen] = useState(false)
+  const [compact, setCompact] = useState(compactFirst)
   const { openSession, toast, loadSessions } = useStore()
+  const used = useStore((s) => s.contexts[session.id]?.used ?? 0)
+  const me = profiles.find((p) => p.id === session.profileId)
   const targets = profiles.filter((p) => p.id !== session.profileId)
   if (!targets.length) return null
+  const go = async (t: Profile, fresh: boolean): Promise<void> => {
+    setOpen(false)
+    try {
+      // same chat on another account of the same provider: it reads the whole context there, so shrink it first
+      if (!fresh && me && sameProvider(me, t)) await compactBefore(session.id)
+      const meta = await api.sessions.handoff(session.id, t.id, undefined, undefined, fresh)
+      await loadSessions()
+      await openSession(meta.id)
+      toast(tr("Conversația continuă în {name}", { name: t.name }))
+    } catch (err) {
+      toast(errMsg(err), true)
+    }
+  }
   return (
     <div style={{ position: 'relative' }}>
       <button className="btn small" onClick={() => setOpen(!open)} title={tr("Continuă conversația cu alt model sau alt cont")}>
@@ -616,28 +633,41 @@ function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Pr
       </button>
       {open && (
         <div className="panel" style={{ position: 'absolute', right: 0, top: 36, zIndex: 20, width: 290, padding: 6 }} onMouseLeave={() => setOpen(false)}>
-          {targets.map((t) => (
-            <button
-              key={t.id}
-              className="nav-item"
-              style={{ width: '100%' }}
-              onClick={async () => {
-                setOpen(false)
-                try {
-                  const meta = await api.sessions.handoff(session.id, t.id)
-                  await loadSessions()
-                  await openSession(meta.id)
-                  toast(tr("Conversația continuă în {name}", { name: t.name }))
-                } catch (err) {
-                  toast(errMsg(err), true)
-                }
+          <label className="small faint" style={{ display: 'flex', gap: 8, padding: '6px 10px 8px', cursor: 'pointer' }} title={tr("Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.")}>
+            <input
+              type="checkbox"
+              checked={compact}
+              onChange={(e) => {
+                setCompact(e.target.checked)
+                setCompactFirst(e.target.checked)
               }}
-            >
-              <ProfileDot profile={t} />
-              <span className="ellipsis">{t.name}</span>
-              <span className="count">{ENGINE_LABEL[t.engine]}</span>
-            </button>
-          ))}
+            />
+            {tr("Compactează înainte ({k}k tokeni acum)", { k: Math.round(used / 1000) })}
+          </label>
+          {targets.map((t) => {
+            const same = Boolean(me && sameProvider(me, t))
+            return (
+              <Fragment key={t.id}>
+                <button
+                  className="nav-item"
+                  style={{ width: '100%' }}
+                  title={same ? tr("Același chat, pe celălalt cont. Cu bifa de sus, compactat înainte.") : tr("Chat nou cu un rezumat compact al istoricului.")}
+                  onClick={() => void go(t, false)}
+                >
+                  <ProfileDot profile={t} />
+                  <span className="ellipsis">{t.name}</span>
+                  <span className="count">{same ? tr("același chat") : ENGINE_LABEL[t.engine]}</span>
+                </button>
+                {same && (
+                  <button className="nav-item" style={{ width: '100%' }} title={tr("Chat nou cu doar un rezumat de câțiva mii de tokeni, fără compactare.")} onClick={() => void go(t, true)}>
+                    <ProfileDot profile={t} />
+                    <span className="ellipsis">{t.name}</span>
+                    <span className="count">{tr("rezumat rapid")}</span>
+                  </button>
+                )}
+              </Fragment>
+            )
+          })}
         </div>
       )}
     </div>
@@ -768,8 +798,9 @@ export function ChatView({ session }: { session: SessionMeta }) {
         seed={session.handoffPending ? tr("Continuă de unde ai rămas.") : undefined}
         onPick={(profileId, m, effort) => {
           if (profileId === session.profileId) {
-            void api.sessions
-              .setModel(session.id, m)
+            // a new model has no cache of this conversation: compact first, unless only the effort changes
+            void (m !== session.model ? compactBefore(session.id) : Promise.resolve())
+              .then(() => api.sessions.setModel(session.id, m))
               .then(() => (effort ? api.sessions.setEffort(session.id, effort) : undefined))
               .then(loadSessions)
               .catch((e) => toast(errMsg(e), true))
@@ -777,8 +808,9 @@ export function ChatView({ session }: { session: SessionMeta }) {
           }
           // another account or engine cannot join a running engine session: carry the conversation over
           const target = profiles.find((x) => x.id === profileId)
-          void api.sessions
-            .handoff(session.id, profileId, m, effort)
+          const from = profiles.find((x) => x.id === session.profileId)
+          void (from && target && sameProvider(from, target) ? compactBefore(session.id) : Promise.resolve())
+            .then(() => api.sessions.handoff(session.id, profileId, m, effort))
             .then(async (meta) => {
               await loadSessions()
               await openSession(meta.id)

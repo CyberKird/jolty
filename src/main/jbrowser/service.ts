@@ -39,6 +39,8 @@ export class BrowserService {
   private windowId = 0
   private liveTab?: Tab
   private liveListener?: (f: LiveFrame) => void
+  private liveFrameAt = 0
+  private liveWatch?: NodeJS.Timeout
 
   constructor(
     readonly hub: BrowserHub,
@@ -258,6 +260,7 @@ export class BrowserService {
   private async stopLive(): Promise<void> {
     const t = this.liveTab
     this.liveTab = undefined
+    clearInterval(this.liveWatch)
     if (t && !t.dead) await t.send('Page.stopScreencast').catch(() => undefined)
   }
 
@@ -273,12 +276,25 @@ export class BrowserService {
     }
     this.liveTab = best
     await best.send('Page.startScreencast', { format: 'jpeg', quality: 60, maxWidth: 1280, maxHeight: 900 }).catch(() => undefined)
+    // A window that is behind others or in another desktop may stop painting, and the screencast goes quiet with it
+    // (it only sends when the page paints). Without a frame for 2 s the picture is taken directly instead.
+    this.liveFrameAt = Date.now()
+    this.liveWatch = setInterval(() => {
+      const t = this.liveTab
+      if (!t || t.dead || !this.liveListener || Date.now() - this.liveFrameAt < 2000) return
+      void t
+        .send<{ data: string }>('Page.captureScreenshot', { format: 'jpeg', quality: 60 }, 4000)
+        .then((r) => this.liveTab === t && this.liveListener?.({ frame: r.data, url: t.url, title: t.title }))
+        .catch(() => undefined)
+    }, 2000)
   }
 
   private onFrame(tab: Tab, p: Record<string, unknown>): void {
     // the browser sends the next frame only after this one is acknowledged
     void tab.send('Page.screencastFrameAck', { sessionId: p.sessionId }).catch(() => undefined)
-    if (tab === this.liveTab) this.liveListener?.({ frame: String(p.data), url: tab.url, title: tab.title })
+    if (tab !== this.liveTab) return
+    this.liveFrameAt = Date.now()
+    this.liveListener?.({ frame: String(p.data), url: tab.url, title: tab.title })
   }
 
   /** Called by tools so the live picture follows the model from tab to tab. */

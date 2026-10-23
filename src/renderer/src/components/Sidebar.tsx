@@ -1,8 +1,9 @@
-import { BarChart3, CalendarClock, Cpu, Download, FolderOpen, KeyRound, Link, MessageSquare, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { copyItem, pathItems, showMenu } from './ContextMenu'
 import { MOVE_HINT, useProfileDrag } from '../pages/Accounts'
+import { LiveList } from './LiveList'
 import { tr } from '@shared/i18n'
 
 function money(n: number, currency = 'USD'): string {
@@ -258,6 +259,7 @@ export function Sidebar() {
           </button>
         ))}
       </div>
+      <LiveList />
       <div className="side-head">
         <span className="label">{tr("Conversații")}</span>
         <span className="label">{saved.length}</span>
@@ -288,6 +290,7 @@ export function Sidebar() {
                       'sep',
                       { label: tr("Arată folderul în Explorer"), icon: FolderOpen, run: () => void api.app.revealPath(s.cwd) },
                       copyItem(tr("Copiază calea folderului"), s.cwd, Link),
+                      ...(s.worktree ? [copyItem(tr("Copiază numele branch-ului"), s.worktree.branch, GitBranch)] : []),
                       'sep',
                       { label: tr("Scoate din Jolty"), icon: Trash2, run: () => void removeSession(s.id) }
                     ])
@@ -296,6 +299,7 @@ export function Sidebar() {
                   tabIndex={0}
                 >
                   <span className={`dot ${status[s.id] === 'running' ? 'running' : ''}`} style={{ background: profile?.color }} />
+                  {s.worktree && <GitBranch size={11} className="live-branch" aria-label={s.worktree.branch} />}
                   {renaming === s.id ? (
                     <input
                       className="title-edit"

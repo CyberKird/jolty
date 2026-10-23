@@ -41,7 +41,8 @@ import { handoffPrompt, roughTokens, sameProvider } from './handoff'
 import { gitDiff, reviewerFor, reviewPrompt, transcriptDiff } from './review'
 import * as store from './store'
 import { removeProfileFiles } from './profile-files'
-import { bindJoltyTools } from './jolty-tools'
+import { bindJoltyTools, taskMode } from './jolty-tools'
+import { addWorktree, removeWorktree } from './workers'
 import { learningNudge } from './learning'
 import { forget } from './recall'
 import { Scheduler } from './scheduler'
@@ -56,6 +57,12 @@ const DEFAULT_PROFILES: Profile[] = [
 ]
 
 export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes' }
+
+/** below this a compaction costs more than it saves (tokens in the context) */
+const COMPACT_MIN = 20000
+/** sessions one lead may start in all, and how many of all started sessions work at the same time */
+const MAX_CHILDREN = 20
+const MAX_RUNNING_CHILDREN = 8
 
 function gitState(cwd: string): Promise<string> {
   const run = (args: string[]): Promise<string> =>
@@ -98,6 +105,10 @@ export class Jolty {
   private live = new Map<string, EngineSession>()
   /** conversations with a turn under way */
   private busy = new Set<string>()
+  /** tokens in each conversation's context after its last request, from the engine's context events */
+  private ctxUsed = new Map<string, number>()
+  /** callers waiting for a conversation's turn to end (see waitIdle, compactAndWait) */
+  private idleWaiters = new Set<(sessionId: string) => void>()
   private transcripts = new Map<string, ChatItem[]>()
   private saveTimers = new Map<string, NodeJS.Timeout>()
   private removingProfiles = new Set<string>()
@@ -132,7 +143,18 @@ export class Jolty {
 
   constructor(private send: (e: ChatEvent) => void) {
     this.codex.onLimits = (s) => this.recordLimits(s)
-    bindJoltyTools({ sessions: () => store.loadSessions(), meta: (id) => this.findMeta(id), history: (id) => this.loadHistory(id), scheduler: this.scheduler })
+    bindJoltyTools({
+      sessions: () => store.loadSessions(),
+      meta: (id) => this.findMeta(id),
+      history: (id) => this.loadHistory(id),
+      scheduler: this.scheduler,
+      startChild: (lead, input) => this.startChild(lead, input),
+      children: (lead) => store.loadSessions().filter((s) => s.parentId === lead),
+      busy: (id) => this.busy.has(id),
+      lastAnswer: (id) => this.lastAnswer(id),
+      waitIdle: (ids, ms) => this.waitIdle(ids, ms),
+      sendTo: (lead, id, text) => this.sendToChild(lead, id, text)
+    })
     if (store.loadProfiles().length === 0) store.saveProfiles(DEFAULT_PROFILES)
     const profiles = store.loadProfiles()
     if (!profiles.some((p) => p.engine === 'hermes') && hermesExecutable()) {
@@ -323,7 +345,9 @@ export class Jolty {
       if (e.status === 'running') this.busy.add(e.sessionId)
       else this.busy.delete(e.sessionId)
       this.power.onStatus(e.status, e.error)
+      if (e.status !== 'running') for (const w of [...this.idleWaiters]) w(e.sessionId)
     }
+    if (e.type === 'context') this.ctxUsed.set(e.sessionId, e.used)
     if (e.type === 'item') {
       const t = this.transcript(e.sessionId)
       const i = t.findIndex((x) => x.id === e.item.id)
@@ -502,6 +526,7 @@ export class Jolty {
         }
       })
       s = own
+      if (meta.engineSessionId) s.restorePlan?.(this.transcript(sessionId))
       this.live.set(sessionId, s)
     }
     return s
@@ -633,6 +658,109 @@ export class Jolty {
     await this.liveSession(sessionId).compact()
   }
 
+  /**
+   * Compacts and settles when the engine is done. A new account or model reads the whole context with a
+   * cold cache, so what it reads should be the summary, not the conversation: this runs first, on the
+   * model that has the context warm. Small contexts are not worth a turn (undefined).
+   */
+  async compactAndWait(sessionId: string): Promise<{ before: number; after: number } | undefined> {
+    const meta = this.meta(sessionId)
+    const before = this.ctxUsed.get(sessionId) ?? 0
+    if (meta.engine === 'hermes' || before < COMPACT_MIN) return undefined
+    if (this.busy.has(sessionId)) throw new Error(tr("Conversația lucrează deja."))
+    let release = (): void => undefined
+    const finished = new Promise<void>((resolve) => {
+      const done = (): void => {
+        clearTimeout(timer)
+        this.idleWaiters.delete(onIdle)
+        resolve()
+      }
+      const onIdle = (id: string): void => {
+        if (id === sessionId) done()
+      }
+      const timer = setTimeout(done, 6 * 60e3)
+      release = done
+      this.idleWaiters.add(onIdle)
+    })
+    try {
+      await this.compact(sessionId)
+    } catch (err) {
+      release()
+      throw err
+    }
+    await finished
+    return { before, after: this.ctxUsed.get(sessionId) ?? before }
+  }
+
+  /** Resolves when none of the conversations has a turn under way, or after `ms`. */
+  private waitIdle(ids: string[], ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const check = (): void => {
+        if (!ids.some((id) => this.busy.has(id))) finish()
+      }
+      const timer = setTimeout(() => finish(), ms)
+      const finish = (): void => {
+        clearTimeout(timer)
+        this.idleWaiters.delete(check)
+        resolve()
+      }
+      this.idleWaiters.add(check)
+      check()
+    })
+  }
+
+  /** The end of what a conversation last said, for a lead that follows the sessions it started. */
+  private lastAnswer(sessionId: string): string {
+    const last = [...this.transcript(sessionId)].reverse().find((i) => i.kind === 'assistant' && i.text.trim())
+    const text = last && last.kind === 'assistant' ? last.text.trim() : ''
+    return text.length > 1200 ? `…${text.slice(-1200)}` : text
+  }
+
+  /**
+   * One job of a lead session, in a session of its own that starts working at once. In a git repository it gets
+   * a worktree and a branch, so the sessions never write the same files. Same account, model and effort as the
+   * lead, and never a freer mode than Auto or "accept edits": nobody approves its steps one by one.
+   */
+  private async startChild(leadId: string, input: { title: string; brief: string; isolate: boolean }): Promise<{ meta: SessionMeta; note: string }> {
+    const lead = this.meta(leadId)
+    if (lead.parentId) throw new Error('A session started by another session cannot start sessions of its own.')
+    if (lead.temporary) throw new Error('A temporary chat leaves nothing behind, so it cannot start sessions.')
+    const mine = store.loadSessions().filter((s) => s.parentId === leadId)
+    if (mine.length >= MAX_CHILDREN) throw new Error(`This chat already started ${MAX_CHILDREN} sessions: finish with those, or ask the user to start a new chat.`)
+    const running = [...this.busy].filter((id) => this.findMeta(id)?.parentId).length
+    if (running >= MAX_RUNNING_CHILDREN) throw new Error(`${running} started sessions are working already (the limit is ${MAX_RUNNING_CHILDREN}): use wait_for_sessions, then start the next one.`)
+    let cwd = lead.cwd
+    let tree: Awaited<ReturnType<typeof addWorktree>>
+    let note = 'It works in the same folder as you, so do not give it files you are editing yourself.'
+    if (input.isolate) {
+      tree = await addWorktree(lead.cwd, randomUUID().slice(0, 8), input.title)
+      if (tree) {
+        cwd = tree.cwd
+        note = `Its own worktree: branch ${tree.info.branch}, folder ${tree.info.path}, cut from commit ${tree.info.base.slice(0, 8)}. Merge the branch when it is done.`
+      } else note = 'The folder is not a git repository with a commit, so it works in the same folder as you: do not give it files you are editing yourself.'
+    }
+    const meta = await this.startSession({ profileId: lead.profileId, cwd, model: lead.model, effort: lead.effort, permissionMode: taskMode(lead.permissionMode), title: input.title })
+    meta.parentId = leadId
+    meta.worktree = tree?.info
+    meta.titled = true
+    this.saveMeta(meta)
+    this.send({ type: 'meta', sessionId: meta.id, meta })
+    // for the model only: the chat shows the brief as written
+    const where = tree
+      ? `You work in your own git worktree (${tree.info.path}) on branch ${tree.info.branch}, cut from commit ${tree.info.base.slice(0, 8)}. The lead's uncommitted changes and untracked files (node_modules, .env) are not in it: install or copy what you need. Commit your work on this branch when it is done; do not merge it, the lead does.`
+      : `You work in the lead's folder (${cwd}), at the same time as the lead and maybe other sessions: touch only the files your job needs.`
+    const head = `[Session started by Jolty for the lead session "${lead.title}". You have one job, below. ${where} The project ledger (ledger_read, ledger_write) holds what every session learned: read it before you explore, and write there what a later session would need. End with a short summary for the lead: what you did, what is left, anything surprising.]`
+    await this.sendMessage(meta.id, `${head}\n\n${input.brief}`, [], input.brief)
+    return { meta, note }
+  }
+
+  private async sendToChild(leadId: string, id: string, text: string): Promise<void> {
+    const kid = store.loadSessions().find((s) => s.id === id)
+    if (!kid || kid.parentId !== leadId) throw new Error(`No session of yours with id ${id}.`)
+    if (!text.trim()) throw new Error('message is empty')
+    await this.sendMessage(id, text.trim())
+  }
+
   async interrupt(sessionId: string): Promise<void> {
     await this.live.get(sessionId)?.interrupt()
   }
@@ -726,16 +854,17 @@ export class Jolty {
    * Moves a conversation to another profile. Nothing is sent: the history rides along with the
    * user's next message, so there is time to pick another model first.
    * - same provider on Claude Code (two Anthropic accounts, two profiles on one endpoint): the same
-   *   chat continues on the other account with its full context
+   *   chat continues on the other account with its full context (compact it first to keep the switch cheap),
+   *   unless `fresh`: then a new chat that carries only the compact brief, like any other switch
    * - a moved chat that has not sent anything yet: simply points at the new profile
    * - anything else: a new chat that carries the visible history over
    */
-  async handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string): Promise<SessionMeta> {
+  async handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string, fresh = false): Promise<SessionMeta> {
     const src = this.meta(sessionId)
     if (src.temporary) throw new Error(tr("O conversație temporară nu poate fi mutată pe alt cont: nu se salvează nimic din ea."))
     const srcProfile = store.loadProfiles().find((p) => p.id === src.profileId)
     const target = this.profile(targetProfileId)
-    if ((src.handoffPending && !src.engineSessionId) || (srcProfile && sameProvider(srcProfile, target))) {
+    if ((src.handoffPending && !src.engineSessionId) || (!fresh && srcProfile && sameProvider(srcProfile, target))) {
       return this.retarget(src, srcProfile, target, model, effort)
     }
     const targetHermes = target.engine === 'hermes'
@@ -884,7 +1013,10 @@ ${text.slice(0, 1500)}`
     this.transcripts.delete(sessionId)
     forget(sessionId)
     store.removeTranscript(sessionId)
+    const gone = store.loadSessions().find((s) => s.id === sessionId)
     store.saveSessions(store.loadSessions().filter((s) => s.id !== sessionId))
+    // an unused worktree goes with its session; one with changes or commits stays, on its branch
+    if (gone?.worktree) void removeWorktree(gone.worktree)
   }
 
   /** One run of a scheduled task: a new conversation that gets the task's prompt, as if the user had sent it. */

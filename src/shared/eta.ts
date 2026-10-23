@@ -24,6 +24,16 @@ export function tick(c: Clock | undefined, prev: PlanStep[] | undefined, steps: 
 }
 
 /**
+ * A new turn starts the turn clock. A task list left unfinished by an earlier turn is still the plan: its clock
+ * restarts here (the idle time between turns is not pace), so its steps get estimated like those of a fresh list.
+ */
+export function turnStart(c: Clock | undefined, steps: PlanStep[] | undefined, now = Date.now()): Clock {
+  const done = doneCount(steps)
+  if (!steps?.length || done === steps.length) return { ...c, turn: now }
+  return { ...c, turn: now, plan: now, base: done, done, last: now }
+}
+
+/**
  * Time left: the pace of the steps finished so far times the steps left, minus the time already
  * spent on the current one (never below a tenth of a step while work remains).
  * ponytail: every step weighs the same; weigh by step text length if estimates swing too much.

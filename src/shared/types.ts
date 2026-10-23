@@ -122,6 +122,10 @@ export interface SessionMeta {
   handoffFrom?: string
   /** moved here but not sent yet: the history goes out with the user's first message */
   handoffPending?: boolean
+  /** the lead session that started this one with start_session */
+  parentId?: string
+  /** a git worktree of the project made for this session: `root` is the repository, `base` the commit it was cut from */
+  worktree?: { path: string; branch: string; base: string; root: string }
 }
 
 export interface ExternalSession {
@@ -463,10 +467,12 @@ export interface JoltyApi {
     setBrowser(sessionId: string, on: boolean): Promise<void>
     /** summarize the conversation so far to free context (Claude /compact, Codex thread compaction) */
     compact(sessionId: string): Promise<void>
+    /** compacts and resolves when the engine is done; undefined when the context is too small to be worth it */
+    compactAndWait(sessionId: string): Promise<{ before: number; after: number } | undefined>
     /** Claude only: the project's files go back to how they were before that user message */
     rewind(sessionId: string, itemId: string, dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }>
     respond(sessionId: string, requestId: string, decision: PermissionDecision): Promise<void>
-    handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string): Promise<SessionMeta>
+    handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string, fresh?: boolean): Promise<SessionMeta>
     /** a read-only review of the current changes by a model from the other family */
     review(sessionId: string): Promise<void>
     remove(sessionId: string): Promise<void>

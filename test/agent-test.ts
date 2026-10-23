@@ -129,8 +129,26 @@ test('learning nudges: memory every 10 messages, skills every 15, never for Herm
 
 test('MCP tools over the local server: token required, search, read, schedule, cancel', async () => {
   const scheduler = new Scheduler({ run: async () => 'x', busy: () => false, profileExists: () => true, changed: () => undefined })
-  const sessions = [meta('a', 'Scroll iPhone', 1), { ...meta('self', 'Asta', 5), cwd: data, model: 'opus', permissionMode: 'full' as const }]
-  bindJoltyTools({ sessions: () => sessions, meta: (id) => sessions.find((s) => s.id === id), history: async () => [], scheduler })
+  const kid = { ...meta('kid', 'Job', 3), cwd: data, parentId: 'self', worktree: { path: path.join(data, 'wt'), branch: 'jolty/job-1', base: 'abc', root: data } }
+  const sessions = [meta('a', 'Scroll iPhone', 1), { ...meta('self', 'Asta', 5), cwd: data, model: 'opus', permissionMode: 'full' as const }, kid]
+  const started: string[] = []
+  bindJoltyTools({
+    sessions: () => sessions,
+    meta: (id) => sessions.find((s) => s.id === id),
+    history: async () => [],
+    scheduler,
+    startChild: async (lead, input) => {
+      started.push(`${lead}|${input.title}|${input.isolate}`)
+      return { meta: meta('new', input.title, 9), note: 'Its own worktree.' }
+    },
+    children: (lead) => sessions.filter((x) => x.parentId === lead),
+    busy: (id) => id === 'kid',
+    lastAnswer: () => 'did the thing',
+    waitIdle: async () => undefined,
+    sendTo: async (lead, id) => {
+      if (id !== 'kid' || lead !== 'self') throw new Error(`No session of yours with id ${id}.`)
+    }
+  })
   const hub = new BrowserHub({ token: () => 'secret-token', bundledVersion: () => '1', mcp: async () => undefined, tools: handleJoltyTools })
   const port = await hub.start()
   try {
@@ -138,7 +156,13 @@ test('MCP tools over the local server: token required, search, read, schedule, c
       fetch(`http://127.0.0.1:${port}/jolty/self`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) })
     assert.equal((await call({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, 'wrong')).status, 401)
     const list = (await (await call({ jsonrpc: '2.0', id: 1, method: 'tools/list' })).json()) as { result: { tools: { name: string }[] } }
-    assert.deepEqual(list.result.tools.map((t) => t.name).sort(), ['cancel_scheduled_task', 'list_scheduled_tasks', 'read_conversation', 'schedule_task', 'search_conversations'])
+    assert.deepEqual(list.result.tools.map((t) => t.name).sort(), [
+      'cancel_scheduled_task', 'ledger_read', 'ledger_write', 'list_scheduled_tasks', 'list_sessions', 'read_conversation', 'schedule_task', 'search_conversations', 'send_to_session', 'start_session', 'wait_for_sessions'
+    ])
+    // a session a lead started cannot start sessions of its own
+    const kidList = (await (await fetch(`http://127.0.0.1:${port}/jolty/kid`, { method: 'POST', headers: { authorization: 'Bearer secret-token', 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) })).json()) as { result: { tools: { name: string }[] } }
+    assert.equal(kidList.result.tools.some((t) => t.name === 'start_session' || t.name === 'send_to_session'), false)
+    assert.equal(kidList.result.tools.some((t) => t.name === 'ledger_write'), true)
     const tool = async (name: string, args: Record<string, unknown>): Promise<{ text: string; isError?: boolean }> => {
       const r = (await (await call({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name, arguments: args } })).json()) as { result: { content: { text: string }[]; isError?: boolean } }
       return { text: r.result.content[0].text, isError: r.result.isError }
@@ -159,6 +183,24 @@ test('MCP tools over the local server: token required, search, read, schedule, c
     assert.match((await tool('list_scheduled_tasks', {})).text, /Raport.*daily at 08:30 on Mon/)
     assert.match((await tool('cancel_scheduled_task', { id: saved.id })).text, /Deleted/)
     assert.equal(scheduler.list().some((t) => t.name === 'Raport'), false)
+    assert.match((await tool('start_session', { title: 'Parte 1', brief: 'Fă partea 1' })).text, /Started "Parte 1" \(id: new\)\. Its own worktree\./)
+    assert.deepEqual(started, ['self|Parte 1|true'])
+    await tool('start_session', { title: 'Parte 2', brief: 'b', isolate: false })
+    assert.equal(started[1], 'self|Parte 2|false')
+    assert.equal((await tool('start_session', { title: 'fara brief' })).isError, true)
+    const mine = await tool('wait_for_sessions', {})
+    assert.match(mine.text, /Job \(id: kid\) RUNNING, branch jolty\/job-1/)
+    assert.match(mine.text, /last answer: did the thing/)
+    assert.match((await tool('list_sessions', { ids: ['nope'] })).text, /not started any session/)
+    assert.match((await tool('send_to_session', { id: 'kid', message: 'continua' })).text, /Sent/)
+    assert.equal((await tool('send_to_session', { id: 'a', message: 'x' })).isError, true)
+    assert.match((await tool('ledger_read', {})).text, /empty/)
+    await tool('ledger_write', { text: 'decis: A' })
+    await tool('ledger_write', { text: 'facut: B' })
+    assert.match((await tool('ledger_read', {})).text, /decis: A[\s\S]*facut: B/)
+    assert.equal((await tool('ledger_write', { text: 'x'.repeat(31000) })).isError, true)
+    await tool('ledger_write', { text: 'scurt', mode: 'replace' })
+    assert.equal((await tool('ledger_read', {})).text.trim(), 'scurt')
     // the browser route is untouched
     const browser = await fetch(`http://127.0.0.1:${port}/mcp/self`, { method: 'POST', headers: { authorization: 'Bearer secret-token' }, body: '{"jsonrpc":"2.0","method":"x"}' })
     assert.equal(browser.status, 202)

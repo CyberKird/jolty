@@ -864,5 +864,21 @@
  "Sunet la notificări": "Son des notifications",
  "Sunetul Windows care însoțește notificările de mai sus.": "Le son Windows qui accompagne les notifications ci-dessus.",
  "Jolty: planul așteaptă aprobarea ta": "Jolty : le plan attend ton approbation",
- "Jolty: are nevoie de acordul tău": "Jolty : a besoin de ton accord"
+ "Jolty: are nevoie de acordul tău": "Jolty : a besoin de ton accord",
+ "Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.": "Un nouveau compte ou modèle lit tout le contexte depuis zéro, sans cache. Compacté, il ne lit que le résumé.",
+ "Compactează înainte ({k}k tokeni acum)": "Compacter avant ({k}k jetons actuellement)",
+ "Același chat, pe celălalt cont. Cu bifa de sus, compactat înainte.": "La même conversation, sur l'autre compte. Avec la case ci-dessus cochée, compactée avant.",
+ "Chat nou cu un rezumat compact al istoricului.": "Une nouvelle conversation avec un résumé compact de l'historique.",
+ "același chat": "même conversation",
+ "Chat nou cu doar un rezumat de câțiva mii de tokeni, fără compactare.": "Une nouvelle conversation avec seulement un résumé de quelques milliers de jetons, sans compactage.",
+ "rezumat rapid": "résumé rapide",
+ "Copiază numele branch-ului": "Copier le nom de la branche",
+ "Arată worktree-ul în Explorer": "Afficher le worktree dans l'Explorateur",
+ "Ascunde din Live": "Masquer de Live",
+ "Așteaptă aprobarea ta": "Attend ton approbation",
+ "Rezumat compact, câțiva mii de tokeni": "Résumé compact, quelques milliers de jetons",
+ "Același chat, cu tot contextul citit de la zero pe celălalt cont": "La même conversation, tout le contexte est relu depuis zéro sur l'autre compte",
+ "Tot contextul ({k}k)": "Tout le contexte ({k}k)",
+ "Compactez conversația înainte, ca să nu o recitească tot noul cont sau model.": "Compactage de la conversation avant, pour que le nouveau compte ou modèle ne la relise pas en entier.",
+ "Compactat: de la {before}k la {after}k tokeni.": "Compacté : de {before}k à {after}k jetons."
 }

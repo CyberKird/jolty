@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { flushSync } from 'react-dom'
-import { tick, type Clock } from '@shared/eta'
+import { tick, turnStart, type Clock } from '@shared/eta'
+import { TaskBoard } from '@shared/tasks'
 import type {
   ChatEvent,
   ChatItem,
@@ -52,6 +53,9 @@ interface State {
   transcripts: Record<string, ChatItem[]>
   status: Record<string, 'idle' | 'running' | 'error'>
   permissions: Record<string, PermissionRequest[]>
+  /** conversations that finished while the user was elsewhere, until opened or dismissed */
+  unseen: Record<string, true>
+  dismissUnseen(id: string): void
   drafts: Record<string, Record<string, Draft>>
   plans: Record<string, PlanStep[]>
   /** when the current turn started, and when its task list started and last ticked a step off */
@@ -90,6 +94,9 @@ interface State {
 
 let toastId = 0
 
+export { liveRows } from '@shared/live'
+export type { LiveRow, LiveState } from '@shared/live'
+
 function upsert(list: ChatItem[], item: ChatItem): ChatItem[] {
   const i = list.findIndex((x) => x.id === item.id)
   if (i < 0) {
@@ -122,6 +129,8 @@ export const useStore = create<State>((set, get) => ({
   transcripts: {},
   status: {},
   permissions: {},
+  unseen: {},
+  dismissUnseen: (id) => set((s) => (s.unseen[id] ? { unseen: Object.fromEntries(Object.entries(s.unseen).filter(([k]) => k !== id)) as Record<string, true> } : s)),
   drafts: {},
   plans: {},
   clocks: {},
@@ -188,6 +197,7 @@ export const useStore = create<State>((set, get) => ({
     // a temporary chat ends when the user leaves it: nothing of it stays, here or on disk
     const left = get().sessions.find((x) => x.id === get().activeId && x.temporary && x.id !== id)
     set({ activeId: id, page: 'chat' })
+    if (id) get().dismissUnseen(id)
     if (left) {
       set((s) => {
         const { [left.id]: _gone, ...transcripts } = s.transcripts
@@ -197,7 +207,9 @@ export const useStore = create<State>((set, get) => ({
     }
     if (id && !get().transcripts[id]) {
       const items = await api.sessions.history(id)
-      set((s) => ({ transcripts: { ...s.transcripts, [id]: items } }))
+      // the task list of a conversation opened again (after a restart) comes from what it saved
+      const steps = get().plans[id] ? undefined : new TaskBoard().replay(items).steps()
+      set((s) => ({ transcripts: { ...s.transcripts, [id]: items }, plans: steps?.length ? { ...s.plans, [id]: steps } : s.plans }))
     }
   },
 
@@ -229,19 +241,23 @@ export const useStore = create<State>((set, get) => ({
           return { transcripts: { ...s.transcripts, [e.sessionId]: next } }
         })
         return
-      case 'status':
+      case 'status': {
+        const prev = get().status[e.sessionId]
         set((s) => ({
           status: { ...s.status, [e.sessionId]: e.status },
-          clocks: e.status === 'running' && s.status[e.sessionId] !== 'running' ? { ...s.clocks, [e.sessionId]: { ...s.clocks[e.sessionId], turn: Date.now() } } : s.clocks
+          clocks: e.status === 'running' && s.status[e.sessionId] !== 'running' ? { ...s.clocks, [e.sessionId]: turnStart(s.clocks[e.sessionId], s.plans[e.sessionId]) } : s.clocks
         }))
         if (e.status !== 'running') {
           // a finished turn has no pending approvals left
           set((s) => ({ permissions: { ...s.permissions, [e.sessionId]: [] } }))
+          // finished while the user looks at something else: it stays in the Live list until opened
+          if (prev === 'running' && (get().activeId !== e.sessionId || get().page !== 'chat')) set((s) => ({ unseen: { ...s.unseen, [e.sessionId]: true } }))
           void get().loadSessions()
           const profile = get().profiles.find((p) => p.id === get().sessions.find((x) => x.id === e.sessionId)?.profileId)
           if (profile) refreshLimitsSoon(profile)
         }
         return
+      }
       case 'power':
         set({ power: { armed: e.armed, plan: e.plan, due: e.due, seconds: e.seconds, reason: e.reason } })
         return
@@ -377,6 +393,39 @@ export function levelColor(pct: number): string {
   if (pct >= 75) return 'var(--serious)'
   if (pct >= 50) return 'var(--warning)'
   return 'var(--good)'
+}
+
+const COMPACT_KEY = 'jolty.compactFirst'
+/** below this many tokens a compaction costs more than it saves (same number as in main) */
+const COMPACT_MIN = 20000
+
+/** Compact before moving a conversation to another account or model: on by default. */
+export function compactFirst(): boolean {
+  try {
+    return localStorage.getItem(COMPACT_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+export function setCompactFirst(on: boolean): void {
+  try {
+    localStorage.setItem(COMPACT_KEY, on ? '1' : '0')
+  } catch {
+    // a convenience only
+  }
+}
+
+/**
+ * A new account or model reads the whole context with a cold cache, which is the usage spike of a switch.
+ * Compacting first, on the model that has the context warm, leaves it a summary to read.
+ */
+export async function compactBefore(sessionId: string): Promise<void> {
+  const { contexts, toast } = useStore.getState()
+  if (!compactFirst() || (contexts[sessionId]?.used ?? 0) < COMPACT_MIN) return
+  toast(tr("Compactez conversația înainte, ca să nu o recitească tot noul cont sau model."))
+  const r = await api.sessions.compactAndWait(sessionId)
+  if (r && r.after < r.before) toast(tr("Compactat: de la {before}k la {after}k tokeni.", { before: Math.round(r.before / 1000), after: Math.round(r.after / 1000) }))
 }
 
 export function basename(p: string): string {

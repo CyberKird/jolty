@@ -22,13 +22,18 @@ export function WorkClock({ sessionId }: { sessionId: string }) {
   const done = planned.filter((step) => step.status === 'done').length
   const left = timeLeft(timer, planned, now)
   const elapsed = clock(now - (timer?.turn || now))
-  const remaining = left === undefined ? tr("se estimează") : `~${clock(left)}`
+  // without a task list there is nothing to estimate from: show the time worked, not a label that never changes
+  const remaining = !planned.length ? undefined : left === undefined ? tr("se estimează") : `~${clock(left)}`
   return (
-    <div className="work-clock" role="status" aria-label={`${tr("Lucrează de {clock}", { clock: elapsed })}, ${tr("Rămas")}: ${remaining}`}>
+    <div className="work-clock" role="status" aria-label={`${tr("Lucrează de {clock}", { clock: elapsed })}${remaining ? `, ${tr("Rămas")}: ${remaining}` : ''}`}>
       <span className="work-clock-times">
         <span>{elapsed}</span>
-        <span className="work-clock-separator">/</span>
-        <span>{remaining}</span>
+        {remaining && (
+          <>
+            <span className="work-clock-separator">/</span>
+            <span>{remaining}</span>
+          </>
+        )}
       </span>
       <span className={`work-clock-track ${planned.length ? '' : 'waiting'}`} aria-hidden="true">
         <span style={planned.length ? { width: `${(done / planned.length) * 100}%` } : undefined} />
@@ -115,15 +120,18 @@ export function LimitStrip({ session }: { session: SessionMeta }) {
   if (!hit || !me) return null
   const worst = (id: string): number => Math.max(0, ...(limits[id]?.windows || []).map((w) => w.usedPercent))
   const next = profiles.filter((p) => sameProvider(me, p) && worst(p.id) < 100).sort((a, b) => worst(a.id) - worst(b.id))[0]
-  const go = async (): Promise<void> => {
+  const used = useStore.getState().contexts[session.id]?.used ?? 0
+  // the full chat on the other account reads the whole context there with a cold cache: say how big that is
+  const go = async (fresh: boolean): Promise<void> => {
     if (!next) return
     setBusy(true)
     try {
-      await api.sessions.handoff(session.id, next.id, session.model, session.effort)
+      const moved = await api.sessions.handoff(session.id, next.id, session.model, session.effort, fresh)
       await loadSessions()
+      if (fresh) await useStore.getState().openSession(moved.id)
       // shown as working at once, like a message sent from the composer
-      useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'running' })
-      await api.sessions.send(session.id, tr("Continuă de unde ai rămas: contul {me} a atins limita, acum lucrezi pe {next}.", { me: me.name, next: next.name }))
+      useStore.getState().onEvent({ type: 'status', sessionId: moved.id, status: 'running' })
+      await api.sessions.send(moved.id, tr("Continuă de unde ai rămas: contul {me} a atins limita, acum lucrezi pe {next}.", { me: me.name, next: next.name }))
     } catch (err) {
       toast(errMsg(err), true)
     } finally {
@@ -135,9 +143,12 @@ export function LimitStrip({ session }: { session: SessionMeta }) {
       <span className="verification-text">{tr("Limita contului {name} e atinsă", { name: me.name })}</span>
       {next ? (
         <>
-          <span className="verification-cost">{tr("Același chat, cu tot contextul")}</span>
-          <button disabled={busy} onClick={() => void go()}>
+          <span className="verification-cost">{tr("Rezumat compact, câțiva mii de tokeni")}</span>
+          <button disabled={busy} onClick={() => void go(true)}>
             {tr("Continuă pe {name} · {pct}% folosit", { name: next.name, pct: Math.round(worst(next.id)) })}
+          </button>
+          <button disabled={busy} title={tr("Același chat, cu tot contextul citit de la zero pe celălalt cont")} onClick={() => void go(false)}>
+            {tr("Tot contextul ({k}k)", { k: Math.round(used / 1000) })}
           </button>
         </>
       ) : (

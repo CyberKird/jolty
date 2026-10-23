@@ -864,5 +864,21 @@
  "Sunet la notificări": "सूचना की आवाज़",
  "Sunetul Windows care însoțește notificările de mai sus.": "ऊपर की सूचनाओं के साथ बजने वाली Windows की आवाज़।",
  "Jolty: planul așteaptă aprobarea ta": "Jolty: योजना आपकी मंज़ूरी का इंतज़ार कर रही है",
- "Jolty: are nevoie de acordul tău": "Jolty: को आपकी अनुमति चाहिए"
+ "Jolty: are nevoie de acordul tău": "Jolty: को आपकी अनुमति चाहिए",
+ "Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.": "नया खाता या मॉडल पूरा संदर्भ शुरू से पढ़ता है, कैश के बिना। संक्षिप्त करने पर वह सिर्फ़ सारांश पढ़ता है।",
+ "Compactează înainte ({k}k tokeni acum)": "पहले संक्षिप्त करें (अभी {k}k टोकन)",
+ "Același chat, pe celălalt cont. Cu bifa de sus, compactat înainte.": "वही बातचीत, दूसरे खाते पर। ऊपर का बॉक्स चुना हो तो पहले संक्षिप्त की जाती है।",
+ "Chat nou cu un rezumat compact al istoricului.": "इतिहास के संक्षिप्त सारांश के साथ नई बातचीत।",
+ "același chat": "वही बातचीत",
+ "Chat nou cu doar un rezumat de câțiva mii de tokeni, fără compactare.": "संक्षिप्त किए बिना, सिर्फ़ कुछ हज़ार टोकन के सारांश के साथ नई बातचीत।",
+ "rezumat rapid": "त्वरित सारांश",
+ "Copiază numele branch-ului": "ब्रांच का नाम कॉपी करें",
+ "Arată worktree-ul în Explorer": "Explorer में worktree दिखाएँ",
+ "Ascunde din Live": "Live से छिपाएँ",
+ "Așteaptă aprobarea ta": "आपकी मंज़ूरी का इंतज़ार",
+ "Rezumat compact, câțiva mii de tokeni": "संक्षिप्त सारांश, कुछ हज़ार टोकन",
+ "Același chat, cu tot contextul citit de la zero pe celălalt cont": "वही बातचीत, दूसरे खाते पर पूरा संदर्भ शुरू से पढ़ा जाएगा",
+ "Tot contextul ({k}k)": "पूरा संदर्भ ({k}k)",
+ "Compactez conversația înainte, ca să nu o recitească tot noul cont sau model.": "पहले बातचीत संक्षिप्त की जा रही है, ताकि नया खाता या मॉडल उसे पूरा न पढ़े।",
+ "Compactat: de la {before}k la {after}k tokeni.": "संक्षिप्त हुआ: {before}k से {after}k टोकन।"
 }

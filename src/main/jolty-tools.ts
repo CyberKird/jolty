@@ -1,18 +1,20 @@
 // Jolty's own tools for the model, served as an MCP server next to the browser one (same local hub, same
-// token, one URL per chat): search and read earlier conversations, and schedule work for later.
-// Like Hermes' session_search and cronjob tools, for Claude Code and Codex.
+// token, one URL per chat): search and read earlier conversations, schedule work for later, and run
+// several sessions at once (start_session, worktrees, a shared ledger). Like Hermes' session_search
+// and cronjob tools, for Claude Code and Codex.
 import type { ChatItem, PermissionMode, SessionMeta } from '@shared/types'
 import type { ScheduledTask } from '@shared/schedule'
 import { pageOf, savedTurns, search, turnsOf } from './recall'
 import type { Scheduler } from './scheduler'
+import { projectOf, readLedger, writeLedger } from './workers'
 
 export const JOLTY_SERVER = 'jolty'
 
-/** Tools that only read: they run without asking, except in Manual mode. */
-export const JOLTY_READ_TOOLS = ['search_conversations', 'read_conversation', 'list_scheduled_tasks']
+/** Tools that only read, or only touch Jolty's own notes: they run without asking, except in Manual mode. */
+export const JOLTY_READ_TOOLS = ['search_conversations', 'read_conversation', 'list_scheduled_tasks', 'list_sessions', 'wait_for_sessions', 'ledger_read', 'ledger_write']
 
 export const JOLTY_TOOLS_PROMPT =
-  'Jolty tools (MCP server "jolty"): search_conversations and read_conversation find and read the user\'s earlier conversations in Jolty on this PC; use them when the user refers to earlier work, a past decision or "what we talked about". schedule_task runs a prompt later or on a repeat, each run in a new conversation, while Jolty is open; list_scheduled_tasks and cancel_scheduled_task manage them. Schedule only when the user asks for it.'
+  'Jolty tools (MCP server "jolty"): search_conversations and read_conversation find and read the user\'s earlier conversations in Jolty on this PC; use them when the user refers to earlier work, a past decision or "what we talked about". schedule_task runs a prompt later or on a repeat, each run in a new conversation, while Jolty is open; list_scheduled_tasks and cancel_scheduled_task manage them. Schedule only when the user asks for it. Several jobs at once: start_session gives each job its own session (own git worktree and branch when the project is a repository) with a short brief that stands on its own; wait_for_sessions returns when they end, list_sessions shows their state and last answer, send_to_session talks to one. Merging their branches is your job. ledger_read and ledger_write keep one shared notes file for the project: read it first when you start, and write decisions, state and open work there instead of re-exploring the codebase. Start sessions only when the user asked for parallel work or the task clearly splits into independent jobs.'
 
 export interface ToolHost {
   /** saved conversations (never temporary ones) */
@@ -21,6 +23,15 @@ export interface ToolHost {
   /** the full history, read from the engine when Jolty has no copy yet */
   history(sessionId: string): Promise<ChatItem[]>
   scheduler: Scheduler
+  /** a new session for one job of a lead session */
+  startChild(leadId: string, input: { title: string; brief: string; isolate: boolean }): Promise<{ meta: SessionMeta; note: string }>
+  children(leadId: string): SessionMeta[]
+  busy(sessionId: string): boolean
+  /** the end of the last answer of a session */
+  lastAnswer(sessionId: string): string
+  /** resolves when none of `ids` has a turn under way, or after `ms` */
+  waitIdle(ids: string[], ms: number): Promise<void>
+  sendTo(leadId: string, id: string, text: string): Promise<void>
 }
 
 let host: ToolHost | undefined
@@ -94,6 +105,54 @@ const TOOLS = [
     }
   },
   {
+    name: 'start_session',
+    description:
+      'Starts a new session for one job and returns at once; the session works on its own, with the same account, model and effort as this chat, in Auto mode if this chat uses it and "accept edits" otherwise. In a git repository it gets its own worktree and branch cut from the last commit (your uncommitted changes and untracked files such as node_modules are not in it), so sessions never write the same files; it commits its work on that branch. The session does not see this conversation: the brief must hold everything it needs (goal, the files and decisions that matter, what done looks like). Up to 8 sessions work at once. Then use wait_for_sessions, and merge the branches yourself.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'short name shown to the user in the sidebar' },
+        brief: { type: 'string', description: 'the full, self-contained instructions for the job' },
+        isolate: { type: 'boolean', description: "false: work in this chat's folder instead of a worktree (default true when the folder is a git repository)" }
+      },
+      required: ['title', 'brief']
+    }
+  },
+  {
+    name: 'list_sessions',
+    description: 'Lists the sessions you started: id, title, running or idle, branch, and the end of the last answer.',
+    inputSchema: { type: 'object', properties: {} },
+    annotations: { readOnlyHint: true }
+  },
+  {
+    name: 'wait_for_sessions',
+    description:
+      'Waits until the sessions you started have ended their turn (all of them, or the ids given), for at most 100 seconds per call, then lists them like list_sessions. When some still run, call it again. Waiting costs nothing.',
+    inputSchema: { type: 'object', properties: { ids: { type: 'array', items: { type: 'string' }, description: 'session ids, all of yours when left out' } } },
+    annotations: { readOnlyHint: true }
+  },
+  {
+    name: 'send_to_session',
+    description: 'Sends a follow-up message to a session you started (a correction, the next step). It is queued if the session is still working.',
+    inputSchema: { type: 'object', properties: { id: { type: 'string' }, message: { type: 'string' } }, required: ['id', 'message'] }
+  },
+  {
+    name: 'ledger_read',
+    description: 'Reads the shared ledger of this project: notes written by every session working on it (decisions, state, open work). Read it when you start.',
+    inputSchema: { type: 'object', properties: {} },
+    annotations: { readOnlyHint: true }
+  },
+  {
+    name: 'ledger_write',
+    description:
+      "Writes to the project ledger. mode \"append\" (default) adds a dated entry under your session's name; \"replace\" rewrites the whole file, to keep it short (over 30,000 characters it must be rewritten). Write what a new session would otherwise have to find out again: decisions and why, current state, what is done, what is open, traps found.",
+    inputSchema: {
+      type: 'object',
+      properties: { text: { type: 'string' }, mode: { type: 'string', enum: ['append', 'replace'] } },
+      required: ['text']
+    }
+  },
+  {
     name: 'cancel_scheduled_task',
     description: 'Deletes a scheduled task. Conversations of runs that already happened stay.',
     inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] }
@@ -116,7 +175,7 @@ export function describeSchedule(t: ScheduledTask): string {
 }
 
 /** Runs nobody watches: a model never sets them up with more freedom than Auto or "accept edits". */
-function taskMode(mode: PermissionMode): PermissionMode {
+export function taskMode(mode: PermissionMode): PermissionMode {
   return mode === 'auto' ? 'auto' : 'autoEdit'
 }
 
@@ -184,6 +243,42 @@ async function run(h: ToolHost, sid: string, name: string, a: Record<string, unk
     h.scheduler.remove(id)
     return ok(`Deleted the scheduled task "${task.name}".`)
   }
+  if (name === 'start_session') {
+    const title = String(a.title || '').replace(/\s+/g, ' ').trim().slice(0, 80)
+    const brief = String(a.brief || '').trim()
+    if (!title || !brief) return fail('title and brief are both needed')
+    const { meta, note } = await h.startChild(sid, { title, brief, isolate: a.isolate !== false })
+    return ok(`Started "${meta.title}" (id: ${meta.id}). ${note} It is working now: use wait_for_sessions to wait for it.`)
+  }
+  if (name === 'list_sessions' || name === 'wait_for_sessions') {
+    let kids = h.children(sid)
+    const ids = Array.isArray(a.ids) ? a.ids.map(String) : []
+    if (ids.length) kids = kids.filter((k) => ids.includes(k.id))
+    if (!kids.length) return ok('You have not started any session.')
+    if (name === 'wait_for_sessions') await h.waitIdle(kids.map((k) => k.id), 100000)
+    return ok(
+      kids
+        .map((k) => `- ${k.title} (id: ${k.id}) ${h.busy(k.id) ? 'RUNNING' : 'idle'}${k.worktree ? `, branch ${k.worktree.branch}, folder ${k.worktree.path}` : ''}\n  last answer: ${h.lastAnswer(k.id) || '(none yet)'}`)
+        .join('\n')
+    )
+  }
+  if (name === 'send_to_session') {
+    await h.sendTo(sid, String(a.id || ''), String(a.message || ''))
+    return ok('Sent.')
+  }
+  if (name === 'ledger_read') {
+    const meta = h.meta(sid)
+    if (!meta) return fail('This conversation is not known to Jolty.')
+    return ok(readLedger(projectOf(meta)) || 'The ledger of this project is empty.')
+  }
+  if (name === 'ledger_write') {
+    const meta = h.meta(sid)
+    if (!meta) return fail('This conversation is not known to Jolty.')
+    const text = String(a.text || '').trim()
+    if (!text) return fail('text is empty')
+    writeLedger(projectOf(meta), text, a.mode === 'replace' ? 'replace' : 'append', meta.title)
+    return ok('Written to the ledger.')
+  }
   return fail(`Unknown tool ${name}`)
 }
 
@@ -198,7 +293,11 @@ export async function handleJoltyTools(sid: string, msg: Record<string, unknown>
     return reply({ protocolVersion: params.protocolVersion || '2025-03-26', capabilities: { tools: { listChanged: false } }, serverInfo: { name: JOLTY_SERVER, version: '1.0.0' } })
   }
   if (method === 'ping') return reply({})
-  if (method === 'tools/list') return reply({ tools: TOOLS })
+  if (method === 'tools/list') {
+    // a session started by a lead does not start sessions of its own: no tree of sessions nobody can follow
+    const child = Boolean(host?.meta(sid)?.parentId)
+    return reply({ tools: child ? TOOLS.filter((t) => t.name !== 'start_session' && t.name !== 'send_to_session') : TOOLS })
+  }
   if (method === 'tools/call') {
     const params = (msg.params || {}) as { name?: string; arguments?: Record<string, unknown> }
     if (!host) return reply(fail('Jolty is still starting.'))

@@ -61,6 +61,8 @@ class H(BaseHTTPRequestHandler):
         # the user's turn = every message after the last assistant message
         idx = max([i for i, m in enumerate(msgs) if m.get("role") == "assistant"], default=-1)
         tail = "\n".join(flatten(m.get("content")) for m in msgs[idx + 1:])
+        # RUN_MCP=<tool name> MCP_ARGS=<json>: call any tool (an MCP tool of the app) once
+        want_mcp = re.search(r"RUN_MCP=(\S+)", tail) if "TOOL_RESULT:" not in tail and req.get("tools") else None
         want_tool = "RUN_TOOL" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
         want_write = "RUN_WRITE" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
         want_todo = "RUN_TODO" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
@@ -81,7 +83,13 @@ class H(BaseHTTPRequestHandler):
         mid = "msg_mock_%d" % (abs(hash(all_text)) % 10**8)
         sse(self, "message_start", {"type": "message_start", "message": {"id": mid, "type": "message", "role": "assistant", "model": model, "content": [],
             "stop_reason": None, "stop_sequence": None, "usage": {"input_tokens": 100, "output_tokens": 1, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}})
-        if want_todo:
+        if want_mcp:
+            args = re.search(r"MCP_ARGS=(\{.*\})", tail)
+            sse(self, "content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "toolu_m" + mid, "name": want_mcp.group(1), "input": {}}})
+            sse(self, "content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": args.group(1) if args else "{}"}})
+            sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})
+            sse(self, "message_delta", {"type": "message_delta", "delta": {"stop_reason": "tool_use", "stop_sequence": None}, "usage": {"output_tokens": 30}})
+        elif want_todo:
             todos = [{"content": c, "activeForm": c, "status": st} for c, st in [("Citesc structura proiectului", "completed"), ("Mut clasa jucatorului in TypeScript", "completed"),
                      ("Adaug tipurile pentru inventar", "in_progress"), ("Scriu testele pentru miscare", "pending"), ("Rulez build-ul si testele", "pending")]]
             sse(self, "content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "toolu_t" + mid, "name": "TodoWrite", "input": {}}})

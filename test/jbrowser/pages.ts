@@ -34,5 +34,6 @@ export const PAGES: Record<string, string> = {
   '/dnd': `<!doctype html><title>DnD</title><style>.box{width:120px;height:60px;border:1px solid #888;margin:10px;display:inline-block}</style>
 <div id="a" class="box" draggable="true" role="button" aria-label="Drag me">drag</div><div id="b" class="box" aria-label="Drop zone" role="region">zone</div>
 <script>const b=document.getElementById('b');b.ondragover=e=>e.preventDefault();b.ondrop=e=>{e.preventDefault();document.title='dropped '+e.dataTransfer.getData('text/plain')};document.getElementById('a').ondragstart=e=>e.dataTransfer.setData('text/plain','payload')</script>`,
+  '/ticker': `<!doctype html><title>Ticker</title><body style="font:80px sans-serif"><div id="n">0</div><script>let n=0;setInterval(()=>{document.getElementById('n').textContent=++n},100)</script>`,
   '/covered': `<!doctype html><title>Covered</title><button onclick="document.title='clicked'">Under cover</button><div style="position:fixed;inset:0;background:rgba(0,0,0,.3)" id="shield"><button onclick="document.getElementById('shield').remove()">Close cover</button></div>`
 }

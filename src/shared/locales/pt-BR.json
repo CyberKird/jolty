@@ -864,5 +864,21 @@
  "Sunet la notificări": "Som das notificações",
  "Sunetul Windows care însoțește notificările de mai sus.": "O som do Windows que acompanha as notificações acima.",
  "Jolty: planul așteaptă aprobarea ta": "Jolty: o plano espera sua aprovação",
- "Jolty: are nevoie de acordul tău": "Jolty: precisa da sua autorização"
+ "Jolty: are nevoie de acordul tău": "Jolty: precisa da sua autorização",
+ "Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.": "Uma conta ou um modelo novo lê todo o contexto do zero, sem cache. Compactado, lê só o resumo.",
+ "Compactează înainte ({k}k tokeni acum)": "Compactar antes ({k}k tokens agora)",
+ "Același chat, pe celălalt cont. Cu bifa de sus, compactat înainte.": "A mesma conversa, na outra conta. Com a caixa acima marcada, compactada antes.",
+ "Chat nou cu un rezumat compact al istoricului.": "Uma conversa nova com um resumo compacto do histórico.",
+ "același chat": "mesma conversa",
+ "Chat nou cu doar un rezumat de câțiva mii de tokeni, fără compactare.": "Uma conversa nova com só um resumo de alguns milhares de tokens, sem compactação.",
+ "rezumat rapid": "resumo rápido",
+ "Copiază numele branch-ului": "Copiar o nome do branch",
+ "Arată worktree-ul în Explorer": "Mostrar o worktree no Explorador",
+ "Ascunde din Live": "Ocultar do Live",
+ "Așteaptă aprobarea ta": "Aguardando sua aprovação",
+ "Rezumat compact, câțiva mii de tokeni": "Resumo compacto, alguns milhares de tokens",
+ "Același chat, cu tot contextul citit de la zero pe celălalt cont": "A mesma conversa, com todo o contexto lido do zero na outra conta",
+ "Tot contextul ({k}k)": "Contexto inteiro ({k}k)",
+ "Compactez conversația înainte, ca să nu o recitească tot noul cont sau model.": "Compactando a conversa antes, para que a conta ou o modelo novo não leia tudo.",
+ "Compactat: de la {before}k la {after}k tokeni.": "Compactado: de {before}k para {after}k tokens."
 }
