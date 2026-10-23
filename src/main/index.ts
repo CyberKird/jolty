@@ -147,7 +147,7 @@ function registerIpc(): void {
   handle('sessions:start', (input) => jolty.startSession(input as never))
   handle('sessions:history', (id: string) => jolty.loadHistory(id))
   handle('sessions:importAll', () => jolty.importAll())
-  handle('sessions:send', (id: string, text: string, attachments) => jolty.sendMessage(id, text, (attachments as never) || []))
+  handle('sessions:send', (id: string, text: string, attachments, parallel) => jolty.sendMessage(id, text, (attachments as never) || [], undefined, parallel === true))
   handle('sessions:interrupt', (id: string) => jolty.interrupt(id))
   handle('sessions:setModel', (id: string, model: string) => jolty.setModel(id, model))
   handle('sessions:setEffort', (id: string, effort: string) => jolty.setEffort(id, effort))

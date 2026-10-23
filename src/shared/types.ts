@@ -459,7 +459,8 @@ export interface JoltyApi {
     history(sessionId: string): Promise<ChatItem[]>
     /** every conversation from every login folder, skipping ones already in Jolty */
     importAll(): Promise<{ imported: number; failed: string[] }>
-    send(sessionId: string, text: string, attachments?: Attachment[]): Promise<void>
+    /** parallel: the model also gets the instruction to split the job into sessions (shared/parallel.ts) */
+    send(sessionId: string, text: string, attachments?: Attachment[], parallel?: boolean): Promise<void>
     interrupt(sessionId: string): Promise<void>
     setModel(sessionId: string, model: string): Promise<void>
     setEffort(sessionId: string, effort: string): Promise<void>

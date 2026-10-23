@@ -48,6 +48,7 @@ import { forget } from './recall'
 import { Scheduler } from './scheduler'
 import type { ScheduledTask } from '@shared/schedule'
 import { tr } from '@shared/i18n'
+import { withParallelInstruction } from '@shared/parallel'
 
 const { COLORS } = store
 
@@ -569,7 +570,7 @@ export class Jolty {
       : `[${images.length} attached images (${images.map((i) => i.name).join(', ')}). Their description, by ${vp.name}:]\n${text}\n[End of description]`
   }
 
-  async sendMessage(sessionId: string, text: string, attachments: Attachment[] = [], display?: string): Promise<void> {
+  async sendMessage(sessionId: string, text: string, attachments: Attachment[] = [], display?: string, parallel = false): Promise<void> {
     const s = this.liveSession(sessionId)
     if (s.meta.handoffPending) {
       // a moved chat's first message carries the history it came with
@@ -598,6 +599,8 @@ export class Jolty {
     // every few messages the model is reminded to save what it learned (see learning.ts); a temporary chat leaves nothing behind
     const nudge = s.meta.temporary || store.loadSettings().learningLoop === false ? undefined : learningNudge(s.meta.engine, this.transcript(sessionId).filter((i) => i.kind === 'user').length)
     let prompt = [text, filePrompt(prepared.files), nudge].filter(Boolean).join('\n\n')
+    // for the model only: the chat and the title keep the user's words (Hermes has no Jolty tools)
+    if (parallel && s.meta.engine !== 'hermes') prompt = withParallelInstruction(prompt)
     let images = prepared.images
     if (images.length && !(await this.canSee(s.meta))) {
       try {
