@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.15
+
+### New
+
+- Intelligence and speed scores for more models in the picker: GLM-5.3 and GLM-5.3-Flash, Beam, and the Nemotron family (Super VL, Ultra, Bolt, Lightning). Flint 40B and Big Pickle stay without a score until they are ranked.
+
+### Changed
+
+- A roomier chat box. It is wider, the text field is taller, and the project name gets more room, so the bar is less cramped.
+- The power button moved into the Tools menu as "Oprire PC". It shows in the bar only while a shutdown plan is set.
+
 ## 0.7.14
 
 ### Changed
