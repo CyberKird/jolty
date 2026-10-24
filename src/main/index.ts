@@ -11,6 +11,7 @@ import { BrowserLive } from './browser-live'
 import { allowFraming, listening, Preview } from './preview'
 import * as voice from './voice'
 import { nativeBrowser } from './jbrowser/native'
+import { nativeComputer } from './computer/native'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
 import * as updater from './updater'
@@ -157,6 +158,7 @@ function registerIpc(): void {
   handle('sessions:compactAndWait', (id: string) => jolty.compactAndWait(String(id)))
   handle('sessions:rewind', (id: string, itemId: string, dryRun?: boolean) => jolty.rewind(id, String(itemId), dryRun === true))
   handle('sessions:setBrowser', (id: string, on: boolean) => jolty.setBrowser(id, on === true))
+  handle('sessions:setComputer', (id: string, on: boolean) => jolty.setComputer(id, on === true))
   handle('schedules:list', () => jolty.scheduler.list())
   handle('schedules:add', (input) => jolty.scheduler.add(input as never))
   handle('schedules:update', (id: string, patch) => jolty.scheduler.update(String(id), (patch || {}) as never))
@@ -343,7 +345,7 @@ app.on('before-quit', (e) => {
   e.preventDefault()
   quitting = true
   preview.stop()
-  void jolty.shutdown().then(() => nativeBrowser.stop()).finally(() => app.quit())
+  void Promise.all([nativeComputer.stop().catch(() => undefined), jolty.shutdown()]).then(() => nativeBrowser.stop()).finally(() => app.quit())
 })
 
 app.on('window-all-closed', () => {

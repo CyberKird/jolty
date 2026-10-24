@@ -3,6 +3,7 @@
 import { browserMode, browserServer, BROWSER_SERVER } from './browser'
 import { JOLTY_READ_TOOLS, JOLTY_SERVER } from './jolty-tools'
 import { nativeBrowser } from './jbrowser/native'
+import { COMPUTER_ACT_TOOLS, COMPUTER_READ_TOOLS, COMPUTER_SERVER } from './computer/names'
 
 export { BROWSER_SERVER }
 
@@ -42,4 +43,27 @@ export function codexJoltyServer(sid: string, manual: boolean): Record<string, R
   if (!c) return {}
   const tools = manual ? {} : Object.fromEntries(JOLTY_READ_TOOLS.map((t) => [t, { approval_mode: 'approve' }]))
   return { [JOLTY_SERVER]: { url: c.url, http_headers: c.headers, tool_timeout_sec: 120, tools } }
+}
+
+/** Computer use for Claude Code; empty while the local server is not up. */
+export function claudeComputerServer(sid: string): Record<string, { type: 'http'; url: string; headers: Record<string, string> }> {
+  const c = nativeBrowser.computerMcp(sid)
+  return c ? { [COMPUTER_SERVER]: { type: 'http', ...c } } : {}
+}
+
+/** Computer use for ACP agents (OpenCode). */
+export function acpComputerServers(sid: string): Record<string, unknown>[] {
+  const c = nativeBrowser.computerMcp(sid)
+  return c ? [{ type: 'http', name: COMPUTER_SERVER, url: c.url, headers: Object.entries(c.headers).map(([name, value]) => ({ name, value })) }] : []
+}
+
+/**
+ * Computer use for Codex. Outside Manual mode every tool runs on its own: Jolty's server asks the user per application,
+ * the same for all engines. In Manual mode Codex asks for each call.
+ */
+export function codexComputerServer(sid: string, manual: boolean): Record<string, Record<string, unknown>> {
+  const c = nativeBrowser.computerMcp(sid)
+  if (!c) return {}
+  const tools = manual ? {} : Object.fromEntries([...COMPUTER_READ_TOOLS, ...COMPUTER_ACT_TOOLS].map((t) => [t, { approval_mode: 'approve' }]))
+  return { [COMPUTER_SERVER]: { url: c.url, http_headers: c.headers, tool_timeout_sec: 120, tools } }
 }

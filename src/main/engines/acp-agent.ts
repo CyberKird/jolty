@@ -9,8 +9,8 @@ import { list, object, str, type AcpObject } from './acp-events'
 export interface AcpAgent {
   engine: 'hermes' | 'opencode'
   name: string
-  launch(mode: PermissionMode, browser: boolean): JsonRpcProcess
-  /** whether the Jolty browser can be attached to a conversation */
+  launch(mode: PermissionMode, browser: boolean, computer: boolean): JsonRpcProcess
+  /** whether the Jolty browser and computer use can be attached to a conversation */
   browser: boolean
   /** the agent's own mode id for a Jolty permission mode; throws when the agent cannot do it */
   modeId(mode: PermissionMode): string
@@ -64,7 +64,7 @@ function configOption(state: AcpObject, id: string): AcpObject {
 export const OPENCODE: AcpAgent = {
   engine: 'opencode',
   name: 'OpenCode',
-  launch: (mode, browser) => launchOpencode(mode, browser),
+  launch: (mode, browser, computer) => launchOpencode(mode, browser, computer),
   browser: true,
   modeId: (mode) => mode === 'plan' ? 'plan' : 'build',
   // opencode keeps an "always" answer in memory for the running process, not on disk

@@ -4,6 +4,7 @@ import os from 'os'
 import path from 'path'
 import type { PermissionMode } from '@shared/types'
 import { BROWSER_BLOCKED_TOOLS, BROWSER_READ_TOOLS, BROWSER_SERVER, browserPrompt } from '../browser'
+import { COMPUTER_ACT_TOOLS, COMPUTER_READ_TOOLS, COMPUTER_SERVER, computerPrompt } from '../computer/names'
 import { dataDir, loadSettings } from '../store'
 import { JsonRpcProcess } from './jsonrpc'
 import { tr } from '@shared/i18n'
@@ -59,10 +60,16 @@ function browserRules(mode: PermissionMode): Record<string, Rule> {
   }
 }
 
-/** opencode has no system prompt over ACP: the browser instructions go in as an instructions file. */
-function browserInstructions(): string {
-  const file = path.join(dataDir(), 'opencode-browser.md')
-  fs.writeFileSync(file, browserPrompt() + '\n')
+/** Computer use: outside Manual mode every tool is allowed, because Jolty's server asks the user per application. */
+function computerRules(mode: PermissionMode): Record<string, Rule> {
+  const rule: Rule = mode === 'ask' ? 'ask' : 'allow'
+  return Object.fromEntries([...COMPUTER_READ_TOOLS, ...COMPUTER_ACT_TOOLS].map((t) => [`${COMPUTER_SERVER}_${t}`, rule]))
+}
+
+/** opencode has no system prompt over ACP: the browser and computer instructions go in as an instructions file. */
+function toolInstructions(browser: boolean, computer: boolean): string {
+  const file = path.join(dataDir(), 'opencode-tools.md')
+  fs.writeFileSync(file, [browser ? browserPrompt() : '', computer ? computerPrompt() : ''].filter(Boolean).join('\n\n') + '\n')
   return file
 }
 
@@ -88,7 +95,7 @@ export function opencodeVariants(): Promise<Map<string, string[]>> {
   })
 }
 
-export function launchOpencode(mode: PermissionMode = 'ask', browser = false): JsonRpcProcess {
+export function launchOpencode(mode: PermissionMode = 'ask', browser = false, computer = false): JsonRpcProcess {
   const exe = opencodeExecutable()
   if (!exe) throw new Error(tr("OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări."))
   const env: Record<string, string> = {}
@@ -96,8 +103,8 @@ export function launchOpencode(mode: PermissionMode = 'ask', browser = false): J
     if (value !== undefined && !/^(CLAUDECODE|CLAUDE_.*|ANTHROPIC_.*|CODEX_.*|OPENAI_.*|ELECTRON_RUN_AS_NODE)$/i.test(key)) env[key] = value
   }
   env.OPENCODE_CONFIG_CONTENT = JSON.stringify({
-    permission: { ...opencodePermissions(mode), ...(browser ? browserRules(mode) : {}) },
-    ...(browser ? { instructions: [browserInstructions()] } : {}),
+    permission: { ...opencodePermissions(mode), ...(browser ? browserRules(mode) : {}), ...(computer ? computerRules(mode) : {}) },
+    ...(browser || computer ? { instructions: [toolInstructions(browser, computer)] } : {}),
     autoupdate: false
   })
   return new JsonRpcProcess(exe, ['acp'], env, { jsonrpc: true, label: 'OpenCode' })

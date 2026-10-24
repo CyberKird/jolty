@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto'
 import type { Attachment, FileDiff, PermissionDecision, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import { BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER } from '../browser'
-import { codexBrowserServer, codexJoltyServer } from '../browser-mcp'
+import { codexBrowserServer, codexComputerServer, codexJoltyServer } from '../browser-mcp'
+import { computerPrompt } from '../computer/names'
 import { JOLTY_TOOLS_PROMPT } from '../jolty-tools'
 import { codexItem, planItemSteps, saveImages } from './codex-items'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
@@ -131,21 +132,28 @@ export class CodexSession implements EngineSession, ThreadListener {
     }
   }
 
+  /** whether the thread's computer tools were configured for Manual mode */
+  private startedManual = false
+
   private async startThread(): Promise<JsonRpcProcess> {
     const rpc = await this.server.get()
-    if (this.threadId) return rpc
+    // computer tools are approved in the thread's config: crossing the Manual mode line needs the thread started again
+    const manual = this.meta.permissionMode === 'ask'
+    if (this.threadId && !(this.meta.computer && this.startedManual !== manual)) return rpc
+    this.startedManual = manual
     const mode = MODES[this.meta.permissionMode]
     const common = {
       cwd: this.meta.cwd,
       model: this.meta.model || null,
       approvalPolicy: mode.approvalPolicy,
       sandbox: mode.sandbox,
-      developerInstructions: [WRITING_RULES, PLAN_RULES, JOLTY_TOOLS_PROMPT, this.meta.browser ? browserPrompt() : ''].filter(Boolean).join(' '),
+      developerInstructions: [WRITING_RULES, PLAN_RULES, JOLTY_TOOLS_PROMPT, this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' '),
       // one dotted key per server: the user's own MCP servers from config.toml stay next to them
       config: Object.fromEntries(
         Object.entries({
           ...codexJoltyServer(this.meta.id, this.meta.permissionMode === 'ask'),
-          ...(this.meta.browser ? { [BROWSER_SERVER]: this.browserConfig() } : {})
+          ...(this.meta.browser ? { [BROWSER_SERVER]: this.browserConfig() } : {}),
+          ...(this.meta.computer ? codexComputerServer(this.meta.id, this.meta.permissionMode === 'ask') : {})
         }).map(([name, server]) => [`mcp_servers.${name}`, server])
       )
     }
@@ -463,6 +471,12 @@ export class CodexSession implements EngineSession, ThreadListener {
     if (Boolean(this.meta.browser) === on) return
     this.meta.browser = on
     // thread config is fixed at start: the next message resumes the same thread with the new servers
+    if (!this.turnId) this.threadId = undefined
+  }
+
+  async setComputer(on: boolean): Promise<void> {
+    if (Boolean(this.meta.computer) === on) return
+    this.meta.computer = on
     if (!this.turnId) this.threadId = undefined
   }
 

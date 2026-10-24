@@ -1,10 +1,10 @@
-import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, MessageSquareDashed, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
+import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
 import { usageRisk } from '@shared/usage-risk'
 import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
-import { hasJoltyBrowser, isAcp } from '@shared/types'
+import { hasJoltyBrowser, hasJoltyComputer, isAcp } from '@shared/types'
 import { sameProvider } from '@shared/provider'
 import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
@@ -122,6 +122,8 @@ interface ComposerProps {
   onMode: (m: PermissionMode) => void
   browser?: boolean
   onBrowser: (on: boolean) => void
+  computer?: boolean
+  onComputer: (on: boolean) => void
   /** temporary chat: chosen before the first message, shown as locked once the chat exists */
   temporary?: boolean
   onTemporary?: (on: boolean) => void
@@ -460,6 +462,20 @@ function Composer(p: ComposerProps) {
             {p.browser && tr("Browser")}
           </button>
           {!isAcp(engine) && p.browser && <BrowserMenu />}
+          <button
+            className={`chrome-toggle ${p.computer ? 'on' : ''}`}
+            disabled={!hasJoltyComputer(engine)}
+            aria-pressed={Boolean(p.computer)}
+            onClick={() => p.onComputer(!p.computer)}
+            title={
+              !hasJoltyComputer(engine) ? tr("Controlul PC-ului nu este disponibil pentru Hermes.") : p.computer
+                ? tr("Computer e pornit: modelul vede ecranul și folosește mouse-ul și tastatura. Ctrl+Alt+Esc îl oprește oricând. Clic ca să-l oprești.")
+                : tr("Computer: modelul vede ecranul și folosește mouse-ul și tastatura ca un om, în programele pe care le aprobi. Merge cu orice model.")
+            }
+          >
+            <Monitor size={14} strokeWidth={1.8} />
+            {p.computer && tr("Computer")}
+          </button>
           {(p.onTemporary || p.temporary) && (
             <button
               className={`chrome-toggle ${p.temporary ? 'on' : ''}`}
@@ -841,6 +857,8 @@ export function ChatView({ session }: { session: SessionMeta }) {
         mode={session.permissionMode}
         onMode={(m) => void api.sessions.setPermissionMode(session.id, m).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         browser={session.browser}
+        computer={session.computer}
+        onComputer={(on) => void api.sessions.setComputer(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         temporary={session.temporary}
         onBrowser={(on) => void api.sessions.setBrowser(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         onStop={() => void api.sessions.interrupt(session.id)}
@@ -878,6 +896,7 @@ export function NewChat() {
   const [effort, setEffort] = useState<string>()
   const [mode, setMode] = useState<PermissionMode>(DEFAULT_MODE)
   const [browser, setBrowser] = useState(false)
+  const [computer, setComputer] = useState(false)
   const [temporary, setTemporary] = useState(false)
   const [cwd, setCwd] = useState<string>()
   const [seed, setSeed] = useState<string>()
@@ -956,6 +975,7 @@ export function NewChat() {
           if (isAcp(picked)) {
             if (mode === 'auto' || (mode === 'plan' && picked === 'hermes')) setMode('ask')
             if (!hasJoltyBrowser(picked)) setBrowser(false)
+            if (!hasJoltyComputer(picked)) setComputer(false)
             setTemporary(false)
           }
           if (id !== profileId) {
@@ -971,6 +991,8 @@ export function NewChat() {
         onMode={setMode}
         browser={browser}
         onBrowser={setBrowser}
+        computer={computer}
+        onComputer={setComputer}
         temporary={temporary}
         onTemporary={setTemporary}
         cwd={cwd}
@@ -998,6 +1020,7 @@ export function NewChat() {
               effort: effort || undefined,
               permissionMode: mode,
               browser,
+              computer: computer || undefined,
               temporary: temporary || undefined
             })
             const queued = launchQueue.current.splice(0)

@@ -23,9 +23,10 @@ import type {
   TurnUsage,
   UsageSummary
 } from '@shared/types'
-import { hasEffort, hasJoltyBrowser, isAcp } from '@shared/types'
+import { hasEffort, hasJoltyBrowser, hasJoltyComputer, isAcp } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browserMode, browsers } from './browser'
 import { nativeBrowser } from './jbrowser/native'
+import { nativeComputer } from './computer/native'
 import { PowerGuard, systemShutdown } from './power'
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
@@ -137,6 +138,8 @@ export class Jolty {
     }
   })
   private awakeId?: number
+  /** questions of the computer server waiting for the user's yes or no */
+  private computerAsks = new Map<string, { sessionId: string; resolve: (d: PermissionDecision) => void }>()
   /** temporary chats: kept here only, never in sessions.json or transcripts/ */
   private temps = new Map<string, SessionMeta>()
   private trackedTemps = new Set<string>()
@@ -162,6 +165,16 @@ export class Jolty {
       lastAnswer: (id) => this.lastAnswer(id),
       waitIdle: (ids, ms) => this.waitIdle(ids, ms),
       sendTo: (lead, id, text) => this.sendToChild(lead, id, text)
+    })
+    // the PC is never handed over by a switch left on from before: computer use starts off in every chat
+    const left = store.loadSessions().filter((m) => m.computer)
+    if (left.length) store.saveSessions(store.loadSessions().map((m) => (m.computer ? { ...m, computer: undefined } : m)))
+    nativeComputer.bind({
+      mode: (sid) => (this.live.get(sid)?.meta ?? this.findMeta(sid))?.permissionMode,
+      enabled: (sid) => Boolean((this.live.get(sid)?.meta ?? this.findMeta(sid))?.computer),
+      ask: (sid, q) => this.askComputer(sid, q),
+      notice: (sid, text, level) => this.onEngineEvent({ type: 'item', sessionId: sid, item: { kind: 'notice', id: randomUUID(), text, level } }),
+      killed: () => this.computerKilled()
     })
     if (store.loadProfiles().length === 0) store.saveProfiles(DEFAULT_PROFILES)
     const profiles = store.loadProfiles()
@@ -424,6 +437,7 @@ export class Jolty {
     if (isAcp(p.engine)) {
       AGENTS[p.engine as 'hermes' | 'opencode'].modeId(input.permissionMode)
       if (input.browser && !hasJoltyBrowser(p.engine)) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru {agent}.", { agent: ENGINE_NAMES[p.engine] }))
+      if (input.computer && !hasJoltyComputer(p.engine)) throw new Error(tr("Controlul PC-ului nu este disponibil pentru {agent}.", { agent: ENGINE_NAMES[p.engine] }))
     }
     if (input.temporary) {
       if (isAcp(p.engine)) throw new Error(tr("Conversația temporară nu este disponibilă pentru {agent}.", { agent: ENGINE_NAMES[p.engine] }))
@@ -457,6 +471,10 @@ export class Jolty {
     if (meta.temporary) this.temps.set(meta.id, meta)
     this.saveMeta(meta)
     if (!input.resumeEngineSessionId && input.model && !meta.temporary) this.remember(p.id, { model: input.model, effort: input.effort || '' })
+    if (input.computer) {
+      await this.setComputer(meta.id, true).catch((err) => this.onEngineEvent({ type: 'item', sessionId: meta.id, item: { kind: 'notice', id: randomUUID(), level: 'error', text: err instanceof Error ? err.message : String(err) } }))
+      meta.computer = this.findMeta(meta.id)?.computer
+    }
     return meta
   }
 
@@ -614,6 +632,7 @@ export class Jolty {
 
   async sendMessage(sessionId: string, text: string, attachments: Attachment[] = [], display?: string, parallel = false): Promise<void> {
     const s = this.liveSession(sessionId)
+    nativeComputer.newTurn(sessionId)
     if (s.meta.handoffPending) {
       // a moved chat's first message carries the history it came with
       const from = this.findMeta(s.meta.handoffFrom ?? '') || s.meta
@@ -858,6 +877,7 @@ export class Jolty {
   }
 
   async interrupt(sessionId: string): Promise<void> {
+    this.denyComputerAsks(sessionId)
     await this.live.get(sessionId)?.interrupt()
   }
 
@@ -920,6 +940,63 @@ export class Jolty {
     if (!on) void nativeBrowser.release(sessionId)
   }
 
+  async setComputer(sessionId: string, on: boolean): Promise<void> {
+    const engine = this.meta(sessionId).engine
+    if (on && !hasJoltyComputer(engine)) throw new Error(tr("Controlul PC-ului nu este disponibil pentru {agent}.", { agent: ENGINE_NAMES[engine] }))
+    if (on && process.platform !== 'win32') throw new Error(tr("Controlul PC-ului funcționează doar pe Windows."))
+    if (on) {
+      // the local server has to be up before an engine is given its address; the helper starts (and compiles, once) now so a failure shows here
+      await nativeBrowser.start()
+      await nativeComputer.setEnabled(sessionId, true)
+    }
+    const s = this.live.get(sessionId)
+    if (s) await s.setComputer(on)
+    const meta = s?.meta || this.meta(sessionId)
+    meta.computer = on || undefined
+    this.saveMeta(meta)
+    if (!on) {
+      this.denyComputerAsks(sessionId)
+      nativeComputer.release(sessionId)
+    }
+  }
+
+  /** The kill key: every chat that had computer use on loses it, and the ones waiting for a yes are answered no. */
+  private computerKilled(): void {
+    for (const m of this.sessions()) {
+      if (!m.computer) continue
+      void this.setComputer(m.id, false)
+      this.send({ type: 'meta', sessionId: m.id, meta: this.live.get(m.id)?.meta ?? { ...m, computer: undefined } })
+      this.onEngineEvent({ type: 'item', sessionId: m.id, item: { kind: 'notice', id: randomUUID(), level: 'warn', text: tr("Controlul PC-ului a fost oprit (Ctrl+Alt+Esc). Pornește-l din nou din butonul Computer.") } })
+    }
+  }
+
+  /** A question of the computer server to the user, shown like any permission request of the chat. */
+  private askComputer(sessionId: string, q: { title: string; detail?: string; app?: string }): Promise<PermissionDecision> {
+    const id = randomUUID()
+    this.send({
+      type: 'permission',
+      sessionId,
+      request: {
+        id,
+        toolName: 'mcp__jolty-computer',
+        title: q.title,
+        detail: q.detail,
+        canAllowForSession: Boolean(q.app),
+        sessionLabel: q.app ? tr("Mereu în {app}", { app: q.app }) : undefined
+      }
+    })
+    return new Promise((resolve) => this.computerAsks.set(id, { sessionId, resolve }))
+  }
+
+  private denyComputerAsks(sessionId: string): void {
+    for (const [id, a] of this.computerAsks) {
+      if (a.sessionId !== sessionId) continue
+      this.computerAsks.delete(id)
+      this.send({ type: 'permissionResolved', sessionId, requestId: id })
+      a.resolve('deny')
+    }
+  }
+
   /** First use of Jolty's own extension: put its files in place and show the user where to load them. */
   private async prepareNativeBrowser(): Promise<void> {
     await nativeBrowser.start()
@@ -944,6 +1021,13 @@ export class Jolty {
   }
 
   respond(sessionId: string, requestId: string, decision: PermissionDecision): void {
+    const ask = this.computerAsks.get(requestId)
+    if (ask) {
+      this.computerAsks.delete(requestId)
+      this.send({ type: 'permissionResolved', sessionId, requestId })
+      ask.resolve(decision)
+      return
+    }
     this.live.get(sessionId)?.respond(requestId, decision)
   }
 
@@ -1023,6 +1107,7 @@ export class Jolty {
     if (isAcp(to.engine)) {
       if (meta.permissionMode === 'auto' || (meta.permissionMode === 'plan' && to.engine === 'hermes')) meta.permissionMode = 'ask'
       if (!hasJoltyBrowser(to.engine)) meta.browser = undefined
+      if (!hasJoltyComputer(to.engine)) meta.computer = undefined
     }
     this.saveMeta(meta)
     this.onEngineEvent({ type: 'item', sessionId: meta.id, item: { kind: 'notice', id: randomUUID(), level: 'info', text: tr("Continuă în {name}.", { name: to.name }) } })
@@ -1104,6 +1189,8 @@ ${text.slice(0, 1500)}`
 
   async removeSession(sessionId: string): Promise<void> {
     void nativeBrowser.release(sessionId)
+    this.denyComputerAsks(sessionId)
+    nativeComputer.release(sessionId)
     if (this.temps.has(sessionId)) return this.wipeTemp(sessionId)
     await this.live.get(sessionId)?.close()
     this.live.delete(sessionId)

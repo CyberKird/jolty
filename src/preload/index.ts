@@ -36,6 +36,7 @@ const api: JoltyApi = {
     setEffort: (id, effort) => call('sessions:setEffort', id, effort),
     setPermissionMode: (id, mode) => call('sessions:setPermissionMode', id, mode),
     setBrowser: (id, on) => call('sessions:setBrowser', id, on),
+    setComputer: (id, on) => call('sessions:setComputer', id, on),
     compact: (id) => call('sessions:compact', id),
     compactAndWait: (id) => call('sessions:compactAndWait', id),
     rewind: (id, itemId, dryRun) => call('sessions:rewind', id, itemId, dryRun),
