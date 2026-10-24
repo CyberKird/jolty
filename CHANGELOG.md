@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.12
+
+### New
+
+- Jolty can use the computer. A new Computer switch in the chat (also in the new chat box) lets the model see the screen and work the PC like a person: it moves the mouse along a natural path, clicks and types at a human speed. Jolty asks you before it touches each application, and Ctrl+Alt+Esc stops it at once. The switch is off every time Jolty starts, and Settings has a page for it. It works with Claude, Codex and OpenCode.
+- OpenCode is a new engine next to Claude, Codex and Hermes. Pick it in the model list to use the free models OpenCode offers (Big Pickle and the other free ones), with the Jolty browser attached. Each model shows its own thinking levels in the picker. OpenCode has to be installed (npm i -g opencode-ai), or point Settings at opencode.exe.
+
 ## 0.7.11
 
 ### New
