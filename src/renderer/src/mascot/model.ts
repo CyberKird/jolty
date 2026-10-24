@@ -81,7 +81,7 @@ function joint(parent: THREE.Object3D, x: number, y: number, z = 0): THREE.Group
  */
 export const SEARCH_ARM = { x: -2.15, z: -0.62 }
 /** elbow to glove, in app units (rig3.py's forearm bones); the search keeps the elbow straight */
-const FORE = 10
+const FORE = 8.74
 
 const BOLT = [[-0.5, 26], [13, 26], [7, 15.5], [17, 16], [0, -1], [3, 11.5], [-6.5, 11]]
 
@@ -142,7 +142,7 @@ function buildEyes(eyes: THREE.Group, half: number): Record<string, THREE.Group>
 }
 
 /** along the forearm, in app units, where the sleeve ends and the hand begins */
-const WRIST = 10
+const WRIST = 8.6
 
 /** drops every triangle that touches a vertex of the hand (the forearm bone's, farther than `from` along it) */
 function cutHand(skin: THREE.SkinnedMesh, bone: string, elbow: THREE.Vector3, along: THREE.Vector3, from: number): { center: THREE.Vector3; radius: number } {
@@ -325,8 +325,8 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   const alongR = new THREE.Vector3(0, 1, 0).applyQuaternion(foreRBone.getWorldQuaternion(new THREE.Quaternion()))
   const cuff = cutHand(skin, 'foreR', elbowR, alongR, WRIST)
   const handR = new Hand(1)
-  // the mesh's own glove is small (about 5 units tall); the finger hand is built bigger, so it is scaled down to it
-  handR.group.scale.setScalar(0.6)
+  // the glove takes the size of the sleeve it closes (its cuff is 3.4 wide at scale 1)
+  handR.group.scale.setScalar(cuff.radius / 3.4)
   handR.group.position.copy(cuff.center).addScaledVector(alongR, -0.4)
   handR.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), alongR)
   root.add(handR.group)
