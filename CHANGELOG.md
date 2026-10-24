@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.17
+
+### Changed
+
+- "Improve message" now uses the model you picked in the chat box, not a small helper model, and turns what you typed into a proper prompt: the goal stated plainly, the steps in order, what "done" means and what must not break, without inventing anything you did not say. A short message no longer comes back as something that reads like a chat title.
+
+### Fixed
+
+- Skills that carry your own changes on top of their source no longer show as out of date when the source has nothing newer.
+- The active tab in Settings and on the Skills page scrolls into view instead of staying cut off at the edge.
+- Cards on the Skills page fit their column instead of spilling past it.
+
 ## 0.7.16
 
 ### New
