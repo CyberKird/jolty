@@ -4,7 +4,7 @@ import fs from 'fs'
 import { shell } from 'electron'
 import type { SkillInfo, SkillSource } from '@shared/skills'
 import { writeSource } from './skill-fs'
-import { lsRemote, shallowClone, treeOf } from './skills-git'
+import { git, lsRemote, shallowClone, treeOf } from './skills-git'
 import { validCommit, validGitUrl, validRef, validSubdir } from './skills-parse'
 import { currentRev, readState, scan, treeMode, writeState, type CheckState, type Entry } from './skills-scan'
 import { updateEntry } from './skills-update'
@@ -42,6 +42,17 @@ async function remoteRev(e: Entry, st: CheckState | undefined): Promise<string> 
   return lsRemote(src.url, src.ref ?? e.repo?.branch)
 }
 
+/** A clone carrying own commits on top of what the source has is not outdated. Unknown commit (never fetched) answers no. */
+async function ahead(e: Entry, latest: string): Promise<boolean> {
+  if (!e.repo || !validCommit(latest)) return false
+  try {
+    await git(['merge-base', '--is-ancestor', latest, 'HEAD'], e.repo.top)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Asks the sources whether something newer exists (all skills with a git source, or just ids). Returns the full list. */
 export async function check(ids?: string[]): Promise<SkillInfo[]> {
   const all = await scan()
@@ -66,7 +77,8 @@ export async function check(ids?: string[]): Promise<SkillInfo[]> {
           const latest = await remoteRev(e, st)
           const current = currentRev(e, st)
           // offline or a missing ref throws above and leaves the last result as it was
-          state[e.real!] = { ...st, latest, against: current, checkedAt: Date.now(), status: !current ? 'unknown' : current === latest ? 'ok' : 'outdated' }
+          const same = current === latest || (await ahead(e, latest))
+          state[e.real!] = { ...st, latest, against: current, checkedAt: Date.now(), status: !current ? 'unknown' : same ? 'ok' : 'outdated' }
         } catch {
           /* one unreachable source must not hide the others */
         }
