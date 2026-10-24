@@ -1418,7 +1418,7 @@ a {
   padding: 0 32px 24px;
 }
 .composer {
-  max-width: 800px;
+  max-width: 940px;
   margin: 0 auto;
   border: 1px solid var(--line-2);
   background: var(--s1);
@@ -1433,9 +1433,9 @@ a {
 .composer textarea {
   display: block;
   width: 100%;
-  min-height: 60px;
-  max-height: 260px;
-  padding: 18px 20px 8px;
+  min-height: 76px;
+  max-height: 280px;
+  padding: 20px 22px 10px;
   border: 0;
   outline: none;
   resize: none;
@@ -1458,7 +1458,7 @@ a {
 .cwd-btn {
   flex: 0 1 auto;
   min-width: 0;
-  max-width: 190px;
+  max-width: 230px;
 }
 .cwd-btn span {
   min-width: 0;
@@ -3062,9 +3062,11 @@ a {
   }
 }
 @media (min-width: 1700px) {
-  .composer,
   .messages-inner {
     max-width: 880px;
+  }
+  .composer {
+    max-width: 1020px;
   }
 }
 
@@ -3138,7 +3140,7 @@ a {
    --------------------------------------------------------------------------- */
 .tasks {
   flex: none;
-  max-width: 800px;
+  max-width: 940px;
   width: calc(100% - 64px);
   margin: 0 auto -1px;
   border: 1px solid var(--line-2);
@@ -3230,7 +3232,7 @@ a {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  max-width: 800px;
+  max-width: 940px;
   width: calc(100% - 64px);
   margin: 0 auto;
   padding: 7px 10px;
@@ -3249,7 +3251,7 @@ a {
 }
 @media (min-width: 1700px) {
   .tasks {
-    max-width: 880px;
+    max-width: 1020px;
   }
 }
 .sr-only {

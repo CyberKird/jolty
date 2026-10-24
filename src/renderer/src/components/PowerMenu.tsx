@@ -1,7 +1,7 @@
 // The power button in the composer: what the PC does (shutdown, restart, sleep, hibernate, log off, lock)
 // and when (once the work is done, after some minutes, or at a time of day), the way ShutdownTimer asks for it.
 import { Check, Power } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PowerAction, PowerWhen } from '@shared/types'
 import { ACTION_LABEL, DESTRUCTIVE, POWER_ACTIONS } from '@shared/power'
 import { api, useStore } from '../store'
@@ -20,9 +20,23 @@ const inAnHour = (): string => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-export function PowerMenu() {
+/** In the bar only while a plan is armed; otherwise the tools menu mounts it with `autoOpen` and it leaves when closed. */
+export function PowerMenu({ autoOpen, onClosed }: { autoOpen?: boolean; onClosed?: () => void }) {
   const power = useStore((s) => s.power)
   const { open, setOpen, ref } = usePopover()
+  const wasOpen = useRef(false)
+  useEffect(() => {
+    if (autoOpen) setOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (open) wasOpen.current = true
+    else if (wasOpen.current) {
+      wasOpen.current = false
+      onClosed?.()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
   const [action, setAction] = useState<PowerAction>('shutdown')
   const [kind, setKind] = useState<PowerWhen['kind']>('done')
   const [minutes, setMinutes] = useState(30)

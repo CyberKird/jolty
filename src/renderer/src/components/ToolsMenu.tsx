@@ -12,6 +12,8 @@ export interface Tool {
   title: string
   on: boolean
   disabled?: boolean
+  /** opens something instead of switching: no check mark, and the menu closes */
+  action?: boolean
   onToggle: () => void
 }
 
@@ -38,12 +40,15 @@ export function ToolsMenu({ tools, after }: { tools: Tool[]; after?: Record<stri
                 <button
                   key={t.id}
                   data-opt
-                  role="menuitemcheckbox"
-                  aria-checked={t.on}
+                  role={t.action ? 'menuitem' : 'menuitemcheckbox'}
+                  aria-checked={t.action ? undefined : t.on}
                   disabled={t.disabled}
                   className={`picker-opt ${t.on ? 'on' : ''}`}
                   title={t.title}
-                  onClick={() => t.onToggle()}
+                  onClick={() => {
+                    t.onToggle()
+                    if (t.action) setOpen(false)
+                  }}
                 >
                   <span className="picker-opt-text">
                     <span className="picker-opt-name tool-name">{t.icon}{t.label}</span>

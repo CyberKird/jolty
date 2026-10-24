@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Square, X } from 'lucide-react'
+import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Power, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
@@ -138,6 +138,8 @@ function Composer(p: ComposerProps) {
   const [text, setText] = useState('')
   const [atts, setAtts] = useState<Attachment[]>([])
   const [dragging, setDragging] = useState(false)
+  const powerArmed = useStore((s) => s.power.armed)
+  const [powerOpen, setPowerOpen] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const loaded = useAllModels(p.groups ? NO_PROFILES : p.profiles)
@@ -466,11 +468,16 @@ function Composer(p: ComposerProps) {
                     ? tr("Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.")
                     : tr("Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty."),
                 onToggle: () => p.onTemporary?.(!p.temporary)
-              }] : [])
+              }] : []),
+              {
+                id: 'power', icon: <Power size={14} strokeWidth={1.8} />, label: tr("Oprire PC"), on: false, action: true,
+                title: tr("Oprește, repornește, adoarme sau blochează PC-ul când termină lucrul sau la o oră aleasă."),
+                onToggle: () => setPowerOpen(true)
+              }
             ]}
             after={{ browser: !isAcp(engine) ? <BrowserMenu /> : undefined }}
           />
-          <PowerMenu />
+          {(powerArmed || powerOpen) && <PowerMenu autoOpen={powerOpen} onClosed={() => setPowerOpen(false)} />}
           <div className="spacer" />
           {p.sessionId && p.running && <WorkClock sessionId={p.sessionId} />}
           {p.running && (

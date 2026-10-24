@@ -115,6 +115,47 @@
    "note": "MiMo V2.5"
   },
   {
+   "match": ["glm-5.3-flash"],
+   "iq": 42,
+   "tps": 69,
+   "note": "GLM-5.3-Flash"
+  },
+  {
+   "match": ["glm-5.3"],
+   "iq": 45,
+   "tps": 85,
+   "note": "GLM-5.3 (max)"
+  },
+  {
+   "match": ["beam"],
+   "iq": 30,
+   "tps": 337,
+   "note": "Reflection Beam 1.0"
+  },
+  {
+   "match": ["nemotron", "super"],
+   "iq": 26,
+   "tps": 453,
+   "note": "Nemotron 3.5 Super VL"
+  },
+  {
+   "match": ["nemotron", "ultra"],
+   "iq": 23,
+   "tps": 154,
+   "note": "Nemotron 3 Ultra"
+  },
+  {
+   "match": ["nemotron", "bolt"],
+   "iq": 21,
+   "note": "Nemotron 3.5 Bolt 74B-A9B"
+  },
+  {
+   "match": ["nemotron", "lightning"],
+   "iq": 13,
+   "tps": 288,
+   "note": "Nemotron 3.5 Lightning"
+  },
+  {
    "match": ["gemma-4"],
    "iq": 15,
    "note": "Gemma 4 (variantele de 12B-31B)"
