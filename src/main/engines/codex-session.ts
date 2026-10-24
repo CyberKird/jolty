@@ -7,7 +7,7 @@ import { JOLTY_TOOLS_PROMPT } from '../jolty-tools'
 import { loadSettings } from '../store'
 import { codexItem, planItemSteps, saveImages } from './codex-items'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
-import { PLAN_RULES, WRITING_RULES } from './prompt'
+import { LANGUAGE_RULE, PLAN_RULES, WRITING_RULES } from './prompt'
 import type { EngineHost, EngineSession } from './types'
 import { tr } from '@shared/i18n'
 
@@ -148,7 +148,7 @@ export class CodexSession implements EngineSession, ThreadListener {
       model: this.meta.model || null,
       approvalPolicy: mode.approvalPolicy,
       sandbox: mode.sandbox,
-      developerInstructions: [WRITING_RULES, PLAN_RULES, JOLTY_TOOLS_PROMPT, this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' '),
+      developerInstructions: [LANGUAGE_RULE, WRITING_RULES, PLAN_RULES, JOLTY_TOOLS_PROMPT, this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' '),
       // one dotted key per server: the user's own MCP servers from config.toml stay next to them
       config: Object.fromEntries(
         Object.entries({
