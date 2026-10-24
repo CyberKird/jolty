@@ -253,16 +253,17 @@ test('permission for an unknown session is rejected without an approval dialog',
     assert.equal(f.events.some((event) => event.type === 'permission'), false)
   } finally { await f.close() }
 })
-test('OpenCode: free models first, non-chat models dropped, modes and approvals map to its config', () => {
+test('OpenCode: only free models listed, modes and approvals map to its config', () => {
   const state = { configOptions: [{ id: 'model', currentValue: 'opencode/big-pickle', options: [
     { value: 'nvidia/black-forest-labs/flux.1-dev', name: 'FLUX' },
     { value: 'deepseek/deepseek-v4-pro', name: 'DeepSeek V4 Pro' },
-    { value: 'opencode/big-pickle', name: 'Big Pickle' },
+    { value: 'opencode/big-pickle', name: 'OpenCode Zen/Big Pickle' },
     { value: 'opencode/glm-5.3-flash-free', name: 'GLM Free' },
     { value: 'opencode/gpt-5.5', name: 'GPT 5.5' }
   ] }] }
   const ids = OPENCODE.models(state).map((m) => m.id)
-  assert.deepEqual(ids, ['opencode/big-pickle', 'opencode/glm-5.3-flash-free', 'deepseek/deepseek-v4-pro', 'opencode/gpt-5.5'])
+  assert.deepEqual(ids, ['opencode/big-pickle', 'opencode/glm-5.3-flash-free'])
+  assert.equal(OPENCODE.models(state)[0].label, 'Big Pickle')
   assert.equal(OPENCODE.currentModel(state), 'opencode/big-pickle')
   assert.equal(OPENCODE.modeId('plan'), 'plan')
   assert.equal(OPENCODE.modeId('autoEdit'), 'build')

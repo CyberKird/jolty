@@ -74,12 +74,12 @@ export const OPENCODE: AcpAgent = {
   models(state) {
     const option = configOption(state, 'model')
     const models = list(option.options)
-      .filter((m) => typeof m.value === 'string' && !NOT_CHAT.test(m.value))
+      .filter((m) => typeof m.value === 'string' && FREE.test(m.value) && !NOT_CHAT.test(m.value))
       .map((m): ModelOption => ({
-        id: m.value, label: str(m.name) || m.value, vision: true, isDefault: m.value === option.currentValue,
-        description: FREE.test(m.value) ? tr("Gratuit prin OpenCode") : undefined
+        id: m.value, label: (str(m.name) || m.value).split('/').pop() || m.value, vision: true, isDefault: m.value === option.currentValue,
+        description: tr("Gratuit prin OpenCode")
       }))
-    return [...models.filter((m) => FREE.test(m.id)), ...models.filter((m) => !FREE.test(m.id))]
+    return models
   },
   setModel: (rpc, sessionId, value) => rpc.request('session/set_config_option', { sessionId, configId: 'model', value }),
   setMode: (rpc, sessionId, value) => rpc.request('session/set_config_option', { sessionId, configId: 'mode', value }),
