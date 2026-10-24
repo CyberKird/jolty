@@ -1169,5 +1169,9 @@
  "Contul nu are sold. Alimentează-l pe pagina furnizorului și încearcă din nou.": "Akun tidak punya saldo. Isi ulang di halaman penyedia lalu coba lagi.",
  "Prea multe cereri sau limita contului a fost atinsă. Încearcă din nou peste puțin.": "Terlalu banyak permintaan atau batas akun tercapai. Coba lagi sebentar lagi.",
  "Furnizorul nu a acceptat modelul „{model}”. Verifică numele lui în documentația furnizorului. {detail}": "Penyedia tidak menerima model \"{model}\". Periksa namanya di dokumentasi penyedia. {detail}",
- "Furnizorul a răspuns cu eroarea HTTP {status}. {detail}": "Penyedia menjawab dengan galat HTTP {status}. {detail}"
+ "Furnizorul a răspuns cu eroarea HTTP {status}. {detail}": "Penyedia menjawab dengan galat HTTP {status}. {detail}",
+ "Nu e instalată încă în Firefox. Se instalează o singură dată și rămâne instalată.": "Belum terpasang di Firefox. Dipasang sekali dan tetap terpasang.",
+ "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "Tekan Pasang: saya membuka ekstensi yang ditandatangani Mozilla di Firefox.",
+ "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "Firefox bertanya \"Tambahkan Jolty?\". Tekan \"Tambahkan\".",
+ "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "Selesai: status di atas berubah menjadi \"Terhubung\". Ekstensi tetap terpasang setelah Firefox ditutup, jadi langkahnya tidak perlu diulang."
 }

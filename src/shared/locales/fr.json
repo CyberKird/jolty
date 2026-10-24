@@ -1169,5 +1169,9 @@
  "Contul nu are sold. Alimentează-l pe pagina furnizorului și încearcă din nou.": "Le compte n'a plus de solde. Recharge-le sur la page du fournisseur et réessaie.",
  "Prea multe cereri sau limita contului a fost atinsă. Încearcă din nou peste puțin.": "Trop de requêtes ou limite du compte atteinte. Réessaie dans un instant.",
  "Furnizorul nu a acceptat modelul „{model}”. Verifică numele lui în documentația furnizorului. {detail}": "Le fournisseur n'a pas accepté le modèle « {model} ». Vérifie son nom dans la documentation du fournisseur. {detail}",
- "Furnizorul a răspuns cu eroarea HTTP {status}. {detail}": "Le fournisseur a répondu par l'erreur HTTP {status}. {detail}"
+ "Furnizorul a răspuns cu eroarea HTTP {status}. {detail}": "Le fournisseur a répondu par l'erreur HTTP {status}. {detail}",
+ "Nu e instalată încă în Firefox. Se instalează o singură dată și rămâne instalată.": "Pas encore installée dans Firefox. Elle s'installe une seule fois et reste installée.",
+ "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "Clique sur Installer : j'ouvre dans Firefox l'extension signée par Mozilla.",
+ "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "Firefox demande « Ajouter Jolty ? ». Clique sur « Ajouter ».",
+ "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "Terminé : l'état ci-dessus passe à « Connectée ». L'extension reste installée après la fermeture de Firefox, tu ne répètes pas les étapes."
 }

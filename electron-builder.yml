@@ -29,6 +29,9 @@ extraResources:
   # the same for Firefox, which has no DevTools protocol for extensions and needs its own script
   - from: browser-extension-firefox
     to: browser-extension-firefox
+  # the same extension signed by Mozilla (unlisted): installs once in Firefox and stays, see scripts/sign-firefox.mjs
+  - from: browser-extension-firefox-signed
+    to: browser-extension-firefox-signed
   - from: build/icon.ico
     to: icon.ico
   # whisper-cli (Vulkan) for voice input, fetched by scripts/fetch-redist.mjs

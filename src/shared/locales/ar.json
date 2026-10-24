@@ -1169,5 +1169,9 @@
  "Contul nu are sold. Alimentează-l pe pagina furnizorului și încearcă din nou.": "لا يوجد رصيد في الحساب. اشحنه من صفحة المزوّد ثم حاول مرة أخرى.",
  "Prea multe cereri sau limita contului a fost atinsă. Încearcă din nou peste puțin.": "طلبات كثيرة جدًا أو بلغ الحساب حدّه. حاول مرة أخرى بعد قليل.",
  "Furnizorul nu a acceptat modelul „{model}”. Verifică numele lui în documentația furnizorului. {detail}": "لم يقبل المزوّد النموذج \"{model}\". تحقق من اسمه في وثائق المزوّد. {detail}",
- "Furnizorul a răspuns cu eroarea HTTP {status}. {detail}": "ردّ المزوّد بخطأ HTTP رقم {status}. {detail}"
+ "Furnizorul a răspuns cu eroarea HTTP {status}. {detail}": "ردّ المزوّد بخطأ HTTP رقم {status}. {detail}",
+ "Nu e instalată încă în Firefox. Se instalează o singură dată și rămâne instalată.": "لم يتم تثبيتها في Firefox بعد. تُثبَّت مرة واحدة وتبقى مثبّتة.",
+ "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "اضغط تثبيت: سأفتح في Firefox الإضافة الموقّعة من Mozilla.",
+ "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "يسأل Firefox «هل تريد إضافة Jolty؟». اضغط «إضافة».",
+ "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "تم: تتحول الحالة أعلاه إلى «متصلة». تبقى الإضافة مثبّتة بعد إغلاق Firefox، فلا تكرر الخطوات."
 }

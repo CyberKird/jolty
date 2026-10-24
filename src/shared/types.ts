@@ -380,6 +380,8 @@ export interface NativeBrowserStatus {
   port: number
   /** Firefox loads the extension differently (as a temporary add-on, from manifest.json) */
   firefox?: boolean
+  /** Firefox installs the extension signed by Mozilla, which stays installed (no temporary add-on) */
+  signed?: boolean
 }
 
 export interface UpdateStatus {

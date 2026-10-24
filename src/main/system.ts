@@ -105,7 +105,7 @@ export async function check(): Promise<SystemCheck[]> {
       id: 'extension',
       label: tr("Extensia Jolty"),
       ok: ext.connected,
-      detail: ext.connected ? tr("Conectată la browser (versiunea {v})", { v: ext.version || '?' }) : ext.installed ? tr("Instalată, dar browserul nu e conectat. Deschide browserul sau apasă pe iconița extensiei și pe Reconectează.") : tr("Nu e instalată încă în browser."),
+      detail: ext.connected ? tr("Conectată la browser (versiunea {v})", { v: ext.version || '?' }) : ext.installed ? tr("Instalată, dar browserul nu e conectat. Deschide browserul sau apasă pe iconița extensiei și pe Reconectează.") : ext.signed ? tr("Nu e instalată încă în Firefox. Se instalează o singură dată și rămâne instalată.") : tr("Nu e instalată încă în browser."),
       fixLabel: ext.connected ? undefined : ext.installed ? tr("Deschide pagina de extensii") : tr("Instalează extensia")
     })
   }
