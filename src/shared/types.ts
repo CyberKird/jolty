@@ -323,6 +323,8 @@ export interface AppSettings {
   opencodePath?: string
   lastCwd?: string
   lastProfileId?: string
+  /** the "add your own key" suggestion after the first free chat was closed: it does not come back */
+  ownKeyHintDismissed?: boolean
   /** the model and thinking level each profile used last: a new chat opens on them, not on the default */
   lastModels?: Record<string, { model: string; effort?: string }>
   /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
@@ -576,6 +578,15 @@ export interface JoltyApi {
     remove(tag: string): Promise<void>
     createProfile(tag: string): Promise<Profile>
     installOllama(): Promise<void>
+  }
+  /** welcome screen: the checks that prove a way of connecting works before it is kept */
+  setup: {
+    /** one small request with the key; rejects with a sentence that says what is wrong */
+    testKey(baseUrl: string, model: string, key: string): Promise<void>
+    /** one real prompt to a free OpenCode model */
+    testFree(model: string): Promise<void>
+    /** uses the Claude / Codex account already signed in on this PC, else creates a profile to sign in with */
+    account(engine: 'claude' | 'codex'): Promise<{ profile: Profile; loggedIn: boolean }>
   }
   system: {
     check(): Promise<SystemCheck[]>

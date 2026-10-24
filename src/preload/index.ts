@@ -86,6 +86,11 @@ const api: JoltyApi = {
     createProfile: (tag) => call('local:createProfile', tag),
     installOllama: () => call('local:installOllama')
   },
+  setup: {
+    testKey: (baseUrl, model, key) => call('setup:testKey', baseUrl, model, key),
+    testFree: (model) => call('setup:testFree', model),
+    account: (engine) => call('setup:account', engine)
+  },
   system: {
     check: () => call('system:check'),
     fix: (id) => call('system:fix', id)

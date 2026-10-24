@@ -18,6 +18,7 @@ import { LimitStrip, TaskStrip, UpdateStrip, VerificationStrip, WorkClock } from
 import { tr } from '@shared/i18n'
 import { VoiceButton } from './VoiceButton'
 import { Trans } from './Trans'
+import { OwnKeyStrip } from './Welcome'
 
 const EMPTY: ChatItem[] = []
 
@@ -985,6 +986,7 @@ export function NewChat() {
         </div>
       </div>
       <UpdateStrip />
+      <OwnKeyStrip />
       <Composer
         running={false}
         profiles={profiles}

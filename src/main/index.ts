@@ -21,6 +21,7 @@ import * as store from './store'
 import * as skills from './skills'
 import * as pack from './share-pack'
 import * as system from './system'
+import * as connect from './connect'
 import { getLang, setLang, tr } from '@shared/i18n'
 
 /** Links from chats and pages open in the browser only when they are plain web links. */
@@ -242,10 +243,14 @@ function registerIpc(): void {
   handle('local:createProfile', (tag: string) => jolty.createLocalProfile(tag))
   handle('local:installOllama', () => system.fix('ollama', (p) => shell.openPath(p)))
 
+  handle('setup:testKey', (baseUrl: unknown, model: unknown, key: unknown) => connect.testKey(baseUrl, model, key))
+  handle('setup:testFree', (model: unknown) => connect.testFree(model))
+  handle('setup:account', (engine: unknown) => jolty.connectAccount(engine))
+
   handle('system:check', () => system.check())
   handle('system:fix', async (id: string) => {
     await system.fix(id, (p) => shell.openPath(p))
-    if (id === 'opencode') jolty.ensureOpencodeProfile()
+    if (id === 'opencode') jolty.addDetectedAgents()
   })
 
   handle('codexImport:detect', (id: string, cwd?: string) => jolty.codex.importDetect(jolty.profile(id), cwd))

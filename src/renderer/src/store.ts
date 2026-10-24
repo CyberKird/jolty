@@ -48,6 +48,8 @@ interface Toast {
 interface State {
   page: Page
   profiles: Profile[]
+  /** false until the first list came back: an empty list before that does not mean a new user */
+  profilesLoaded: boolean
   sessions: SessionMeta[]
   activeId?: string
   transcripts: Record<string, ChatItem[]>
@@ -128,6 +130,7 @@ function swapPage(update: () => void): void {
 export const useStore = create<State>((set, get) => ({
   page: 'chat',
   profiles: [],
+  profilesLoaded: false,
   sessions: [],
   transcripts: {},
   status: {},
@@ -166,7 +169,7 @@ export const useStore = create<State>((set, get) => ({
   },
 
   loadProfiles: async () => {
-    set({ profiles: await api.profiles.list() })
+    set({ profiles: await api.profiles.list(), profilesLoaded: true })
   },
 
   moveProfile: async (from, to) => {
