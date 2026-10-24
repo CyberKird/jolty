@@ -1,6 +1,6 @@
 // Starts everything a browser tool test needs: a local web server, the Jolty hub + service, and a real
 // Chromium with the Jolty extension loaded. Tools are called over HTTP, exactly like a model's client does.
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import fs from 'node:fs'
 import http from 'node:http'
 import os from 'node:os'
@@ -59,8 +59,19 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
   if (pair) hub.openPairing()
   else fs.writeFileSync(path.join(ext, 'config.json'), JSON.stringify({ token: TOKEN, ports: [port] }))
 
-  const proc: ChildProcess = firefox
-    ? spawn('npx', ['--yes', 'web-ext', 'run', '--source-dir', ext, '--firefox', firefox, '--firefox-profile', path.join(root, 'profile'), '--profile-create-if-missing', '--no-reload', '--no-input', '--start-url', 'about:blank'].map((a) => `"${a}"`), { stdio: process.env.JBROWSER_DEBUG ? 'inherit' : 'ignore', shell: true })
+  // JBROWSER_XPI=1 (with JBROWSER_FIREFOX and JBROWSER_PAIR): the signed add-on in a fresh profile, as a user has it, not a temporary one. Pop-ups are allowed like web-ext does, or Firefox blocks the new-tab test's link
+  const xpi = !!process.env.JBROWSER_XPI
+  if (xpi) {
+    const profile = path.join(root, 'profile')
+    fs.mkdirSync(path.join(profile, 'extensions'), { recursive: true })
+    fs.copyFileSync(path.resolve('browser-extension-firefox-signed/jolty.xpi'), path.join(profile, 'extensions', 'jolty@joltarise.com.xpi'))
+    const prefs = { 'extensions.autoDisableScopes': 0, 'extensions.enabledScopes': 15, 'browser.shell.checkDefaultBrowser': false, 'dom.disable_open_during_load': false }
+    fs.writeFileSync(path.join(profile, 'user.js'), Object.entries(prefs).map(([k, v]) => `user_pref(${JSON.stringify(k)}, ${v});`).join('\n'))
+  }
+  const proc: ChildProcess = xpi && firefox
+    ? spawn(firefox, ['-no-remote', '-profile', path.join(root, 'profile'), 'about:blank'], { stdio: 'ignore' })
+    : firefox
+      ? spawn('npx', ['--yes', 'web-ext', 'run', '--source-dir', ext, '--firefox', firefox, '--firefox-profile', path.join(root, 'profile'), '--profile-create-if-missing', '--no-reload', '--no-input', '--start-url', 'about:blank'].map((a) => `"${a}"`), { stdio: process.env.JBROWSER_DEBUG ? 'inherit' : 'ignore', shell: true })
     : spawn(
     chrome,
     [`--user-data-dir=${path.join(root, 'profile')}`, `--load-extension=${ext}`, `--disable-extensions-except=${ext}`, ...(process.env.JBROWSER_HEADFUL ? [] : ['--headless=new']), '--no-first-run', '--no-default-browser-check', '--window-size=1280,900', 'about:blank'],
@@ -94,12 +105,12 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
     },
     async stop() {
       // web-ext starts Firefox as a child of a shell: the whole tree has to go
-      if (firefox && proc.pid) spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore' })
+      if (firefox && proc.pid) spawnSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore' })
       else proc.kill()
       await hub.stop()
       site.close()
       await new Promise((r) => setTimeout(r, 400))
-      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 })
     }
   }
 }
