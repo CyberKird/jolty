@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.22
+
+### Fixed
+
+- Firefox: "Install" opened the signed extension as a file, and Firefox showed an empty page instead of the "Add Jolty?" question. Jolty now serves the extension on its local address and opens that, so Firefox asks, you press Add once and it stays installed. Checked in a real Firefox: the prompt appears, the extension pairs with Jolty, and after a restart it reconnects on its own.
+
 ## 0.7.21
 
 ### New
