@@ -4,7 +4,6 @@ import { randomBytes } from 'crypto'
 import { app, clipboard, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
-import { pathToFileURL } from 'url'
 import type { NativeBrowserStatus } from '@shared/types'
 import { activeBrowser, browsers } from '../browser'
 import { dataDir, getSecret, loadSettings, setSecret } from '../store'
@@ -62,6 +61,7 @@ class NativeBrowser {
     bundledVersion: (agent) => versionOf(bundledDir(kindOfAgent(agent))),
     mcp: (sid, m) => this.service.handle(sid, m),
     tools: handleJoltyTools,
+    xpi: signedXpi,
     paired: { get: () => getSecret(FIREFOX_KEY), set: (o) => setSecret(FIREFOX_KEY, o) },
     computer: (sid, m) => nativeComputer.handle(sid, m),
     log: (m) => process.env.JOLTY_DEBUG && console.error('[jbrowser]', m)
@@ -139,7 +139,7 @@ class NativeBrowser {
     if (this.signed()) {
       // Firefox shows its own "Add Jolty?" prompt; the extension then asks the app for its token (pairing)
       this.hub.openPairing()
-      activeBrowser()?.open(pathToFileURL(signedXpi()).href)
+      activeBrowser()?.open(`http://127.0.0.1:${this.hub.port}/jolty.xpi`)
       return this.status()
     }
     const dir = this.install()
