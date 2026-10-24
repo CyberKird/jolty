@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.18
+
+### New
+
+- Opera is now a supported browser for the Jolty extension. Jolty finds it, offers it in Settings and opens its extensions page when you install the extension. Chrome, Edge, Brave, Vivaldi and Firefox work as before.
+
 ## 0.7.17
 
 ### Changed

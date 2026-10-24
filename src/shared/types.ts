@@ -394,7 +394,7 @@ export interface SlashItem {
   scope: 'proiect' | 'global'
 }
 
-export type BrowserApp = 'chrome' | 'vivaldi' | 'edge' | 'brave' | 'firefox'
+export type BrowserApp = 'chrome' | 'vivaldi' | 'edge' | 'brave' | 'opera' | 'firefox'
 
 export type EditAction = 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'selectAll'
 
