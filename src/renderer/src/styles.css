@@ -3683,3 +3683,226 @@ a {
   font-size: 11px;
   letter-spacing: 0;
 }
+
+/* ---- page tabs (same look as the live panel tabs) ---- */
+.page-tabs {
+  position: relative;
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+  scrollbar-width: none;
+}
+.page-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--grey-2);
+  font-family: var(--label);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.page-tab:hover,
+.page-tab.on {
+  color: var(--white);
+}
+.page-tab.on svg {
+  color: var(--volt);
+}
+.page-tab:focus-visible {
+  outline: 1px solid var(--volt);
+  outline-offset: -1px;
+}
+.page-tab-count {
+  color: var(--volt);
+}
+.page-tab-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--volt);
+  box-shadow: 0 0 10px rgba(212, 255, 0, 0.45);
+  transition: transform 0.34s var(--ease), width 0.34s var(--ease);
+  pointer-events: none;
+}
+.nav-item .count.nav-alert {
+  min-width: 18px;
+  padding: 0 5px;
+  text-align: center;
+  color: var(--black);
+  background: var(--volt);
+}
+
+/* ---- skills page ---- */
+.skills-head {
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.skills-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.skills-filters .search.skills-search {
+  flex: 1;
+  min-width: 220px;
+  margin: 0;
+}
+.skills-count {
+  margin-inline-start: auto;
+}
+.skills-table-wrap {
+  overflow-x: auto;
+}
+.skills-table td {
+  vertical-align: middle;
+}
+.skill-cell {
+  max-width: 340px;
+}
+.skill-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+.skill-warn {
+  flex: none;
+  color: var(--warning);
+}
+.skill-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.th-sort:hover {
+  color: var(--white);
+}
+.attn-group {
+  margin-bottom: 26px;
+}
+.attn-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.attn-why {
+  margin: 4px 0 10px;
+}
+.attn-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+}
+.attn-top {
+  align-items: flex-start;
+  gap: 10px;
+}
+.attn-name {
+  flex: 1;
+  min-width: 0;
+}
+.attn-problems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.attn-problems li {
+  display: flex;
+  flex-direction: column;
+}
+.skills-calm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+/* ---- share packs ---- */
+.pack-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 820px;
+}
+.pack-group {
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+}
+.pack-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  cursor: pointer;
+}
+.pack-size {
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+.pack-drop,
+.pack-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 20px;
+  border: 1px dashed var(--line-2);
+  text-align: center;
+  transition: border-color 0.2s, background 0.2s;
+}
+.pack-done {
+  align-items: flex-start;
+  border-style: solid;
+  text-align: start;
+  max-width: 620px;
+}
+.pack-drop.over {
+  border-color: var(--volt);
+  background: var(--volt-dim);
+}
+.pack-warn {
+  padding: 8px 12px;
+  border: 1px solid rgba(250, 178, 25, 0.45);
+  color: var(--warning);
+}
+.pack-risk {
+  color: var(--warning);
+}
+.pack-note {
+  margin: 0 0 6px 24px;
+  color: var(--grey);
+}

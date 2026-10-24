@@ -6,9 +6,14 @@
 
 - An "Improve message" button in the chat box. It rewrites what you typed to be clearer, in the same language, and puts the result in the box instead of the old text. Nothing is sent: you read it, edit it and send as usual, and Ctrl+Z brings your original back.
 - On the PC, Jolty now shows what it is doing. The pill at the top says the action ("Click in notepad", "Typing in notepad: ..."), the window it works in gets an outline, the pointer presses when it clicks, and a click leaves a double ripple.
+- A Skills page. All your skills in one table (Claude, Codex and shared folders) with search, filters and sortable columns. "Check for updates" compares skills that come from Git with their source and updates them in one click; the old folder is kept as a backup, and a skill you edited asks first. You can tell Jolty where a skill came from. A badge on the sidebar counts what needs a look.
+- An Attention tab on the Skills page: skills that are broken (missing SKILL.md, shortcut to nowhere, unreadable header), out of date or changed here, grouped by reason, each with what to do.
+- Export and Import. Pick skills, commands, instructions, settings, accounts (never the keys) and scheduled tasks and save them as one .joltypack file to send to someone. On import you see what is new, identical, different, newer or older than yours and choose per item: keep mine, replace (with a backup) or add next to mine. Risky items (code that runs, instructions, settings) are flagged, and the whole import can be undone.
+- Personal data stays home. On export, e-mail addresses, phone numbers, IBANs, card numbers and your user name in file paths are replaced with markers like <email> and <user>. API keys, tokens and cookies never go into a pack.
 
 ### Changed
 
+- Settings are sorted into tabs: General, Models and sessions, Browser and computer, Privacy, and Updates and about.
 - With "No permissions", computer control no longer asks about ordinary applications, starting a program or the clipboard. Windows itself, terminals, Win-key shortcuts, password managers and banking pages still keep their rules.
 - The timer next to the stop button only counts up. The progress bar and the "time left" estimate are gone, since nobody can know how long a task takes.
 

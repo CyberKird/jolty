@@ -1,10 +1,11 @@
-import { BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { copyItem, pathItems, showMenu } from './ContextMenu'
 import { MOVE_HINT, useProfileDrag } from '../pages/Accounts'
 import { LiveList } from './LiveList'
 import { tr } from '@shared/i18n'
+import { needsAttention } from '@shared/skills'
 
 function money(n: number, currency = 'USD'): string {
   const v = n.toFixed(2)
@@ -216,6 +217,7 @@ const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
   { id: 'local', label: tr("Modele locale"), icon: Cpu },
   { id: 'usage', label: tr("Consum"), icon: BarChart3 },
   { id: 'schedules', label: tr("Programate"), icon: CalendarClock },
+  { id: 'skills', label: tr("Skilluri"), icon: Puzzle },
   { id: 'system', label: tr("Verificare sistem"), icon: ShieldCheck },
   { id: 'settings', label: tr("Setări"), icon: Settings }
 ]
@@ -224,6 +226,14 @@ export function Sidebar() {
   const { page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast } = useStore()
   const [q, setQ] = useState('')
   const [renaming, setRenaming] = useState<string>()
+  const skillsAttention = useStore((s) => s.skillsAttention)
+  // the badge is there before the Skills page is ever opened; that page keeps it current afterwards
+  useEffect(() => {
+    void api.skills
+      .list()
+      .then((l) => useStore.getState().setSkillsAttention(l.filter(needsAttention).length))
+      .catch(() => undefined)
+  }, [])
   const saved = useMemo(() => sessions.filter((s) => !s.temporary), [sessions])
   const groups = useMemo(() => {
     const filtered = saved.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.cwd.toLowerCase().includes(q.toLowerCase()))
@@ -268,6 +278,11 @@ export function Sidebar() {
         {NAV.map((n) => (
           <button key={n.id} className={`nav-item ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)}>
             <n.icon size={15} strokeWidth={1.6} /> {n.label}
+            {n.id === 'skills' && skillsAttention ? (
+              <span className="count nav-alert" title={tr("{n} skilluri cer atenție", { n: skillsAttention })}>
+                {skillsAttention}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>

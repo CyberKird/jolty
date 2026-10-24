@@ -18,6 +18,8 @@ import * as updater from './updater'
 import * as local from './local'
 import * as modelWatch from './model-watch'
 import * as store from './store'
+import * as skills from './skills'
+import * as pack from './share-pack'
 import * as system from './system'
 import { getLang, setLang, tr } from '@shared/i18n'
 
@@ -213,6 +215,17 @@ function registerIpc(): void {
   handle('sessions:remove', (id: string) => jolty.removeSession(id))
   handle('sessions:rename', (id: string, title: string) => jolty.renameSession(String(id), String(title)))
   handle('sessions:review', (id: string) => jolty.review(String(id)))
+  handle('skills:list', () => skills.list())
+  handle('skills:check', (ids?: string[]) => skills.check(ids))
+  handle('skills:update', (id: string) => skills.update(String(id)))
+  handle('skills:setSource', (id: string, source) => skills.setSource(String(id), source as never))
+  handle('skills:reveal', (id: string) => skills.reveal(String(id)))
+  handle('pack:items', () => pack.items())
+  handle('pack:export', (req) => pack.exportPack(req as never))
+  handle('pack:open', (file?: string) => pack.openPack(file))
+  handle('pack:apply', (previewId: string, decisions) => pack.apply(String(previewId), decisions as never))
+  handle('pack:discard', (previewId: string) => pack.discard(String(previewId)))
+  handle('pack:undo', (importId: string) => pack.undo(String(importId)))
   handle('sessions:improvePrompt', (text: string) => jolty.improvePrompt(String(text)))
 
   handle('usage:summary', () => jolty.usageSummary())

@@ -481,6 +481,8 @@ export interface SystemCheck {
   optional?: boolean
 }
 
+import type { ExportRequest, ExportResult, ImportDecision, ImportPreview, ImportResult, PackItem, SkillInfo, SkillSource } from './skills'
+
 export interface JoltyApi {
   files: { path(file: File): string }
   profiles: {
@@ -525,6 +527,30 @@ export interface JoltyApi {
     remove(sessionId: string): Promise<void>
     rename(sessionId: string, title: string): Promise<void>
     onEvent(cb: (e: ChatEvent) => void): () => void
+  }
+  skills: {
+    /** every skill found, with problems and the last known status; fast, no network */
+    list(): Promise<SkillInfo[]>
+    /** checks sources for newer versions (network); all skills with a source when ids is left out */
+    check(ids?: string[]): Promise<SkillInfo[]>
+    /** brings a skill up to date from its source; the folder it replaces is kept as a backup */
+    update(id: string): Promise<SkillInfo>
+    /** tells Jolty where a skill came from, so it can be checked and updated */
+    setSource(id: string, source: SkillSource): Promise<SkillInfo>
+    reveal(id: string): Promise<void>
+  }
+  pack: {
+    /** what this PC can put in a pack */
+    items(): Promise<PackItem[]>
+    /** asks for the file with a save dialog; null when the user cancels */
+    export(req: ExportRequest): Promise<ExportResult | null>
+    /** asks for a pack file (or takes `file`, a path dropped on the window), reads it and compares with what is here; null when cancelled */
+    open(file?: string): Promise<ImportPreview | null>
+    /** applies the decisions (key to decision; items left out are skipped) */
+    apply(previewId: string, decisions: Record<string, ImportDecision>): Promise<ImportResult>
+    discard(previewId: string): Promise<void>
+    /** puts back what an import replaced */
+    undo(importId: string): Promise<void>
   }
   usage: {
     summary(): Promise<UsageSummary[]>

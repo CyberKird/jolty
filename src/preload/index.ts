@@ -52,6 +52,21 @@ const api: JoltyApi = {
       return () => ipcRenderer.removeListener('jolty:event', listener)
     }
   },
+  skills: {
+    list: () => call('skills:list'),
+    check: (ids) => call('skills:check', ids),
+    update: (id) => call('skills:update', id),
+    setSource: (id, source) => call('skills:setSource', id, source),
+    reveal: (id) => call('skills:reveal', id)
+  },
+  pack: {
+    items: () => call('pack:items'),
+    export: (req) => call('pack:export', req),
+    open: (file) => call('pack:open', file),
+    apply: (previewId, decisions) => call('pack:apply', previewId, decisions),
+    discard: (previewId) => call('pack:discard', previewId),
+    undo: (importId) => call('pack:undo', importId)
+  },
   usage: {
     summary: () => call('usage:summary'),
     balance: (id) => call('usage:balance', id),

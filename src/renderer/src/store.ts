@@ -20,7 +20,7 @@ import { DEFAULT_PLAN } from '@shared/power'
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
-export type Page = 'chat' | 'import' | 'accounts' | 'local' | 'usage' | 'schedules' | 'system' | 'settings'
+export type Page = 'chat' | 'import' | 'accounts' | 'local' | 'usage' | 'schedules' | 'skills' | 'system' | 'settings'
 
 export interface Draft {
   toolId: string
@@ -77,6 +77,9 @@ interface State {
   sidebarOpen: boolean
   /** "turn the PC off when the work is done" */
   power: PowerState
+  /** skills that need attention, for the badge on the sidebar; undefined until the list was read */
+  skillsAttention?: number
+  setSkillsAttention(n: number | undefined): void
 
   setPage(p: Page): void
   toast(text: string, error?: boolean): void
@@ -154,6 +157,7 @@ export const useStore = create<State>((set, get) => ({
   },
   setLiveOpen: (liveOpen) => set({ liveOpen }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+  setSkillsAttention: (skillsAttention) => set({ skillsAttention }),
 
   toast: (text, error) => {
     const id = ++toastId
