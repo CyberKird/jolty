@@ -32,4 +32,6 @@ if (!xpi) throw new Error('web-ext produced no .xpi')
 fs.mkdirSync('browser-extension-firefox-signed', { recursive: true })
 fs.copyFileSync(path.join(out, xpi), path.join('browser-extension-firefox-signed', 'jolty.xpi'))
 fs.rmSync(out, { recursive: true, force: true })
+// web-ext leaves its upload id in the source folder, which would end up in the app's copy of the extension
+fs.rmSync('browser-extension-firefox/.amo-upload-uuid', { force: true })
 console.log('signed: browser-extension-firefox-signed/jolty.xpi')
