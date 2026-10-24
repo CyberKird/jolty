@@ -56,15 +56,12 @@ import * as modelWatch from './model-watch'
 import { candidates, FULL_PERCENT, pickAuto, type Candidate } from './auto-model'
 import type { ScheduledTask } from '@shared/schedule'
 import { tr } from '@shared/i18n'
+import { withDetectedAgents } from './first-run'
 import { withParallelInstruction } from '@shared/parallel'
 import { cleanImproved, improvePrompt } from '@shared/improve-prompt'
 
-const { COLORS } = store
-
-const DEFAULT_PROFILES: Profile[] = [
-  { id: 'claude-main', name: tr("Claude (contul principal)"), engine: 'claude', auth: 'subscription', isDefaultDir: true, color: COLORS[0] },
-  { id: 'codex-main', name: tr("Codex (contul principal)"), engine: 'codex', auth: 'subscription', isDefaultDir: true, color: COLORS[1] }
-]
+/** Profiles that older versions created at first launch: they stay for the people who have them, a new user gets none (see first-run.ts). */
+const MAIN_PROFILE_IDS = ['claude-main', 'codex-main']
 
 export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', opencode: 'OpenCode' }
 
@@ -180,21 +177,35 @@ export class Jolty {
       notice: (sid, text, level) => this.onEngineEvent({ type: 'item', sessionId: sid, item: { kind: 'notice', id: randomUUID(), text, level } }),
       killed: () => this.computerKilled()
     })
-    if (store.loadProfiles().length === 0) store.saveProfiles(DEFAULT_PROFILES)
-    const profiles = store.loadProfiles()
-    if (!profiles.some((p) => p.engine === 'hermes') && hermesExecutable()) {
-      store.saveProfiles([...profiles, { id: 'hermes-main', name: 'Hermes', engine: 'hermes', auth: 'existing', isDefaultDir: true, color: store.freeColor(profiles) }])
-    }
-    this.ensureOpencodeProfile()
+    this.addDetectedAgents()
     store.fixProfileColors()
   }
 
-  /** OpenCode gets its profile as soon as it is installed, at startup or right after the install button. */
-  ensureOpencodeProfile(): void {
-    const profiles = store.loadProfiles()
-    if (!profiles.some((p) => p.engine === 'opencode') && opencodeExecutable()) {
-      store.saveProfiles([...profiles, { id: 'opencode-main', name: 'OpenCode', engine: 'opencode', auth: 'existing', isDefaultDir: true, color: store.freeColor(profiles) }])
+  /** Hermes and OpenCode get their profile as soon as they are installed, at startup or right after the install button. */
+  addDetectedAgents(): void {
+    const before = store.loadProfiles()
+    const after = withDetectedAgents(before, { hermes: Boolean(hermesExecutable()), opencode: Boolean(opencodeExecutable()) })
+    if (after.length !== before.length) store.saveProfiles(after)
+  }
+
+  /**
+   * Welcome screen, "I have a subscription": the account already signed in on this PC is used as it is, otherwise
+   * a profile with its own login folder is created and the caller opens the sign-in.
+   */
+  async connectAccount(engine: unknown): Promise<{ profile: Profile; loggedIn: boolean }> {
+    if (engine !== 'claude' && engine !== 'codex') throw new Error('Motor necunoscut')
+    const all = store.loadProfiles()
+    const id = `${engine}-main`
+    if (!all.some((p) => p.id === id)) {
+      const main: Profile = {
+        id, name: engine === 'claude' ? tr("Claude (contul principal)") : tr("Codex (contul principal)"), engine, auth: 'subscription', isDefaultDir: true, color: store.freeColor(all)
+      }
+      if ((await this.driver(engine).status(main)).loggedIn) {
+        store.saveProfiles([...all, main])
+        return { profile: main, loggedIn: true }
+      }
     }
+    return { profile: this.createProfile({ name: ENGINE_NAMES[engine], engine, auth: 'subscription' }), loggedIn: false }
   }
 
   private driver(engine: EngineKind): EngineDriver {
@@ -268,7 +279,7 @@ export class Jolty {
   }
 
   async removeProfile(id: string): Promise<void> {
-    if (DEFAULT_PROFILES.some((d) => d.id === id)) throw new Error(tr("Profilurile principale nu se pot șterge"))
+    if (MAIN_PROFILE_IDS.includes(id)) throw new Error(tr("Profilurile principale nu se pot șterge"))
     const p = this.profile(id)
     this.removingProfiles.add(id)
     try {

@@ -2,6 +2,7 @@ import { GripVertical, KeyRound, LogIn, LogOut, Pencil, Plus, RefreshCw, Trash2 
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
 import type { AccountStatus, AuthKind, EngineKind, Profile, ProfileInput } from '@shared/types'
 import { isAcp } from '@shared/types'
+import { CONNECT_PROVIDERS } from '@shared/setup'
 import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
 import { tr } from '@shared/i18n'
@@ -14,8 +15,7 @@ const AUTH_LABEL: Record<AuthKind, string> = {
 }
 
 const PRESETS = [
-  { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/anthropic', models: 'deepseek-chat', vision: false },
-  { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api', models: 'deepseek/deepseek-chat', vision: false },
+  ...CONNECT_PROVIDERS.map((p) => ({ name: p.name, baseUrl: p.baseUrl, models: p.model, vision: false })),
   { name: 'Kimi (Moonshot)', baseUrl: 'https://api.moonshot.ai/anthropic', models: 'kimi-k2-turbo-preview', vision: false },
   { name: 'GLM (Z.ai)', baseUrl: 'https://api.z.ai/api/anthropic', models: 'glm-4.6', vision: false },
   { name: 'Xiaomi MiMo', baseUrl: 'https://api.xiaomimimo.com/anthropic', models: '', vision: false },

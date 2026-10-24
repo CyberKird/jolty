@@ -6,6 +6,7 @@ import { ContextMenu } from './components/ContextMenu'
 import { LivePanel } from './components/LivePanel'
 import { Mascot } from './mascot/Mascot'
 import { WhatsNewHost } from './components/WhatsNew'
+import { Welcome } from './components/Welcome'
 import { PowerBar } from './components/PowerBar'
 import { Sidebar } from './components/Sidebar'
 import { api, liveRows, useStore } from './store'
@@ -70,6 +71,7 @@ function TitleBar() {
 }
 
 export function App() {
+  const newUser = useStore((s) => s.profilesLoaded && s.profiles.length === 0)
   const { page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent } = useStore()
 
   // Below 1180 px (with the sidebar shown) the live panel is a drawer over the chat. Making the window
@@ -140,7 +142,7 @@ export function App() {
       <TitleBar />
       <Sidebar />
       <main className="main">
-        {isChat && (session ? <ChatView key={session.id} session={session} /> : <NewChat />)}
+        {isChat && (session ? <ChatView key={session.id} session={session} /> : newUser ? <Welcome /> : <NewChat />)}
         <Suspense fallback={null}>
           {page === 'import' && <ImportPage />}
           {page === 'accounts' && <AccountsPage />}
