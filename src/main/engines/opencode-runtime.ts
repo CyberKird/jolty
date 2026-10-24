@@ -80,7 +80,7 @@ function toolInstructions(browser: boolean, computer: boolean): string {
  */
 export function opencodeVariants(): Promise<Map<string, string[]>> {
   const exe = opencodeExecutable()
-  if (!exe) return Promise.reject(new Error(tr("OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.")))
+  if (!exe) return Promise.reject(new Error(tr("OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.")))
   return new Promise((resolve, reject) => {
     execFile(exe, ['models', '--verbose'], { windowsHide: true, timeout: 60000, maxBuffer: 64 * 1024 * 1024, env: { ...process.env, OPENCODE_CONFIG_CONTENT: '{"autoupdate":false}' } }, (error, stdout) => {
       if (error) return reject(error)
@@ -97,7 +97,7 @@ export function opencodeVariants(): Promise<Map<string, string[]>> {
 
 export function launchOpencode(mode: PermissionMode = 'ask', browser = false, computer = false): JsonRpcProcess {
   const exe = opencodeExecutable()
-  if (!exe) throw new Error(tr("OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări."))
+  if (!exe) throw new Error(tr("OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări."))
   const env: Record<string, string> = {}
   for (const [key, value] of Object.entries(process.env)) {
     if (value !== undefined && !/^(CLAUDECODE|CLAUDE_.*|ANTHROPIC_.*|CODEX_.*|OPENAI_.*|ELECTRON_RUN_AS_NODE)$/i.test(key)) env[key] = value

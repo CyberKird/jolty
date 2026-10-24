@@ -99,7 +99,7 @@ export interface InputBackend {
   onKill(cb: () => void): void
 }
 
-const csc = (): string => path.join(process.env.WINDIR || 'C:\\Windows', 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe')
+export const csc = (): string => path.join(process.env.WINDIR || 'C:\\Windows', 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe')
 
 /** Compiles the helper into `dir` (once per source version) and returns the executable. */
 export async function compileHelper(dir: string): Promise<string> {

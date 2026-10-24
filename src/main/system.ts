@@ -4,8 +4,11 @@ import os from 'os'
 import path from 'path'
 import type { SystemCheck } from '@shared/types'
 import { browserMode } from './browser'
+import { csc } from './computer/helper'
 import { nativeBrowser } from './jbrowser/native'
 import * as local from './local'
+import { opencodeExecutable } from './engines/opencode-runtime'
+import { installOpencode } from './engines/opencode-install'
 import { claudeExecutable, codexExecutable } from './runtime'
 import { tr } from '@shared/i18n'
 
@@ -49,6 +52,7 @@ export async function check(): Promise<SystemCheck[]> {
   const vc = await vcRuntime()
   const ollama = await local.status()
   const redirect = settingsRedirect()
+  const opencode = opencodeExecutable()
   await nativeBrowser.start()
   const ext = nativeBrowser.status()
   const checks: SystemCheck[] = [
@@ -75,8 +79,26 @@ export async function check(): Promise<SystemCheck[]> {
       optional: true,
       detail: ollama.running ? tr("Rulează (versiunea {version}), {length} modele", { version: ollama.version, length: ollama.models.length }) : ollama.installed ? tr("Instalat, dar nu rulează: pornește aplicația Ollama.") : tr("Opțional: pentru modele care rulează pe PC-ul tău."),
       fixLabel: ollama.installed ? undefined : tr("Instalează Ollama")
+    },
+    {
+      id: 'opencode',
+      label: 'OpenCode',
+      ok: Boolean(opencode),
+      optional: true,
+      detail: opencode || tr("Opțional: agentul OpenCode, cu modelele lui gratuite."),
+      fixLabel: opencode ? undefined : tr("Instalează OpenCode")
     }
   ]
+  // the computer helper builds itself on first use, with the compiler Windows ships
+  if (isWin) {
+    const compiler = fs.existsSync(csc())
+    checks.push({
+      id: 'computer',
+      label: tr("Control al PC-ului"),
+      ok: compiler,
+      detail: compiler ? tr("Asistentul se construiește singur la prima folosire.") : tr("Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.")
+    })
+  }
   // only the default way of connecting needs Jolty's own extension
   if (browserMode() === 'jolty') {
     checks.splice(4, 0, {
@@ -131,6 +153,7 @@ export async function fix(id: string, openPath: (p: string) => Promise<string>):
     else await install('Microsoft.VCRedist.2015+.x64', 'Jolty - instalare Visual C++', async () => 'https://aka.ms/vs/17/release/vc_redist.x64.exe', '/install /passive /norestart')
   }
   else if (id === 'ollama') await install('Ollama.Ollama', 'Jolty - instalare Ollama', async () => 'https://ollama.com/download/OllamaSetup.exe', '/SILENT')
+  else if (id === 'opencode') await installOpencode()
   else if (id === 'extension') await nativeBrowser.installAndOpen()
   else if (id === 'redirect') await openPath(path.join(os.homedir(), '.claude', 'settings.json'))
 }

@@ -924,7 +924,6 @@
  "Conversația nu mai există în {agent}.": "The conversation no longer exists in {agent}.",
  "{name} nu mai rulează": "{name} is no longer running",
  "{method}: fără răspuns de la {name}": "{method}: no answer from {name}",
- "OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.": "OpenCode is not installed. Install it (npm i -g opencode-ai) or choose opencode.exe in Settings.",
  "{agent} folosește configurația existentă.": "{agent} uses its existing configuration.",
  "Profilul {agent} există deja.": "The {agent} profile already exists.",
  "Configurează modelul și cheia în {agent}.": "Set up the model and the key in {agent}.",
@@ -1124,5 +1123,12 @@
  "căi cu numele tău de utilizator": "paths with your user name",
  "numele contului tău de Windows": "your Windows account name",
  "Date personale înlocuite la export: {kinds}.": "Personal data replaced on export: {kinds}.",
- "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} items had personal data, replaced with markers like <email> or <user>."
+ "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} items had personal data, replaced with markers like <email> or <user>.",
+ "OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.": "OpenCode is not installed. Install it from System check or choose opencode.exe in Settings.",
+ "Opțional: agentul OpenCode, cu modelele lui gratuite.": "Optional: the OpenCode agent, with its free models.",
+ "Instalează OpenCode": "Install OpenCode",
+ "OpenCode a fost instalat.": "OpenCode is installed.",
+ "Control al PC-ului": "PC control",
+ "Asistentul se construiește singur la prima folosire.": "The helper builds itself the first time you use it.",
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": ".NET Framework 4 (csc.exe) is missing, so PC control cannot start. Turn it on in Windows Features."
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.19
+
+### New
+
+- OpenCode installs with one click. In System check, "Install OpenCode" downloads OpenCode's own release, puts it where OpenCode's installer would, checks that it starts and adds the OpenCode account. No Node.js, npm or terminal needed. If it is already installed, nothing changes.
+- System check now also checks PC control: it tells you at once if the Windows compiler it builds its helper with is missing, instead of failing on first use.
+
+### Changed
+
+- The "OpenCode is not installed" message points to System check instead of an npm command.
+
 ## 0.7.18
 
 ### New

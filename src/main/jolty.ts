@@ -185,11 +185,16 @@ export class Jolty {
     if (!profiles.some((p) => p.engine === 'hermes') && hermesExecutable()) {
       store.saveProfiles([...profiles, { id: 'hermes-main', name: 'Hermes', engine: 'hermes', auth: 'existing', isDefaultDir: true, color: store.freeColor(profiles) }])
     }
-    const withHermes = store.loadProfiles()
-    if (!withHermes.some((p) => p.engine === 'opencode') && opencodeExecutable()) {
-      store.saveProfiles([...withHermes, { id: 'opencode-main', name: 'OpenCode', engine: 'opencode', auth: 'existing', isDefaultDir: true, color: store.freeColor(withHermes) }])
-    }
+    this.ensureOpencodeProfile()
     store.fixProfileColors()
+  }
+
+  /** OpenCode gets its profile as soon as it is installed, at startup or right after the install button. */
+  ensureOpencodeProfile(): void {
+    const profiles = store.loadProfiles()
+    if (!profiles.some((p) => p.engine === 'opencode') && opencodeExecutable()) {
+      store.saveProfiles([...profiles, { id: 'opencode-main', name: 'OpenCode', engine: 'opencode', auth: 'existing', isDefaultDir: true, color: store.freeColor(profiles) }])
+    }
   }
 
   private driver(engine: EngineKind): EngineDriver {

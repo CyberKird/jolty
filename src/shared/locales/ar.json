@@ -924,7 +924,6 @@
  "Conversația nu mai există în {agent}.": "لم تعد المحادثة موجودة في {agent}.",
  "{name} nu mai rulează": "لم يعد {name} يعمل",
  "{method}: fără răspuns de la {name}": "{method}: لا رد من {name}",
- "OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.": "OpenCode غير مثبّت. ثبّته (npm i -g opencode-ai) أو اختر opencode.exe من الإعدادات.",
  "{agent} folosește configurația existentă.": "يستخدم {agent} إعداداته الحالية.",
  "Profilul {agent} există deja.": "ملف {agent} الشخصي موجود بالفعل.",
  "Configurează modelul și cheia în {agent}.": "اضبط النموذج والمفتاح في {agent}.",
@@ -1124,5 +1123,12 @@
  "căi cu numele tău de utilizator": "مسارات تحتوي على اسم المستخدم الخاص بك",
  "numele contului tău de Windows": "اسم حساب Windows الخاص بك",
  "Date personale înlocuite la export: {kinds}.": "تم استبدال البيانات الشخصية عند التصدير: {kinds}.",
- "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "احتوت {n} عناصر على بيانات شخصية وتم استبدالها بعلامات مثل <email> أو <user>."
+ "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "احتوت {n} عناصر على بيانات شخصية وتم استبدالها بعلامات مثل <email> أو <user>.",
+ "OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.": "OpenCode غير مثبّت. ثبّته من فحص النظام أو اختر opencode.exe من الإعدادات.",
+ "Opțional: agentul OpenCode, cu modelele lui gratuite.": "اختياري: وكيل OpenCode مع نماذجه المجانية.",
+ "Instalează OpenCode": "تثبيت OpenCode",
+ "OpenCode a fost instalat.": "تم تثبيت OpenCode.",
+ "Control al PC-ului": "التحكم في الحاسوب",
+ "Asistentul se construiește singur la prima folosire.": "يُبنى المساعد تلقائيًا عند أول استخدام.",
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": "ملف .NET Framework 4 (csc.exe) غير موجود، لذلك لا يمكن بدء التحكم في الحاسوب. فعّله من ميزات Windows."
 }

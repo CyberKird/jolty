@@ -243,7 +243,10 @@ function registerIpc(): void {
   handle('local:installOllama', () => system.fix('ollama', (p) => shell.openPath(p)))
 
   handle('system:check', () => system.check())
-  handle('system:fix', (id: string) => system.fix(id, (p) => shell.openPath(p)))
+  handle('system:fix', async (id: string) => {
+    await system.fix(id, (p) => shell.openPath(p))
+    if (id === 'opencode') jolty.ensureOpencodeProfile()
+  })
 
   handle('codexImport:detect', (id: string, cwd?: string) => jolty.codex.importDetect(jolty.profile(id), cwd))
   handle('codexImport:run', (id: string, cwd?: string, types?: string[]) => jolty.codex.importRun(jolty.profile(id), cwd, types))

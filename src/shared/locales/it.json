@@ -924,7 +924,6 @@
  "Conversația nu mai există în {agent}.": "La conversazione non esiste più in {agent}.",
  "{name} nu mai rulează": "{name} non è più in esecuzione",
  "{method}: fără răspuns de la {name}": "{method}: nessuna risposta da {name}",
- "OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.": "OpenCode non è installato. Installalo (npm i -g opencode-ai) o scegli opencode.exe nelle Impostazioni.",
  "{agent} folosește configurația existentă.": "{agent} usa la configurazione esistente.",
  "Profilul {agent} există deja.": "Il profilo {agent} esiste già.",
  "Configurează modelul și cheia în {agent}.": "Configura il modello e la chiave in {agent}.",
@@ -1124,5 +1123,12 @@
  "căi cu numele tău de utilizator": "percorsi con il tuo nome utente",
  "numele contului tău de Windows": "il nome del tuo account Windows",
  "Date personale înlocuite la export: {kinds}.": "Dati personali sostituiti all'esportazione: {kinds}.",
- "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} elementi avevano dati personali, sostituiti da segnaposto come <email> o <user>."
+ "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} elementi avevano dati personali, sostituiti da segnaposto come <email> o <user>.",
+ "OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.": "OpenCode non è installato. Installalo da Verifica del sistema o scegli opencode.exe nelle Impostazioni.",
+ "Opțional: agentul OpenCode, cu modelele lui gratuite.": "Facoltativo: l'agente OpenCode, con i suoi modelli gratuiti.",
+ "Instalează OpenCode": "Installa OpenCode",
+ "OpenCode a fost instalat.": "OpenCode è stato installato.",
+ "Control al PC-ului": "Controllo del PC",
+ "Asistentul se construiește singur la prima folosire.": "L'assistente si compila da solo al primo utilizzo.",
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": "Manca .NET Framework 4 (csc.exe), quindi il controllo del PC non può avviarsi. Attivalo da Funzionalità di Windows."
 }

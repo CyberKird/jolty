@@ -924,7 +924,6 @@
  "Conversația nu mai există în {agent}.": "Die Unterhaltung existiert in {agent} nicht mehr.",
  "{name} nu mai rulează": "{name} läuft nicht mehr",
  "{method}: fără răspuns de la {name}": "{method}: keine Antwort von {name}",
- "OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.": "OpenCode ist nicht installiert. Installiere es (npm i -g opencode-ai) oder wähle opencode.exe in den Einstellungen.",
  "{agent} folosește configurația existentă.": "{agent} nutzt seine vorhandene Konfiguration.",
  "Profilul {agent} există deja.": "Das {agent}-Profil existiert bereits.",
  "Configurează modelul și cheia în {agent}.": "Richte Modell und Schlüssel in {agent} ein.",
@@ -1124,5 +1123,12 @@
  "căi cu numele tău de utilizator": "Pfade mit deinem Benutzernamen",
  "numele contului tău de Windows": "dein Windows-Kontoname",
  "Date personale înlocuite la export: {kinds}.": "Persönliche Daten werden beim Export ersetzt: {kinds}.",
- "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} Elemente hatten persönliche Daten, ersetzt durch Platzhalter wie <email> oder <user>."
+ "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} Elemente hatten persönliche Daten, ersetzt durch Platzhalter wie <email> oder <user>.",
+ "OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.": "OpenCode ist nicht installiert. Installiere es über die Systemprüfung oder wähle opencode.exe in den Einstellungen.",
+ "Opțional: agentul OpenCode, cu modelele lui gratuite.": "Optional: der OpenCode-Agent mit seinen kostenlosen Modellen.",
+ "Instalează OpenCode": "OpenCode installieren",
+ "OpenCode a fost instalat.": "OpenCode wurde installiert.",
+ "Control al PC-ului": "PC-Steuerung",
+ "Asistentul se construiește singur la prima folosire.": "Der Helfer baut sich bei der ersten Nutzung selbst.",
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": ".NET Framework 4 (csc.exe) fehlt, deshalb kann die PC-Steuerung nicht starten. Aktiviere es unter Windows-Features."
 }

@@ -924,7 +924,6 @@
  "Conversația nu mai există în {agent}.": "A conversa não existe mais no {agent}.",
  "{name} nu mai rulează": "O {name} não está mais em execução",
  "{method}: fără răspuns de la {name}": "{method}: sem resposta do {name}",
- "OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.": "O OpenCode não está instalado. Instale-o (npm i -g opencode-ai) ou escolha o opencode.exe em Configurações.",
  "{agent} folosește configurația existentă.": "O {agent} usa a configuração existente.",
  "Profilul {agent} există deja.": "O perfil do {agent} já existe.",
  "Configurează modelul și cheia în {agent}.": "Configure o modelo e a chave no {agent}.",
@@ -1124,5 +1123,12 @@
  "căi cu numele tău de utilizator": "caminhos com seu nome de usuário",
  "numele contului tău de Windows": "o nome da sua conta do Windows",
  "Date personale înlocuite la export: {kinds}.": "Dados pessoais substituídos na exportação: {kinds}.",
- "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} itens tinham dados pessoais, substituídos por marcadores como <email> ou <user>."
+ "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} itens tinham dados pessoais, substituídos por marcadores como <email> ou <user>.",
+ "OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.": "O OpenCode não está instalado. Instale-o em Verificação do sistema ou escolha o opencode.exe em Configurações.",
+ "Opțional: agentul OpenCode, cu modelele lui gratuite.": "Opcional: o agente OpenCode, com seus modelos gratuitos.",
+ "Instalează OpenCode": "Instalar o OpenCode",
+ "OpenCode a fost instalat.": "O OpenCode foi instalado.",
+ "Control al PC-ului": "Controle do PC",
+ "Asistentul se construiește singur la prima folosire.": "O assistente se compila sozinho no primeiro uso.",
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": "Falta o .NET Framework 4 (csc.exe), então o controle do PC não consegue iniciar. Ative-o em Recursos do Windows."
 }

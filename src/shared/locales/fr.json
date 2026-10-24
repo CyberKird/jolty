@@ -924,7 +924,6 @@
  "Conversația nu mai există în {agent}.": "La conversation n'existe plus dans {agent}.",
  "{name} nu mai rulează": "{name} ne tourne plus",
  "{method}: fără răspuns de la {name}": "{method} : pas de réponse de {name}",
- "OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.": "OpenCode n'est pas installé. Installe-le (npm i -g opencode-ai) ou choisis opencode.exe dans les Réglages.",
  "{agent} folosește configurația existentă.": "{agent} utilise sa configuration existante.",
  "Profilul {agent} există deja.": "Le profil {agent} existe déjà.",
  "Configurează modelul și cheia în {agent}.": "Configure le modèle et la clé dans {agent}.",
@@ -1124,5 +1123,12 @@
  "căi cu numele tău de utilizator": "chemins avec ton nom d'utilisateur",
  "numele contului tău de Windows": "le nom de ton compte Windows",
  "Date personale înlocuite la export: {kinds}.": "Données personnelles remplacées à l'export : {kinds}.",
- "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} éléments avaient des données personnelles, remplacées par des repères comme <email> ou <user>."
+ "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} éléments avaient des données personnelles, remplacées par des repères comme <email> ou <user>.",
+ "OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.": "OpenCode n'est pas installé. Installez-le depuis Vérification du système ou choisissez opencode.exe dans Paramètres.",
+ "Opțional: agentul OpenCode, cu modelele lui gratuite.": "Facultatif : l'agent OpenCode, avec ses modèles gratuits.",
+ "Instalează OpenCode": "Installer OpenCode",
+ "OpenCode a fost instalat.": "OpenCode est installé.",
+ "Control al PC-ului": "Contrôle du PC",
+ "Asistentul se construiește singur la prima folosire.": "L'assistant se construit tout seul à la première utilisation.",
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": "Il manque .NET Framework 4 (csc.exe), le contrôle du PC ne peut donc pas démarrer. Activez-le dans Fonctionnalités Windows."
 }

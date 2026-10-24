@@ -5,8 +5,9 @@ import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
 
 export function SystemPage() {
-  const { toast } = useStore()
+  const { toast, loadProfiles } = useStore()
   const [checks, setChecks] = useState<SystemCheck[]>()
+  const [busy, setBusy] = useState<string>()
   const load = useCallback(async () => {
     setChecks(undefined)
     setChecks(await api.system.check())
@@ -53,16 +54,24 @@ export function SystemPage() {
               {c.fixLabel && (
                 <button
                   className="btn small"
+                  disabled={busy === c.id}
                   onClick={async () => {
+                    setBusy(c.id)
                     try {
                       await api.system.fix(c.id)
-                      toast(tr("Pornit. Apasă „Verifică din nou” după ce termină."))
+                      // OpenCode is installed by the time the call returns; the other fixes hand over to an installer
+                      if (c.id === 'opencode') {
+                        toast(tr("OpenCode a fost instalat."))
+                        await Promise.all([load(), loadProfiles()])
+                      } else toast(tr("Pornit. Apasă „Verifică din nou” după ce termină."))
                     } catch (err) {
                       toast(errMsg(err), true)
+                    } finally {
+                      setBusy(undefined)
                     }
                   }}
                 >
-                  {c.fixLabel}
+                  {busy === c.id ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : null} {c.fixLabel}
                 </button>
               )}
             </div>

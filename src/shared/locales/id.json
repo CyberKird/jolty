@@ -924,7 +924,6 @@
  "Conversația nu mai există în {agent}.": "Percakapan ini sudah tidak ada di {agent}.",
  "{name} nu mai rulează": "{name} tidak lagi berjalan",
  "{method}: fără răspuns de la {name}": "{method}: tidak ada jawaban dari {name}",
- "OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.": "OpenCode belum terpasang. Pasang (npm i -g opencode-ai) atau pilih opencode.exe di Pengaturan.",
  "{agent} folosește configurația existentă.": "{agent} memakai konfigurasi yang ada.",
  "Profilul {agent} există deja.": "Profil {agent} sudah ada.",
  "Configurează modelul și cheia în {agent}.": "Atur model dan kunci di {agent}.",
@@ -1124,5 +1123,12 @@
  "căi cu numele tău de utilizator": "jalur dengan nama penggunamu",
  "numele contului tău de Windows": "nama akun Windows-mu",
  "Date personale înlocuite la export: {kinds}.": "Data pribadi diganti saat ekspor: {kinds}.",
- "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} item berisi data pribadi, diganti dengan penanda seperti <email> atau <user>."
+ "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} item berisi data pribadi, diganti dengan penanda seperti <email> atau <user>.",
+ "OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.": "OpenCode belum terpasang. Pasang dari Pemeriksaan sistem atau pilih opencode.exe di Pengaturan.",
+ "Opțional: agentul OpenCode, cu modelele lui gratuite.": "Opsional: agen OpenCode, dengan model gratisnya.",
+ "Instalează OpenCode": "Pasang OpenCode",
+ "OpenCode a fost instalat.": "OpenCode sudah terpasang.",
+ "Control al PC-ului": "Kontrol PC",
+ "Asistentul se construiește singur la prima folosire.": "Pembantu dibuat sendiri saat pertama kali dipakai.",
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": ".NET Framework 4 (csc.exe) tidak ada, jadi kontrol PC tidak bisa dimulai. Aktifkan di Fitur Windows."
 }

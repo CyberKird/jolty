@@ -924,7 +924,6 @@
  "Conversația nu mai există în {agent}.": "La conversación ya no existe en {agent}.",
  "{name} nu mai rulează": "{name} ya no está en ejecución",
  "{method}: fără răspuns de la {name}": "{method}: sin respuesta de {name}",
- "OpenCode nu este instalat. Instalează-l (npm i -g opencode-ai) sau alege opencode.exe în Setări.": "OpenCode no está instalado. Instálalo (npm i -g opencode-ai) o elige opencode.exe en Ajustes.",
  "{agent} folosește configurația existentă.": "{agent} usa su configuración existente.",
  "Profilul {agent} există deja.": "El perfil de {agent} ya existe.",
  "Configurează modelul și cheia în {agent}.": "Configura el modelo y la clave en {agent}.",
@@ -1124,5 +1123,12 @@
  "căi cu numele tău de utilizator": "rutas con tu nombre de usuario",
  "numele contului tău de Windows": "el nombre de tu cuenta de Windows",
  "Date personale înlocuite la export: {kinds}.": "Datos personales sustituidos al exportar: {kinds}.",
- "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} elementos tenían datos personales, sustituidos por marcadores como <email> o <user>."
+ "{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.": "{n} elementos tenían datos personales, sustituidos por marcadores como <email> o <user>.",
+ "OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.": "OpenCode no está instalado. Instálalo desde Verificación del sistema o elige opencode.exe en Ajustes.",
+ "Opțional: agentul OpenCode, cu modelele lui gratuite.": "Opcional: el agente OpenCode, con sus modelos gratuitos.",
+ "Instalează OpenCode": "Instalar OpenCode",
+ "OpenCode a fost instalat.": "OpenCode se ha instalado.",
+ "Control al PC-ului": "Control del PC",
+ "Asistentul se construiește singur la prima folosire.": "El asistente se compila solo la primera vez que lo usas.",
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": "Falta .NET Framework 4 (csc.exe), así que el control del PC no puede iniciarse. Actívalo en Características de Windows."
 }
