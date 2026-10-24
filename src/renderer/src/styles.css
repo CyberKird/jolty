@@ -629,6 +629,7 @@ a {
 /* cards sit in a grid separated by hairline gaps, like the joltarise service grid */
 .grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 2px;
 }
 .grid.two {
@@ -3819,6 +3820,7 @@ a {
 .attn-card {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 8px;
   padding: 14px 16px;
 }
