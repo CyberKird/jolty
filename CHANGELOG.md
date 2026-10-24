@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.21
+
+### New
+
+- A first start now opens a welcome screen instead of creating Claude and Codex profiles. You pick how to begin: OpenCode's free models with no key (one click, Jolty installs OpenCode and sends a test message), your own DeepSeek or OpenRouter key (tested before it is saved), or a Claude or ChatGPT subscription. After your first chat, one quiet line offers to add a key of your own, once. Existing users keep their profiles.
+- Firefox: the Jolty extension now comes signed by Mozilla. "Install" opens it in Firefox, you press Add once and it stays installed after Firefox closes (before, it was a temporary add-on that disappeared). The old temporary route stays as a fallback.
+
+### Fixed
+
+- "No questions" now really asks nothing: a Claude chat that was already running kept asking about secret files, Codex asked for every Jolty tool, OpenCode asked before reading `.env`, and PC control still asked for system apps and terminals. Banks, password managers and security windows are still refused.
+- Models answer in the language you write in again, also after tools run (Claude, Codex and OpenCode).
+- A new chat no longer gets the title "Not logged in" when the helper that names chats is not signed in; it keeps the first words of your message instead.
+- The DeepSeek preset uses the model name DeepSeek's docs now require.
+
 ## 0.7.20
 
 ### Fixed

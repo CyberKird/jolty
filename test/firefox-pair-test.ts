@@ -66,12 +66,14 @@ function unzip(file: string): Map<string, Buffer> {
   return files
 }
 
+const lf = (b: Buffer): string => b.toString().replace(/\r\n/g, '\n')
+
 test('the signed xpi is the extension folder, signed', { skip: !fs.existsSync('browser-extension-firefox-signed/jolty.xpi') }, () => {
   const xpi = unzip('browser-extension-firefox-signed/jolty.xpi')
   for (const name of fs.readdirSync('browser-extension-firefox')) {
     const mine = fs.readFileSync(`browser-extension-firefox/${name}`)
-    // web-ext rewrites the manifest's whitespace; the content must be the same
-    const same = name === 'manifest.json' ? xpi.has(name) && JSON.stringify(JSON.parse(xpi.get(name)!.toString())) === JSON.stringify(JSON.parse(mine.toString())) : !!xpi.get(name)?.equals(mine)
+    // web-ext rewrites the manifest's whitespace and a checkout may have CRLF line ends; the content must be the same
+    const same = name === 'manifest.json' ? xpi.has(name) && JSON.stringify(JSON.parse(xpi.get(name)!.toString())) === JSON.stringify(JSON.parse(mine.toString())) : xpi.has(name) && lf(xpi.get(name)!) === lf(mine)
     assert.ok(same, `${name} differs: bump the version in manifest.json and sign again (node scripts/sign-firefox.mjs)`)
   }
   assert.ok(xpi.has('META-INF/mozilla.rsa'), 'not signed')
