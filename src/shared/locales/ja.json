@@ -962,5 +962,6 @@
  "Textele lungi pot fi lipite": "長い文章は貼り付けてよい",
  "Oprit: modelul scrie tot, tastă cu tastă. Pornit: un text lung poate intra prin clipboard (mai repede, dar nu arată ca scrisul de mână).": "オフ: モデルはすべて1キーずつ入力します。オン: 長い文章はクリップボード経由で入力できます(速いですが、手入力には見えません)。",
  "Programe aprobate pentru totdeauna": "常に許可したプログラム",
- "Niciunul încă: modelul te întreabă prima dată când vrea să lucreze într-un program.": "まだありません。モデルがプログラムで作業したいとき、最初に確認します。"
+ "Niciunul încă: modelul te întreabă prima dată când vrea să lucreze într-un program.": "まだありません。モデルがプログラムで作業したいとき、最初に確認します。",
+ "Unelte": "ツール"
 }

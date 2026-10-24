@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.14
+
+### Changed
+
+- A tidier chat box. Plan, Browser, Computer and Temporary chat now sit behind one Tools button, and only the ones that are on show in the bar. The power button stays beside it.
+
 ## 0.7.13
 
 ### Changed

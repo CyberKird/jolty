@@ -10,6 +10,7 @@ import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, level
 import { MessageItem, PermissionCard } from './Messages'
 import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODES, useAllModels, type ModelGroup } from './ModelPicker'
 import { MentionMenu, useMentions } from './Mentions'
+import { ToolsMenu } from './ToolsMenu'
 import { PowerMenu } from './PowerMenu'
 import { withQuote } from '@shared/quote'
 import { QuoteBar, SelectionPopup } from './Quote'
@@ -436,64 +437,39 @@ function Composer(p: ComposerProps) {
             otherProfileHint={p.otherProfileHint}
           />
           <ModePicker mode={p.mode} onMode={p.onMode} engine={engine} />
-          {!isAcp(engine) && (
-            <button
-              className={`chrome-toggle ${p.mode === 'plan' ? 'on' : ''}`}
-              aria-pressed={p.mode === 'plan'}
-              onClick={() => p.onMode(p.mode === 'plan' ? DEFAULT_MODE : 'plan')}
-              title={p.mode === 'plan' ? tr("Plan activ: clic ca să revii la Build, unde editează fișiere") : tr("Comută în Plan: modelul doar cercetează și propune un plan, fără să modifice nimic")}
-            >
-              <ClipboardList size={14} strokeWidth={1.8} />
-              {p.mode === 'plan' && 'Plan'}
-            </button>
-          )}
-          <button
-            className={`chrome-toggle ${p.browser ? 'on' : ''}`}
-            disabled={!hasJoltyBrowser(engine)}
-            aria-pressed={Boolean(p.browser)}
-            onClick={() => p.onBrowser(!p.browser)}
-            title={
-              !hasJoltyBrowser(engine) ? tr("Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.") : p.browser
-                ? tr("Jolty în browser e pornit: modelul poate folosi browserul tău (Chrome, Vivaldi, Edge, Brave), cu login-urile tale. Clic ca să-l oprești.")
-                : tr("Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări).")
-            }
-          >
-            <Globe size={14} strokeWidth={1.8} />
-            {p.browser && tr("Browser")}
-          </button>
-          {!isAcp(engine) && p.browser && <BrowserMenu />}
-          <button
-            className={`chrome-toggle ${p.computer ? 'on' : ''}`}
-            disabled={!hasJoltyComputer(engine)}
-            aria-pressed={Boolean(p.computer)}
-            onClick={() => p.onComputer(!p.computer)}
-            title={
-              !hasJoltyComputer(engine) ? tr("Controlul PC-ului nu este disponibil pentru Hermes.") : p.computer
-                ? tr("Computer e pornit: modelul vede ecranul și folosește mouse-ul și tastatura. Ctrl+Alt+Esc îl oprește oricând. Clic ca să-l oprești.")
-                : tr("Computer: modelul vede ecranul și folosește mouse-ul și tastatura ca un om, în programele pe care le aprobi. Merge cu orice model.")
-            }
-          >
-            <Monitor size={14} strokeWidth={1.8} />
-            {p.computer && tr("Computer")}
-          </button>
-          {(p.onTemporary || p.temporary) && (
-            <button
-              className={`chrome-toggle ${p.temporary ? 'on' : ''}`}
-              disabled={isAcp(engine) || !p.onTemporary}
-              aria-pressed={Boolean(p.temporary)}
-              onClick={() => p.onTemporary?.(!p.temporary)}
-              title={
-                isAcp(engine) ? tr("Conversația temporară nu este disponibilă pentru Hermes.") : !p.onTemporary
+          <ToolsMenu
+            tools={[
+              ...(!isAcp(engine) ? [{
+                id: 'plan', icon: <ClipboardList size={14} strokeWidth={1.8} />, label: 'Plan', on: p.mode === 'plan',
+                title: p.mode === 'plan' ? tr("Plan activ: clic ca să revii la Build, unde editează fișiere") : tr("Comută în Plan: modelul doar cercetează și propune un plan, fără să modifice nimic"),
+                onToggle: () => p.onMode(p.mode === 'plan' ? DEFAULT_MODE : 'plan')
+              }] : []),
+              {
+                id: 'browser', icon: <Globe size={14} strokeWidth={1.8} />, label: tr("Browser"), on: Boolean(p.browser), disabled: !hasJoltyBrowser(engine),
+                title: !hasJoltyBrowser(engine) ? tr("Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.") : p.browser
+                  ? tr("Jolty în browser e pornit: modelul poate folosi browserul tău (Chrome, Vivaldi, Edge, Brave), cu login-urile tale. Clic ca să-l oprești.")
+                  : tr("Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări)."),
+                onToggle: () => p.onBrowser(!p.browser)
+              },
+              {
+                id: 'computer', icon: <Monitor size={14} strokeWidth={1.8} />, label: tr("Computer"), on: Boolean(p.computer), disabled: !hasJoltyComputer(engine),
+                title: !hasJoltyComputer(engine) ? tr("Controlul PC-ului nu este disponibil pentru Hermes.") : p.computer
+                  ? tr("Computer e pornit: modelul vede ecranul și folosește mouse-ul și tastatura. Ctrl+Alt+Esc îl oprește oricând. Clic ca să-l oprești.")
+                  : tr("Computer: modelul vede ecranul și folosește mouse-ul și tastatura ca un om, în programele pe care le aprobi. Merge cu orice model."),
+                onToggle: () => p.onComputer(!p.computer)
+              },
+              ...(p.onTemporary || p.temporary ? [{
+                id: 'temporary', icon: <MessageSquareDashed size={14} strokeWidth={1.8} />, label: tr("Temporar"), on: Boolean(p.temporary), disabled: isAcp(engine) || !p.onTemporary,
+                title: isAcp(engine) ? tr("Conversația temporară nu este disponibilă pentru Hermes.") : !p.onTemporary
                   ? tr("Conversație temporară: nu apare în listă și dispare când o părăsești sau închizi Jolty.")
                   : p.temporary
                     ? tr("Conversație temporară activă: nu se salvează nimic, nici întrebările, nici răspunsurile. Clic ca s-o oprești.")
-                    : tr("Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty.")
-              }
-            >
-              <MessageSquareDashed size={14} strokeWidth={1.8} />
-              {p.temporary && tr("Temporar")}
-            </button>
-          )}
+                    : tr("Conversație temporară: nu se salvează în Jolty, nu apare în listă și dispare când o părăsești sau închizi Jolty."),
+                onToggle: () => p.onTemporary?.(!p.temporary)
+              }] : [])
+            ]}
+            after={{ browser: !isAcp(engine) ? <BrowserMenu /> : undefined }}
+          />
           <PowerMenu />
           <div className="spacer" />
           {p.sessionId && p.running && <WorkClock sessionId={p.sessionId} />}

@@ -962,5 +962,6 @@
  "Textele lungi pot fi lipite": "긴 텍스트는 붙여넣기 허용",
  "Oprit: modelul scrie tot, tastă cu tastă. Pornit: un text lung poate intra prin clipboard (mai repede, dar nu arată ca scrisul de mână).": "끔: 모델이 모든 글자를 키 하나씩 입력합니다. 켬: 긴 텍스트는 클립보드로 넣을 수 있습니다(더 빠르지만 손으로 쓴 것처럼 보이지 않습니다).",
  "Programe aprobate pentru totdeauna": "항상 승인한 프로그램",
- "Niciunul încă: modelul te întreabă prima dată când vrea să lucreze într-un program.": "아직 없음: 모델이 프로그램에서 처음 작업하려 할 때 먼저 묻습니다."
+ "Niciunul încă: modelul te întreabă prima dată când vrea să lucreze într-un program.": "아직 없음: 모델이 프로그램에서 처음 작업하려 할 때 먼저 묻습니다.",
+ "Unelte": "도구"
 }

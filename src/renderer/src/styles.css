@@ -3117,6 +3117,15 @@ a {
   outline: 1px solid var(--volt);
   outline-offset: 1px;
 }
+.tool-chip {
+  display: inline-flex;
+  align-items: center;
+}
+.tool-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .steps {
   margin: 0 0 14px;
   padding-inline-start: 18px;

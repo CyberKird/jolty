@@ -113,6 +113,11 @@ await win.click('.chrome-toggle.chevron')
 await win.waitForSelector('.picker-pop:has-text("Cât de liber lucrează modelul")')
 await shot('01g-browser-menu')
 await win.keyboard.press('Escape')
+// the composer's switches live behind one button
+await win.click('.composer-bar button[aria-label="Unelte"]')
+await win.waitForSelector('.picker-pop [role="menuitemcheckbox"]')
+await shot('01i-tools-menu')
+await win.keyboard.press('Escape')
 // a key in the message: a hint under the box, nothing blocked
 await win.fill('.composer textarea', 'ține minte cheia sk-ant-api03-abcdefghijklmnopqrstu1234')
 await win.waitForSelector('.attachment-note:has-text("pare să conțină o cheie API")')

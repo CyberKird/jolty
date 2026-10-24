@@ -962,5 +962,6 @@
  "Textele lungi pot fi lipite": "Long text can be pasted",
  "Oprit: modelul scrie tot, tastă cu tastă. Pornit: un text lung poate intra prin clipboard (mai repede, dar nu arată ca scrisul de mână).": "Off: the model types everything key by key. On: a long text may go in through the clipboard (faster, but it does not look like handwriting).",
  "Programe aprobate pentru totdeauna": "Programs approved for good",
- "Niciunul încă: modelul te întreabă prima dată când vrea să lucreze într-un program.": "None yet: the model asks you the first time it wants to work in a program."
+ "Niciunul încă: modelul te întreabă prima dată când vrea să lucreze într-un program.": "None yet: the model asks you the first time it wants to work in a program.",
+ "Unelte": "Tools"
 }
