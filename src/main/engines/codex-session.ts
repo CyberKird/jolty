@@ -1,9 +1,10 @@
 import { randomUUID } from 'crypto'
-import type { Attachment, FileDiff, PermissionDecision, PermissionMode, Profile, SessionMeta } from '@shared/types'
-import { BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER } from '../browser'
+import { noQuestions, type Attachment, type FileDiff, type PermissionDecision, type PermissionMode, type Profile, type SessionMeta } from '@shared/types'
+import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER } from '../browser'
 import { codexBrowserServer, codexComputerServer, codexJoltyServer } from '../browser-mcp'
 import { computerPrompt } from '../computer/names'
 import { JOLTY_TOOLS_PROMPT } from '../jolty-tools'
+import { loadSettings } from '../store'
 import { codexItem, planItemSteps, saveImages } from './codex-items'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
@@ -394,6 +395,11 @@ export class CodexSession implements EngineSession, ThreadListener {
         this.notice(tr("{server} a cerut ceva ce Jolty nu poate afișa încă; cererea a fost refuzată.", { server: String(p.serverName || 'MCP') }), 'warn')
         return true
       }
+      // "No questions": a tool call is not asked about (the sandbox and Jolty's own policy still bound it)
+      if (noQuestions(this.meta.permissionMode)) {
+        this.server.rpc?.respond(r.id, { action: 'accept', content: {} })
+        return true
+      }
       const id = randomUUID()
       this.pending.set(id, r.id)
       this.elicitations.add(id)
@@ -472,7 +478,9 @@ export class CodexSession implements EngineSession, ThreadListener {
 
   /** The Playwright server for this thread; reading pages runs on its own outside Manual mode. */
   private browserConfig(): Record<string, unknown> {
-    const tools = this.meta.permissionMode === 'ask' ? {} : Object.fromEntries(BROWSER_READ_TOOLS.map((t) => [t, { approval_mode: 'approve' }]))
+    // acting (click, type) is approved up front when the browser menu says "Liber"; a change reaches the thread when it next starts
+    const free = loadSettings().siteTrust === 'free'
+    const tools = this.meta.permissionMode === 'ask' ? {} : Object.fromEntries((free ? [...BROWSER_READ_TOOLS, ...BROWSER_ACT_TOOLS] : BROWSER_READ_TOOLS).map((t) => [t, { approval_mode: 'approve' }]))
     return { ...codexBrowserServer(this.meta.id), disabled_tools: BROWSER_BLOCKED_TOOLS, tools }
   }
 

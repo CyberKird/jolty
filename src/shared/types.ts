@@ -88,6 +88,9 @@ export interface AccountStatus {
 /** `project` is Codex only: no questions, but the sandbox keeps it inside the project folder. `full` is the whole disk. */
 export type PermissionMode = 'auto' | 'ask' | 'autoEdit' | 'plan' | 'project' | 'full'
 
+/** The modes that mean "do not ask me": nothing in Jolty may show a permission card in them (the safety policy refuses instead). */
+export const noQuestions = (mode?: PermissionMode): boolean => mode === 'project' || mode === 'full'
+
 export interface ModelOption {
   id: string
   label: string

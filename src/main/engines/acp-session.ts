@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto'
-import type { Attachment, PermissionDecision, PermissionMode, Profile, SessionMeta } from '@shared/types'
+import { noQuestions, type Attachment, type PermissionDecision, type PermissionMode, type Profile, type SessionMeta } from '@shared/types'
+import { loadSettings } from '../store'
+import { touchesSecretFile } from './secret-files'
 import type { EngineHost, EngineSession } from './types'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
 import { count, AcpEvents, list, object, str, toolDiffs, type AcpObject } from './acp-events'
@@ -149,6 +151,12 @@ export class AcpSession implements EngineSession {
     const id = randomUUID()
     const tool = object(p.toolCall)
     const options = list(p.options).filter((o) => typeof o.optionId === 'string')
+    // OpenCode in "No questions" asks nothing; the one exception is a secret file while "ask before touching secret files" is on
+    const once = options.find((o) => o.kind === 'allow_once')
+    if (once && this.agent.engine === 'opencode' && noQuestions(this.meta.permissionMode) && (loadSettings().protectSecretFiles === false || !touchesSecretFile({ ...object(tool.rawInput), locations: tool.locations }))) {
+      rpc.respond(request.id, { outcome: { outcome: 'selected', optionId: once.optionId } })
+      return
+    }
     const timer = setTimeout(() => this.respond(id, 'deny'), 55000)
     this.pending.set(id, { rpcId: request.id, options, timer })
     this.host.emit({ type: 'permission', sessionId: this.meta.id, request: {

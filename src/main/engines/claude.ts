@@ -41,6 +41,7 @@ import { TaskBoard } from '@shared/tasks'
 import { getSecret, loadSettings, profileDir } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
 import { PLAN_RULES, WRITING_RULES } from './prompt'
+import { SECRET_FILE_RULES, touchesSecretFile } from './secret-files'
 import { ProfileProcesses } from './profile-processes'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 import { tr } from '@shared/i18n'
@@ -48,10 +49,6 @@ import { tr } from '@shared/i18n'
 type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
 let sdkModule: Promise<SdkModule> | undefined
 const loadSdk = (): Promise<SdkModule> => (sdkModule ??= import('@anthropic-ai/claude-agent-sdk'))
-
-/** Files that hold secrets: a model gets asked about them even in the modes that otherwise read and edit freely. */
-const SECRET_FILES = ['**/.env', '**/.env.*', '**/secrets.json', '**/.credentials.json', '**/*.pem', '**/*.key', '**/id_rsa*', '**/id_ed25519*', '~/.ssh/**']
-const SECRET_FILE_RULES = SECRET_FILES.flatMap((f) => [`Read(${f})`, `Edit(${f})`])
 
 /** Even with every question switched off, these never run: they cannot be undone by a checkpoint. */
 const NEVER_RUN = ['Bash(format:*)', 'Bash(diskpart:*)', 'Bash(reg delete:*)', 'Bash(git push --force:*)', 'Bash(git push -f:*)', 'Bash(rm -rf /:*)', 'Bash(rm -rf ~:*)', 'Bash(rm -rf C:*)', 'Bash(rm -rf $HOME:*)']
@@ -555,6 +552,9 @@ class ClaudeSession implements EngineSession {
   private ask(toolName: string, input: Record<string, unknown>, opts: Parameters<CanUseTool>[2]): Promise<PermissionResult> {
     // a tool that Claude Code still asks about while Stop is winding the turn down does not run
     if (this.stopRequested) return Promise.resolve({ behavior: 'deny', message: tr("Cererea a fost anulată.") })
+    // "Ask before touching secret files" is off: a session started while it was on still has the rules, so they are answered here.
+    // In "No questions" nothing else can ask (bypassPermissions only stops for the rules), so a turned-off setting means no card.
+    if (loadSettings().protectSecretFiles === false && (this.meta.permissionMode === 'full' || touchesSecretFile(input))) return Promise.resolve({ behavior: 'allow', updatedInput: input })
     // reading pages is not an action on the user's behalf: only Manual mode asks for it
     const [, server, tool] = /^mcp__(.+?)__(.+)$/.exec(toolName) || []
     // computer use: outside Manual mode the server itself asks the user, per application, the same for every engine
