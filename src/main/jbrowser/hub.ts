@@ -4,6 +4,7 @@
 // Nothing here touches Electron, so it can be tested on its own.
 import { EventEmitter } from 'events'
 import crypto from 'crypto'
+import fs from 'fs'
 import http from 'http'
 import { WebSocket, WebSocketServer } from 'ws'
 
@@ -40,6 +41,8 @@ export interface HubOptions {
   tools?: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
   /** and for computer use (screen, mouse, keyboard), at /computer/<chat id> */
   computer?: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
+  /** where the signed Firefox extension is, served at /jolty.xpi: Firefox only asks "Add Jolty?" for an http address, a file:// one shows a blank page */
+  xpi?: () => string
   /** the Firefox extension that was paired (its moz-extension:// origin); a signed add-on has no token file, it asks for the token at /jolty-pair */
   paired?: { get: () => string | undefined; set: (origin: string) => void }
   log?: (m: string) => void
@@ -166,6 +169,15 @@ export class BrowserHub extends EventEmitter {
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ app: 'jolty', v: 1 }))
       return
     }
+    if (req.method === 'GET' && url.pathname === '/jolty.xpi' && this.opts.xpi) {
+      // public file, nothing secret in it: the token comes later through pairing
+      try {
+        res.writeHead(200, { 'content-type': 'application/x-xpinstall' }).end(fs.readFileSync(this.opts.xpi()))
+      } catch {
+        res.writeHead(404).end()
+      }
+      return
+    }
     if (req.method === 'POST' && url.pathname === '/jolty-pair') {
       this.pair(req, res)
       return
@@ -267,6 +279,7 @@ export class BrowserHub extends EventEmitter {
       }
       if (!conn.ready) {
         if (msg.type !== 'hello' || typeof msg.token !== 'string' || !safeEqual(msg.token, this.opts.token())) {
+          this.opts.log?.(`extension refused: ${msg.type !== 'hello' ? 'no hello' : 'wrong token'}`)
           ws.send(JSON.stringify({ type: 'reject', reason: 'wrong token: let Jolty install the extension again' }))
           ws.close(4401, 'bad token')
           return

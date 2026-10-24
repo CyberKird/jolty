@@ -79,3 +79,30 @@ test('the signed xpi is the extension folder, signed', { skip: !fs.existsSync('b
   assert.ok(xpi.has('META-INF/mozilla.rsa'), 'not signed')
   assert.ok(!xpi.has('config.json'), 'a token file inside a signed add-on')
 })
+
+test('the hub serves the xpi as an install, only when it has one', async () => {
+  const file = 'browser-extension-firefox-signed/jolty.xpi'
+  const mk = (xpi?: () => string) => new BrowserHub({ token: () => 't', bundledVersion: () => '1', mcp: async () => undefined, xpi })
+  // a plain request on a fresh socket: fetch may reuse one still open to an earlier test's hub on the same port
+  const get = (port: number) =>
+    new Promise<{ status: number; type: string; body: Buffer }>((resolve, reject) =>
+      http.get({ host: '127.0.0.1', port, path: '/jolty.xpi', agent: false }, (r) => {
+        const parts: Buffer[] = []
+        r.on('data', (c: Buffer) => parts.push(c)).on('end', () => resolve({ status: r.statusCode || 0, type: String(r.headers['content-type'] || ''), body: Buffer.concat(parts) }))
+      }).on('error', reject)
+    )
+  const none = mk()
+  const p1 = await none.start()
+  const hub = mk(() => file)
+  const p2 = await hub.start()
+  try {
+    assert.equal((await get(p1)).status, 404)
+    if (!fs.existsSync(file)) return
+    const r = await get(p2)
+    assert.equal(r.type, 'application/x-xpinstall')
+    assert.ok(r.body.equals(fs.readFileSync(file)))
+  } finally {
+    await none.stop()
+    await hub.stop()
+  }
+})
