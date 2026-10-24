@@ -1214,13 +1214,16 @@ ${text.slice(0, 1500)}`
     }
   }
 
-  /** The composer's text rewritten once by the same cheap model that names chats; throws when it cannot be trusted. */
-  async improvePrompt(text: string): Promise<string> {
-    const vp = this.visionProfile()
+  /** The composer's text rewritten once by the model picked in the composer (the image describer when that one cannot); throws when it cannot be trusted. */
+  async improvePrompt(text: string, profileId?: string, model?: string, cwd?: string): Promise<string> {
+    const picked = store.loadProfiles().find((p) => p.id === profileId)
+    const own = picked && !isAcp(picked.engine)
+    const vp = own ? picked : this.visionProfile()
     if (!vp) throw new Error(tr("Niciun profil nu poate îmbunătăți mesajul: adaugă un profil Claude sau Codex."))
-    const asked = this.driver(vp.engine).describe(vp, [], improvePrompt(text), vp.engine === 'claude' && vp.auth !== 'endpoint' ? 'haiku' : undefined)
+    const pick = own ? model || undefined : vp.engine === 'claude' && vp.auth !== 'endpoint' ? 'haiku' : undefined
+    const asked = this.driver(vp.engine).describe(vp, [], improvePrompt(text, cwd ? path.basename(cwd) : undefined), pick)
     let timer: NodeJS.Timeout | undefined
-    const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(tr("Modelul nu a răspuns la timp."))), 60000) })
+    const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(tr("Modelul nu a răspuns la timp."))), 120000) })
     try {
       const out = cleanImproved(text, await Promise.race([asked, late]))
       if (!out) throw new Error(tr("Modelul nu a dat o variantă folosibilă. Mesajul rămâne cum era."))

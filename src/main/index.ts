@@ -226,7 +226,9 @@ function registerIpc(): void {
   handle('pack:apply', (previewId: string, decisions) => pack.apply(String(previewId), decisions as never))
   handle('pack:discard', (previewId: string) => pack.discard(String(previewId)))
   handle('pack:undo', (importId: string) => pack.undo(String(importId)))
-  handle('sessions:improvePrompt', (text: string) => jolty.improvePrompt(String(text)))
+  handle('sessions:improvePrompt', (text: string, profileId?: string, model?: string, cwd?: string) =>
+    jolty.improvePrompt(String(text), typeof profileId === 'string' ? profileId : undefined, typeof model === 'string' ? model : undefined, typeof cwd === 'string' ? cwd : undefined)
+  )
 
   handle('usage:summary', () => jolty.usageSummary())
   handle('usage:balance', (id: string) => jolty.balance(id))

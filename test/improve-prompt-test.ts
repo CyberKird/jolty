@@ -30,5 +30,7 @@ test('improve prompt: an empty or much shorter reply is refused', () => {
 
 test('improve prompt: the instruction carries the text, capped', () => {
   assert.ok(improvePrompt(original).endsWith(original))
-  assert.ok(improvePrompt('x'.repeat(IMPROVE_MAX + 500)).length < IMPROVE_MAX + 1500)
+  assert.ok(improvePrompt('x'.repeat(IMPROVE_MAX + 500)).length < IMPROVE_MAX + 2500)
+  assert.ok(improvePrompt(original, 'jolty').includes('"jolty"'))
+  assert.ok(!improvePrompt(original).includes('project folder'))
 })

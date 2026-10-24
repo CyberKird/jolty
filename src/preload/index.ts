@@ -45,7 +45,7 @@ const api: JoltyApi = {
     remove: (id) => call('sessions:remove', id),
     rename: (id, title) => call('sessions:rename', id, title),
     review: (id) => call('sessions:review', id),
-    improvePrompt: (text) => call('sessions:improvePrompt', text),
+    improvePrompt: (text, profileId, model, cwd) => call('sessions:improvePrompt', text, profileId, model, cwd),
     onEvent: (cb) => {
       const listener = (_e: unknown, ev: ChatEvent): void => cb(ev)
       ipcRenderer.on('jolty:event', listener)

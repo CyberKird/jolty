@@ -37,6 +37,8 @@ export function PageTabs<T extends string>({ tabs, tab, onPick, label }: { tabs:
       if (on) setBar((b) => (b?.x === on.offsetLeft && b.w === on.offsetWidth ? b : { x: on.offsetLeft, w: on.offsetWidth }))
     }
     fit()
+    // the strip scrolls with no visible scrollbar, so a tab past the edge would stay cut off
+    el.querySelector<HTMLElement>('.page-tab.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     const ro = new ResizeObserver(fit)
     ro.observe(el)
     return () => ro.disconnect()

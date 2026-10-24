@@ -313,10 +313,10 @@ export class CodexDriver implements EngineDriver {
   }
 
   /** Asks a Codex model to describe images for a model that cannot see them. */
-  async describe(profile: Profile, images: Attachment[], prompt: string): Promise<string> {
+  async describe(profile: Profile, images: Attachment[], prompt: string, model?: string): Promise<string> {
     const server = this.server(profile)
     const rpc = await server.get()
-    const t = await rpc.request<Any>('thread/start', { cwd: os.tmpdir(), ephemeral: true, approvalPolicy: 'never', sandbox: 'read-only' })
+    const t = await rpc.request<Any>('thread/start', { cwd: os.tmpdir(), model: model || null, ephemeral: true, approvalPolicy: 'never', sandbox: 'read-only' })
     const threadId = t.thread.id as string
     const shot = new OneShot()
     server.sessions.set(threadId, shot)

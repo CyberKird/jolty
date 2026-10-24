@@ -523,7 +523,7 @@ export interface JoltyApi {
     /** a read-only review of the current changes by a model from the other family */
     review(sessionId: string): Promise<void>
     /** the composer text rewritten clearer by a cheap model, in the same language; rejects when it fails */
-    improvePrompt(text: string): Promise<string>
+    improvePrompt(text: string, profileId?: string, model?: string, cwd?: string): Promise<string>
     remove(sessionId: string): Promise<void>
     rename(sessionId: string, title: string): Promise<void>
     onEvent(cb: (e: ChatEvent) => void): () => void

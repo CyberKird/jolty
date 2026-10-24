@@ -274,7 +274,7 @@ function Composer(p: ComposerProps) {
     if (!ta || improving || !original.trim()) return
     setImproving(true)
     try {
-      const better = await api.sessions.improvePrompt(original)
+      const better = await api.sessions.improvePrompt(original, p.profileId, p.model, p.cwd)
       if (!ta.isConnected || ta.value !== original) return
       ta.readOnly = false
       ta.focus()
