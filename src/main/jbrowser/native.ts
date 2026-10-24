@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto'
 import { app, clipboard, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import { pathToFileURL } from 'url'
 import type { NativeBrowserStatus } from '@shared/types'
 import { activeBrowser, browsers } from '../browser'
 import { dataDir, getSecret, loadSettings, setSecret } from '../store'
@@ -14,6 +15,8 @@ import { BrowserHub } from './hub'
 import { BrowserService } from './service'
 
 const TOKEN_KEY = 'jbrowser-token'
+/** the moz-extension:// origin of the paired Firefox extension (the browser gives every install its own) */
+const FIREFOX_KEY = 'jbrowser-firefox-origin'
 
 export const NATIVE_SERVER = 'jolty-browser'
 
@@ -29,6 +32,11 @@ const bundledDir = (kind: Kind): string => {
   return candidates.find((c) => fs.existsSync(path.join(c, 'manifest.json'))) || candidates[0]
 }
 export const installedDir = (kind: Kind = 'browser-extension'): string => path.join(dataDir(), kind)
+/** The Firefox extension signed by Mozilla (unlisted channel): installs once and stays, unlike a temporary add-on. Absent until it has been signed. */
+const signedXpi = (): string => {
+  const candidates = ['browser-extension-firefox-signed'].flatMap((d) => [path.join(process.resourcesPath || '', d), path.join(__dirname, '../..', d), path.join(app.getAppPath(), d)])
+  return path.join(candidates.find((c) => fs.existsSync(path.join(c, 'jolty.xpi'))) || candidates[0], 'jolty.xpi')
+}
 const KINDS: Kind[] = ['browser-extension', 'browser-extension-firefox']
 
 const versionOf = (dir: string): string => {
@@ -54,6 +62,7 @@ class NativeBrowser {
     bundledVersion: (agent) => versionOf(bundledDir(kindOfAgent(agent))),
     mcp: (sid, m) => this.service.handle(sid, m),
     tools: handleJoltyTools,
+    paired: { get: () => getSecret(FIREFOX_KEY), set: (o) => setSecret(FIREFOX_KEY, o) },
     computer: (sid, m) => nativeComputer.handle(sid, m),
     log: (m) => process.env.JOLTY_DEBUG && console.error('[jbrowser]', m)
   })
@@ -119,9 +128,20 @@ class NativeBrowser {
     return dir
   }
 
+  /** Whether Firefox can install the signed extension (it asks once and then keeps it). */
+  private signed(): boolean {
+    return this.firefox() && fs.existsSync(signedXpi())
+  }
+
   /** Copies the files, puts the folder path on the clipboard and opens the browser's extensions page and the folder. */
   async installAndOpen(): Promise<NativeBrowserStatus> {
     await this.start()
+    if (this.signed()) {
+      // Firefox shows its own "Add Jolty?" prompt; the extension then asks the app for its token (pairing)
+      this.hub.openPairing()
+      activeBrowser()?.open(pathToFileURL(signedXpi()).href)
+      return this.status()
+    }
     const dir = this.install()
     // Firefox asks for the manifest file, the other browsers for the folder
     clipboard.writeText(this.firefox() ? path.join(dir, 'manifest.json') : dir)
@@ -135,13 +155,13 @@ class NativeBrowser {
     const kind = kindOf(firefox)
     const dir = installedDir(kind)
     return {
-      installed: fs.existsSync(path.join(dir, 'manifest.json')),
+      installed: fs.existsSync(path.join(dir, 'manifest.json')) || (firefox && !!getSecret(FIREFOX_KEY)),
       connected: this.hub.connected,
       version: this.hub.extension?.version,
       bundledVersion: versionOf(bundledDir(kind)),
       dir,
       port: this.hub.port,
-      ...(firefox ? { firefox } : {})
+      ...(firefox ? { firefox, ...(this.signed() ? { signed: true } : {}) } : {})
     }
   }
 

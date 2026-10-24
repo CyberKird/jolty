@@ -40,8 +40,12 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
   const debug = (tag: string) => (m: string) => {
     if (process.env.JBROWSER_DEBUG) console.error(tag, m)
   }
+  // JBROWSER_PAIR=1: no config.json in the extension, it pairs with the hub like the signed add-on does
+  const pair = !!process.env.JBROWSER_PAIR
+  let paired: string | undefined
   const hub = new BrowserHub({
     token: () => TOKEN,
+    paired: { get: () => paired, set: (o) => (paired = o) },
     bundledVersion: () => '1.0.1',
     mcp: (sid, m) => svc.handle(sid, m),
     log: debug('[hub]')
@@ -52,7 +56,8 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
     log: debug('[svc]')
   })
   const port = await hub.start()
-  fs.writeFileSync(path.join(ext, 'config.json'), JSON.stringify({ token: TOKEN, ports: [port] }))
+  if (pair) hub.openPairing()
+  else fs.writeFileSync(path.join(ext, 'config.json'), JSON.stringify({ token: TOKEN, ports: [port] }))
 
   const proc: ChildProcess = firefox
     ? spawn('npx', ['--yes', 'web-ext', 'run', '--source-dir', ext, '--firefox', firefox, '--firefox-profile', path.join(root, 'profile'), '--profile-create-if-missing', '--no-reload', '--no-input', '--start-url', 'about:blank'].map((a) => `"${a}"`), { stdio: process.env.JBROWSER_DEBUG ? 'inherit' : 'ignore', shell: true })

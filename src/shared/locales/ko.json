@@ -1130,5 +1130,9 @@
  "OpenCode a fost instalat.": "OpenCode를 설치했습니다.",
  "Control al PC-ului": "PC 제어",
  "Asistentul se construiește singur la prima folosire.": "도우미는 처음 사용할 때 스스로 만들어집니다.",
- "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": ".NET Framework 4(csc.exe)가 없어 PC 제어를 시작할 수 없습니다. Windows 기능에서 켜세요."
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": ".NET Framework 4(csc.exe)가 없어 PC 제어를 시작할 수 없습니다. Windows 기능에서 켜세요.",
+ "Nu e instalată încă în Firefox. Se instalează o singură dată și rămâne instalată.": "Firefox에 아직 설치되지 않았습니다. 한 번 설치하면 계속 유지됩니다.",
+ "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "설치를 누르면 Mozilla가 서명한 확장 프로그램을 Firefox에서 엽니다.",
+ "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "Firefox가 \"Jolty를 추가하시겠습니까?\"라고 묻습니다. \"추가\"를 누르세요.",
+ "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "완료: 위의 상태가 \"연결됨\"으로 바뀝니다. Firefox를 닫아도 확장 프로그램은 설치된 상태로 남으므로 단계를 반복할 필요가 없습니다."
 }

@@ -19,7 +19,9 @@ function Status({ st }: { st?: NativeBrowserStatus }) {
       : state === 'off'
         ? tr("Instalată, dar browserul nu e conectat. Deschide browserul sau apasă pe iconița extensiei și pe Reconectează.")
         : state === 'none'
-          ? tr("Nu e instalată încă în browser.")
+          ? st?.signed
+            ? tr("Nu e instalată încă în Firefox. Se instalează o singură dată și rămâne instalată.")
+            : tr("Nu e instalată încă în browser.")
           : tr("Verific…")
   return (
     <div className="row" style={{ gap: 8, marginBottom: 12 }}>
@@ -111,7 +113,9 @@ export function BrowserSettings({ s, setS }: { s: AppSettings; setS: (v: AppSett
             <>
               <ol className="muted small steps">
                 <li>
-                  {tr("Apasă Instalează: pun fișierele extensiei într-un folder și deschid pagina de extensii din {name}.", { name: browserName })}{' '}
+                  {native?.signed
+                    ? tr("Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.")
+                    : tr("Apasă Instalează: pun fișierele extensiei într-un folder și deschid pagina de extensii din {name}.", { name: browserName })}{' '}
                   <button
                     className="btn small"
                     onClick={async () => {
@@ -125,7 +129,9 @@ export function BrowserSettings({ s, setS }: { s: AppSettings; setS: (v: AppSett
                     <ExternalLink size={13} /> {native?.installed ? tr("Deschide pagina de extensii") : tr("Instalează extensia")}
                   </button>
                 </li>
-                {native?.firefox ? (
+                {native?.signed ? (
+                  <li>{tr("Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.")}</li>
+                ) : native?.firefox ? (
                   <li>
                     {tr("Pe pagina deschisă apasă „Încarcă un supliment temporar” (în engleză „Load Temporary Add-on”) și alege fișierul manifest.json din folderul:")}
                     {native.dir && (
@@ -157,7 +163,7 @@ export function BrowserSettings({ s, setS }: { s: AppSettings; setS: (v: AppSett
                     </li>
                   </>
                 )}
-                <li>{native?.firefox ? tr("Gata: starea de mai sus devine „Conectată”. Firefox șterge suplimentele temporare când se închide, deci după repornire repetă pașii.") : tr("Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.")}</li>
+                <li>{native?.signed ? tr("Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.") : native?.firefox ? tr("Gata: starea de mai sus devine „Conectată”. Firefox șterge suplimentele temporare când se închide, deci după repornire repetă pașii.") : tr("Gata: starea de mai sus devine „Conectată”. Se face o singură dată; după aceea extensia se conectează singură și se actualizează odată cu Jolty.")}</li>
               </ol>
             </>
           )}

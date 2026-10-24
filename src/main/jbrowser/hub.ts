@@ -40,6 +40,8 @@ export interface HubOptions {
   tools?: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
   /** and for computer use (screen, mouse, keyboard), at /computer/<chat id> */
   computer?: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
+  /** the Firefox extension that was paired (its moz-extension:// origin); a signed add-on has no token file, it asks for the token at /jolty-pair */
+  paired?: { get: () => string | undefined; set: (origin: string) => void }
   log?: (m: string) => void
 }
 
@@ -64,6 +66,7 @@ export class BrowserHub extends EventEmitter {
   private conns: Conn[] = []
   private pending = new Map<number, Pending>()
   private seq = 0
+  private pairUntil = 0
 
   constructor(private opts: HubOptions) {
     super()
@@ -163,6 +166,10 @@ export class BrowserHub extends EventEmitter {
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ app: 'jolty', v: 1 }))
       return
     }
+    if (req.method === 'POST' && url.pathname === '/jolty-pair') {
+      this.pair(req, res)
+      return
+    }
     const m = /^\/(mcp|jolty|computer)\/([A-Za-z0-9_.-]{1,80})$/.exec(url.pathname)
     const handler = m?.[1] === 'jolty' ? this.opts.tools : m?.[1] === 'computer' ? this.opts.computer : this.opts.mcp
     if (!m || !handler) {
@@ -211,6 +218,30 @@ export class BrowserHub extends EventEmitter {
       this.opts.log?.('mcp: ' + (e instanceof Error ? e.stack : String(e)))
       res.writeHead(500).end()
     }
+  }
+
+  /** The user pressed Install: for a few minutes the next Firefox extension that asks is paired (and replaces an older pairing). */
+  openPairing(ms = 10 * 60 * 1000): void {
+    this.pairUntil = Date.now() + ms
+  }
+
+  /**
+   * The token for a signed extension, which cannot carry a token file. The browser sets Origin itself, so a web page cannot
+   * claim to be the extension, and no CORS header goes to anyone else, so a page cannot read the answer either. Only the
+   * extension paired earlier (or the first one asking while pairing is open) gets it.
+   */
+  private pair(req: http.IncomingMessage, res: http.ServerResponse): void {
+    const origin = String(req.headers.origin || '')
+    const opts = this.opts.paired
+    const open = Date.now() < this.pairUntil
+    if (!opts || !/^moz-extension:\/\/[0-9a-f-]{36}$/i.test(origin) || (!open && opts.get() !== origin)) {
+      this.opts.log?.(`pair refused for ${origin || 'no origin'}`)
+      res.writeHead(403).end()
+      return
+    }
+    if (open && opts.get() !== origin) opts.set(origin)
+    this.pairUntil = 0
+    res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': origin, vary: 'Origin' }).end(JSON.stringify({ token: this.opts.token() }))
   }
 
   // ------------------------------------------------------------------ the extension

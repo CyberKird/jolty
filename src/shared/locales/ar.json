@@ -1130,5 +1130,9 @@
  "OpenCode a fost instalat.": "تم تثبيت OpenCode.",
  "Control al PC-ului": "التحكم في الحاسوب",
  "Asistentul se construiește singur la prima folosire.": "يُبنى المساعد تلقائيًا عند أول استخدام.",
- "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": "ملف .NET Framework 4 (csc.exe) غير موجود، لذلك لا يمكن بدء التحكم في الحاسوب. فعّله من ميزات Windows."
+ "Lipsește .NET Framework 4 (csc.exe), așa că controlul PC-ului nu poate porni. Activează-l din Funcții Windows.": "ملف .NET Framework 4 (csc.exe) غير موجود، لذلك لا يمكن بدء التحكم في الحاسوب. فعّله من ميزات Windows.",
+ "Nu e instalată încă în Firefox. Se instalează o singură dată și rămâne instalată.": "لم يتم تثبيتها في Firefox بعد. تُثبَّت مرة واحدة وتبقى مثبّتة.",
+ "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "اضغط تثبيت: سأفتح في Firefox الإضافة الموقّعة من Mozilla.",
+ "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "يسأل Firefox «هل تريد إضافة Jolty؟». اضغط «إضافة».",
+ "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "تم: تتحول الحالة أعلاه إلى «متصلة». تبقى الإضافة مثبّتة بعد إغلاق Firefox، فلا تكرر الخطوات."
 }

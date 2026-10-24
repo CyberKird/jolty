@@ -2,7 +2,8 @@
 // script answers the same requests as the Chromium extension by translating the protocol commands Jolty uses
 // into what Firefox offers: tabs, webNavigation, webRequest, screenshots, and driver.js inside the page.
 // It talks to the Jolty desktop app over a WebSocket on 127.0.0.1; nothing leaves the computer.
-// The token in config.json (written by Jolty) proves the caller is Jolty.
+// The token proves the caller is Jolty. A copy loaded from a folder has it in config.json (written by Jolty); the signed
+// add-on cannot be changed after signing, so it asks Jolty for the token once (pairing, started by Install in Jolty) and keeps it.
 'use strict'
 
 const VERSION = browser.runtime.getManifest().version
@@ -61,27 +62,61 @@ async function loadConfig() {
   return config
 }
 
-async function findHub() {
+async function findHubs() {
   const ports = config && Array.isArray(config.ports) && config.ports.length ? config.ports : Array.from({ length: PORT_COUNT }, (_, i) => FIRST_PORT + i)
+  const found = []
   for (const port of ports) {
     try {
       const r = await fetch(`http://127.0.0.1:${port}/jolty-hello`, { signal: AbortSignal.timeout(900), cache: 'no-store' })
       const j = await r.json()
-      if (j && j.app === 'jolty') return port
+      if (j && j.app === 'jolty') found.push(port)
     } catch {
       // not this port
     }
   }
-  return 0
+  return found
+}
+
+// Where the token came from: a rejected pairing token is forgotten so the next attempt pairs again
+let fromStorage = false
+
+async function tokenFor(port) {
+  fromStorage = false
+  if (config && config.token) return config.token
+  const { token } = await browser.storage.local.get('token')
+  if (token) {
+    fromStorage = true
+    return token
+  }
+  try {
+    const r = await fetch(`http://127.0.0.1:${port}/jolty-pair`, { method: 'POST', cache: 'no-store' })
+    if (!r.ok) return ''
+    const j = await r.json()
+    if (!j || !j.token) return ''
+    await browser.storage.local.set({ token: j.token })
+    return j.token
+  } catch {
+    return ''
+  }
 }
 
 async function connect() {
   if (state === 'connecting' || (sock && sock.readyState <= WebSocket.OPEN)) return
   setState('connecting')
   await loadConfig()
-  if (!config || !config.token) return fail('no config.json: let Jolty install the extension again')
-  const port = await findHub()
-  if (!port) return fail('Jolty is not running')
+  const hubs = await findHubs()
+  if (!hubs.length) return fail('Jolty is not running')
+  // more than one Jolty may be running (an installed one and a development copy): the one that knows this extension
+  let port = 0
+  let token = ''
+  for (const p of hubs) {
+    token = await tokenFor(p)
+    if (token) {
+      port = p
+      break
+    }
+  }
+  if (!token) return fail('not paired: press Install in Jolty (Settings > Browser)')
   let ws
   try {
     ws = new WebSocket(`ws://127.0.0.1:${port}/ext`)
@@ -89,7 +124,7 @@ async function connect() {
     return fail(String(e))
   }
   sock = ws
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'hello', token: config.token, version: VERSION, agent: navigator.userAgent }))
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'hello', token, version: VERSION, agent: navigator.userAgent }))
   ws.onmessage = (m) => onMessage(ws, m)
   ws.onclose = () => {
     if (sock === ws) sock = null
@@ -134,6 +169,7 @@ async function onMessage(ws, m) {
     return
   }
   if (msg.type === 'reject') {
+    if (fromStorage) await browser.storage.local.remove('token')
     setState('offline', msg.reason || 'rejected')
     ws.close()
     return
