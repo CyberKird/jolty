@@ -42,11 +42,12 @@ export function opencodeExecutable(): string | undefined {
 }
 
 /** opencode asks for approvals through its own permission config, so the Jolty mode is passed in as config. */
-export function opencodePermissions(mode: PermissionMode): Record<string, 'ask' | 'allow'> {
+export function opencodePermissions(mode: PermissionMode, protectSecrets = true): Record<string, 'ask' | 'allow'> {
   // "no questions" also covers folders outside the project (opencode's own auth.json, ~/.config) and its repeated-call guard
-  if (mode === 'full') return { edit: 'allow', bash: 'allow', external_directory: 'allow', doom_loop: 'allow' }
-  if (mode === 'autoEdit') return { edit: 'allow', bash: 'ask' }
-  return { edit: 'ask', bash: 'ask' }
+  const base: Record<string, 'ask' | 'allow'> =
+    mode === 'full' ? { edit: 'allow', bash: 'allow', external_directory: 'allow', doom_loop: 'allow' } : mode === 'autoEdit' ? { edit: 'allow', bash: 'ask' } : { edit: 'ask', bash: 'ask' }
+  // opencode asks before reading .env files on its own: that is the "ask before touching secret files" setting, so it follows it
+  return protectSecrets ? base : { ...base, read: 'allow' }
 }
 
 type Rule = 'ask' | 'allow' | 'deny'
@@ -138,7 +139,7 @@ export function launchOpencode(mode: PermissionMode = 'ask', browser = false, co
     if (value !== undefined && !/^(CLAUDECODE|CLAUDE_.*|ANTHROPIC_.*|CODEX_.*|OPENAI_.*|ELECTRON_RUN_AS_NODE)$/i.test(key)) env[key] = value
   }
   env.OPENCODE_CONFIG_CONTENT = JSON.stringify({
-    permission: { ...opencodePermissions(mode), ...(browser ? browserRules(mode) : {}), ...(computer ? computerRules(mode) : {}) },
+    permission: { ...opencodePermissions(mode, loadSettings().protectSecretFiles !== false), ...(browser ? browserRules(mode) : {}), ...(computer ? computerRules(mode) : {}) },
     ...(browser || computer ? { instructions: [toolInstructions(browser, computer)] } : {}),
     autoupdate: false
   })

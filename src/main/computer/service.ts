@@ -1,7 +1,7 @@
 // The computer-use service behind the MCP endpoint: per chat it remembers what the model last saw (the screenshot
 // that its coordinates refer to, the window in front), and every action goes through the same gate here:
 // switched on, not stopped, user idle, same window as when it looked, not a forbidden window, approved.
-import type { PermissionDecision, PermissionMode } from '@shared/types'
+import { noQuestions, type PermissionDecision, type PermissionMode } from '@shared/types'
 import { toPhysical, viewOf, type DisplayInfo, type View } from './geometry'
 import type { HelperState, InputBackend, PlayResult, WinInfo } from './helper'
 import { makeRng, readingPauseMs, type Humanness, type Rng } from './human'
@@ -179,8 +179,8 @@ export class ComputerService {
     const settings = this.host.settings()
     const key = appKey(facts)
     const always = what.always || v.kind === 'always'
-    // "No permissions": ordinary applications are not asked about; Windows itself, terminals and the blocked windows above still are
-    if (mode === 'full' && !always) return
+    // "No questions": nothing is asked; what stays off limits is refused by classify() above, not asked about
+    if (noQuestions(mode)) return
     if (!always && (s.trusted.has(key) || settings.trusted.includes(key))) return
     this.overlay.paused(true)
     const answer = await this.host.ask(s.sid, { title: what.title, detail: what.detail, app: always ? undefined : appLabel(facts) })
@@ -192,10 +192,10 @@ export class ComputerService {
     }
   }
 
-  /** For what belongs to no single application (starting a program, the clipboard): approved one by one. "No permissions" skips it, except for what `always` marks. */
+  /** For what belongs to no single application (starting a program, the clipboard): approved one by one. "No questions" skips it. */
   async confirmEach(s: Session, q: AskInput & { always?: boolean }): Promise<void> {
     const mode = this.host.mode(s.sid)
-    if (mode === 'ask' || (mode === 'full' && !q.always)) return
+    if (mode === 'ask' || noQuestions(mode)) return
     this.overlay.paused(true)
     const answer = await this.host.ask(s.sid, { title: q.title, detail: q.detail })
     this.overlay.paused(false)

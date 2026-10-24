@@ -1,5 +1,4 @@
-// The approval gate: "No permissions" (full) stops asking about ordinary applications and about open/clipboard,
-// but Windows itself, terminals and blocked windows keep their rules.
+// The approval gate: the no-questions modes (full, project) never ask; blocked windows are refused, not asked about.
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { PermissionMode } from '../src/shared/types'
@@ -36,12 +35,14 @@ test('full mode skips the question for an ordinary application and for open/clip
   assert.equal(asked.length, 0)
 })
 
-test('full mode still asks for Windows itself, terminals and Win-key shortcuts', async () => {
-  const { svc, asked, s, st } = rig('full')
-  await svc.authorize(s, win('explorer.exe'), st, { title: 'Click' })
-  await svc.authorize(s, win('notepad.exe'), st, { title: 'Type', always: true })
-  await svc.confirmEach(s, { title: 'Win+R', always: true })
-  assert.equal(asked.length, 3)
+test('no-questions modes do not ask about Windows itself, terminals and Win-key shortcuts either', async () => {
+  for (const mode of ['full', 'project'] as const) {
+    const { svc, asked, s, st } = rig(mode)
+    await svc.authorize(s, win('explorer.exe'), st, { title: 'Click' })
+    await svc.authorize(s, win('notepad.exe'), st, { title: 'Type', always: true })
+    await svc.confirmEach(s, { title: 'Win+R', always: true })
+    assert.equal(asked.length, 0)
+  }
 })
 
 test('full mode never opens a blocked window', async () => {

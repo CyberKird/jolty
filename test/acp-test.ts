@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import { AcpDriver } from '../src/main/engines/acp'
 import { OPENCODE } from '../src/main/engines/acp-agent'
 import { opencodePermissions } from '../src/main/engines/opencode-runtime'
+import { isSecretPath, touchesSecretFile } from '../src/main/engines/secret-files'
 import { JsonRpcProcess, type RpcRequest } from '../src/main/engines/jsonrpc'
 import type { EngineHost, EngineSession } from '../src/main/engines/types'
 import type { ChatEvent, ChatItem, Profile, SessionMeta, TurnUsage } from '../src/shared/types'
@@ -270,6 +271,17 @@ test('OpenCode: only free models listed, modes and approvals map to its config',
   assert.deepEqual(opencodePermissions('ask'), { edit: 'ask', bash: 'ask' })
   assert.deepEqual(opencodePermissions('autoEdit'), { edit: 'allow', bash: 'ask' })
   assert.deepEqual(opencodePermissions('full'), { edit: 'allow', bash: 'allow', external_directory: 'allow', doom_loop: 'allow' })
+  assert.equal(opencodePermissions('autoEdit', false).read, 'allow')
+  assert.equal(opencodePermissions('full', true).read, undefined)
   assert.equal(OPENCODE.sessionAllow({ optionId: 'always', kind: 'allow_always' }), true)
   assert.equal(OPENCODE.sessionAllow({ optionId: 'once', kind: 'allow_once' }), false)
+})
+
+test('secret files are recognised by path, the way the Claude rules list them', () => {
+  for (const p of [String.raw`C:\app\.env`, '/home/a/.env.local', 'x/secrets.json', 'a/server.pem', 'a/b/id_rsa.pub', String.raw`C:\Users\a\.ssh\config`]) assert.equal(isSecretPath(p), true, p)
+  for (const p of ['src/env.ts', 'a/.envrc', 'a/keyboard.ts', 'a/monkey.json', 'README.md']) assert.equal(isSecretPath(p), false, p)
+  assert.equal(touchesSecretFile({ file_path: String.raw`C:\app\.env` }), true)
+  assert.equal(touchesSecretFile({ filePath: 'a.ts', locations: [{ path: '/x/.env' }] }), true)
+  assert.equal(touchesSecretFile({ command: 'cat .env' }), false)
+  assert.equal(touchesSecretFile(undefined), false)
 })
