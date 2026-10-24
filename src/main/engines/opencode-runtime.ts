@@ -42,8 +42,9 @@ export function opencodeExecutable(): string | undefined {
 }
 
 /** opencode asks for approvals through its own permission config, so the Jolty mode is passed in as config. */
-export function opencodePermissions(mode: PermissionMode): { edit: 'ask' | 'allow'; bash: 'ask' | 'allow' } {
-  if (mode === 'full') return { edit: 'allow', bash: 'allow' }
+export function opencodePermissions(mode: PermissionMode): Record<string, 'ask' | 'allow'> {
+  // "no questions" also covers folders outside the project (opencode's own auth.json, ~/.config) and its repeated-call guard
+  if (mode === 'full') return { edit: 'allow', bash: 'allow', external_directory: 'allow', doom_loop: 'allow' }
   if (mode === 'autoEdit') return { edit: 'allow', bash: 'ask' }
   return { edit: 'ask', bash: 'ask' }
 }
@@ -92,6 +93,40 @@ export function opencodeVariants(): Promise<Map<string, string[]>> {
       }
       resolve(out)
     })
+  })
+}
+
+/**
+ * One question to one OpenCode model, no tools: for the composer's "Improve message". OpenCode has no ACP call for a
+ * single answer without a chat, so `opencode run` does it and the session it leaves behind is deleted again.
+ */
+export function opencodeOnce(prompt: string, model: string): Promise<string> {
+  const exe = opencodeExecutable()
+  if (!exe) return Promise.reject(new Error(tr("OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.")))
+  const env: Record<string, string> = {}
+  for (const [key, value] of Object.entries(process.env)) if (value !== undefined && !/^(CLAUDECODE|CLAUDE_.*|ANTHROPIC_.*|CODEX_.*|OPENAI_.*|ELECTRON_RUN_AS_NODE)$/i.test(key)) env[key] = value
+  // the user's ~/.claude rules and memory are for coding agents, they would leak into the rewrite
+  env.OPENCODE_DISABLE_CLAUDE_CODE = '1'
+  env.OPENCODE_CONFIG_CONTENT = JSON.stringify({ autoupdate: false, permission: { edit: 'deny', bash: 'deny', webfetch: 'deny' } })
+  return new Promise((resolve, reject) => {
+    const child = execFile(exe, ['run', '-m', model, '--format', 'json', '--dir', os.tmpdir(), prompt], { windowsHide: true, timeout: 120000, maxBuffer: 16 * 1024 * 1024, env }, (error, stdout) => {
+      let text = ''
+      let session = ''
+      let failure = ''
+      for (const line of String(stdout).split(/\r?\n/)) {
+        try {
+          const event = JSON.parse(line)
+          session = session || event.sessionID || ''
+          if (event.type === 'text' && typeof event.part?.text === 'string') text += event.part.text
+          if (event.type === 'error') failure = event.error?.data?.message || event.error?.message || JSON.stringify(event.error || event).slice(0, 200)
+        } catch { /* not an event line */ }
+      }
+      if (session) execFile(exe, ['session', 'delete', session], { windowsHide: true, timeout: 30000, env }, () => undefined)
+      if (text.trim()) return resolve(text.trim())
+      reject(new Error(failure || error?.message || tr("descrierea nu a primit răspuns")))
+    })
+    // `opencode run` reads a piped stdin to the end before it starts: with the pipe left open it waits for ever
+    child.stdin?.end()
   })
 }
 

@@ -269,7 +269,7 @@ test('OpenCode: only free models listed, modes and approvals map to its config',
   assert.equal(OPENCODE.modeId('autoEdit'), 'build')
   assert.deepEqual(opencodePermissions('ask'), { edit: 'ask', bash: 'ask' })
   assert.deepEqual(opencodePermissions('autoEdit'), { edit: 'allow', bash: 'ask' })
-  assert.deepEqual(opencodePermissions('full'), { edit: 'allow', bash: 'allow' })
+  assert.deepEqual(opencodePermissions('full'), { edit: 'allow', bash: 'allow', external_directory: 'allow', doom_loop: 'allow' })
   assert.equal(OPENCODE.sessionAllow({ optionId: 'always', kind: 'allow_always' }), true)
   assert.equal(OPENCODE.sessionAllow({ optionId: 'once', kind: 'allow_once' }), false)
 })

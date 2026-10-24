@@ -2,7 +2,7 @@
 // It speaks JSON lines on stdin / stdout. Input is injected with SendInput, the clock is a spin-wait on a
 // Stopwatch, and two low level hooks tell real hardware input from injected input. C# 5 only: that is what csc has.
 // Keep this free of backticks and dollar-brace sequences, it lives in a template string.
-export const HELPER_VERSION = 3
+export const HELPER_VERSION = 4
 
 export const HELPER_SOURCE = String.raw`
 using System;
@@ -416,7 +416,27 @@ class Helper
         return D("done", done, "total", total, "reason", reason, "lateAvgMs", Math.Round(late, 2), "lateMaxMs", Math.Round(lateMax, 2), "x", p.x, "y", p.y, "fg", fg.ToInt64());
     }
 
+    // Keys and buttons a plan has pressed and not yet released. A plan that ends early (stop, the user took over, the
+    // window changed) must not leave a Windows key or a mouse button held down: the next key the user presses would
+    // then be Win+that key (show desktop, minimize all).
+    static readonly Dictionary<ushort, bool> heldKeys = new Dictionary<ushort, bool>();
+    static readonly HashSet<string> heldButtons = new HashSet<string>();
+
+    static void ReleaseHeld()
+    {
+        foreach (var kv in heldKeys) KeyEv(kv.Key, (ushort)Win.MapVirtualKey(kv.Key, 0), 2u | (kv.Value ? 1u : 0u));
+        heldKeys.Clear();
+        foreach (var b in heldButtons) MouseEv(b == "l" ? 0x4u : b == "r" ? 0x10u : 0x40u, 0, 0, 0);
+        heldButtons.Clear();
+    }
+
     static object Play(ArrayList events, IntPtr guard, bool allowUser)
+    {
+        try { return PlayEvents(events, guard, allowUser); }
+        finally { ReleaseHeld(); }
+    }
+
+    static object PlayEvents(ArrayList events, IntPtr guard, bool allowUser)
     {
         int seq = abortSeq;
         long start = Stopwatch.GetTimestamp();
@@ -459,6 +479,7 @@ class Helper
                         bool down = Num(e[3]) != 0;
                         uint f = b == "l" ? (down ? 0x2u : 0x4u) : b == "r" ? (down ? 0x8u : 0x10u) : (down ? 0x20u : 0x40u);
                         MouseEv(f, 0, 0, 0);
+                        if (down) heldButtons.Add(b); else heldButtons.Remove(b);
                         break;
                     }
                 case "w": MouseEv(Num(e[3]) != 0 ? 0x1000u : 0x0800u, 0, 0, unchecked((uint)(int)Num(e[2]))); break;
@@ -467,6 +488,7 @@ class Helper
                         ushort vk = (ushort)Num(e[2]);
                         uint f = (Num(e[3]) == 0 ? 2u : 0u) | (Num(e[4]) != 0 ? 1u : 0u);
                         KeyEv(vk, (ushort)Win.MapVirtualKey(vk, 0), f);
+                        if (Num(e[3]) != 0) heldKeys[vk] = Num(e[4]) != 0; else heldKeys.Remove(vk);
                         break;
                     }
                 case "c": CharTap((int)Num(e[2]), (int)Num(e[3]), guard != IntPtr.Zero ? guard : Win.GetForegroundWindow()); break;

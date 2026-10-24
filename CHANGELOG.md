@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.20
+
+### Fixed
+
+- A key could stay stuck after PC control was stopped halfway. If the Windows key was down when you pressed Stop, or the plan ended early because you took over the mouse or another window came to the front, every key you pressed next acted as Win plus that key: all windows minimized and came back (Win+D, Win+M). Jolty now lets go of every key and mouse button it pressed whenever a plan ends, finished or not. A test presses a key, stops the plan and checks that Windows no longer sees it held.
+- "Improve message" on OpenCode's free models failed with "The model did not give a usable version". The model you pick is now the one that rewrites your message (before, a Claude model quietly did it instead). The rewrite does not carry your Claude rules or memory into the prompt and leaves no chat behind in OpenCode.
+- OpenCode kept asking for permission in "No questions" mode when a command touched a folder outside the project (for example its own auth file). That mode now also allows those folders.
+
 ## 0.7.19
 
 ### New

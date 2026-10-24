@@ -33,7 +33,7 @@ import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
 import { AcpDriver } from './engines/acp'
 import { AGENTS, HERMES, OPENCODE } from './engines/acp-agent'
-import { opencodeExecutable } from './engines/opencode-runtime'
+import { opencodeExecutable, opencodeOnce } from './engines/opencode-runtime'
 import { hermesExecutable } from './engines/hermes-runtime'
 import type { EngineDriver, EngineHost, EngineSession } from './engines/types'
 import { DESCRIBE_PROMPT } from './engines/claude'
@@ -1222,11 +1222,14 @@ ${text.slice(0, 1500)}`
   /** The composer's text rewritten once by the model picked in the composer (the image describer when that one cannot); throws when it cannot be trusted. */
   async improvePrompt(text: string, profileId?: string, model?: string, cwd?: string): Promise<string> {
     const picked = store.loadProfiles().find((p) => p.id === profileId)
+    // OpenCode's free models are asked directly; Hermes cannot answer once, so it uses the automatic profile
+    const viaOpencode = picked?.engine === 'opencode' && Boolean(model)
     const own = picked && !isAcp(picked.engine)
     const vp = own ? picked : this.visionProfile()
-    if (!vp) throw new Error(tr("Niciun profil nu poate îmbunătăți mesajul: adaugă un profil Claude sau Codex."))
-    const pick = own ? model || undefined : vp.engine === 'claude' && vp.auth !== 'endpoint' ? 'haiku' : undefined
-    const asked = this.driver(vp.engine).describe(vp, [], improvePrompt(text, cwd ? path.basename(cwd) : undefined), pick)
+    if (!viaOpencode && !vp) throw new Error(tr("Niciun profil nu poate îmbunătăți mesajul: adaugă un profil Claude sau Codex."))
+    const prompt = improvePrompt(text, cwd ? path.basename(cwd) : undefined)
+    const pick = own ? model || undefined : vp!.engine === 'claude' && vp!.auth !== 'endpoint' ? 'haiku' : undefined
+    const asked = viaOpencode ? opencodeOnce(prompt, model!) : this.driver(vp!.engine).describe(vp!, [], prompt, pick)
     let timer: NodeJS.Timeout | undefined
     const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(tr("Modelul nu a răspuns la timp."))), 120000) })
     try {
