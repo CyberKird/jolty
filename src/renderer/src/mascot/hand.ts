@@ -55,8 +55,8 @@ export class Hand {
 
   /** side: 1 for a hand whose palm faces -x (right), -1 mirrored */
   constructor(private side: 1 | -1 = 1) {
-    this.mat = new THREE.MeshStandardMaterial({ color: '#17181c', roughness: 0.78, metalness: 0, emissive: '#050507' })
-    const cuff = new THREE.MeshStandardMaterial({ color: '#1a1b20', roughness: 0.9, metalness: 0 })
+    this.mat = new THREE.MeshStandardMaterial({ color: '#2b2d35', roughness: 0.5, metalness: 0.05, emissive: '#101116' })
+    const cuff = new THREE.MeshStandardMaterial({ color: '#202228', roughness: 0.85, metalness: 0 })
     const g = this.group
     // the wrist: a short rib cuff closing the sleeve
     const wrist = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.5, 1.4, 20), cuff)

@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 // inlined: the page is a file:// URL in the packaged app, where fetch cannot read it
 import glbUrl from './jolty.glb?inline'
+import { polishGeometry } from './smooth'
 import { Hand } from './hand'
 
 /**
@@ -80,8 +81,8 @@ function joint(parent: THREE.Object3D, x: number, y: number, z = 0): THREE.Group
  * shoulder at (17.7, 53) and an arm of about 24). The lens is turned by the inverse, so it then faces us.
  */
 export const SEARCH_ARM = { x: -2.15, z: -0.62 }
-/** elbow to glove, in app units (rig3.py's forearm bones); the search keeps the elbow straight */
-const FORE = 8.74
+/** elbow to glove, in app units (rig.py's forearm bones); the search keeps the elbow straight */
+const FORE = 11.7
 
 const BOLT = [[-0.5, 26], [13, 26], [7, 15.5], [17, 16], [0, -1], [3, 11.5], [-6.5, 11]]
 
@@ -142,10 +143,10 @@ function buildEyes(eyes: THREE.Group, half: number): Record<string, THREE.Group>
 }
 
 /** along the forearm, in app units, where the sleeve ends and the hand begins */
-const WRIST = 8.6
+const WRIST = 11.2
 
 /** drops every triangle that touches a vertex of the hand (the forearm bone's, farther than `from` along it) */
-function cutHand(skin: THREE.SkinnedMesh, bone: string, elbow: THREE.Vector3, along: THREE.Vector3, from: number): { center: THREE.Vector3; radius: number } {
+function cutHand(skin: THREE.SkinnedMesh, bone: string, elbow: THREE.Vector3, along: THREE.Vector3, from: number): void {
   const geo = skin.geometry
   const bi = skin.skeleton.bones.findIndex((b) => b.name === bone)
   const si = geo.attributes.skinIndex
@@ -168,28 +169,49 @@ function cutHand(skin: THREE.SkinnedMesh, bone: string, elbow: THREE.Vector3, al
   }
   const src = geo.index ? Array.from(geo.index.array) : Array.from({ length: pos.count }, (_, i) => i)
   const keep: number[] = []
-  const edge = new Set<number>()
   for (let t = 0; t < src.length; t += 3) {
-    const a = src[t]
-    const b = src[t + 1]
-    const c = src[t + 2]
-    if (!hand[a] && !hand[b] && !hand[c]) keep.push(a, b, c)
-    else for (const v of [a, b, c]) if (!hand[v]) edge.add(v)
+    if (!hand[src[t]] && !hand[src[t + 1]] && !hand[src[t + 2]]) keep.push(src[t], src[t + 1], src[t + 2])
   }
   geo.setIndex(keep)
-  // where the sleeve now ends: the middle and the radius of the ring of vertices along the cut (only those near
-  // the wrist: stray bits of the scan elsewhere can border a cut too)
-  const wrist = elbow.clone().addScaledVector(along, from)
-  const ring = [...edge].filter((v) => p.set(pos.getX(v) * UNIT, pos.getY(v) * UNIT, pos.getZ(v) * UNIT).distanceTo(wrist) < 7)
-  const center = new THREE.Vector3()
-  for (const v of ring) center.add(p.set(pos.getX(v) * UNIT, pos.getY(v) * UNIT, pos.getZ(v) * UNIT))
-  center.divideScalar(Math.max(1, ring.length))
-  let radius = 0
-  for (const v of ring) {
-    p.set(pos.getX(v) * UNIT, pos.getY(v) * UNIT, pos.getZ(v) * UNIT).sub(center)
-    radius += p.sub(along.clone().multiplyScalar(p.dot(along))).length()
+}
+
+/**
+ * The scan's colour map has its lighting baked in, with cold blue-grey blotches on the hood and creases that read
+ * as stains. The reference is matte charcoal fabric: here the dull pixels lose most of their colour and a good part
+ * of their contrast (the volt ones, drawstrings and shoe outlines, are left alone).
+ */
+function calmTexture(tex: THREE.Texture): THREE.Texture {
+  const img = tex.image as ImageBitmap
+  const c = document.createElement('canvas')
+  c.width = img.width
+  c.height = img.height
+  const g = c.getContext('2d', { willReadFrequently: true })!
+  g.drawImage(img, 0, 0)
+  const d = g.getImageData(0, 0, c.width, c.height)
+  const px = d.data
+  for (let i = 0; i < px.length; i += 4) {
+    const r = px[i]
+    const gr = px[i + 1]
+    const b = px[i + 2]
+    // volt: strongly green-yellow
+    if (gr > 110 && gr > b * 1.6 && r > b * 1.2) continue
+    const l = (r + gr + b) / 3
+    // toward a neutral charcoal, and the light/dark swings pulled in around a dark middle
+    const t = 0.22 + 0.78 * Math.min(1, l / 120) * 0.0
+    const lc = 34 + (l - 34) * 0.62
+    px[i] = lc + (r - l) * 0.28 * (1 - t * 0)
+    px[i + 1] = lc + (gr - l) * 0.28
+    px[i + 2] = lc + (b - l) * 0.28
   }
-  return ring.length ? { center, radius: radius / ring.length } : { center: wrist, radius: 3.4 }
+  g.putImageData(d, 0, 0)
+  const out = new THREE.CanvasTexture(c)
+  out.colorSpace = tex.colorSpace
+  out.flipY = tex.flipY
+  out.wrapS = tex.wrapS
+  out.wrapT = tex.wrapT
+  out.anisotropy = tex.anisotropy
+  tex.dispose()
+  return out
 }
 
 export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
@@ -205,32 +227,18 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   const skin = model.getObjectByProperty('type', 'SkinnedMesh') as THREE.SkinnedMesh
   skin.geometry.computeBoundingBox()
   const hoodTop = skin.geometry.boundingBox!.max.y * UNIT
-  // the baked occlusion is in the colour map already; the env light only adds a soft sheen
-  const scanned = skin.material as THREE.MeshStandardMaterial
-  // fleece has a soft fuzz that catches light at grazing angles: a physical material with sheen, not a plastic standard one
-  const fleece = new THREE.MeshPhysicalMaterial({
-    map: scanned.map,
-    normalMap: scanned.normalMap,
-    emissiveMap: scanned.emissiveMap,
-    emissive: scanned.emissive,
-    emissiveIntensity: 0.95,
-    roughnessMap: scanned.roughnessMap,
-    roughness: 1,
-    metalness: 0,
-    vertexColors: scanned.vertexColors,
-    envMapIntensity: 0.7,
-    sheen: 0.6,
-    sheenRoughness: 0.6,
-    sheenColor: new THREE.Color('#2b2f3d')
-  })
-  scanned.dispose()
-  skin.material = fleece
+  // smooth cloth instead of a faceted scan, and a round hood top instead of a pinch under the bolt
+  polishGeometry(skin.geometry, (hoodTop / UNIT) * 0.8, hoodTop / UNIT)
+  // the scan's lighting is in its texture already; the env light only adds a soft sheen
+  const fleece = skin.material as THREE.MeshStandardMaterial
+  fleece.envMapIntensity = 0.9
+  if (fleece.map) fleece.map = calmTexture(fleece.map)
+  fleece.emissiveIntensity = 1.4
   skin.frustumCulled = false
   const boltMesh = node('Bolt') as THREE.Mesh
   ;(boltMesh.material as THREE.Material).dispose()
   // not tone mapped, or ACES washes the volt out to pale yellow
-  // the face stays a little darker than the glow around it, and the clear coat draws the edges
-  boltMesh.material = new THREE.MeshPhysicalMaterial({ color: '#6e8200', emissive: VOLT, emissiveIntensity: 0.32, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.2, toneMapped: false })
+  boltMesh.material = new THREE.MeshStandardMaterial({ color: VOLT, emissive: VOLT, emissiveIntensity: 0.35, roughness: 0.4, toneMapped: false })
 
   const shadow = mesh(new THREE.PlaneGeometry(64, 16), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(212,255,0,0.2)', 'rgba(212,255,0,0)'), transparent: true, depthWrite: false }), 0, 0.2, 0)
   shadow.rotation.x = -Math.PI / 2
@@ -249,32 +257,18 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   const r = at('eyeR')
   const mount = new THREE.Group()
   mount.position.copy(l).add(r).multiplyScalar(0.5)
-  mount.position.z += 0.3
+  mount.position.z += 1.2
   root.add(mount)
   root.updateMatrixWorld(true)
   node('head').attach(mount)
   const eyes = new THREE.Group()
-  eyes.position.z = 0.4
   mount.add(eyes)
   const faces = buildEyes(eyes, (r.x - l.x) / 2)
 
   // the slot the bolt comes out of, as in the reference: a dark opening in the hood top with a thin volt glow
   // around the bolt's foot (the scan only has the bolt pushed into the cloth)
   {
-    // the middle of the bolt's lowest vertices: where its foot meets the hood
-    const bp = boltMesh.geometry.attributes.position
-    let lowY = Infinity
-    for (let i = 0; i < bp.count; i++) lowY = Math.min(lowY, bp.getY(i))
-    const low = new THREE.Vector3()
-    let n = 0
-    for (let i = 0; i < bp.count; i++) {
-      if (bp.getY(i) < lowY + 0.012) {
-        low.x += bp.getX(i)
-        low.z += bp.getZ(i)
-        n++
-      }
-    }
-    const foot = boltMesh.localToWorld(new THREE.Vector3(low.x / n, lowY, low.z / n))
+    const foot = boltMesh.localToWorld(new THREE.Vector3(-0.023, hoodTop / UNIT - 0.004, 0.042))
     const slot = new THREE.Group()
     slot.position.copy(foot)
     const dark = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.5, 40), new THREE.MeshStandardMaterial({ color: '#030304', roughness: 0.55, metalness: 0 }))
@@ -323,11 +317,9 @@ export async function loadJolty(scene: THREE.Scene): Promise<Joints> {
   const foreRBone = node('foreR')
   const elbowR = foreRBone.getWorldPosition(new THREE.Vector3())
   const alongR = new THREE.Vector3(0, 1, 0).applyQuaternion(foreRBone.getWorldQuaternion(new THREE.Quaternion()))
-  const cuff = cutHand(skin, 'foreR', elbowR, alongR, WRIST)
+  cutHand(skin, 'foreR', elbowR, alongR, WRIST)
   const handR = new Hand(1)
-  // the glove takes the size of the sleeve it closes (its cuff is 3.4 wide at scale 1)
-  handR.group.scale.setScalar(cuff.radius / 3.4)
-  handR.group.position.copy(cuff.center).addScaledVector(alongR, -0.4)
+  handR.group.position.copy(elbowR).addScaledVector(alongR, WRIST - 0.5)
   handR.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), alongR)
   root.add(handR.group)
   root.updateMatrixWorld(true)
@@ -384,11 +376,11 @@ export function lightStudio(scene: THREE.Scene, renderer: THREE.WebGLRenderer): 
   scene.environmentIntensity = 0.55
   pmrem.dispose()
 
-  scene.add(new THREE.HemisphereLight('#b8bcc6', '#24262c', 0.8))
+  scene.add(new THREE.HemisphereLight('#c3cfe0', '#2a2e36', 1))
   const key = new THREE.DirectionalLight('#ffffff', 2.6)
   key.position.set(-120, 220, 240)
   // two cold rims from behind, one per side: they draw his edges, so charcoal reads on a near-black app
-  const rimR = new THREE.DirectionalLight('#c9dbff', 5.5)
+  const rimR = new THREE.DirectionalLight('#b8d2ff', 6)
   rimR.position.set(200, 140, -180)
   const rimL = new THREE.DirectionalLight('#dfe8ff', 4.5)
   rimL.position.set(-200, 110, -160)
