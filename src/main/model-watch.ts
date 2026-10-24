@@ -5,6 +5,7 @@
 // them), the models Ollama has, and the model list of an endpoint provider (DeepSeek, Xiaomi MiMo...) at its own host.
 import { Notification } from 'electron'
 import type { ModelOption, Profile } from '@shared/types'
+import { isAcp } from '@shared/types'
 import { modelScore, parseRemoteScores, setRemoteScores } from '@shared/scores'
 import { tr } from '@shared/i18n'
 import * as store from './store'
@@ -20,7 +21,7 @@ const MAX_BYTES = 200_000
 /** Local profiles share one source (Ollama); every other profile has its own. */
 const sourceKey = (p: Profile): string => (p.local ? 'ollama' : p.id)
 /** Profiles whose model list comes from the engine itself; endpoint profiles list what the user typed, so their source is the provider. */
-const listedByEngine = (p: Profile): boolean => p.auth !== 'endpoint' && p.engine !== 'hermes'
+const listedByEngine = (p: Profile): boolean => p.auth !== 'endpoint' && !isAcp(p.engine)
 
 async function getJson(url: string, headers?: Record<string, string>): Promise<unknown> {
   const r = await fetch(url, { headers, signal: AbortSignal.timeout(TIMEOUT), redirect: 'error' })
@@ -104,7 +105,7 @@ export function start(deps: { scan: boolean; profiles: () => Profile[]; loggedIn
     void refreshScores()
     const seen = new Set<string>()
     for (const p of deps.profiles()) {
-      if (p.engine === 'hermes' || seen.has(sourceKey(p))) continue
+      if (isAcp(p.engine) || seen.has(sourceKey(p))) continue
       seen.add(sourceKey(p))
       try {
         if (!listedByEngine(p)) record(p, await listProvider(p))

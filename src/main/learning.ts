@@ -6,6 +6,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import type { EngineKind } from '@shared/types'
+import { isAcp } from '@shared/types'
 
 /** Hermes' defaults: memory every 10 user messages; skills every 15 (the user's Hermes setting). */
 export const MEMORY_EVERY = 10
@@ -47,7 +48,7 @@ function skillsPart(engine: EngineKind): string {
 
 /** The reminder for the n-th user message of a conversation, or undefined when this one has none. */
 export function learningNudge(engine: EngineKind, n: number): string | undefined {
-  if (engine === 'hermes' || n <= 0) return undefined
+  if (isAcp(engine) || n <= 0) return undefined
   const parts = [n % MEMORY_EVERY === 0 ? memoryPart(engine) : undefined, n % SKILLS_EVERY === 0 ? skillsPart(engine) : undefined].filter(Boolean)
   if (!parts.length) return undefined
   return [HEAD, ...parts, SOURCE, QUIET].join('\n')

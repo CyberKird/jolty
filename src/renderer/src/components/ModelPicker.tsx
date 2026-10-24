@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { capability } from '@shared/complexity'
 import { modelScore } from '@shared/scores'
 import type { BrowserMode, EngineKind, ModelOption, PermissionMode, Profile, SiteTrust } from '@shared/types'
+import { isAcp } from '@shared/types'
 import { api, ENGINE_LABEL, errMsg } from '../store'
 import { tr } from '@shared/i18n'
 
@@ -248,9 +249,18 @@ const HERMES_MODES = [
   { id: 'full' as const, label: tr("Editări extinse"), desc: tr("Aprobă editările din afara proiectului"), title: tr("Hermes aprobă editările în această sesiune, cu excepția căilor sensibile. Comenzile periculoase cer în continuare acordul.") }
 ]
 
+// OpenCode asks through its own permission config, and it has a read-only plan agent
+const OPENCODE_MODES = [
+  { id: 'ask' as const, label: tr("Aprobă editările"), desc: tr("Cere acordul pentru fișiere și comenzi"), title: tr("OpenCode cere acordul înainte de orice editare și orice comandă.") },
+  { id: 'autoEdit' as const, label: tr("Acceptă editările"), desc: tr("Editează singur, cere acordul pentru comenzi"), title: tr("OpenCode editează fișierele fără să întrebe și cere acordul pentru comenzi.") },
+  { id: 'plan' as const, label: tr("Plan"), desc: tr("Doar citește și propune, fără să modifice nimic"), title: tr("OpenCode trece pe agentul de plan: citește proiectul și propune, fără editări.") },
+  { id: 'full' as const, label: tr("Fără întrebări"), desc: tr("Editează și rulează comenzi fără acord"), title: tr("OpenCode editează și rulează comenzi fără să întrebe.") }
+]
+
 /** The modes this engine offers. */
 export function modesFor(engine?: EngineKind): { id: PermissionMode; label: string; desc: string; title: string }[] {
-  return engine === 'hermes' ? HERMES_MODES : MODES.filter((m) => !m.only || m.only === engine)
+  if (engine === 'opencode') return OPENCODE_MODES
+  return isAcp(engine) ? HERMES_MODES : MODES.filter((m) => !m.only || m.only === engine)
 }
 
 /** Whole-disk access is never one slip away: it needs a yes, and Shift+Tab does not pass through it. */
@@ -265,7 +275,7 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
     if (!open) setArmed(false)
   }, [open])
   const pick = (m: PermissionMode): void => {
-    if (m === 'full' && mode !== 'full' && engine !== 'hermes' && !armed) {
+    if (m === 'full' && mode !== 'full' && !isAcp(engine) && !armed) {
       setArmed(true)
       setOpen(true)
       return

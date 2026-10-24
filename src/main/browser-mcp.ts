@@ -12,6 +12,15 @@ export function claudeBrowserServer(sid: string): { type: 'stdio'; command: stri
   return { type: 'stdio', ...browserServer() }
 }
 
+/** For ACP agents (`mcpServers` of session/new and session/load): headers and env are name/value lists. */
+export function acpBrowserServers(sid: string): Record<string, unknown>[] {
+  const server = claudeBrowserServer(sid)
+  const pairs = (o: Record<string, string>) => Object.entries(o).map(([name, value]) => ({ name, value }))
+  return server.type === 'http'
+    ? [{ type: 'http', name: BROWSER_SERVER, url: server.url, headers: pairs(server.headers) }]
+    : [{ name: BROWSER_SERVER, command: server.command, args: server.args, env: pairs(server.env) }]
+}
+
 /** For Codex (`config.mcp_servers`). */
 export function codexBrowserServer(sid: string): Record<string, unknown> {
   if (browserMode() === 'jolty') {

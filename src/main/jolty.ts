@@ -23,14 +23,16 @@ import type {
   TurnUsage,
   UsageSummary
 } from '@shared/types'
+import { hasEffort, hasJoltyBrowser, isAcp } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browserMode, browsers } from './browser'
 import { nativeBrowser } from './jbrowser/native'
 import { PowerGuard, systemShutdown } from './power'
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
-import { HermesDriver } from './engines/hermes'
+import { AcpDriver } from './engines/acp'
+import { AGENTS, HERMES, OPENCODE } from './engines/acp-agent'
+import { opencodeExecutable } from './engines/opencode-runtime'
 import { hermesExecutable } from './engines/hermes-runtime'
-import { hermesMode } from './engines/hermes-session'
 import type { EngineDriver, EngineHost, EngineSession } from './engines/types'
 import { DESCRIBE_PROMPT } from './engines/claude'
 import { describeWithGemini } from './gemini-vision'
@@ -61,7 +63,7 @@ const DEFAULT_PROFILES: Profile[] = [
   { id: 'codex-main', name: tr("Codex (contul principal)"), engine: 'codex', auth: 'subscription', isDefaultDir: true, color: COLORS[1] }
 ]
 
-export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes' }
+export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', opencode: 'OpenCode' }
 
 /** below this a compaction costs more than it saves (tokens in the context) */
 const COMPACT_MIN = 20000
@@ -106,7 +108,8 @@ function brief(src: SessionMeta, srcProfile: Profile | undefined, items: ChatIte
 export class Jolty {
   readonly claude = new ClaudeDriver()
   readonly codex = new CodexDriver()
-  readonly hermes = new HermesDriver()
+  readonly hermes = new AcpDriver(HERMES.launch, HERMES)
+  readonly opencode = new AcpDriver(OPENCODE.launch, OPENCODE)
   private live = new Map<string, EngineSession>()
   /** conversations with a turn under way */
   private busy = new Set<string>()
@@ -165,11 +168,16 @@ export class Jolty {
     if (!profiles.some((p) => p.engine === 'hermes') && hermesExecutable()) {
       store.saveProfiles([...profiles, { id: 'hermes-main', name: 'Hermes', engine: 'hermes', auth: 'existing', isDefaultDir: true, color: store.freeColor(profiles) }])
     }
+    const withHermes = store.loadProfiles()
+    if (!withHermes.some((p) => p.engine === 'opencode') && opencodeExecutable()) {
+      store.saveProfiles([...withHermes, { id: 'opencode-main', name: 'OpenCode', engine: 'opencode', auth: 'existing', isDefaultDir: true, color: store.freeColor(withHermes) }])
+    }
     store.fixProfileColors()
   }
 
   private driver(engine: EngineKind): EngineDriver {
     if (engine === 'hermes') return this.hermes
+    if (engine === 'opencode') return this.opencode
     if (engine === 'claude') return this.claude
     if (engine === 'codex') return this.codex
     throw new Error('Motor necunoscut')
@@ -194,10 +202,11 @@ export class Jolty {
 
   createProfile(input: ProfileInput): Profile {
     const all = store.loadProfiles()
-    if (!['claude', 'codex', 'hermes'].includes(input.engine)) throw new Error('Motor necunoscut')
-    if ((input.engine === 'hermes') !== (input.auth === 'existing')) throw new Error(tr("Hermes folosește configurația existentă."))
-    if (input.engine === 'hermes' && all.some((p) => p.engine === 'hermes')) throw new Error(tr("Profilul Hermes există deja."))
-    if (input.engine === 'hermes' && (input.secret || input.baseUrl || input.models?.length)) throw new Error(tr("Configurează modelul și cheia în Hermes."))
+    if (!['claude', 'codex', 'hermes', 'opencode'].includes(input.engine)) throw new Error('Motor necunoscut')
+    const agent = ENGINE_NAMES[input.engine]
+    if (isAcp(input.engine) !== (input.auth === 'existing')) throw new Error(tr("{agent} folosește configurația existentă.", { agent }))
+    if (isAcp(input.engine) && all.some((p) => p.engine === input.engine)) throw new Error(tr("Profilul {agent} există deja.", { agent }))
+    if (isAcp(input.engine) && (input.secret || input.baseUrl || input.models?.length)) throw new Error(tr("Configurează modelul și cheia în {agent}.", { agent }))
     if (input.engine === 'codex' && input.auth === 'endpoint') throw new Error(tr("Endpoint-urile compatibile sunt disponibile doar pentru motorul Claude Code"))
     const profile: Profile = {
       id: randomUUID().slice(0, 8),
@@ -205,7 +214,7 @@ export class Jolty {
       engine: input.engine,
       auth: input.auth,
       // Claude API-key/endpoint profiles reuse ~/.claude (settings, skills, MCP); logins need their own folder.
-      isDefaultDir: input.engine === 'hermes' || (input.engine === 'claude' && input.auth !== 'subscription'),
+      isDefaultDir: isAcp(input.engine) || (input.engine === 'claude' && input.auth !== 'subscription'),
       baseUrl: input.baseUrl?.trim() || undefined,
       models: input.models?.map((m) => m.trim()).filter(Boolean),
       vision: input.vision,
@@ -223,7 +232,7 @@ export class Jolty {
     const all = store.loadProfiles()
     const p = all.find((x) => x.id === id)
     if (!p) throw new Error(tr("Profil inexistent"))
-    if (p.engine === 'hermes' && (patch.secret !== undefined || patch.baseUrl !== undefined || patch.models !== undefined)) throw new Error(tr("Configurează modelul și cheia în Hermes."))
+    if (isAcp(p.engine) && (patch.secret !== undefined || patch.baseUrl !== undefined || patch.models !== undefined)) throw new Error(tr("Configurează modelul și cheia în {agent}.", { agent: ENGINE_NAMES[p.engine] }))
     if (patch.name !== undefined) p.name = patch.name.trim() || p.name
     if (patch.baseUrl !== undefined) p.baseUrl = patch.baseUrl.trim() || undefined
     if (patch.models !== undefined) p.models = patch.models.map((m) => m.trim()).filter(Boolean)
@@ -412,12 +421,12 @@ export class Jolty {
 
   async startSession(input: StartSessionInput): Promise<SessionMeta> {
     const p = this.profile(input.profileId)
-    if (p.engine === 'hermes') {
-      hermesMode(input.permissionMode)
-      if (input.browser) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru Hermes."))
+    if (isAcp(p.engine)) {
+      AGENTS[p.engine as 'hermes' | 'opencode'].modeId(input.permissionMode)
+      if (input.browser && !hasJoltyBrowser(p.engine)) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru {agent}.", { agent: ENGINE_NAMES[p.engine] }))
     }
     if (input.temporary) {
-      if (p.engine === 'hermes') throw new Error(tr("Conversația temporară nu este disponibilă pentru Hermes."))
+      if (isAcp(p.engine)) throw new Error(tr("Conversația temporară nu este disponibilă pentru {agent}.", { agent: ENGINE_NAMES[p.engine] }))
       if (input.resumeEngineSessionId) throw new Error(tr("O sesiune existentă nu poate deveni temporară."))
     }
     const now = Date.now()
@@ -428,7 +437,7 @@ export class Jolty {
       cwd: input.cwd,
       title: input.title || tr("Conversație nouă"),
       model: input.model,
-      effort: p.engine === 'hermes' ? undefined : input.effort,
+      effort: hasEffort(p.engine) ? input.effort : undefined,
       permissionMode: input.permissionMode,
       browser: input.browser || undefined,
       temporary: input.temporary || undefined,
@@ -541,7 +550,7 @@ export class Jolty {
   private async canSee(meta: SessionMeta): Promise<boolean> {
     const p = this.profile(meta.profileId)
     if (p.engine === 'claude') return p.auth === 'endpoint' ? Boolean(p.vision) : true
-    if (p.engine === 'hermes') return true
+    if (isAcp(p.engine)) return true
     try {
       const models = await this.codex.models(p)
       const m = models.find((x) => x.id === meta.model) || models.find((x) => x.isDefault)
@@ -555,7 +564,7 @@ export class Jolty {
   visionProfile(): Profile | undefined {
     const all = store.loadProfiles()
     const chosen = all.find((p) => p.id === store.loadSettings().visionProfileId)
-    if (chosen && chosen.engine !== 'hermes') return chosen
+    if (chosen && !isAcp(chosen.engine)) return chosen
     return (
       all.find((p) => p.engine === 'claude' && p.auth !== 'endpoint') ||
       all.find((p) => p.engine === 'codex') ||
@@ -633,7 +642,7 @@ export class Jolty {
     const nudge = s.meta.temporary || store.loadSettings().learningLoop === false ? undefined : learningNudge(s.meta.engine, this.transcript(sessionId).filter((i) => i.kind === 'user').length)
     let prompt = [text, filePrompt(prepared.files), nudge].filter(Boolean).join('\n\n')
     // for the model only: the chat and the title keep the user's words (Hermes has no Jolty tools)
-    if (parallel && s.meta.engine !== 'hermes') prompt = withParallelInstruction(prompt)
+    if (parallel && !isAcp(s.meta.engine)) prompt = withParallelInstruction(prompt)
     let images = prepared.images
     if (images.length && !(await this.canSee(s.meta))) {
       try {
@@ -702,7 +711,7 @@ export class Jolty {
   async compactAndWait(sessionId: string): Promise<{ before: number; after: number } | undefined> {
     const meta = this.meta(sessionId)
     const before = this.ctxUsed.get(sessionId) ?? 0
-    if (meta.engine === 'hermes' || before < COMPACT_MIN) return undefined
+    if (isAcp(meta.engine) || before < COMPACT_MIN) return undefined
     if (this.busy.has(sessionId)) throw new Error(tr("Conversația lucrează deja."))
     let release = (): void => undefined
     const finished = new Promise<void>((resolve) => {
@@ -793,7 +802,7 @@ export class Jolty {
       model: own ? own.model : lead.model,
       effort: own ? own.effort : lead.effort,
       permissionMode: st.childMode ?? 'full',
-      browser: st.childBrowser !== false && lead.engine !== 'hermes',
+      browser: st.childBrowser !== false && hasJoltyBrowser(lead.engine),
       title: input.title
     })
     meta.parentId = leadId
@@ -826,7 +835,7 @@ export class Jolty {
     const lists = await Promise.all(
       store
         .loadProfiles()
-        .filter((p) => !p.local && p.engine !== 'hermes' && (p.auth !== 'endpoint' || store.getSecret(p.id)) && !limits[p.id]?.windows.some((w) => w.usedPercent >= FULL_PERCENT))
+        .filter((p) => !p.local && !isAcp(p.engine) && (p.auth !== 'endpoint' || store.getSecret(p.id)) && !limits[p.id]?.windows.some((w) => w.usedPercent >= FULL_PERCENT))
         .map(async (p) => {
           try {
             const d = this.driver(p.engine)
@@ -862,7 +871,7 @@ export class Jolty {
   }
 
   async setEffort(sessionId: string, effort: string): Promise<void> {
-    if (effort && this.meta(sessionId).engine === 'hermes') throw new Error(tr("Hermes folosește efortul din configurația proprie."))
+    if (effort && !hasEffort(this.meta(sessionId).engine)) throw new Error(tr("{agent} folosește efortul din configurația proprie.", { agent: ENGINE_NAMES[this.meta(sessionId).engine] }))
     const s = this.live.get(sessionId)
     if (s) await s.setEffort(effort)
     const meta = s?.meta || this.meta(sessionId)
@@ -880,7 +889,8 @@ export class Jolty {
   }
 
   async setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void> {
-    if (this.meta(sessionId).engine === 'hermes') hermesMode(mode)
+    const engine = this.meta(sessionId).engine
+    if (engine === 'hermes' || engine === 'opencode') AGENTS[engine].modeId(mode)
     const s = this.live.get(sessionId)
     if (s) await s.setPermissionMode(mode)
     const meta = s?.meta || this.meta(sessionId)
@@ -889,7 +899,7 @@ export class Jolty {
   }
 
   async setBrowser(sessionId: string, on: boolean): Promise<void> {
-    if (on && this.meta(sessionId).engine === 'hermes') throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru Hermes."))
+    if (on && !hasJoltyBrowser(this.meta(sessionId).engine)) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru {agent}.", { agent: ENGINE_NAMES[this.meta(sessionId).engine] }))
     if (on && browserMode() === 'own' && !browsers().active) throw new Error(tr("Nu găsesc niciun browser Chromium (Chrome, Vivaldi, Edge sau Brave) pentru fereastra Jolty."))
     if (on && browserMode() === 'jolty') await this.prepareNativeBrowser()
     // the separate Jolty window needs no extension at all
@@ -954,12 +964,12 @@ export class Jolty {
     if ((src.handoffPending && !src.engineSessionId) || (!fresh && srcProfile && sameProvider(srcProfile, target))) {
       return this.retarget(src, srcProfile, target, model, effort)
     }
-    const targetHermes = target.engine === 'hermes'
+    const targetHermes = isAcp(target.engine)
     const meta = await this.startSession({
       profileId: targetProfileId,
       cwd: src.cwd,
-      permissionMode: targetHermes && (src.permissionMode === 'plan' || src.permissionMode === 'auto') ? 'ask' : src.permissionMode,
-      browser: targetHermes ? undefined : src.browser,
+      permissionMode: targetHermes && (src.permissionMode === 'auto' || (src.permissionMode === 'plan' && target.engine === 'hermes')) ? 'ask' : src.permissionMode,
+      browser: hasJoltyBrowser(target.engine) ? src.browser : undefined,
       model,
       // effort names differ between models; a picked model starts on its own default
       effort: model ? effort : src.effort,
@@ -1009,10 +1019,10 @@ export class Jolty {
     meta.profileId = to.id
     meta.engine = to.engine
     meta.model = model
-    meta.effort = to.engine === 'hermes' ? undefined : model ? effort : meta.effort
-    if (to.engine === 'hermes') {
-      if (meta.permissionMode === 'plan' || meta.permissionMode === 'auto') meta.permissionMode = 'ask'
-      meta.browser = undefined
+    meta.effort = !hasEffort(to.engine) ? undefined : model ? effort : meta.effort
+    if (isAcp(to.engine)) {
+      if (meta.permissionMode === 'auto' || (meta.permissionMode === 'plan' && to.engine === 'hermes')) meta.permissionMode = 'ask'
+      if (!hasJoltyBrowser(to.engine)) meta.browser = undefined
     }
     this.saveMeta(meta)
     this.onEngineEvent({ type: 'item', sessionId: meta.id, item: { kind: 'notice', id: randomUUID(), level: 'info', text: tr("Continuă în {name}.", { name: to.name }) } })
@@ -1186,5 +1196,6 @@ ${text.slice(0, 1500)}`
     await this.claude.shutdown()
     await this.codex.shutdown()
     await this.hermes.shutdown()
+    await this.opencode.shutdown()
   }
 }

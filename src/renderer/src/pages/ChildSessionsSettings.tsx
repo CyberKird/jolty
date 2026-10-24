@@ -1,5 +1,6 @@
 import { GitFork } from 'lucide-react'
 import type { AppSettings, PermissionMode } from '@shared/types'
+import { isAcp } from '@shared/types'
 import { MODES, useAllModels } from '../components/ModelPicker'
 import { api, useStore } from '../store'
 import { tr } from '@shared/i18n'
@@ -8,7 +9,7 @@ import { tr } from '@shared/i18n'
 export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: AppSettings) => void }) {
   // "plan" and "ask" would leave a session waiting for someone to approve it
   const modes = MODES.filter((m) => m.id !== 'plan' && m.id !== 'ask')
-  const profiles = useStore((x) => x.profiles).filter((p) => p.engine !== 'hermes')
+  const profiles = useStore((x) => x.profiles).filter((p) => !isAcp(p.engine))
   const groups = useAllModels(profiles)
   const setModel = async (kind: 'simple' | 'hard', value: string): Promise<void> => {
     const [profileId, ...rest] = value.split('|')

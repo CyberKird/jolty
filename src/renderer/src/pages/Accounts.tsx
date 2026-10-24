@@ -1,6 +1,7 @@
 import { GripVertical, KeyRound, LogIn, LogOut, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
 import type { AccountStatus, AuthKind, EngineKind, Profile, ProfileInput } from '@shared/types'
+import { isAcp } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
 import { tr } from '@shared/i18n'
@@ -168,7 +169,7 @@ function ProfileCard({ profile, onEdit, dragProps }: { profile: Profile; onEdit:
       )}
       {profile.auth === 'subscription' && <LimitMeters profileId={profile.id} />}
       <div className="row wrap" style={{ marginTop: 12 }}>
-        {profile.auth === 'existing' && <button className="btn small" onClick={() => void refresh()}><RefreshCw size={14} /> {tr("Verifică Hermes")}</button>}
+        {profile.auth === 'existing' && <button className="btn small" onClick={() => void refresh()}><RefreshCw size={14} /> {tr("Verifică {agent}", { agent: ENGINE_LABEL[profile.engine] })}</button>}
         {!status?.loggedIn && profile.auth !== 'endpoint' && profile.auth !== 'existing' && (
           <button className="btn primary small" disabled={busy} onClick={() => void login()}>
             <LogIn size={14} /> {profile.auth === 'subscription' ? tr("Conectează contul") : tr("Conectează cheia")}
@@ -286,13 +287,13 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
             <div className="field">
               <label>{tr("Motor")}</label>
               <div className="segmented">
-                {(['claude', 'codex', 'hermes'] as EngineKind[]).map((e) => (
+                {(['claude', 'codex', 'hermes', 'opencode'] as EngineKind[]).map((e) => (
                   <button
                     key={e}
                     className={engine === e ? 'on' : ''}
                     onClick={() => {
                       setEngine(e)
-                      if (e === 'hermes') setAuth('existing')
+                      if (isAcp(e)) setAuth('existing')
                       else if (auth === 'existing' || (e === 'codex' && auth === 'endpoint')) setAuth('subscription')
                     }}
                   >
@@ -305,7 +306,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
               <label>{tr("Autentificare")}</label>
               <div className="segmented">
                 {(['subscription', 'apiKey', 'endpoint', 'existing'] as AuthKind[])
-                  .filter((a) => engine === 'hermes' ? a === 'existing' : a !== 'existing' && (engine === 'claude' || a !== 'endpoint'))
+                  .filter((a) => isAcp(engine) ? a === 'existing' : a !== 'existing' && (engine === 'claude' || a !== 'endpoint'))
                   .map((a) => (
                     <button key={a} className={auth === a ? 'on' : ''} onClick={() => setAuth(a)}>
                       {AUTH_LABEL[a]}
@@ -313,7 +314,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
                   ))}
               </div>
               <div className="hint">
-                {auth === 'existing' && tr("Folosește modelul, cheia, memoria și skill-urile deja configurate în Hermes. Nu trebuie să copiezi cheia aici.")}
+                {auth === 'existing' && tr("Folosește modelul, cheia, memoria și skill-urile deja configurate în {agent}. Nu trebuie să copiezi cheia aici.", { agent: ENGINE_LABEL[engine] })}
                 {auth === 'subscription' &&
                   (engine === 'claude'
                     ? tr("Te conectezi cu contul tău claude.ai în fereastra oficială Claude Code. Fiecare profil are login-ul lui, deci poți avea mai multe conturi.")
