@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.13
+
+### Changed
+
+- The original Jolty mascot is back. The rebuilt one from 0.7.11 is gone.
+- OpenCode lists only its free models, each shown by the model name alone.
+
 ## 0.7.12
 
 ### New
