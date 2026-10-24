@@ -98,6 +98,8 @@ export class AcpSession implements EngineSession {
   }
 
   async send(text: string, images: Attachment[] = []): Promise<void> {
+    // Stop shows "idle" at once, the turn ends a moment later: a message sent in between waits for it
+    for (let i = 0; this.cancelled && this.busy && i < 80; i++) await new Promise((r) => setTimeout(r, 100))
     if (this.busy) throw new Error(tr("{agent} lucrează deja în această conversație.", { agent: this.agent.name }))
     this.busy = true
     this.cancelled = false
@@ -119,6 +121,8 @@ export class AcpSession implements EngineSession {
       }
       this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
     } catch (err) {
+      // a turn Stop had to end by killing the agent is a stop, not an error
+      if (this.cancelled) return
       const error = err instanceof Error ? err.message : String(err)
       if (!this.closed) this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'error', error })
       if (/session\/prompt: fără răspuns/.test(error)) { this.rpc?.kill(); this.ready = undefined }
@@ -180,6 +184,16 @@ export class AcpSession implements EngineSession {
     this.cancelled = true
     this.resolvePending()
     if (this.rpc && !this.rpc.exited && this.sessionId) this.rpc.notify('session/cancel', { sessionId: this.sessionId })
+    // an agent that ignores the cancel (a tool that never returns) is ended with its child processes; the next message starts it again
+    const rpc = this.rpc
+    if (this.busy && rpc) {
+      setTimeout(() => {
+        if (!this.busy || !this.cancelled || this.rpc !== rpc || this.closed) return
+        this.rpc = undefined
+        this.ready = undefined
+        void rpc.stop().catch(() => rpc.kill())
+      }, 4000)
+    }
   }
 
   async setModel(model: string): Promise<void> {

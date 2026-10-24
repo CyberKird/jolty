@@ -1,7 +1,8 @@
 // The tools that move the pointer, press buttons and type. Each builds a timed plan from the human models and
 // hands it to the helper in one piece; the gate in service.ts decides first whether it may run at all.
+import { tr } from '@shared/i18n'
 import { clickPoint, chordPlan, clickPlan, dragPlan, later, movePlan, parseCombo, planEnd, scrollPlan, typeDuration, typePlan, type Button, type Ev } from './plan'
-import { isTerminal, reachesPastApp, secretField } from './policy'
+import { appLabel, isTerminal, reachesPastApp, secretField } from './policy'
 import { num, obj, str, text, UserError, type ToolDef } from './result'
 import type { ComputerService, Session } from './service'
 import type { HelperState, WinInfo } from './helper'
@@ -46,6 +47,7 @@ export const ACT_TOOLS: ToolDef[] = [
       const at = svc.physical(s, num(a.x, 'x'), num(a.y, 'y'))
       const mode = svc.host.settings().human
       const w = Number.isFinite(num(a.w, 'w', { optional: true })) ? num(a.w, 'w') / v.scale : undefined
+      svc.announce(tr("Mută cursorul"))
       await svc.readingPause(s, st)
       await svc.perform(s, movePlan(st, at, mode, svc.rng, w))
       const under = await svc.input.windowAt(at.x, at.y)
@@ -75,6 +77,7 @@ export const ACT_TOOLS: ToolDef[] = [
       const what = `${count === 2 ? 'Double-click' : count === 3 ? 'Triple-click' : btn === 'left' ? 'Click' : `${btn[0].toUpperCase()}${btn.slice(1)}-click`} in ${win?.exe || 'a window'}`
       await svc.authorize(s, win, st, { title: what, detail: `${win?.title ?? ''} at (${a.x}, ${a.y})` })
       const now = await fresh(svc, s)
+      svc.announce(tr("Click în {app}", { app: win ? appLabel(win) : '?' }), win)
       await svc.readingPause(s, now)
       const mods = typeof a.hold === 'string' && a.hold ? parseCombo(a.hold) : []
       const path = movePlan(now, land, mode, svc.rng, w)
@@ -113,6 +116,7 @@ export const ACT_TOOLS: ToolDef[] = [
       const w2 = await svc.input.windowAt(end.x, end.y)
       if (w2 && w1 && w2.exe !== w1.exe) await svc.authorize(s, w2, st, { title: `Drop into ${w2.exe}`, detail: `${w2.title} at (${a.to_x}, ${a.to_y})` })
       const now = await fresh(svc, s)
+      svc.announce(tr("Trage și plasează"), w1)
       await svc.readingPause(s, now)
       const approach = movePlan(now, start, mode, svc.rng)
       const arrive = planEnd(approach)
@@ -144,6 +148,7 @@ export const ACT_TOOLS: ToolDef[] = [
         moves.push(...movePlan(st, pos, mode, svc.rng))
         lead = planEnd(moves) + (mode === 'fast' ? 10 : 70)
       }
+      svc.announce(tr("Derulează"))
       const signed = dir === 'down' || dir === 'right' ? amount : -amount
       await svc.perform(s, [...moves, ...later(scrollPlan(signed, dir === 'left' || dir === 'right', mode, svc.rng), lead)])
       const under = await svc.input.windowAt(pos.x, pos.y)
@@ -170,6 +175,8 @@ export const ACT_TOOLS: ToolDef[] = [
       })
       const now = await fresh(svc, s)
       if (secretField(await svc.input.focused())) throw new UserError('The field that has the focus holds a password or another secret. Jolty never types there; ask the user to type it.')
+      const snippet = body.replace(/\s+/g, ' ').trim()
+      svc.announce(`${tr("Scrie în {app}", { app: appLabel(fg) })}${snippet ? `: „${snippet.length > 28 ? `${snippet.slice(0, 28)}…` : snippet}”` : ''}`, fg)
       await svc.readingPause(s, now)
       const front = needFront(now).hwnd
       if (a.paste === true && settings.paste && body.length >= 80) {
@@ -225,12 +232,13 @@ export const ACT_TOOLS: ToolDef[] = [
       svc.checkFront(s, st)
       const fg = needFront(st)
       const mode = svc.host.settings().human
-      if (reachesPastApp(vks)) await svc.confirmEach(s, { title: `Press ${pretty(combo)}`, detail: 'A shortcut with the Windows key acts on the whole PC.' })
+      if (reachesPastApp(vks)) await svc.confirmEach(s, { title: `Press ${pretty(combo)}`, detail: 'A shortcut with the Windows key acts on the whole PC.', always: true })
       else {
         const sends = vks.includes(0x0d) && isTerminal(fg)
         await svc.authorize(s, fg, st, { title: `Press ${pretty(combo)} in ${fg.exe}`, always: sends })
       }
       const now = await fresh(svc, s)
+      svc.announce(tr("Apasă {keys}", { keys: pretty(combo) }), fg)
       // a letter, digit or paste could put a secret somewhere: same rule as typing
       const inserts = vks.length === 1 ? (vks[0] >= 0x30 && vks[0] <= 0x5a) || vks[0] === 0x20 : vks.includes(0x56) && vks.includes(0x11)
       if (inserts && secretField(await svc.input.focused())) throw new UserError('The field that has the focus holds a password or another secret. Jolty never types or pastes there.')

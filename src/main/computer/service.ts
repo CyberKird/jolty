@@ -179,6 +179,8 @@ export class ComputerService {
     const settings = this.host.settings()
     const key = appKey(facts)
     const always = what.always || v.kind === 'always'
+    // "No permissions": ordinary applications are not asked about; Windows itself, terminals and the blocked windows above still are
+    if (mode === 'full' && !always) return
     if (!always && (s.trusted.has(key) || settings.trusted.includes(key))) return
     this.overlay.paused(true)
     const answer = await this.host.ask(s.sid, { title: what.title, detail: what.detail, app: always ? undefined : appLabel(facts) })
@@ -190,13 +192,19 @@ export class ComputerService {
     }
   }
 
-  /** For what belongs to no single application (starting a program, the clipboard): approved one by one. */
-  async confirmEach(s: Session, q: AskInput): Promise<void> {
-    if (this.host.mode(s.sid) === 'ask') return
+  /** For what belongs to no single application (starting a program, the clipboard): approved one by one. "No permissions" skips it, except for what `always` marks. */
+  async confirmEach(s: Session, q: AskInput & { always?: boolean }): Promise<void> {
+    const mode = this.host.mode(s.sid)
+    if (mode === 'ask' || (mode === 'full' && !q.always)) return
     this.overlay.paused(true)
     const answer = await this.host.ask(s.sid, { title: q.title, detail: q.detail })
     this.overlay.paused(false)
     if (answer === 'deny') throw new UserError('The user declined this action. Do not retry it; ask what they want instead.')
+  }
+
+  /** Tells the user on screen what is happening now, and outlines the window it happens in. */
+  announce(label: string, win?: WinInfo | null): void {
+    this.overlay.say(label, win && !win.minimized ? { x: win.x, y: win.y, w: win.w, h: win.h } : undefined)
   }
 
   /** Waits until the user's hands are off the mouse and keyboard. */

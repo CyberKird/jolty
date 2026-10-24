@@ -27,6 +27,7 @@ import { hasEffort, hasJoltyBrowser, hasJoltyComputer, isAcp } from '@shared/typ
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browserMode, browsers } from './browser'
 import { nativeBrowser } from './jbrowser/native'
 import { nativeComputer } from './computer/native'
+import { afterStop } from './stop-gate'
 import { PowerGuard, systemShutdown } from './power'
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
@@ -56,6 +57,7 @@ import { candidates, FULL_PERCENT, pickAuto, type Candidate } from './auto-model
 import type { ScheduledTask } from '@shared/schedule'
 import { tr } from '@shared/i18n'
 import { withParallelInstruction } from '@shared/parallel'
+import { cleanImproved, improvePrompt } from '@shared/improve-prompt'
 
 const { COLORS } = store
 
@@ -114,6 +116,8 @@ export class Jolty {
   private live = new Map<string, EngineSession>()
   /** conversations with a turn under way */
   private busy = new Set<string>()
+  /** conversations the user stopped whose engine has not said "idle" yet: see stop-gate.ts */
+  private stopped = new Set<string>()
   /** tokens in each conversation's context after its last request, from the engine's context events */
   private ctxUsed = new Map<string, number>()
   /** callers waiting for a conversation's turn to end (see waitIdle, compactAndWait) */
@@ -368,6 +372,10 @@ export class Jolty {
 
   private onEngineEvent(e: ChatEvent): void {
     if ('sessionId' in e && this.wiped.has(e.sessionId)) return
+    if ('sessionId' in e && this.stopped.has(e.sessionId)) {
+      if (!afterStop(e, (id) => this.transcript(e.sessionId).find((x) => x.id === id))) return
+      if (e.type === 'status') this.stopped.delete(e.sessionId)
+    }
     if (e.type === 'status') {
       if (e.status === 'running') this.busy.add(e.sessionId)
       else this.busy.delete(e.sessionId)
@@ -632,7 +640,10 @@ export class Jolty {
 
   async sendMessage(sessionId: string, text: string, attachments: Attachment[] = [], display?: string, parallel = false): Promise<void> {
     const s = this.liveSession(sessionId)
+    this.stopped.delete(sessionId)
     nativeComputer.newTurn(sessionId)
+    // Stop switched this chat's computer tools off for the turn that was running; its toggle is still on
+    if (s.meta.computer) await nativeComputer.setEnabled(sessionId, true).catch(() => undefined)
     if (s.meta.handoffPending) {
       // a moved chat's first message carries the history it came with
       const from = this.findMeta(s.meta.handoffFrom ?? '') || s.meta
@@ -876,9 +887,25 @@ export class Jolty {
     await this.sendMessage(id, text.trim())
   }
 
+  /**
+   * Stop: the chat shows "idle" at once, what the engine still says is dropped (stop-gate.ts), the question the computer
+   * server waits on is answered no, and the tools in flight lose their footing: the tabs are let go and the
+   * computer tools refuse until the next message. Only then is the engine asked to abort the turn.
+   */
   async interrupt(sessionId: string): Promise<void> {
+    const s = this.live.get(sessionId)
+    const working = this.busy.has(sessionId)
     this.denyComputerAsks(sessionId)
-    await this.live.get(sessionId)?.interrupt()
+    if (working) {
+      for (const it of this.transcript(sessionId)) {
+        if (it.kind === 'tool' && it.status === 'running') this.onEngineEvent({ type: 'item', sessionId, item: { ...it, status: 'error' } })
+      }
+      this.onEngineEvent({ type: 'status', sessionId, status: 'idle' })
+      this.stopped.add(sessionId)
+      void nativeBrowser.release(sessionId)
+      nativeComputer.interrupt(sessionId)
+    }
+    await s?.interrupt()
   }
 
   async setModel(sessionId: string, model: string): Promise<void> {
@@ -1184,6 +1211,23 @@ ${text.slice(0, 1500)}`
       if (title && !this.live.get(sessionId)?.meta.titled) this.setTitle(sessionId, title)
     } catch {
       // the first words stay as the title
+    }
+  }
+
+  /** The composer's text rewritten once by the same cheap model that names chats; throws when it cannot be trusted. */
+  async improvePrompt(text: string): Promise<string> {
+    const vp = this.visionProfile()
+    if (!vp) throw new Error(tr("Niciun profil nu poate îmbunătăți mesajul: adaugă un profil Claude sau Codex."))
+    const asked = this.driver(vp.engine).describe(vp, [], improvePrompt(text), vp.engine === 'claude' && vp.auth !== 'endpoint' ? 'haiku' : undefined)
+    let timer: NodeJS.Timeout | undefined
+    const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(tr("Modelul nu a răspuns la timp."))), 60000) })
+    try {
+      const out = cleanImproved(text, await Promise.race([asked, late]))
+      if (!out) throw new Error(tr("Modelul nu a dat o variantă folosibilă. Mesajul rămâne cum era."))
+      return out
+    } finally {
+      clearTimeout(timer)
+      asked.catch(() => undefined)
     }
   }
 

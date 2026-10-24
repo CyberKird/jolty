@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { capability } from '@shared/complexity'
-import { clock, etaLabel, timeLeft } from '@shared/eta'
+import { clock } from '@shared/eta'
 import { sameProvider } from '@shared/provider'
 import type { ChatItem, PlanStep, SessionMeta } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
@@ -12,32 +12,15 @@ import { tr } from '@shared/i18n'
 
 const NONE: PlanStep[] = []
 
-/** Turn progress beside the composer. A percentage is shown only for a current task list. */
+/** Time worked this turn beside the composer: small digits and a quiet dot, no estimate of the end. */
 export function WorkClock({ sessionId }: { sessionId: string }) {
-  const steps = useStore((s) => s.plans[sessionId]) || NONE
-  const timer = useStore((s) => s.clocks[sessionId])
+  const turn = useStore((s) => s.clocks[sessionId]?.turn)
   const now = useNow(true)
-  const current = Boolean(timer?.plan && timer.turn && timer.plan >= timer.turn)
-  const planned = current ? steps : NONE
-  const done = planned.filter((step) => step.status === 'done').length
-  const left = timeLeft(timer, planned, now)
-  const elapsed = clock(now - (timer?.turn || now))
-  // without a task list there is nothing to estimate from: show the time worked, not a label that never changes
-  const remaining = !planned.length ? undefined : left === undefined ? tr("se estimează") : `~${clock(left)}`
+  const elapsed = clock(now - (turn || now))
   return (
-    <div className="work-clock" role="status" aria-label={`${tr("Lucrează de {clock}", { clock: elapsed })}${remaining ? `, ${tr("Rămas")}: ${remaining}` : ''}`}>
-      <span className="work-clock-times">
-        <span>{elapsed}</span>
-        {remaining && (
-          <>
-            <span className="work-clock-separator">/</span>
-            <span>{remaining}</span>
-          </>
-        )}
-      </span>
-      <span className={`work-clock-track ${planned.length ? '' : 'waiting'}`} aria-hidden="true">
-        <span style={planned.length ? { width: `${(done / planned.length) * 100}%` } : undefined} />
-      </span>
+    <div className="work-clock" role="status" aria-label={tr("Lucrează de {clock}", { clock: elapsed })}>
+      <span className="work-clock-dot" aria-hidden="true" />
+      <span>{elapsed}</span>
     </div>
   )
 }
@@ -57,11 +40,9 @@ export function useNow(on: boolean): number {
 export function TaskStrip({ sessionId }: { sessionId: string }) {
   const steps = useStore((s) => s.plans[sessionId]) || NONE
   const running = useStore((s) => s.status[sessionId] === 'running')
-  const timer = useStore((s) => s.clocks[sessionId])
   const [open, setOpen] = useState(false)
   const done = steps.filter((s) => s.status === 'done').length
   const all = done === steps.length
-  const now = useNow(running && !all && steps.length > 0)
   if (!steps.length) return null
   const current = steps.find((s) => s.status === 'active') || steps.find((s) => s.status === 'pending')
   return (
@@ -85,11 +66,6 @@ export function TaskStrip({ sessionId }: { sessionId: string }) {
           <span style={{ transform: `scaleX(${done / steps.length})` }} />
         </span>
         <span className={`tasks-now ${running && !all ? 'live' : ''}`}>{all ? tr("Toate gata") : current?.text}</span>
-        {running && !all && (
-          <span className="tasks-eta" title={timer?.turn ? tr("Lucrează de {clock}", { clock: clock(now - timer.turn) }) : undefined}>
-            {etaLabel(timeLeft(timer, steps, now))}
-          </span>
-        )}
         {open ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
       </button>
     </div>

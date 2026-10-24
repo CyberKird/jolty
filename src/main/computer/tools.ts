@@ -1,9 +1,10 @@
 // The computer tools models can call: looking (screenshot, zoom, windows, UI tree), moving between windows and
 // the clipboard here; the ones that press and type are in tools-act.ts.
 import path from 'path'
+import { tr } from '@shared/i18n'
 import { displayOfRect, toPhysical, toPicture, type DisplayInfo } from './geometry'
 import type { WinInfo } from './helper'
-import { blockedReason } from './policy'
+import { appLabel, blockedReason } from './policy'
 import { ACT_TOOLS } from './tools-act'
 import { image, num, obj, str, text, UserError, type ToolDef } from './result'
 import type { ComputerService, Session } from './service'
@@ -37,6 +38,8 @@ export const TOOLS: ToolDef[] = [
       if (!d) throw new UserError(`No display ${index}. Displays: ${displays.map((x) => x.index).join(', ')}.`)
       const shot = await svc.capturer.grab(d, undefined, { x: st.x, y: st.y })
       svc.setView(s, shot.view)
+      svc.overlay.active(d)
+      svc.announce(tr("Se uită la ecran"))
       s.seenFg = st.foreground?.hwnd ?? 0
       const v = shot.view
       const cur = toPicture(v, st.x, st.y)
@@ -108,6 +111,7 @@ export const TOOLS: ToolDef[] = [
       if (!win) throw new UserError('No such window. List them with computer_windows.')
       await svc.authorize(s, win, st, { title: `Bring "${win.title}" to the front`, detail: `${win.exe}` })
       svc.overlay.active(svc.ensureView(s).display)
+      svc.announce(tr("Deschide {app}", { app: appLabel(win) }), win)
       const ok = await svc.input.focus(win.hwnd)
       svc.acted(s)
       const note = await svc.afterAction(s, 220)
@@ -125,6 +129,8 @@ export const TOOLS: ToolDef[] = [
       if (target.length > 400 || /[\u0000-\u001f]/.test(target)) throw new UserError('That is not a program name, path or link.')
       if (st.secure) throw new UserError(blockedReason({ exe: '', title: '' }, true) as string)
       await svc.confirmEach(s, { title: `Open ${target}`, detail: target })
+      svc.overlay.active(svc.ensureView(s).display)
+      svc.announce(tr("Deschide {app}", { app: path.basename(target) }))
       const before = new Set((await svc.input.windows()).map((w) => w.hwnd))
       const pid = await svc.input.launch(target)
       svc.acted(s)
@@ -192,6 +198,8 @@ export const TOOLS: ToolDef[] = [
       if (!write && a.action !== 'read') throw new UserError('"action" is read or write')
       const body = write ? str(a.text, 'text') : ''
       await svc.confirmEach(s, { title: write ? 'Replace the clipboard' : 'Read the clipboard', detail: write ? body.slice(0, 400) : undefined })
+      svc.overlay.active(svc.ensureView(s).display)
+      svc.announce(tr("Clipboard"))
       svc.acted(s)
       if (write) {
         await svc.host.clipboard.writeText(body)

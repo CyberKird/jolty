@@ -89,6 +89,13 @@ class NativeComputer {
     this.svc?.release(sid)
   }
 
+  /** The user pressed Stop in this chat: its tools refuse from now on and the typing or mouse path under way ends at once. */
+  interrupt(sid: string): void {
+    if (!this.svc) return
+    this.svc.release(sid)
+    void this.svc.input.abort().catch(() => undefined)
+  }
+
   async stop(): Promise<void> {
     if (!this.svc) return
     globalShortcut.unregister(KILL.accelerator)

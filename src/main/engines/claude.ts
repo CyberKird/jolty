@@ -309,6 +309,8 @@ class ClaudeSession implements EngineSession {
   private lastCost = 0
   /** a turn is under way: a message sent now lands mid-turn */
   private turn = false
+  /** Stop was pressed since the last message: a send still starting the process must not push its text */
+  private stopRequested = false
   private limitWindows = new Map<string, LimitWindow>()
 
   constructor(
@@ -519,7 +521,7 @@ class ClaudeSession implements EngineSession {
           costUsd: cost,
           ts: Date.now()
         })
-        if (m.subtype !== 'success') this.notice(`Claude s-a oprit: ${m.subtype}`, 'warn')
+        if (m.subtype !== 'success' && !this.stopRequested) this.notice(`Claude s-a oprit: ${m.subtype}`, 'warn')
         this.turn = false
         this.host.emit({ type: 'status', sessionId: sid, status: 'idle' })
         return
@@ -551,6 +553,8 @@ class ClaudeSession implements EngineSession {
   }
 
   private ask(toolName: string, input: Record<string, unknown>, opts: Parameters<CanUseTool>[2]): Promise<PermissionResult> {
+    // a tool that Claude Code still asks about while Stop is winding the turn down does not run
+    if (this.stopRequested) return Promise.resolve({ behavior: 'deny', message: tr("Cererea a fost anulată.") })
     // reading pages is not an action on the user's behalf: only Manual mode asks for it
     const [, server, tool] = /^mcp__(.+?)__(.+)$/.exec(toolName) || []
     // computer use: outside Manual mode the server itself asks the user, per application, the same for every engine
@@ -604,7 +608,12 @@ class ClaudeSession implements EngineSession {
   }
 
   async send(text: string, images: Attachment[] = [], clientId?: string): Promise<void> {
+    this.stopRequested = false
     await this.ensureStarted()
+    if (this.stopRequested) {
+      this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
+      return
+    }
     const mid = this.turn
     this.turn = true
     this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'running' })
@@ -630,6 +639,9 @@ class ClaudeSession implements EngineSession {
   }
 
   async interrupt(): Promise<void> {
+    this.stopRequested = true
+    // answered now: the abort signal of a pending request only reaches us once Claude Code gets to it
+    for (const id of [...this.pending.keys()]) this.respond(id, 'deny')
     await this.q?.interrupt()
   }
 

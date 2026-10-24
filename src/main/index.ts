@@ -213,6 +213,7 @@ function registerIpc(): void {
   handle('sessions:remove', (id: string) => jolty.removeSession(id))
   handle('sessions:rename', (id: string, title: string) => jolty.renameSession(String(id), String(title)))
   handle('sessions:review', (id: string) => jolty.review(String(id)))
+  handle('sessions:improvePrompt', (text: string) => jolty.improvePrompt(String(text)))
 
   handle('usage:summary', () => jolty.usageSummary())
   handle('usage:balance', (id: string) => jolty.balance(id))

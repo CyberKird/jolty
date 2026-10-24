@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { flushSync } from 'react-dom'
-import { tick, turnStart, type Clock } from '@shared/eta'
+import type { Clock } from '@shared/eta'
 import { TaskBoard } from '@shared/tasks'
 import type {
   ChatEvent,
@@ -245,7 +245,7 @@ export const useStore = create<State>((set, get) => ({
         const prev = get().status[e.sessionId]
         set((s) => ({
           status: { ...s.status, [e.sessionId]: e.status },
-          clocks: e.status === 'running' && s.status[e.sessionId] !== 'running' ? { ...s.clocks, [e.sessionId]: turnStart(s.clocks[e.sessionId], s.plans[e.sessionId]) } : s.clocks
+          clocks: e.status === 'running' && s.status[e.sessionId] !== 'running' ? { ...s.clocks, [e.sessionId]: { turn: Date.now() } } : s.clocks
         }))
         if (e.status !== 'running') {
           // a finished turn has no pending approvals left
@@ -275,7 +275,7 @@ export const useStore = create<State>((set, get) => ({
         set((s) => ({ permissions: { ...s.permissions, [e.sessionId]: (s.permissions[e.sessionId] || []).filter((r) => r.id !== e.requestId) } }))
         return
       case 'plan':
-        set((s) => ({ plans: { ...s.plans, [e.sessionId]: e.steps }, clocks: { ...s.clocks, [e.sessionId]: tick(s.clocks[e.sessionId], s.plans[e.sessionId], e.steps) } }))
+        set((s) => ({ plans: { ...s.plans, [e.sessionId]: e.steps } }))
         return
       case 'browserLive':
         set((s) => ({ browserLive: e.note ? { note: e.note } : { frame: e.frame ?? s.browserLive.frame, url: e.url, title: e.title } }))

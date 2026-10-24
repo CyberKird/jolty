@@ -169,6 +169,8 @@ export class CodexSession implements EngineSession, ThreadListener {
   }
 
   async send(text: string, images: Attachment[] = []): Promise<void> {
+    // Stop shows "idle" at once, the turn ends a moment later: a message sent in between waits for it
+    for (let i = 0; this.stopRequested && (this.startPending || this.status === 'running') && i < 50; i++) await new Promise((r) => setTimeout(r, 100))
     if (this.startPending || this.status === 'running') throw new Error(tr("Conversația lucrează deja. Pune mesajul în așteptare."))
     const operation = ++this.operation
     this.startPending = operation
@@ -358,6 +360,11 @@ export class CodexSession implements EngineSession, ThreadListener {
 
   onRequest(r: RpcRequest): boolean {
     const p = r.params as Any
+    // asked while Stop is winding the turn down: no card, the answer is no
+    if (this.stopRequested && /requestApproval$|elicitation\/request$/.test(r.method)) {
+      this.server.rpc?.respond(r.id, r.method.endsWith('elicitation/request') ? { action: 'decline' } : { decision: 'decline' })
+      return true
+    }
     if (r.method === 'item/commandExecution/requestApproval') {
       const id = randomUUID()
       this.pending.set(id, r.id)
@@ -436,6 +443,8 @@ export class CodexSession implements EngineSession, ThreadListener {
 
   async interrupt(): Promise<void> {
     this.stopRequested = true
+    // a question waiting for the user would hold the turn: answer it no, now
+    for (const id of [...this.pending.keys()]) this.respond(id, 'deny')
     if (!this.threadId || !this.turnId) return
     const turnId = this.turnId
     if (this.interruptSent === turnId) return

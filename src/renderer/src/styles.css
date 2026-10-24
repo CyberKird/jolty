@@ -1509,41 +1509,23 @@ a {
   padding: 0;
 }
 .work-clock {
-  display: grid;
-  gap: 4px;
-  min-width: 110px;
-  color: var(--volt);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  color: var(--grey-2);
   font-family: var(--label);
   font-weight: 500;
-  font-size: 11.5px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-.work-clock-times {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
   white-space: nowrap;
 }
-.work-clock-separator { color: var(--grey-2); }
-.work-clock-track {
-  height: 2px;
-  overflow: hidden;
-  background: var(--line-2);
-}
-.work-clock-track span {
-  display: block;
-  height: 100%;
+.work-clock-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
   background: var(--volt);
-  transition: width 0.4s ease;
-}
-.work-clock-track.waiting span {
-  width: 35%;
-  animation: work-clock-wait 1.4s ease-in-out infinite alternate;
-}
-@keyframes work-clock-wait {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(290%); }
+  animation: blink-soft 1.6s ease-in-out infinite;
 }
 
 /* first screen */
@@ -3206,16 +3188,6 @@ a {
   text-overflow: ellipsis;
   font-size: 13px;
   color: var(--white);
-}
-.tasks-eta {
-  flex: none;
-  font-family: var(--label);
-  font-weight: 500;
-  font-size: 11.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--volt);
-  font-variant-numeric: tabular-nums;
 }
 .tasks-now.live::before {
   content: '';

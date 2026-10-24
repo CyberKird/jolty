@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.16
+
+### New
+
+- An "Improve message" button in the chat box. It rewrites what you typed to be clearer, in the same language, and puts the result in the box instead of the old text. Nothing is sent: you read it, edit it and send as usual, and Ctrl+Z brings your original back.
+- On the PC, Jolty now shows what it is doing. The pill at the top says the action ("Click in notepad", "Typing in notepad: ..."), the window it works in gets an outline, the pointer presses when it clicks, and a click leaves a double ripple.
+
+### Changed
+
+- With "No permissions", computer control no longer asks about ordinary applications, starting a program or the clipboard. Windows itself, terminals, Win-key shortcuts, password managers and banking pages still keep their rules.
+- The timer next to the stop button only counts up. The progress bar and the "time left" estimate are gone, since nobody can know how long a task takes.
+
+### Fixed
+
+- Stop now stops the chat at once: the chat shows idle immediately, pending questions are answered no, tools in flight and the computer typing under way end, and late text from the old turn no longer wakes the chat up again.
+
 ## 0.7.15
 
 ### New

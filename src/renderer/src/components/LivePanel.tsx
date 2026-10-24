@@ -1,7 +1,7 @@
 import { Code2, ExternalLink, Eye, FileDiff as DiffIcon, FolderTree, Globe, ListChecks, RotateCw, SquareTerminal, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
-import { clock, etaLabel, timeLeft, type Clock } from '@shared/eta'
+import { clock } from '@shared/eta'
 import { api, basename, useStore, type Draft } from '../store'
 import { toolKind } from './Messages'
 import { DiffView, highlight, highlightLive, langOf } from './Rich'
@@ -280,7 +280,7 @@ function LiveCode({ drafts }: { drafts: Draft[] }) {
   )
 }
 
-function PlanView({ steps, timer, running, now }: { steps: PlanStep[]; timer?: Clock; running: boolean; now: number }) {
+function PlanView({ steps }: { steps: PlanStep[] }) {
   const done = steps.filter((s) => s.status === 'done').length
   return (
     <>
@@ -288,7 +288,6 @@ function PlanView({ steps, timer, running, now }: { steps: PlanStep[]; timer?: C
         <span>
           {done}/{steps.length} {tr("gata")}
         </span>
-        {running && done < steps.length && <span className="volt">{etaLabel(timeLeft(timer, steps, now))}</span>}
       </div>
       <div className="plan-progress">
         <div style={{ width: `${(done / Math.max(steps.length, 1)) * 100}%` }} />
@@ -714,7 +713,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
       <div className="live-pane" role="tabpanel" key={tab}>
         {tab === 'changes' && <ChangesView changes={changes} cwd={cwd} />}
         {tab === 'plan' &&
-          (plan?.length ? <PlanView steps={plan} timer={timer} running={running} now={now} /> :<div className="faint small">{tr("Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.")}</div>)}
+          (plan?.length ? <PlanView steps={plan} /> :<div className="faint small">{tr("Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.")}</div>)}
         {tab === 'terminal' && <TerminalView items={items} />}
         {tab === 'code' && <LiveCode drafts={drafts} />}
         {tab === 'preview' && <PreviewView source={source} cwd={cwd} drafts={drafts} />}

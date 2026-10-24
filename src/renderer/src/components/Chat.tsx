@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Power, Square, X } from 'lucide-react'
+import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, Loader2, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Power, Sparkles, Square, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
@@ -138,6 +138,7 @@ function Composer(p: ComposerProps) {
   const [text, setText] = useState('')
   const [atts, setAtts] = useState<Attachment[]>([])
   const [dragging, setDragging] = useState(false)
+  const [improving, setImproving] = useState(false)
   const powerArmed = useStore((s) => s.power.armed)
   const [powerOpen, setPowerOpen] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -170,6 +171,12 @@ function Composer(p: ComposerProps) {
     if (immediate) sessionStorage.removeItem(immediateKey)
     return !immediate
   })
+  // Stop is not a cue to go on with the next message: what waited stays in the list until the user sends or removes it
+  const [stoppedQueue, setStoppedQueue] = useState(false)
+  const stop = (): void => {
+    if (queue.length) { setRestoredQueue(true); setStoppedQueue(true) }
+    p.onStop?.()
+  }
   const queuedSent = useRef(false)
   const wasRunning = useRef(p.running || (queue.length > 0 && !restoredQueue))
 
@@ -183,7 +190,7 @@ function Composer(p: ComposerProps) {
   }, [p.sessionId, queue, queueStore, toast])
 
   useEffect(() => {
-    if (!queue.length && restoredQueue) { setRestoredQueue(false); return }
+    if (!queue.length && restoredQueue) { setRestoredQueue(false); setStoppedQueue(false); return }
     if (p.running) { wasRunning.current = true; queuedSent.current = false; return }
     if (!wasRunning.current) return
     if (!queue.length || restoredQueue || queuedSent.current) return
@@ -244,7 +251,7 @@ function Composer(p: ComposerProps) {
   // parallel: the same message, plus an instruction for the model to split the job into sessions (hidden from the chat)
   const submit = async (parallel = false): Promise<void> => {
     const own = text.trim()
-    if (!own && !atts.length) return
+    if (improving || (!own && !atts.length)) return
     if (parallel && (!own || isAcp(engine))) return
     const store = useStore.getState()
     const quote = p.sessionId ? store.quotes[p.sessionId] : undefined
@@ -258,6 +265,23 @@ function Composer(p: ComposerProps) {
       return
     }
     await p.onSend(t, a, parallel || undefined)
+  }
+
+  // the box is read-only while the model rewrites it; the result goes in as a paste over the old text, so Ctrl+Z brings the old one back
+  const improve = async (): Promise<void> => {
+    const ta = taRef.current
+    const original = text
+    if (!ta || improving || !original.trim()) return
+    setImproving(true)
+    try {
+      const better = await api.sessions.improvePrompt(original)
+      if (!ta.isConnected || ta.value !== original) return
+      ta.readOnly = false
+      ta.focus()
+      ta.select()
+      if (!document.execCommand('insertText', false, better)) setText(better)
+    } catch (err) { toast(errMsg(err), true) }
+    finally { setImproving(false) }
   }
 
   const pickMention = (i: Parameters<typeof mentions.apply>[0]): void => {
@@ -274,7 +298,7 @@ function Composer(p: ComposerProps) {
     <div className="composer-wrap">
       {queue.length > 0 && (
         <div className="queue" aria-live="polite">
-          <div className="queue-title">{restoredQueue ? tr("Restaurate, trimite manual") : tr("În așteptare")} <span>{queue.length}</span></div>
+          <div className="queue-title">{restoredQueue ? (stoppedQueue ? tr("Oprite, trimite manual") : tr("Restaurate, trimite manual")) : tr("În așteptare")} <span>{queue.length}</span></div>
           {queue.map((q, i) => (
             <div className="queued" key={q.id}>
               <span className="queued-order">{i + 1}</span>
@@ -334,6 +358,8 @@ function Composer(p: ComposerProps) {
         <textarea
           ref={taRef}
           value={text}
+          readOnly={improving}
+          style={improving ? { opacity: 0.55 } : undefined}
           placeholder={p.running ? tr("Scrie următorul mesaj: pleacă imediat ce termină.") : tr("Descrie ce vrei să facă. / pentru skill-uri, @ pentru fișiere.")}
           onChange={(e) => {
             setText(e.target.value)
@@ -360,7 +386,7 @@ function Composer(p: ComposerProps) {
             }
             if (e.key === 'Escape' && p.running && p.onStop) {
               e.preventDefault()
-              p.onStop()
+              stop()
               return
             }
             // Shift+Tab cycles the permission mode, like Claude Code
@@ -418,6 +444,15 @@ function Composer(p: ComposerProps) {
               })
             }}
           />
+          <button
+            className="btn ghost small icon"
+            onClick={() => void improve()}
+            disabled={!text.trim() || improving}
+            aria-label={tr("Îmbunătățește mesajul")}
+            title={improving ? tr("Îmbunătățesc mesajul...") : tr("Îmbunătățește mesajul: un model îl rescrie mai clar, în aceeași limbă. Ctrl+Z aduce textul vechi înapoi.")}
+          >
+            {improving ? <Loader2 size={15} className="spin" /> : <Sparkles size={15} />}
+          </button>
           <input ref={fileRef} type="file" multiple hidden onChange={(e) => { void addFiles([...(e.target.files || [])]); e.target.value = '' }} />
           {p.onCwd && (
             <button className="picker-btn cwd-btn" onClick={p.onCwd} title={p.cwd}>
@@ -481,7 +516,7 @@ function Composer(p: ComposerProps) {
           <div className="spacer" />
           {p.sessionId && p.running && <WorkClock sessionId={p.sessionId} />}
           {p.running && (
-            <button className="btn send-btn" onClick={p.onStop} title={tr("Oprește (Esc)")}>
+            <button className="btn send-btn" onClick={stop} title={tr("Oprește (Esc)")}>
               <Square size={12} fill="currentColor" />
             </button>
           )}
@@ -844,7 +879,11 @@ export function ChatView({ session }: { session: SessionMeta }) {
         onComputer={(on) => void api.sessions.setComputer(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         temporary={session.temporary}
         onBrowser={(on) => void api.sessions.setBrowser(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
-        onStop={() => void api.sessions.interrupt(session.id)}
+        onStop={() => {
+          // the chat shows "stopped" now; the engine winds down in its own time and the main process drops what it still says
+          useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'idle' })
+          void api.sessions.interrupt(session.id).catch((err) => toast(errMsg(err), true))
+        }}
         onSend={async (text, atts, parallel) => {
           useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'running' })
           try {
