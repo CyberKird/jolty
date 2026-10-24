@@ -1213,7 +1213,9 @@ ${text.slice(0, 1500)}`
     try {
       const out = await this.driver(vp.engine).describe(vp, [], prompt, vp.engine === 'claude' && vp.auth !== 'endpoint' ? 'haiku' : undefined)
       const title = (out.split('\n').find((l) => l.trim()) || '').replace(/^[\s"'„“`*#-]+|[\s"'”“`*.]+$/g, '').slice(0, 60)
-      if (title && !this.live.get(sessionId)?.meta.titled) this.setTitle(sessionId, title)
+      // a helper that is not logged in or has no funds answers with its error text, which is no title
+      const failed = /not logged in|\/login|authentication|unauthori[sz]ed|invalid api key|insufficient|rate limit|^(failed|error)\b/i.test(out)
+      if (title && !failed && !this.live.get(sessionId)?.meta.titled) this.setTitle(sessionId, title)
     } catch {
       // the first words stay as the title
     }
