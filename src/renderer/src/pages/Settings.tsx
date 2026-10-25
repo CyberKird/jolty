@@ -6,7 +6,7 @@ import { BrowserSettings } from './BrowserSettings'
 import { ComputerSettings } from './ComputerSettings'
 import { ChildSessionsSettings } from './ChildSessionsSettings'
 import { api, timeAgo, useStore } from '../store'
-import { setMascot } from '../mascot/Mascot'
+import { setMascot, setMascotSize } from '../mascot/Mascot'
 import { openWhatsNew } from '../components/WhatsNew'
 import { PageTabs, useSavedTab } from '../components/PageTabs'
 import { soundsOn } from '../mascot/sfx'
@@ -146,6 +146,27 @@ export function SettingsPage() {
                     {tr("Sunete scurte și încete când sare, aterizează, e aruncat sau se bucură. Tac cât lucrezi în altă fereastră.")}
                   </span>
                 </span>
+              </label>
+              <label className="card row" style={{ marginBottom: 14 }}>
+                <span>
+                  <b>{tr("Mărimea lui Jolty")}</b>
+                  <span className="muted small" style={{ display: 'block' }}>
+                    {tr("Cât de mare e mascota. Se schimbă pe loc.")}
+                  </span>
+                </span>
+                <select
+                  className="select"
+                  style={{ marginLeft: 'auto', width: 'auto' }}
+                  value={s.mascotSize ?? 'big'}
+                  onChange={async (e) => {
+                    await setMascotSize(e.target.value as 'small' | 'normal' | 'big')
+                    setS(await api.app.settings())
+                  }}
+                >
+                  <option value="small">{tr("Mică")}</option>
+                  <option value="normal">{tr("Normală")}</option>
+                  <option value="big">{tr("Mare")}</option>
+                </select>
               </label>
               {(
                 [

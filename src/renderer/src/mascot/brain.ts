@@ -2,27 +2,38 @@ import { useStore } from '../store'
 import { dust, sparks, streak } from './fx'
 import { play, type Sound } from './sfx'
 import { FLOORS, goal, spot, visible, WORK, type Eyes, type Goal, type Pose } from './places'
-import { HIP_Y, Ragdoll, type Ledge } from './ragdoll'
+import { HIP_Y, Ragdoll, scaleRagdoll, type Ledge } from './ragdoll'
 import type { Puppet } from './Rig3D'
+import { dim } from './size'
+import { blocked, forget, freeSpot, modalOpen, pathBlocked, type Spot } from './free'
+import { GAGS, pickGag } from './brain-gags'
 
 type Mode = 'ground' | 'walk' | 'jump' | 'air' | 'held' | 'dash' | 'rag'
 
-const W = 60
-const H = 82
-/** px from the top of the element to the feet: the stage's ground line (132) at its 60 % scale */
-const FOOT = 132 * 0.6
+// everything below is in px at the size he has now (size.ts): set again whenever a Brain is made
+let W = 60
+let H = 82
+/** px from the top of the element to the feet: the stage's ground line (132 units) */
+let FOOT = 132 * 0.6
 /** px from the feet to the hood top, where a cursor holds him */
-const GRIP = 71
+let GRIP = 71
 /** the window's floor: his feet on its bottom edge (seated there he sits on the ground, Rig3D) */
 const FLOOR = (): number => innerHeight - 7
-const GRAVITY = 2600
-/** px from the pelvis down to the feet when he stands (the rig's hip height at 0.6 px a unit) */
-const HIP = HIP_Y * 0.6
-const WALK = 95
-const RUN = 270
+let GRAVITY = 2600
+/** px from the pelvis down to the feet when he stands (the rig's hip height) */
+let HIP = HIP_Y * 0.6
+let WALK = 95
+let RUN = 270
+function scaleToSize(): void {
+  const k = dim.k
+  scaleRagdoll(dim.px)
+  ;[W, H, FOOT, GRIP, HIP, WALK, RUN, GRAVITY] = [60 * k, 82 * k, 132 * dim.px, 71 * k, HIP_Y * dim.px, 95 * k, 270 * k, 2600 * k]
+}
 
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v))
 const rand = (lo: number, hi: number): number => lo + Math.random() * (hi - lo)
+/** a landing this fast (px/s) knocks him flat: the same fall of his own heights, so it scales with how high he is */
+const HARD = (): number => 1100 * Math.sqrt(dim.k)
 const calm = (): boolean => document.documentElement.classList.contains('reduce-motion')
 
 /**
@@ -69,17 +80,27 @@ export class Brain {
   private timers = new Set<number>()
   private off: (() => void)[] = []
   private entered = false
+  /** 1, or less while the only room left is small: he shrinks to fit (free.ts) */
+  private scale = 1
+  private cool = new Map<string, number>()
+  private blockedSince = 0
+  private typedAt = 0
+  private pokes: number[] = []
+  private dodgedAt = 0
+  private ran = 0
+  private ptr = { x: 0, y: 0, at: 0, speed: 0 }
   /** the floor he stands on changed size (the composer grows, a panel slides): re-read his position */
   private resize = new ResizeObserver(() => this.frame())
 
   constructor(private el: HTMLElement, private body: Puppet, private onMenu: (e: MouseEvent) => void) {
+    scaleToSize()
     this.watchStore()
     this.listen()
     this.frame()
     // jumps out of the bolt in the title bar once the page has laid out
     this.later(() => {
       const bolt = document.querySelector('.titlebar-brand .bolt')?.getBoundingClientRect()
-      const home = spot(goal())
+      const home = this.home()
       this.entered = true
       if (!bolt || calm()) return this.decide()
       this.x = bolt.left + bolt.width / 2
@@ -89,6 +110,15 @@ export class Brain {
     }, 600)
     this.blink()
     this.idleLoop()
+    this.thinkLoop()
+  }
+
+  /** test hooks (Mascot.tsx offers them only with the localStorage flag jolty-mascot-debug) */
+  debug = {
+    pose: (pose: Pose, ms = 3000): void => this.react(pose, 'open', ms),
+    gag: (name: string): void => this.gag(name),
+    free: (): unknown => ({ blocked: blocked(this.x, this.y, this.scale), spot: freeSpot({ el: this.anchor, x: this.x, y: this.y, scale: this.scale }), blockedSince: this.blockedSince, busy: this.busyUntil - performance.now() }),
+    state: (): { x: number; y: number; mode: Mode; pose: Pose; scale: number; goal: Pose } => ({ x: this.x, y: this.y, mode: this.mode, pose: this.pose, scale: this.scale, goal: goal().pose })
   }
 
   destroy(): void {
@@ -108,15 +138,58 @@ export class Brain {
     const g = goal()
     const work = WORK.has(g.pose)
     if (!work && now < this.freeUntil) return
-    const to = spot(g)
+    const to = this.home(g)
+    this.setScale(to.scale)
     if (this.anchor === to.el && Math.abs(to.x - this.x) < 8) return this.settle(g)
     this.travel(to, g)
+  }
+
+  /** where he belongs now, moved to the nearest place where he is not in the way (free.ts) */
+  private home(g: Goal = goal()): Spot {
+    const to = spot(g)
+    return freeSpot({ ...to, scale: this.scale })
+  }
+
+  private setScale(k: number): void {
+    if (k === this.scale) return
+    this.scale = k
+    this.el.style.setProperty('scale', String(k))
+  }
+
+  /** someone is in the way (a menu opened, you typed, the layout moved): out to the nearest free spot */
+  private yield(): void {
+    if (this.mode === 'walk') {
+      this.mode = 'ground'
+      this.place(this.anchor, this.x, this.y)
+    }
+    if (this.mode !== 'ground') return
+    const g = goal()
+    const to = freeSpot({ el: this.anchor, x: this.x, y: this.y, scale: this.scale })
+    this.busyUntil = 0
+    this.setScale(to.scale)
+    this.travel(to, g)
+  }
+
+  /** every moment he is checked against what is under him: still in the way after a beat, he moves */
+  private guard = (): void => {
+    if (document.hidden || (this.mode !== 'ground' && this.mode !== 'walk')) return void (this.blockedSince = 0)
+    // on his way to a free spot: a turn back now would only send him to and fro
+    const ok = !blocked(this.x, this.y, this.scale) || (this.mode === 'walk' && !blocked(this.walkTo, this.y, this.scale))
+    if (ok) return void (this.blockedSince = 0)
+    const now = performance.now()
+    this.blockedSince ||= now
+    if (now - this.blockedSince < 280) return
+    this.blockedSince = 0
+    this.yield()
   }
 
   private settle(g: Goal): void {
     if (g.pose === 'idle' && (this.pose === 'sit' || this.pose === 'sleep')) return
     this.set(g.pose, g.eyes, g.bubble)
-    if (g.pose === 'point') this.face(1)
+    if (g.pose === 'point') {
+      const r = g.el?.getBoundingClientRect()
+      this.face(r && r.left + r.width / 2 < this.x ? -1 : 1)
+    }
   }
 
   private travel(to: { el: Element | null; x: number; y: number }, g: Goal): void {
@@ -126,7 +199,8 @@ export class Brain {
     }
     const dx = to.x - this.x
     const dist = Math.hypot(dx, to.y - this.y)
-    if (to.el === this.anchor && Math.abs(to.y - this.y) < 4) {
+    // walking would take him across something in the way: he jumps it instead
+    if (to.el === this.anchor && Math.abs(to.y - this.y) < 4 && !pathBlocked(this.x, to.x, this.y, this.scale)) {
       this.mode = 'walk'
       this.wv = 0
       this.walkTo = to.x
@@ -147,7 +221,7 @@ export class Brain {
     const ty = top !== undefined ? top + dy : FLOOR()
     const dist = Math.hypot(tx - this.x, ty - this.y)
     this.mode = 'jump'
-    this.jump = { x0: this.x, y0: this.y, el, tx, dy, t0: performance.now() + 150, ms: clamp(380 + dist * 0.55, 420, 760), lift: 46 + Math.max(0, this.y - ty) * 0.6 }
+    this.jump = { x0: this.x, y0: this.y, el, tx, dy, t0: performance.now() + 150, ms: clamp(380 + dist * 0.55, 420, 760), lift: (46 + Math.max(0, this.y - ty) * 0.6) * dim.k }
     // a beat of crouching first, then the spring
     this.set('crouch', 'happy')
   }
@@ -304,11 +378,11 @@ export class Brain {
   private landed(speed: number): void {
     this.mode = 'ground'
     // every landing kicks up a little dust at his feet, more for a harder one
-    dust(this.x, this.y - 1, speed > 1100 ? 1.6 : 0.45)
-    play(speed > 1100 ? 'thud' : 'land', speed / 1800)
-    if (speed > 1100) play('oof')
+    dust(this.x, this.y - 1, speed > HARD() ? 1.6 : 0.45)
+    play(speed > HARD() ? 'thud' : 'land', speed / 1800)
+    if (speed > HARD()) play('oof')
     // a hard landing knocks him flat (Rig3D bounces him and picks the side he spun to), then he gets up
-    if (speed > 1100) return this.react('trip', 'dizzy', 1700)
+    if (speed > HARD()) return this.react('trip', 'dizzy', 1700)
     this.react('land', 'open', 260)
   }
 
@@ -345,12 +419,13 @@ export class Brain {
   private follow(): void {
     if (!this.anchor) {
       this.y = FLOOR()
-      this.x = clamp(this.x, 30, innerWidth - 30)
+      this.x = clamp(this.x, W / 2, innerWidth - W / 2)
       return
     }
     // the card was answered or the composer replaced: hop to where he is needed; scrolled away: fall off
     if (!this.anchor.isConnected) {
-      const home = spot(goal())
+      const home = this.home()
+      this.setScale(home.scale)
       return calm() ? this.place(home.el, home.x, home.y) : this.leap(home.el, home.x, home.y)
     }
     const r = visible(this.anchor)
@@ -365,10 +440,18 @@ export class Brain {
     const left = Math.abs(this.walkTo - this.x)
     this.wv += (this.walkSpeed * clamp(left / 70, 0.3, 1) - this.wv) * (1 - Math.exp(-dt * 7))
     const step = this.wv * dt
+    if (this.walkSpeed === RUN) this.ran += step
     if (left <= step + 0.4) {
       this.x = this.walkTo
       this.wv = 0
       this.place(this.anchor, this.x, this.y)
+      if (this.ran > 900 * dim.k) {
+        // a long sprint: he stops to catch his breath
+        this.ran = 0
+        play('pant')
+        return this.react('tired', 'sleepy', 2200)
+      }
+      this.ran = 0
       this.set('idle', 'open')
       return this.decide()
     }
@@ -405,8 +488,8 @@ export class Brain {
     this.vy += GRAVITY * dt
     this.x += this.vx * dt
     this.y += this.vy * dt
-    if (this.x < 30 || this.x > innerWidth - 30) {
-      this.x = clamp(this.x, 30, innerWidth - 30)
+    if (this.x < W / 2 || this.x > innerWidth - W / 2) {
+      this.x = clamp(this.x, W / 2, innerWidth - W / 2)
       // a bump into the wall, by how hard he hit it
       if (Math.abs(this.vx) > 150) play('thud', Math.abs(this.vx) / 1800)
       this.vx *= -0.5
@@ -459,8 +542,9 @@ export class Brain {
     // to the device pixel, not the css one: whole css pixels made a slow walk step along the screen
     const dpr = devicePixelRatio || 1
     const snap = (v: number): number => Math.round(v * dpr) / dpr
-    const t = `translate3d(${snap(this.x - W / 2)}px, ${snap(this.y - FOOT)}px, 0)`
-    if (t !== this.placed) this.el.style.transform = this.placed = t
+    // `translate`, not `transform`: the shrink (`scale`, free.ts) must not scale the position too
+    const t = `${snap(this.x - W / 2)}px ${snap(this.y - FOOT)}px`
+    if (t !== this.placed) this.el.style.translate = this.placed = t
   }
 
   private set(pose: Pose, eyes: Eyes, bubble = ''): void {
@@ -515,7 +599,7 @@ export class Brain {
         if (toast && toast !== p.toasts.at(-1)) {
           if (toast.error) {
             play('worry')
-            this.react('idle', 'worried', 1500)
+            this.react('facepalm', 'worried', 1500)
           }
           // a nod: "done" (copied, saved, removed)
           else this.react('land', 'happy', 300)
@@ -527,19 +611,26 @@ export class Brain {
         const now = s.status[id]
         if (was === 'running' && now === 'idle') {
           // done: a cheer, or now and then a thumbs-up at you
-          if (Math.random() < 0.4) {
+          const roll = Math.random()
+          if (roll < 0.3) {
             this.react('like', 'happy', 1600)
             play('hello')
-          } else this.react('cheer', 'happy', 1400)
+          } else if (roll < 0.5 && this.cool.get('dance')! < performance.now()) this.gag('dance')
+          else this.react('cheer', 'happy', 1400)
           this.spark()
         } else if (now === 'error' && was !== 'error') this.hurt()
         else if (now !== was) this.later(this.decide, 120)
-        if ((s.permissions[id]?.length ?? 0) !== (p.permissions[id]?.length ?? 0)) this.later(this.decide, 120)
+        const asks = s.permissions[id]?.length ?? 0
+        if (asks !== (p.permissions[id]?.length ?? 0)) {
+          // something waits for you: he waves and cries out first, then points at the card
+          if (asks) this.react('wave', 'worried', 1100, '!')
+          else this.later(this.decide, 120)
+        }
         const list = s.transcripts[id]
         const before = p.transcripts[id]
         if (list && list !== before && list.length > (before?.length ?? 0)) {
           const item = list[list.length - 1]
-          if (item.kind === 'notice' && item.level === 'error') this.hurt()
+          if (item.kind === 'notice' && item.level === 'error') this.react('facepalm', 'worried', 1500)
           else if (item.kind === 'tool') this.zap()
           // a new answer: he glances up at it
           else if (item.kind === 'assistant') this.body.look(this.dir * 0.2, -1)
@@ -554,7 +645,11 @@ export class Brain {
 
   /** an error: knocked backwards */
   private hurt(): void {
-    if (!this.knock(-this.dir * 520)) this.react('trip', 'dizzy', 1800)
+    // a beat of "oh no" first, then the error knocks him over
+    this.react('facepalm', 'worried', 900)
+    this.later(() => {
+      if (this.pose === 'facepalm' && !this.knock(-this.dir * 520)) this.react('trip', 'dizzy', 1800)
+    }, 850)
   }
 
   /** a burst from the bolt on his head: up and fanned, or (radial) outward in every direction from that point */
@@ -592,7 +687,7 @@ export class Brain {
   private idleLoop = (): void => {
     // unhurried: something every 9 to 17 s, so he lives on the page without pulling at your eye
     this.later(this.idleLoop, rand(9000, 17000))
-    if (this.mode !== 'ground' || performance.now() < this.busyUntil || calm()) return
+    if (this.mode !== 'ground' || performance.now() < this.busyUntil || calm() || this.quiet()) return
     if (goal().pose !== 'idle') return
     const now = performance.now()
     if (now - this.lastActive > 60000) return this.set('sleep', 'sleepy', 'z')
@@ -600,23 +695,14 @@ export class Brain {
     const home = spot(goal())
     if (now > this.freeUntil && (home.el !== this.anchor || Math.abs(home.x - this.x) > 40)) return this.decide()
     if (this.pose === 'sit') return this.set('idle', 'open')
+    // a gag now and then, from the ones whose cooldown is over (brain-gags.ts)
+    if (Math.random() < 0.35) {
+      const pick = pickGag(this.cool, now, blocked(this.x + this.dir * 70 * dim.k, this.y, this.scale))
+      if (pick) return this.gag(pick.name)
+    }
     const roll = Math.random()
-    if (roll < 0.35) {
-      const r = this.anchor?.getBoundingClientRect()
-      // beside the composer he strolls in the margin only, never over the box
-      const box = this.anchor?.matches('.composer-wrap') ? this.anchor.querySelector('.composer')?.getBoundingClientRect() : undefined
-      const lo = box ? box.right + 30 : r ? r.left + 30 : 40
-      const hi = r ? r.right - 30 : innerWidth - 40
-      const to = clamp(this.x + rand(60, 200) * (Math.random() < 0.5 ? -1 : 1), lo, hi)
-      if (Math.abs(to - this.x) < 30) return
-      this.mode = 'walk'
-      this.wv = 0
-      this.walkTo = to
-      this.walkSpeed = WALK
-      this.face(to < this.x ? -1 : 1)
-      this.freeUntil = performance.now() + 15000
-      this.set('walk', 'open')
-    } else if (roll < 0.47) {
+    if (roll < 0.35) this.stroll(60, 200)
+    else if (roll < 0.47) {
       // on the floor this brings out his stool (Rig3D)
       this.set('sit', 'open')
     } else if (roll < 0.58) {
@@ -629,7 +715,7 @@ export class Brain {
       // a visit: hops onto the last message on screen, sits there a while, then comes home
       const msg = [...document.querySelectorAll('.msg-user')].reverse().find((el) => visible(el))
       const r = msg && visible(msg)
-      if (!msg || !r || msg === this.anchor) return
+      if (!msg || !r || msg === this.anchor || blocked(clamp(r.right - 60, r.left + 30, r.right - 30), r.top, this.scale)) return
       this.freeUntil = performance.now() + 14000
       this.face(r.left + 60 < this.x ? -1 : 1)
       this.leap(msg, clamp(r.right - 60, r.left + 30, r.right - 30))
@@ -641,6 +727,47 @@ export class Brain {
       this.face(this.pointer.x < this.x ? -1 : 1)
       this.react('wave', 'happy', 1400)
     }
+  }
+
+  /** the user is busy with the page (typing, a menu, a selection): nothing playful */
+  private quiet(): boolean {
+    const sel = getSelection()
+    return modalOpen() || performance.now() - this.typedAt < 5000 || Boolean(sel && !sel.isCollapsed)
+  }
+
+  /** a gag from brain-gags.ts, with the sounds that go with it */
+  private gag(name: string): void {
+    const g = GAGS.find((x) => x.name === name)
+    if (!g) return
+    this.cool.set(g.name, performance.now() + g.cool * 1000)
+    this.react(g.pose, g.eyes, g.ms, g.bubble)
+    if (g.sound) for (let t = 0; t < g.ms; t += 500) this.later(() => this.pose === g.pose && play(g.sound!), t)
+  }
+
+  /** a few steps along what he stands on, where nothing is in the way */
+  private stroll(min: number, max: number): void {
+    const r = this.anchor?.getBoundingClientRect()
+    // beside the composer he strolls in the margin only, never over the box
+    const box = this.anchor?.matches('.composer-wrap') ? this.anchor.querySelector('.composer')?.getBoundingClientRect() : undefined
+    const lo = box ? box.right + 30 : r ? r.left + 30 : 40
+    const hi = r ? r.right - 30 : innerWidth - 40
+    const to = clamp(this.x + rand(min, max) * dim.k * (Math.random() < 0.5 ? -1 : 1), lo, hi)
+    if (Math.abs(to - this.x) < 30 || pathBlocked(this.x, to, this.y, this.scale)) return
+    this.mode = 'walk'
+    this.wv = 0
+    this.walkTo = to
+    this.walkSpeed = WALK
+    this.face(to < this.x ? -1 : 1)
+    this.freeUntil = performance.now() + 15000
+    this.set('walk', 'open')
+  }
+
+  /** while he thinks he scratches his head or paces a few steps (and back: the work spot calls him home) */
+  private thinkLoop = (): void => {
+    this.later(this.thinkLoop, rand(7000, 12000))
+    if (this.pose !== 'think' || this.mode !== 'ground' || calm() || this.quiet() || performance.now() < this.busyUntil) return
+    if (Math.random() < 0.5) this.stroll(40, 90)
+    else this.react('scratch', 'focus', 2300)
   }
 
   private blink = (): void => {
@@ -690,6 +817,7 @@ export class Brain {
       const now = performance.now()
       if (now - typedAt < 700 || !el?.closest) return
       typedAt = now
+      this.typedAt = now
       // the search box: out comes the magnifying glass; the composer: he reads along as you type
       if (el.closest('.search')) this.react('search', 'focus', 1400)
       else if (el.closest('.composer') && this.mode === 'ground' && WORK.has(goal().pose) === false) this.react('idle', 'focus', 1100)
@@ -736,6 +864,7 @@ export class Brain {
       }
       this.frame()
       this.lastActive = performance.now()
+      this.chase(e)
       if (Math.hypot(e.clientX - this.x, e.clientY - this.y) < 200) wake()
       const p = this.press
       if (!p) return
@@ -757,7 +886,7 @@ export class Brain {
       p.vx = p.vx * 0.5 + ((e.clientX - this.x) / dt) * 0.5
       p.vy = p.vy * 0.5 + ((e.clientY + GRIP - this.y) / dt) * 0.5
       p.lt = e.timeStamp
-      this.x = clamp(e.clientX, 30, innerWidth - 30)
+      this.x = clamp(e.clientX, W / 2, innerWidth - W / 2)
       this.y = clamp(e.clientY + GRIP, H, FLOOR())
     }
     const down = (e: PointerEvent): void => {
@@ -773,6 +902,14 @@ export class Brain {
       if (!p.dragged) {
         if (this.mode !== 'ground') return
         this.face(this.pointer.x < this.x ? -1 : 1)
+        // poked again and again: he squirms with laughter
+        const now = performance.now()
+        this.pokes = [...this.pokes.filter((t) => now - t < 2500), now]
+        if (this.pokes.length >= 3) {
+          this.pokes = []
+          play('giggle')
+          return this.react('tickle', 'happy', 2200)
+        }
         this.react('wave', 'happy', 1300)
         return this.spark()
       }
@@ -807,7 +944,26 @@ export class Brain {
     window.addEventListener('scroll', nudge, { ...opts, capture: true, passive: true })
     window.addEventListener('resize', nudge, opts)
     const poll = window.setInterval(nudge, 1000)
-    this.off.push(() => signal.abort(), () => clearInterval(poll))
+    const watch = window.setInterval(this.guard, 250)
+    this.off.push(() => signal.abort(), () => clearInterval(poll), () => clearInterval(watch))
+  }
+
+  /** a cursor racing at him: a hop out of the way, rarely, and never while you work with him */
+  private chase(e: PointerEvent): void {
+    const now = performance.now()
+    const dt = (now - this.ptr.at) / 1000
+    const speed = dt > 0.004 && dt < 0.2 ? Math.hypot(e.clientX - this.ptr.x, e.clientY - this.ptr.y) / dt : 0
+    this.ptr = { x: e.clientX, y: e.clientY, at: now, speed }
+    if (speed < 1600 || this.mode !== 'ground' || this.press || calm() || now - this.dodgedAt < 25000 || WORK.has(this.pose) || this.quiet()) return
+    if (Math.hypot(e.clientX - this.x, e.clientY - (this.y - 40 * dim.k)) > 120 * dim.k) return
+    this.dodgedAt = now
+    const away = e.clientX < this.x ? 1 : -1
+    const to = freeSpot({ el: null, x: clamp(this.x + away * 280 * dim.k, 40, innerWidth - 40), y: FLOOR(), scale: this.scale })
+    this.freeUntil = now + 8000
+    this.busyUntil = 0
+    play('worry')
+    this.face(away)
+    this.travel(to, goal())
   }
 
   private later(fn: () => void, ms: number): void {

@@ -12,10 +12,13 @@ function spawn(className: string, style: Record<string, string>): void {
 }
 
 /** a burst of bolts from a point: fanned around a direction (up by default), or all the way around (radial) */
+const few = (n: number): number => (document.documentElement.classList.contains('low-power') ? Math.ceil(n / 2.2) : n)
+
 export function sparks(x: number, y: number, dir = -Math.PI / 2, radial = false): void {
   if (document.documentElement.classList.contains('reduce-motion')) return
-  for (let i = 0; i < 9; i++) {
-    const a = radial ? dir + (i / 9) * Math.PI * 2 : dir + (i - 4) * 0.36
+  const n = few(9)
+  for (let i = 0; i < n; i++) {
+    const a = radial ? dir + (i / n) * Math.PI * 2 : dir + (i - (n - 1) / 2) * 0.36 * (9 / n)
     const d = rand(radial ? 26 : 34, radial ? 46 : 58)
     spawn('mascot-spark', {
       '--x0': `${x - 3}px`,
@@ -31,7 +34,7 @@ export function sparks(x: number, y: number, dir = -Math.PI / 2, radial = false)
 /** a puff of dust where something hit, thrown out along the surface and up; harder hits throw more */
 export function dust(x: number, y: number, strength: number): void {
   if (document.documentElement.classList.contains('reduce-motion')) return
-  const n = Math.min(9, 3 + Math.round(strength * 3))
+  const n = few(Math.min(9, 3 + Math.round(strength * 3)))
   for (let i = 0; i < n; i++) {
     const side = i % 2 ? 1 : -1
     const d = rand(10, 24 + strength * 14)
