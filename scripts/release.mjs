@@ -9,6 +9,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { versionProblem } from './release-version.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 process.chdir(root)
@@ -37,6 +38,10 @@ const start = log.indexOf(`## ${version}\n`)
 if (start < 0) fail(`CHANGELOG.md has no "## ${version}" section`)
 const next = log.indexOf('\n## ', start + 1)
 const notes = log.slice(start + `## ${version}\n`.length, next < 0 ? undefined : next).trim()
+
+const previous = JSON.parse(gh('api', `repos/${repo}/releases/latest`)).tag_name.replace(/^v/, '')
+const problem = versionProblem(previous, version, notes)
+if (problem) fail(problem)
 
 let existing = releasesOfTag()
 if (existing.length > 1) fail(`there are already ${existing.length} releases for ${tag}: delete the extra ones first`)
