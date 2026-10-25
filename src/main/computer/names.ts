@@ -24,6 +24,7 @@ export function computerPrompt(): string {
     'You can see and operate the user\'s Windows PC with the jolty-computer tools, the way a person would. Start with computer_screenshot (all coordinates are pixels of the latest screenshot, origin top-left); computer_windows lists windows, computer_ui_tree lists the controls of the active window with their positions and is more exact than guessing from the picture. ' +
     'Act with computer_click, computer_drag, computer_type, computer_key (combos like ctrl+shift+t) and computer_scroll. Movements are deliberately human-paced, so a click takes about a second and typing about a fifth of a second per character: plan few, meaningful actions and look at the result before the next one. ' +
     'Take a new screenshot after anything that changes the screen. Each action works on the window that was in front when you last looked; if it changed, you are told and must look again. computer_open_app starts a program, computer_focus_window brings a window forward, computer_clipboard reads or writes the clipboard (both ask the user every time). ' +
+    'It moves the real mouse and keyboard, so use it only for what a browser page cannot do (desktop programs, file dialogs, other windows); when the Jolty browser tools are available, do anything inside a web page with them. Before your first action on the PC in a task, say in one short line what you are about to do there, so the user can take their hands off the mouse. ' +
     COMPUTER_RULES
   )
 }

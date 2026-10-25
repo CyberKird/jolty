@@ -2,6 +2,7 @@
 // that its coordinates refer to, the window in front), and every action goes through the same gate here:
 // switched on, not stopped, user idle, same window as when it looked, not a forbidden window, approved.
 import { noQuestions, type PermissionDecision, type PermissionMode } from '@shared/types'
+import { tr } from '@shared/i18n'
 import { toPhysical, viewOf, type DisplayInfo, type View } from './geometry'
 import type { HelperState, InputBackend, PlayResult, WinInfo } from './helper'
 import { makeRng, readingPauseMs, type Humanness, type Rng } from './human'
@@ -64,6 +65,8 @@ export interface Session {
   lock: Promise<unknown>
   capNoticed: boolean
   lastActEnd: number
+  /** this turn's first move of the real mouse was announced */
+  warned?: boolean
 }
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
@@ -102,6 +105,7 @@ export class ComputerService {
     if (s) {
       s.acts = 0
       s.capNoticed = false
+      s.warned = false
     }
   }
 
@@ -243,6 +247,14 @@ export class ComputerService {
   /** Plays events; turns the helper's stop reasons into messages the model can act on. */
   async perform(s: Session, events: Ev[], opts: { guard?: number } = {}): Promise<PlayResult> {
     await this.yieldToUser(s)
+    // the real mouse and keyboard are about to move: say so on screen and give the user a moment to let go
+    if (!s.warned) {
+      s.warned = true
+      this.overlay.active(this.displayOf(s))
+      this.announce(tr("Jolty preia mouse-ul și tastatura în 3 secunde"))
+      await this.sleep(3000)
+      await this.yieldToUser(s)
+    }
     this.overlay.active(this.displayOf(s))
     const res = await this.input.play(events, opts)
     s.lastActEnd = Date.now()

@@ -1192,5 +1192,6 @@
  "Procesul de autentificare nu s-a oprit.": "サインインのプロセスが終了しませんでした。",
  "Sugerează modelul potrivit": "適したモデルを提案する",
  "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "タスクを入力すると、選んだモデルや負荷レベルが合わない場合に、入力欄の上のバーで別の候補を提案します。オフにすると表示されません。",
- "Ca să îmbunătățesc mesajul, spune-mi: {question} Adaugă răspunsul în mesaj și apasă din nou.": "メッセージを改善するために教えてください: {question} 回答をメッセージに追記して、もう一度押してください。"
+ "Ca să îmbunătățesc mesajul, spune-mi: {question} Adaugă răspunsul în mesaj și apasă din nou.": "メッセージを改善するために教えてください: {question} 回答をメッセージに追記して、もう一度押してください。",
+ "Jolty preia mouse-ul și tastatura în 3 secunde": "3秒後に Jolty がマウスとキーボードを使います"
 }

@@ -1,7 +1,7 @@
 {
   "name": "jolty",
   "productName": "Jolty",
-  "version": "0.7.26",
+  "version": "0.7.27",
   "description": "Desktop app for Claude Code and Codex: multiple profiles, API keys, model picker, usage dashboard",
   "author": "CyberKird",
   "license": "SEE LICENSE IN LICENSE",
@@ -40,7 +40,7 @@
     "test:scroll": "electron-vite build && node test/scroll-test.mjs",
     "icon": "electron scripts/make-icon.cjs",
     "test:gemini": "esbuild test/gemini-vision-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/gemini-vision-test.cjs --log-level=warning && node --test out-test/gemini-vision-test.cjs",
-    "test:computer": "esbuild test/computer-human-test.ts test/computer-gate-test.ts test/computer-release-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outdir=out-test --log-level=warning && node --test out-test/computer-human-test.js out-test/computer-gate-test.js out-test/computer-release-test.js",
+    "test:computer": "esbuild test/computer-human-test.ts test/computer-gate-test.ts test/computer-release-test.ts test/computer-headsup-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outdir=out-test --log-level=warning && node --test out-test/computer-human-test.js out-test/computer-gate-test.js out-test/computer-release-test.js out-test/computer-headsup-test.js",
     "test:improve": "esbuild test/improve-prompt-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/improve-prompt-test.cjs --log-level=warning && node --test out-test/improve-prompt-test.cjs",
     "test:stop": "esbuild test/stop-gate-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/stop-gate-test.cjs --log-level=warning && node --test out-test/stop-gate-test.cjs",
     "test:firstrun": "esbuild test/first-run-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --outfile=out-test/first-run-test.mjs --log-level=warning && node --test out-test/first-run-test.mjs",

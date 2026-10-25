@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.27
+
+### Improvements
+
+- PC control now warns you before it takes the real mouse and keyboard. The first time in each turn, a note appears on screen ("Jolty takes over the mouse and keyboard in 3 seconds") and Jolty waits 3 seconds, so you can lift your hand. After that it works as before: it still waits while you are moving the mouse and stops if you take over.
+- Models are told to prefer the browser: with the Jolty browser available, anything inside a web page goes through it, and the PC is used only for what a page cannot do (desktop programs, file dialogs, other windows). Before the first thing it does on the PC in a task, the model says in one line what it is about to do.
+
+
 ## 0.7.26
 
 ### Improvements

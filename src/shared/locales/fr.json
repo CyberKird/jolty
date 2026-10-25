@@ -1192,5 +1192,6 @@
  "Procesul de autentificare nu s-a oprit.": "Le processus de connexion ne s'est pas arrêté.",
  "Sugerează modelul potrivit": "Suggérer le bon modèle",
  "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "Quand vous saisissez une tâche, une barre au-dessus de la zone propose un autre modèle ou niveau d'effort si celui choisi ne convient pas. Décoché, elle n'apparaît jamais.",
- "Ca să îmbunătățesc mesajul, spune-mi: {question} Adaugă răspunsul în mesaj și apasă din nou.": "Pour améliorer le message, j'ai besoin de savoir : {question} Ajoutez la réponse au message et appuyez à nouveau."
+ "Ca să îmbunătățesc mesajul, spune-mi: {question} Adaugă răspunsul în mesaj și apasă din nou.": "Pour améliorer le message, j'ai besoin de savoir : {question} Ajoutez la réponse au message et appuyez à nouveau.",
+ "Jolty preia mouse-ul și tastatura în 3 secunde": "Jolty prend la souris et le clavier dans 3 secondes"
 }
