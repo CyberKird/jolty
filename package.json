@@ -34,6 +34,7 @@
     "test:ui": "electron-vite build && node test/ui-test.mjs",
     "test:links": "electron-vite build && node test/links-test.mjs",
     "test:mascot": "electron-vite build && node test/mascot-test.mjs",
+    "test:obstruct": "electron-vite build && node test/mascot-obstruct-test.mjs",
     "test:live": "electron-vite build && node test/live-test.mjs",
     "test:sessions": "electron-vite build && node test/sessions-test.mjs",
     "test:plan": "electron-vite build && node test/plan-test.mjs",

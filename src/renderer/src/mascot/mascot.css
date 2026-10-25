@@ -3,12 +3,18 @@
   position: fixed;
   left: 0;
   top: 0;
-  width: 60px;
-  height: 81.6px;
+  width: calc(60px * var(--mk, 1));
+  height: calc(81.6px * var(--mk, 1));
   z-index: 60;
   pointer-events: none;
-  will-change: transform;
+  will-change: translate, scale;
   contain: layout style;
+  /* he shrinks about his feet when the only free room is small (free.ts) */
+  transform-origin: 50% calc(79.2px * var(--mk, 1));
+  transition: scale 320ms var(--ease, ease-out);
+}
+.reduce-motion .mascot {
+  transition: none;
 }
 .m-canvas,
 .m-glow {
@@ -29,12 +35,15 @@
 }
 .m-hit {
   position: absolute;
-  left: 8px;
-  top: 2px;
-  width: 44px;
-  height: 78px;
+  left: calc(8px * var(--mk, 1));
+  top: calc(2px * var(--mk, 1));
+  width: calc(44px * var(--mk, 1));
+  height: calc(78px * var(--mk, 1));
   pointer-events: auto;
   cursor: grab;
+}
+.mascot[data-pose='dash'] .m-hit {
+  pointer-events: none;
 }
 .mascot[data-pose='held'] .m-hit {
   cursor: grabbing;

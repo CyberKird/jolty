@@ -47,7 +47,7 @@ function noise(a: AudioContext, len: number, vol: number, filter: BiquadFilterTy
   src.start(t)
 }
 
-export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape' | 'zap' | 'arrive' | 'knock' | 'step' | 'effort' | 'rustle' | 'key' | 'blip' | 'snore'
+export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape' | 'zap' | 'arrive' | 'knock' | 'step' | 'effort' | 'rustle' | 'key' | 'blip' | 'snore' | 'giggle' | 'beat' | 'pant'
 
 /** strength 0..1 scales the impact sounds */
 export function play(sound: Sound, strength = 0.5): void {
@@ -126,6 +126,16 @@ export function play(sound: Sound, strength = 0.5): void {
       noise(a, 0.5, 0.03, 'lowpass', 300, out)
       for (const [at, f, len] of [[0.04, 210, 0.09], [0.2, 170, 0.12], [0.34, 240, 0.08]] as const) tone(a, { type: 'sawtooth', from: f, to: f * 0.78, len, vol: 0.022, at }, out)
       return
+    case 'giggle':
+      // a few quick rising chirps
+      for (let i = 0; i < 3; i++) tone(a, { type: 'triangle', from: 520 + i * 70, to: 760 + i * 90, len: 0.07, vol: 0.03, at: i * 0.1 }, out)
+      return
+    case 'beat':
+      // a soft kick on the beat
+      noise(a, 0.05, 0.05, 'lowpass', 260, out)
+      return tone(a, { from: 140, to: 60, len: 0.1, vol: 0.07 }, out)
+    case 'pant':
+      return noise(a, 0.3, 0.03, 'bandpass', 1500, out, 0, 900)
     case 'knock':
       // it stops against him: a dull knock of wood
       noise(a, 0.07, 0.07, 'lowpass', 420, out)

@@ -5,6 +5,8 @@ import { toolKind } from '../components/Messages'
 /** Where Jolty belongs right now, read from the store and the page. */
 export type Pose =
   | 'idle' | 'walk' | 'run' | 'crouch' | 'jump' | 'fall' | 'land' | 'sit' | 'wave' | 'point' | 'cheer' | 'trip' | 'held' | 'sleep' | 'dash' | 'getup' | 'stretch' | 'shrug' | 'like'
+  // gags (gags.ts)
+  | 'scratch' | 'facepalm' | 'dance' | 'fight' | 'push' | 'tired' | 'tickle'
   // what he does while the model works, after what it is doing (see activity)
   | 'type' | 'read' | 'think' | 'search' | 'zap' | 'scout'
 
@@ -66,7 +68,8 @@ export function goal(): Goal {
   if (s.page === 'chat' && id) {
     const cards = document.querySelectorAll('.permission')
     const card = cards[cards.length - 1]
-    if (s.permissions[id]?.length && card && visible(card)) return { el: card, at: 'left', pose: 'point', eyes: 'worried', bubble: '!' }
+    // a tall card scrolled under the header still gets pointed at, from wherever he is free to stand
+    if (s.permissions[id]?.length && card && (visible(card) || card.getBoundingClientRect().bottom > 0)) return { el: card, at: 'left', pose: 'point', eyes: 'worried', bubble: '!' }
     if (s.status[id] === 'running') {
       const writing = Object.values(s.drafts[id] || {}).some((d) => !d.done)
       const work = activity(s.transcripts[id], writing)

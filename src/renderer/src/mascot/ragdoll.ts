@@ -12,11 +12,18 @@ import * as planck from 'planck'
  * with the bolt), one unit is U metres, so he is about 1.6 m tall and gravity can be the app's own.
  */
 export const HIP_Y = 23.3
-/** screen px per model unit at the app's size (Mascot.tsx PX) */
-const PX = 0.6
-/** metres per model unit: 40 px per metre */
-const U = PX / 40
 const PXM = 40
+/** metres per model unit: 40 px per metre, and the app's gravity, both grown with his size (size.ts) so a bigger
+ *  Jolty falls, tumbles and gets up in the same beats as the small one */
+let U = 0.6 / PXM
+/** a hand's speed in px/s, as the simulation's: flights of the same px keep their shape (v grows with the root of g) */
+let VS = 1
+let GRAV = 2600 / PXM
+export function scaleRagdoll(px: number): void {
+  U = px / PXM
+  GRAV = (2600 * px) / 0.6 / PXM
+  VS = Math.sqrt(px / 0.6)
+}
 const STEP = 1 / 120
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v))
 const V = (x: number, y: number): planck.Vec2 => planck.Vec2(x, y)
@@ -147,12 +154,12 @@ export class Ragdoll {
     tilt = 0,
     spin = 0
   ) {
-    this.world = new planck.World({ gravity: V(0, -2600 / PXM) })
+    this.world = new planck.World({ gravity: V(0, -GRAV) })
     this.ground = this.world.createBody({ type: 'static' })
     const angles: Joints = { spine: 0, neck: 0, hipL: 0, hipR: 0, kneeL: 0, kneeR: 0, shL: 0.1, shR: 0.1, elL: 0.15, elR: 0.15, ...start }
     this.build(this.sx(x), this.sy(y), angles, tilt)
     for (const b of Object.values(this.bodies)) {
-      b.setLinearVelocity(V((this.dir * vx) / PXM, -vy / PXM))
+      b.setLinearVelocity(V((this.dir * vx * VS) / PXM, (-vy * VS) / PXM))
       b.setAngularVelocity(spin)
     }
     this.world.on('post-solve', (contact, impulse) => {
@@ -328,7 +335,7 @@ export class Ragdoll {
   shove(vx: number, vy = 0): void {
     for (const n of ['torso', 'head', 'pelvis'] as PartName[]) {
       const b = this.bodies[n]
-      b.setLinearVelocity(b.getLinearVelocity().add(V((this.dir * vx) / PXM, -vy / PXM)))
+      b.setLinearVelocity(b.getLinearVelocity().add(V((this.dir * vx * VS) / PXM, (-vy * VS) / PXM)))
     }
     // the upper body goes first: he leans into it
     this.bodies.torso.setAngularVelocity(this.bodies.torso.getAngularVelocity() - Math.sign(this.dir * vx) * 2)
@@ -484,7 +491,7 @@ export class Ragdoll {
     const h = Math.max(0.3, c.y - fy)
     const phi = Math.atan2(c.x - fx, h)
     const dphi = c.vx / h
-    const g = 2600 / PXM
+    const g = GRAV
     const reach = Math.abs(phi)
     // the help fades out as the lean grows past what ankles could do
     const fade = 1 - clamp((reach - 0.3) / 0.25, 0, 1)

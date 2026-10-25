@@ -335,6 +335,8 @@ export interface AppSettings {
   mascot?: boolean
   /** Jolty's soft sounds; on unless false */
   mascotSounds?: boolean
+  /** how big the mascot is; big unless set */
+  mascotSize?: 'small' | 'normal' | 'big'
   /** Windows notification when a task finishes or stops with an error while Jolty is not in front; on unless false */
   notifyDone?: boolean
   /** notification when a model waits for you (permission, plan approval) while Jolty is not in front; on unless false */

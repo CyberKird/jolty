@@ -66,7 +66,19 @@ try {
 
   check(await waitPose('land', 5000), 'jumps in from the title bar')
   await win.waitForTimeout(700)
-  check(await standsOn('.composer'), 'stands on the composer')
+  // on the composer, or on the start cards when standing there would cover the cards' buttons (free.ts)
+  const home = await win
+    .waitForFunction(() => {
+      const m = document.querySelector('.mascot').getBoundingClientRect()
+      const feet = m.top + (m.height * 132) / 136
+      const x = m.left + m.width / 2
+      return [...document.querySelectorAll('.composer, .composer-wrap, .card, .start')].some((el) => {
+        const r = el.getBoundingClientRect()
+        return (Math.abs(feet - r.top) < 6 || Math.abs(feet - (r.bottom - 7)) < 6) && x > r.left && x < r.right + 80
+      })
+    }, null, { timeout: 8000 })
+    .then(() => true, () => false)
+  check(home, 'stands on the composer or a card')
   await shot('01-home')
 
   // Manual mode, so the write asks for approval
@@ -81,12 +93,23 @@ try {
 
   await win.waitForSelector('.permission', { timeout: 60000 })
   check(await waitPose('point'), 'points at the approval card')
-  check(await waitOn('.permission'), 'stands on the approval card')
+  // on the card when its top is in view, else wherever he is free: never over its buttons
+  const overButtons = await win.evaluate(() => {
+    const m = document.querySelector('.m-hit').getBoundingClientRect()
+    return [...document.querySelectorAll('.permission button')].some((b) => {
+      const r = b.getBoundingClientRect()
+      return m.left < r.right && m.right > r.left && m.top < r.bottom && m.bottom > r.top
+    })
+  })
+  check(!overButtons, 'keeps off the approval buttons')
   await shot('03-permission')
 
   await win.click('.permission .btn.primary')
   await win.waitForSelector('.msg-assistant', { timeout: 60000 })
-  check(await waitPose('cheer', 20000), 'cheers when the turn ends')
+  const cheered = await win
+    .waitForFunction(() => ['cheer', 'like', 'dance'].some((p) => window.__poses.slice(-8).includes(p)), null, { timeout: 20000 })
+    .then(() => true, () => false)
+  check(cheered, 'cheers, likes or dances when the turn ends')
   await shot('04-cheer')
   check(await waitOn('.composer', 10000), 'goes back to the composer')
 

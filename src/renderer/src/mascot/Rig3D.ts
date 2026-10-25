@@ -3,6 +3,8 @@ import { loadJolty, lightStudio, SEARCH_ARM, type Joints } from './model'
 import type { Eyes, Pose } from './places'
 import { HIP_Y, type Joints as RagJoints, type RagPose } from './ragdoll'
 import type { HandShape } from './hand'
+import { GAGS, gagTarget } from './gags'
+import { lowPower, watchPower } from './power'
 
 /** What the brain can ask of the body. */
 export interface Puppet {
@@ -100,6 +102,8 @@ export class Rig3D implements Puppet {
   private zapUntil = 0
   private raf = 0
   private pxu: number
+  /** how much bigger than the original 0.6 px a unit: speeds and strides are in px */
+  private k: number
   /** what the right hand is doing now, and how much it types or flutters (hand.ts) */
   private handShape: HandShape = 'relaxed'
   private handTap = 0
@@ -128,14 +132,17 @@ export class Rig3D implements Puppet {
   /** a face the pose wears for a moment (a glance at you, an idea), over the one the brain asked for */
   private moment: Eyes | undefined
   private glow: HTMLCanvasElement
+  private low = lowPower()
+  private unwatch: () => void
   private glowCtx: CanvasRenderingContext2D
   /** every drawable with its own material and the one it wears in the glow pass */
   private swaps: { o: THREE.Mesh | THREE.Sprite; normal: THREE.Material; glow: THREE.Material }[] = []
 
   constructor(canvas: HTMLCanvasElement, pxPerUnit: number) {
     this.pxu = pxPerUnit
-    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' })
-    this.renderer.setPixelRatio(Math.min(2, devicePixelRatio))
+    this.k = pxPerUnit / 0.6
+    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !this.low, powerPreference: 'low-power' })
+    this.renderer.setPixelRatio(this.low ? 1 : Math.min(2, devicePixelRatio))
     this.renderer.setSize((VIEW.right - VIEW.left) * pxPerUnit, (VIEW.top - VIEW.bottom) * pxPerUnit)
     this.renderer.setClearColor(0x000000, 0)
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -148,6 +155,12 @@ export class Rig3D implements Puppet {
     Object.assign(this.glow.style, { left: canvas.style.left, top: canvas.style.top, width: canvas.style.width, height: canvas.style.height, filter: `blur(${(pxPerUnit * 5).toFixed(1)}px) brightness(1.6)` })
     canvas.after(this.glow)
     this.glowCtx = this.glow.getContext('2d')!
+    this.glow.style.display = this.low ? 'none' : ''
+    this.unwatch = watchPower((low) => {
+      this.low = low
+      this.renderer.setPixelRatio(low ? 1 : Math.min(2, devicePixelRatio))
+      this.glow.style.display = low ? 'none' : ''
+    })
     this.camera = new THREE.OrthographicCamera(VIEW.left, VIEW.right, VIEW.top, VIEW.bottom, -2000, 2000)
     // a little from above, like the render
     this.camera.position.set(0, Math.sin(0.16) * 600, Math.cos(0.16) * 600)
@@ -168,7 +181,7 @@ export class Rig3D implements Puppet {
     if (!LAPTOP.has(pose) && LAPTOP.has(this.pose)) this.laptopAway = now
     if (pose === 'fall' && this.pose !== 'fall') {
       // thrown: spin with the throw (a drop from a jump barely turns)
-      this.spin = Math.max(-14, Math.min(14, this.mv.x / (this.pose === 'held' ? 160 : 600)))
+      this.spin = Math.max(-14, Math.min(14, this.mv.x / ((this.pose === 'held' ? 160 : 600) * this.k)))
       this.rot = this.cur.rootRZ
     }
     if (this.pose === 'fall' && pose !== 'fall') {
@@ -234,6 +247,7 @@ export class Rig3D implements Puppet {
 
   destroy(): void {
     this.gone = true
+    this.unwatch()
     cancelAnimationFrame(this.raf)
     // still loading: the load disposes when it lands
     if (this.j) this.dispose()
@@ -325,7 +339,7 @@ export class Rig3D implements Puppet {
         const run = this.pose === 'run'
         const c = this.gait
         // slowing down or starting off, the steps get shorter
-        const pace = Math.max(0.55, Math.min(1.2, this.mv.speed / (run ? 270 : 95)))
+        const pace = Math.max(0.55, Math.min(1.2, this.mv.speed / ((run ? 270 : 95) * this.k)))
         const leg = (run ? 0.95 : 0.5) * pace
         const arm = (run ? 1.1 : 0.55) * pace
         o.legLRX = leg * Math.sin(c)
@@ -604,6 +618,8 @@ export class Rig3D implements Puppet {
         Object.assign(o, { armLRZ: -0.5, armRRZ: 0.5, elbL: -0.45, elbR: -0.45 })
         lookAt(0.3, 0.3)
         break
+      default:
+        if (GAGS.has(this.pose)) gagTarget(this.pose, t, s, d, o)
     }
     // on the floor there is no edge to sit on: he slides a stool out of the composer and sits on it, feet on
     // the ground (on an edge he sits as before, legs dangling)
@@ -641,16 +657,19 @@ export class Rig3D implements Puppet {
 
   private tick = (now: number): void => {
     this.raf = requestAnimationFrame(this.tick)
+    // a hidden or minimised window draws nothing
+    if (document.hidden) return
     const s = this.spr
     const springs = Math.abs(s.sw) + Math.abs(s.up) + Math.abs(s.hang) + Math.abs(s.swv) + Math.abs(s.upv) > 0.02
     const busy = springs || this.phys !== null || now - this.mv.at < 120 || !QUIET.has(this.pose) || now - this.since < 500 || now < this.blinkUntil + 60 || now < this.zapUntil + 200
     // at rest: every frame while his eyes follow something, 30 fps when nothing moves (12 looked choppy)
-    if (!busy && !this.fullRate && now - this.lookedAt > 1500 && now - this.drawn < 1000 / 30) return
+    if (!busy && !this.fullRate && now - this.lookedAt > 1500 && now - this.drawn < 1000 / (this.low ? 12 : 30)) return
+    if (this.low && !this.fullRate && now - this.drawn < 1000 / 24 - 2) return
     const dt = Math.min(0.1, (now - this.last) / 1000)
     this.last = now
     this.drawn = now
     this.physics(dt, now)
-    if (this.pose === 'walk' || this.pose === 'run') this.gait += (dt * TAU * Math.max(this.mv.speed, 30)) / STRIDE[this.pose]
+    if (this.pose === 'walk' || this.pose === 'run') this.gait += (dt * TAU * Math.max(this.mv.speed, 30 * this.k)) / (STRIDE[this.pose] * this.k)
     const goal = this.target(now)
     for (const k in goal) this.cur[k] += (goal[k] - this.cur[k]) * (1 - Math.exp(-dt * (EASE[k] ?? (this.pose === 'getup' ? 12 : BLEND))))
     if (this.phys) Object.assign(this.cur, goal)
@@ -658,7 +677,7 @@ export class Rig3D implements Puppet {
     // a tumble follows the spin exactly: eased, the fast turn would wobble
     if (this.pose === 'fall') Object.assign(this.cur, { rootRZ: goal.rootRZ, rootX: goal.rootX, rootY: goal.rootY })
     this.apply(now)
-    this.drawGlow()
+    if (!this.low) this.drawGlow()
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -668,6 +687,17 @@ export class Rig3D implements Puppet {
     let tap = 0
     let flutter = 0
     switch (this.pose) {
+      case 'fight':
+        shape = 'fist'
+        break
+      case 'scratch':
+        shape = 'claw'
+        break
+      case 'facepalm':
+        shape = 'flat'
+        break
+      case 'dance':
+      case 'tickle':
       case 'wave':
       case 'cheer':
       case 'jump':
@@ -787,7 +817,7 @@ export class Rig3D implements Puppet {
     // secondary motion over the pose: limbs lag the way he speeds up, a jolt throws the arms out, a fast
     // flight sets them flailing
     const { sw, up } = this.phys ? { sw: 0, up: 0 } : this.spr
-    const flail = !this.phys && (this.pose === 'fall' || this.pose === 'held') ? Math.min(1, this.mv.speed / 1200) : 0
+    const flail = !this.phys && (this.pose === 'fall' || this.pose === 'held') ? Math.min(1, this.mv.speed / (1200 * this.k)) : 0
     const t = now / 1000
     j.armL.rotation.set(c.armLRX * c.armLK + sw + 0.4 * flail * Math.sin(t * 19), 0, c.armLRZ * c.armLK - up * 0.8 - 0.3 * flail * Math.sin(t * 23))
     j.armR.rotation.set(c.armRRX + sw + 0.4 * flail * Math.sin(t * 17 + 1), 0, c.armRRZ + up * 0.8 + 0.3 * flail * Math.sin(t * 21 + 2))
