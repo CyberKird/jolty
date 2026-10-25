@@ -200,24 +200,22 @@ function ProfileCard({ profile, onEdit, dragProps }: { profile: Profile; onEdit:
             <LogOut size={14} />
           </button>
         )}
-        {!profile.isDefaultDir || profile.auth !== 'subscription' ? (
-          <button
-            className="btn ghost small icon danger"
-            title={tr("Șterge profilul")}
-            onClick={async () => {
-              if (!confirm(tr("Ștergi profilul „{name}”? Conversațiile lui din Jolty dispar; cele din Claude Code / Codex rămân.", { name: profile.name }))) return
-              polling.current = false
-              try {
-                await api.profiles.remove(profile.id)
-                await loadProfiles()
-              } catch (err) {
-                toast(errMsg(err), true)
-              }
-            }}
-          >
-            <Trash2 size={14} />
-          </button>
-        ) : null}
+        <button
+          className="btn ghost small icon danger"
+          title={tr("Șterge profilul")}
+          onClick={async () => {
+            if (!confirm(tr("Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.", { name: profile.name }))) return
+            polling.current = false
+            try {
+              await api.profiles.remove(profile.id)
+              await loadProfiles()
+            } catch (err) {
+              toast(errMsg(err), true)
+            }
+          }}
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
   )

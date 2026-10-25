@@ -1173,5 +1173,6 @@
  "Nu e instalată încă în Firefox. Se instalează o singură dată și rămâne instalată.": "Pas encore installée dans Firefox. Elle s'installe une seule fois et reste installée.",
  "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "Clique sur Installer : j'ouvre dans Firefox l'extension signée par Mozilla.",
  "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "Firefox demande « Ajouter Jolty ? ». Clique sur « Ajouter ».",
- "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "Terminé : l'état ci-dessus passe à « Connectée ». L'extension reste installée après la fermeture de Firefox, tu ne répètes pas les étapes."
+ "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "Terminé : l'état ci-dessus passe à « Connectée ». L'extension reste installée après la fermeture de Firefox, tu ne répètes pas les étapes.",
+ "Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.": "Supprimer le profil « {name} » ? Ses conversations restent dans Jolty et vous pouvez les poursuivre sur un autre compte."
 }

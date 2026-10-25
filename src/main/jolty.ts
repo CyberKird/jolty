@@ -60,8 +60,6 @@ import { withDetectedAgents } from './first-run'
 import { withParallelInstruction } from '@shared/parallel'
 import { cleanImproved, improvePrompt } from '@shared/improve-prompt'
 
-/** Profiles that older versions created at first launch: they stay for the people who have them, a new user gets none (see first-run.ts). */
-const MAIN_PROFILE_IDS = ['claude-main', 'codex-main']
 
 export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', opencode: 'OpenCode' }
 
@@ -279,13 +277,18 @@ export class Jolty {
   }
 
   async removeProfile(id: string): Promise<void> {
-    if (MAIN_PROFILE_IDS.includes(id)) throw new Error(tr("Profilurile principale nu se pot șterge"))
     const p = this.profile(id)
     this.removingProfiles.add(id)
     try {
       if (p.engine === 'claude') await this.claude.releaseProfile(id)
-      // Close the chats first and wait: the engine process keeps files open in the config folder until it exits.
-      for (const s of [...store.loadSessions(), ...this.temps.values()].filter((x) => x.profileId === id)) await this.removeSession(s.id)
+      // Close the engine sessions first and wait: the process keeps files open in the config folder until it exits.
+      // Saved chats stay (Jolty keeps their transcript, "Continue in" moves them to another account); temporary ones go.
+      for (const s of this.temps.values()) if (s.profileId === id) await this.removeSession(s.id)
+      for (const s of store.loadSessions()) {
+        if (s.profileId !== id) continue
+        await this.live.get(s.id)?.close()
+        this.live.delete(s.id)
+      }
       if (p.engine === 'codex') await this.codex.releaseProfile(id)
       const dir = store.profileDir(p)
       if (dir) {

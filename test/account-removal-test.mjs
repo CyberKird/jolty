@@ -11,9 +11,15 @@ fs.writeFileSync(path.join(shared, 'keep.txt'), 'preserve shared files')
 const profiles = ['claude', 'codex'].map((engine) => ({
   id: `remove-${engine}`, name: `Remove ${engine}`, engine, auth: 'subscription', color: '#d97757'
 }))
+// the main account (default dir, nothing of Jolty's on disk) can be removed too
+profiles.push({ id: 'claude-main', name: 'Remove main', engine: 'claude', auth: 'subscription', isDefaultDir: true, color: '#10a37f' })
 fs.writeFileSync(path.join(data, 'profiles.json'), JSON.stringify(profiles))
+// a saved chat per account: removing the account must keep it
+fs.writeFileSync(path.join(data, 'sessions.json'), JSON.stringify(profiles.map((p) => ({
+  id: `chat-${p.id}`, profileId: p.id, engine: p.engine, cwd: data, title: `Chat ${p.id}`, permissionMode: 'ask', createdAt: 1, updatedAt: 1
+}))))
 fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ language: 'ro', lastCwd: data }))
-for (const profile of profiles) {
+for (const profile of profiles.filter((p) => !p.isDefaultDir)) {
   const dir = path.join(data, 'profiles', profile.id, profile.engine)
   fs.mkdirSync(dir, { recursive: true })
   fs.symlinkSync(shared, path.join(dir, 'skills'), process.platform === 'win32' ? 'junction' : 'dir')
@@ -50,10 +56,12 @@ try {
       throw error
     }
     assert.equal(fs.existsSync(path.join(data, 'profiles', profile.id, profile.engine)), false)
+    assert.ok(JSON.parse(fs.readFileSync(path.join(data, 'sessions.json'), 'utf8')).some((x) => x.id === `chat-${profile.id}`), 'chat kept')
     assert.equal(fs.readFileSync(path.join(shared, 'keep.txt'), 'utf8'), 'preserve shared files')
     console.log('PASS account removal through UI:', profile.engine)
   }
   assert.ok(JSON.parse(fs.readFileSync(path.join(data, 'profiles.json'), 'utf8')).every((profile) => !profile.id.startsWith('remove-')))
+  assert.equal(JSON.parse(fs.readFileSync(path.join(data, 'sessions.json'), 'utf8')).length, profiles.length, 'all chats kept')
 } finally {
   await app.close()
   assert.ok(path.resolve(data).startsWith(path.resolve(os.tmpdir()) + path.sep))

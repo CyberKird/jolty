@@ -3091,7 +3091,7 @@ a {
 }
 .chrome-toggle.chevron {
   padding: 0 5px;
-  margin-inline-start: -6px;
+  margin-inline-start: 3px;
 }
 .chrome-toggle.on {
   color: var(--volt);

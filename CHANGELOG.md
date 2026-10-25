@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.23
+
+### Improvements
+
+- Any account can be deleted now, the main Claude and Codex ones included, and you never have to keep one. Deleting an account no longer deletes its conversations: they stay in the list, you can read them, and "Continue in" moves them to another account. Temporary chats still disappear with it. Jolty only removes what it made itself; your own `~/.claude` and `~/.codex` stay as they are.
+
+### Fixed
+
+- The arrow next to the Browser button overlapped its border. There is a small gap between them now.
+
 ## 0.7.22
 
 ### Fixed
