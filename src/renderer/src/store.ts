@@ -124,7 +124,7 @@ function upsert(list: ChatItem[], item: ChatItem): ChatItem[] {
 function swapPage(update: () => void): void {
   const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } }
   const root = document.documentElement
-  if (!doc.startViewTransition || root.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches) return update()
+  if (!doc.startViewTransition || root.classList.contains('reduce-motion')) return update()
   root.classList.add('vt-page')
   void doc
     .startViewTransition(() => flushSync(update))

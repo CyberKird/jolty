@@ -53,7 +53,8 @@ import { learningNudge } from './learning'
 import { forget } from './recall'
 import { Scheduler } from './scheduler'
 import * as modelWatch from './model-watch'
-import { candidates, FULL_PERCENT, pickAuto, type Candidate } from './auto-model'
+import { modelScore } from '@shared/scores'
+import { candidates, FULL_PERCENT, pickAuto, rankHelpers, type Candidate } from './auto-model'
 import type { ScheduledTask } from '@shared/schedule'
 import { getLang, LANG_ENGLISH_NAME, tr } from '@shared/i18n'
 import { withDetectedAgents } from './first-run'
@@ -104,6 +105,9 @@ function brief(src: SessionMeta, srcProfile: Profile | undefined, items: ChatIte
   const graph = fs.existsSync(path.join(src.cwd, 'graphify-out', 'GRAPH_REPORT.md'))
   return handoffPrompt({ engine: ENGINE_NAMES[src.engine], profile: srcProfile?.name, cwd: src.cwd }, items, git, { next, graph })
 }
+
+/** what a helper model says instead of an answer when it is not logged in, out of usage or out of funds */
+const HELPER_ERROR = /not logged in|\/login|authentication|unauthori[sz]ed|invalid api key|insufficient|rate limit|hit your|session limit|usage limit|limit reached|quota|credit balance|resets? (at )?\d|^(failed|error)\b/i
 
 export class Jolty {
   readonly claude = new ClaudeDriver()
@@ -1236,46 +1240,79 @@ export class Jolty {
   /** The first words of a message make a poor title; a cheap model names the chat after what it is about, so it is easy to find later. */
   private async autoTitle(sessionId: string, text: string): Promise<void> {
     const meta = this.live.get(sessionId)?.meta
-    const vp = meta?.temporary || process.env.JOLTY_TEST ? undefined : this.visionProfile()
-    if (!meta || !vp) return
+    if (!meta || meta.temporary || process.env.JOLTY_TEST) return
     const prompt = `Name this conversation so the user can find it later in a list. Reply with the title only: 3 to 7 words, in the language of the message, naming the concrete subject (project, feature, bug, topic), no quotes, no final punctuation.
 
 Project folder: ${path.basename(meta.cwd)}
 First message:
 ${text.slice(0, 1500)}`
-    try {
-      const out = await this.driver(vp.engine).describe(vp, [], prompt, vp.engine === 'claude' && vp.auth !== 'endpoint' ? 'haiku' : undefined)
-      const title = (out.split('\n').find((l) => l.trim()) || '').replace(/^[\s"'„“`*#-]+|[\s"'”“`*.]+$/g, '').slice(0, 60)
-      // a helper that is not logged in or has no funds answers with its error text, which is no title
-      const failed = /not logged in|\/login|authentication|unauthori[sz]ed|invalid api key|insufficient|rate limit|^(failed|error)\b/i.test(out)
-      if (title && !failed && !this.live.get(sessionId)?.meta.titled) this.setTitle(sessionId, title)
-    } catch {
-      // the first words stay as the title
+    // fastest model first; one out of usage hands over to the next
+    const runners = await this.helperRunners()
+    for (const { key, run } of runners.slice(0, 4)) {
+      let timer: NodeJS.Timeout | undefined
+      const asked = run(prompt)
+      const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), 60000) })
+      try {
+        const out = await Promise.race([asked, late])
+        const title = (out.split('\n').find((l) => l.trim()) || '').replace(/^[\s"'„“`*#-]+|[\s"'”“`*.]+$/g, '').slice(0, 60)
+        // a helper that is not logged in or is out of usage answers with its error text, which is no title
+        const failed = HELPER_ERROR.test(out)
+        if (!title || failed) {
+          this.helperFailed(key, out)
+          continue
+        }
+        if (!this.live.get(sessionId)?.meta.titled) this.setTitle(sessionId, title)
+        return
+      } catch (err) {
+        this.helperFailed(key, err)
+      } finally {
+        clearTimeout(timer)
+        asked.catch(() => undefined)
+      }
     }
   }
 
+  /** models that just failed (out of usage, no funds, no answer): left out for a while, so the next call does not wait on them again */
+  private helperDown = new Map<string, number>()
+
+  private helperFailed(key: string, why: unknown): void {
+    const usage = /limit|quota|usage|credit|insufficient|balance|resets?\b|unauthori[sz]ed|login/i.test(why instanceof Error ? why.message : String(why))
+    this.helperDown.set(key, Date.now() + (usage ? 30 : 5) * 60000)
+  }
+
   /**
-   * The models that can rewrite a message, cheapest first, from whatever this Jolty has: a free OpenCode model the user picked,
-   * the subscription's small model, Codex's mini model, then an API profile's first model, then OpenCode's default.
+   * The models for small jobs (chat titles, "Improve message"), fastest first, from every account that works right now:
+   * logged in, key set, not at its limit, not just failed. The same for everyone, whatever mix of Claude, Codex,
+   * API keys and OpenCode models they have connected.
    */
-  private improveRunners(picked?: Profile, model?: string): ((prompt: string) => Promise<string>)[] {
-    const all = store.loadProfiles()
-    const runners: ((prompt: string) => Promise<string>)[] = []
-    if (picked?.engine === 'opencode' && model) runners.push((prompt) => opencodeOnce(prompt, model))
-    const sub = all.find((p) => p.engine === 'claude' && p.auth !== 'endpoint')
-    if (sub) runners.push((prompt) => this.claude.describe(sub, [], prompt, 'haiku'))
-    const codex = all.find((p) => p.engine === 'codex')
-    if (codex) runners.push(async (prompt) => this.codex.describe(codex, [], prompt, (await this.codex.models(codex)).find((m) => /mini/i.test(m.id))?.id))
-    const api = all.find((p) => p.engine === 'claude' && p.auth === 'endpoint' && p.models?.length)
-    if (api) runners.push((prompt) => this.claude.describe(api, [], prompt, api.models![0]))
-    const oc = all.find((p) => p.engine === 'opencode')
-    if (oc) runners.push(async (prompt) => {
-      const list = await this.opencode.models(oc)
-      const m = list.find((x) => x.isDefault) || list[0]
-      if (!m) throw new Error(tr("Niciun profil nu poate îmbunătăți mesajul: adaugă un profil Claude sau Codex."))
-      return opencodeOnce(prompt, m.id)
-    })
-    return runners
+  private async helperRunners(): Promise<{ key: string; run: (prompt: string) => Promise<string> }[]> {
+    const limits = store.loadLimits()
+    const usable = store
+      .loadProfiles()
+      .filter((p) => !p.local && p.engine !== 'hermes' && (p.auth !== 'endpoint' || store.getSecret(p.id)) && !limits[p.id]?.windows.some((w) => w.usedPercent >= FULL_PERCENT))
+    const found = await Promise.all(
+      usable.map(async (p) => {
+        try {
+          const d = this.driver(p.engine)
+          const look = async (): Promise<ModelOption[]> => {
+            if (p.auth === 'subscription' && p.engine !== 'opencode' && !(await d.status(p)).loggedIn) return []
+            return d.models(p)
+          }
+          const models = await Promise.race([look(), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
+          return models.filter((m) => !m.id.includes('[')).map((m) => {
+            const score = modelScore(p, m)
+            const run = (prompt: string): Promise<string> =>
+              p.engine === 'opencode' ? opencodeOnce(prompt, m.id) : (d as ClaudeDriver | CodexDriver).describe(p, [], prompt, m.id)
+            return { entry: { key: `${p.id}|${m.id}`, engine: p.engine, model: m.id, iq: score?.iq, tps: score?.tps }, run }
+          })
+        } catch {
+          return []
+        }
+      })
+    )
+    const all = found.flat()
+    const ranked = rankHelpers(all.map((x) => x.entry), (key) => (this.helperDown.get(key) ?? 0) > Date.now())
+    return ranked.map((e) => ({ key: e.key, run: all.find((x) => x.entry.key === e.key)!.run }))
   }
 
   /**
@@ -1283,8 +1320,8 @@ ${text.slice(0, 1500)}`
    * and the titles of the latest chats in the same folder, to know what the message is about. Throws when nothing can be trusted;
    * `question` comes back instead of `text` when the model cannot tell what the message is about.
    */
-  async improvePrompt(text: string, profileId?: string, model?: string, cwd?: string, sessionId?: string): Promise<{ text?: string; question?: string }> {
-    const runners = this.improveRunners(store.loadProfiles().find((p) => p.id === profileId), model)
+  async improvePrompt(text: string, _profileId?: string, _model?: string, cwd?: string, sessionId?: string): Promise<{ text?: string; question?: string }> {
+    const runners = await this.helperRunners()
     if (!runners.length) throw new Error(tr("Niciun profil nu poate îmbunătăți mesajul: adaugă un profil Claude sau Codex."))
     const recent = sessionId
       ? this.transcript(sessionId).filter((i) => i.kind === 'user').slice(-3).map((i) => clipForContext((i as { text: string }).text))
@@ -1293,26 +1330,44 @@ ${text.slice(0, 1500)}`
       ? store.loadSessions().filter((x) => x.cwd === cwd && x.id !== sessionId).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 3).map((x) => clipForContext(x.title, 80))
       : []
     const prompt = improvePrompt(text, { recent, titles, language: LANG_ENGLISH_NAME[getLang()] })
-    let failure: unknown
-    for (const run of runners.slice(0, 2)) {
+    const unusable = tr("Modelul nu a dat o variantă folosibilă. Mesajul rămâne cum era.")
+    const attempt = async ({ key, run }: { key: string; run: (prompt: string) => Promise<string> }): Promise<{ text?: string; question?: string }> => {
       let timer: NodeJS.Timeout | undefined
       const asked = run(prompt)
-      const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(tr("Modelul nu a răspuns la timp."))), 120000) })
+      const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(tr("Modelul nu a răspuns la timp."))), 60000) })
       try {
         const reply = await Promise.race([asked, late])
+        if (HELPER_ERROR.test(reply)) throw new Error(reply)
         const question = improveQuestion(reply)
         if (question) return { question }
         const out = cleanImproved(text, reply)
-        if (!out) throw new Error(tr("Modelul nu a dat o variantă folosibilă. Mesajul rămâne cum era."))
+        if (!out) throw new Error(unusable)
         return { text: out }
       } catch (err) {
-        failure = err
+        if (!(err instanceof Error && err.message === unusable)) this.helperFailed(key, err)
+        throw err
       } finally {
         clearTimeout(timer)
         asked.catch(() => undefined)
       }
     }
-    throw failure
+    const first = attempt(runners[0])
+    if (!runners[1]) return first
+    // the second model starts when the first fails or is slow (free models can take 20 s), and the first usable answer wins
+    let settled = false
+    let wake: () => void = () => undefined
+    const hedge = new Promise<void>((go) => { wake = go })
+    const timer = setTimeout(wake, 12000)
+    first.then(() => { settled = true }, wake)
+    const second = hedge.then(() => (settled ? Promise.reject(new Error('not needed')) : attempt(runners[1])))
+    second.catch(() => undefined)
+    try {
+      return await Promise.any([first, second])
+    } catch (err) {
+      throw (err as AggregateError).errors?.[0] ?? err
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   async removeSession(sessionId: string): Promise<void> {

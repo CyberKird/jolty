@@ -2,7 +2,7 @@
    Motion. Every state change moves; short, eased, interruptible, compositor-only where it can be.
    Tokens live here and nowhere else. Enter = transition + @starting-style (no keyframes, so reversing
    mid-way continues from where it is), exit = [data-state=closed] kept mounted by usePresence for --t-exit.
-   Reduce motion (setting or OS) makes everything instant; html.low-power shortens it and drops the glow.
+   Reduce motion (the app setting only, the OS animation switch is ignored) makes everything instant; html.low-power shortens it and drops the glow.
    --------------------------------------------------------------------------- */
 :root {
   --t-fast: 120ms; /* hover, press, small swaps */
@@ -23,28 +23,6 @@
   --t-exit: 0ms;
   --t-exit-slow: 0ms;
   --stagger: 0ms;
-}
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --t-fast: 0.001ms;
-    --t-base: 0.001ms;
-    --t-slow: 0.001ms;
-    --t-exit: 0ms;
-    --t-exit-slow: 0ms;
-    --stagger: 0ms;
-  }
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none !important;
-  }
 }
 html.low-power {
   --t-fast: 80ms;

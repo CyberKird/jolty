@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { candidates, pickAuto } from '../src/main/auto-model'
+import { candidates, pickAuto, rankHelpers, type HelperEntry } from '../src/main/auto-model'
 import { FLAG_DAYS, flagOf, observe, parseOllamaTags, parseProviderList, withBadges } from '../src/main/model-watch-core'
 import { modelScore, parseRemoteScores, setRemoteScores } from '../src/shared/scores'
 import type { ModelOption, Profile } from '../src/shared/types'
@@ -164,3 +164,21 @@ test('auto choice: the strongest model for a hard job, the fastest good enough o
   assert.equal(pickAuto('hard', []), undefined)
 })
 
+
+test('small jobs go to the quickest usable model, a failed one is skipped, an unscored big one is not trusted', () => {
+  const list: HelperEntry[] = [
+    { key: 'a|opus', engine: 'claude', model: 'opus', iq: 54, tps: 74 },
+    { key: 'a|haiku', engine: 'claude', model: 'haiku', iq: 17, tps: 108 },
+    { key: 'o|deepseek-flash', engine: 'opencode', model: 'deepseek-flash', iq: 39, tps: 209 },
+    { key: 'o|big-pickle', engine: 'opencode', model: 'big-pickle' },
+    { key: 'o|tiny-lite', engine: 'opencode', model: 'tiny-lite' }
+  ]
+  const order = (blocked: string[] = []): string[] => rankHelpers(list, (k) => blocked.includes(k)).map((e) => e.model)
+  // OpenCode starts slower than Claude, so Haiku still beats a model twice as fast on paper
+  assert.deepEqual(order().slice(0, 2), ['haiku', 'deepseek-flash'])
+  assert.ok(!order().includes('big-pickle'))
+  assert.equal(order(['a|haiku', 'o|deepseek-flash'])[0], 'tiny-lite')
+  // nothing scored or named small: the unscored model is still better than no helper
+  assert.deepEqual(rankHelpers([list[3]], () => false).map((e) => e.model), ['big-pickle'])
+  assert.deepEqual(rankHelpers(list, () => true), [])
+})

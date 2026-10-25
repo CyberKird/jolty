@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.1
+
+### Fixed
+
+- Animations were off even with Reduce motion unticked, whenever Windows had its own "Animation effects" switch off. Jolty followed the Windows switch on top of its own setting. Now only the Reduce motion setting in Jolty decides.
+- A chat could get a title like "You've hit your session limit, resets 11:10pm" when the model that names chats had run out of usage. Chats are now named by the next model that works, and a model that just ran out of usage is skipped for a while.
+
+### Improvements
+
+- "Improve message" and chat naming pick their model by speed from everything your Jolty has: Claude and Codex subscriptions, API keys and OpenCode models, leaving out accounts that are at their limit or have just failed. The second model starts in parallel when the first is slow or fails, and the first good answer wins.
+
 ## 0.8.0
 
 ### New

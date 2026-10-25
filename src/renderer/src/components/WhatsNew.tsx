@@ -36,7 +36,7 @@ function HeroJolty() {
       if (gone || !canvas.current) return
       Object.assign(canvas.current.style, { left: '0px', top: '0px' })
       const rig = new Rig3D(canvas.current, HERO_PX)
-      const calm = document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches
+      const calm = document.documentElement.classList.contains('reduce-motion')
       const beats: [Parameters<typeof rig.set>[0], Parameters<typeof rig.set>[1], number][] = [
         ['cheer', 'happy', 2600],
         ['wave', 'happy', 2200],
