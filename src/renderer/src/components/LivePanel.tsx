@@ -645,7 +645,10 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
       // the panel sits on the left in right-to-left layouts, so dragging right widens it there
       const pull = document.documentElement.dir === 'rtl' ? ev.clientX - x0 : x0 - ev.clientX
       w = Math.max(300, Math.min(window.innerWidth * 0.55, w0 + pull))
-      if (panel.current) panel.current.style.width = `${w}px`
+      if (panel.current) {
+        panel.current.style.width = `${w}px`
+        panel.current.style.setProperty('--live-w', `${w}px`)
+      }
     }
     const up = (): void => {
       setWidth(w)
@@ -673,7 +676,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   ]
 
   return (
-    <aside ref={panel} className={`live ${open ? '' : 'closed'} ${resizing ? 'resizing' : ''}`} style={open ? { width } : undefined} aria-label={tr("Ce face modelul acum")}>
+    <aside ref={panel} className={`live ${open ? '' : 'closed'} ${resizing ? 'resizing' : ''}`} style={{ '--live-w': `${width}px`, ...(open ? { width } : {}) } as React.CSSProperties} aria-label={tr("Ce face modelul acum")}>
       {open && <div className="live-resize" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label={tr("Lățimea panoului")} />}
       <div className="live-section live-status">
         <div className="live-label">

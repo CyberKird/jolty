@@ -40,6 +40,7 @@
     "test:livecode": "electron-vite build && node test/livecode-test.mjs",
     "test:release": "node --test test/release-version-test.mjs",
     "test:scroll": "electron-vite build && node test/scroll-test.mjs",
+    "test:transitions": "electron-vite build && node test/transitions-test.mjs",
     "icon": "electron scripts/make-icon.cjs",
     "test:gemini": "esbuild test/gemini-vision-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/gemini-vision-test.cjs --log-level=warning && node --test out-test/gemini-vision-test.cjs",
     "test:computer": "esbuild test/computer-human-test.ts test/computer-gate-test.ts test/computer-release-test.ts test/computer-headsup-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outdir=out-test --log-level=warning && node --test out-test/computer-human-test.js out-test/computer-gate-test.js out-test/computer-release-test.js out-test/computer-headsup-test.js",

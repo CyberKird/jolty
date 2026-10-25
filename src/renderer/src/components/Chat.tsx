@@ -20,6 +20,7 @@ import { tr } from '@shared/i18n'
 import { VoiceButton } from './VoiceButton'
 import { Trans } from './Trans'
 import { OwnKeyStrip } from './Welcome'
+import { usePresence, useSettled } from '../usePresence'
 
 const EMPTY: ChatItem[] = []
 
@@ -669,6 +670,7 @@ function ReviewButton({ session, running, items }: { session: SessionMeta; runni
 
 function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Profile[] }) {
   const [open, setOpen] = useState(false)
+  const pop = usePresence(open)
   const [compact, setCompact] = useState(compactFirst)
   const { openSession, toast, loadSessions } = useStore()
   const used = useStore((s) => s.contexts[session.id]?.used ?? 0)
@@ -693,8 +695,8 @@ function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Pr
       <button className="btn small" onClick={() => setOpen(!open)} title={tr("Continuă conversația cu alt model sau alt cont")}>
        {tr("Continuă în")}
       </button>
-      {open && (
-        <div className="panel" style={{ position: 'absolute', right: 0, top: 36, zIndex: 20, width: 290, padding: 6 }} onMouseLeave={() => setOpen(false)}>
+      {pop.shown && (
+        <div className="panel continue-pop" data-state={pop.state} style={{ position: 'absolute', right: 0, top: 36, zIndex: 20, width: 290, padding: 6 }} onMouseLeave={() => setOpen(false)}>
           <label className="small faint" style={{ display: 'flex', gap: 8, padding: '6px 10px 8px', cursor: 'pointer' }} title={tr("Un cont sau un model nou citește tot contextul de la zero, fără cache. Compactat, citește doar rezumatul.")}>
             <input
               type="checkbox"
@@ -801,6 +803,9 @@ export function ChatView({ session }: { session: SessionMeta }) {
   const running = status === 'running'
   const profile = profiles.find((p) => p.id === session.profileId)
   const scrollRef = useStickToBottom(items)
+  // a chat created moments ago has no history to wait for; an old one is settled once its transcript is in
+  const loaded = useStore((s) => s.transcripts[session.id] !== undefined) || Date.now() - session.createdAt < 10_000
+  const settled = useSettled(loaded)
   const lastReasoning = useMemo(() => {
     for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'reasoning') return items[i].id
     return undefined
@@ -827,7 +832,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
         </button>
       </div>
       <div className="messages" ref={scrollRef}>
-        <div className="messages-inner">
+        <div className="messages-inner" data-live={settled ? '' : undefined}>
           {items.map((it, i) => {
             const startsReply = it.kind !== 'user' && it.kind !== 'notice' && (i === 0 || items[i - 1].kind === 'user')
             return (

@@ -9,6 +9,7 @@ import type { ChatItem, PlanStep, SessionMeta } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
 import { useAllModels } from './ModelPicker'
 import { tr } from '@shared/i18n'
+import { Collapse } from './Collapse'
 
 const NONE: PlanStep[] = []
 
@@ -47,7 +48,7 @@ export function TaskStrip({ sessionId }: { sessionId: string }) {
   const current = steps.find((s) => s.status === 'active') || steps.find((s) => s.status === 'pending')
   return (
     <div className={`tasks ${open ? 'open' : ''}`}>
-      {open && (
+      <Collapse open={open}>
         <ol className="tasks-list" aria-label={tr("Sarcinile modelului")}>
           {steps.map((s, i) => (
             <li key={i} className={`plan-step ${s.status}`}>
@@ -57,7 +58,7 @@ export function TaskStrip({ sessionId }: { sessionId: string }) {
             </li>
           ))}
         </ol>
-      )}
+      </Collapse>
       <button className="tasks-bar" aria-expanded={open} onClick={() => setOpen(!open)} title={open ? 'Ascunde sarcinile' : tr("Arată toate sarcinile")}>
         <span className="tasks-count">
           {tr("Sarcini")} {done}/{steps.length}

@@ -23,7 +23,7 @@ const inAnHour = (): string => {
 /** In the bar only while a plan is armed; otherwise the tools menu mounts it with `autoOpen` and it leaves when closed. */
 export function PowerMenu({ autoOpen, onClosed }: { autoOpen?: boolean; onClosed?: () => void }) {
   const power = useStore((s) => s.power)
-  const { open, setOpen, ref } = usePopover()
+  const { open, setOpen, ref, shown, state } = usePopover()
   const wasOpen = useRef(false)
   useEffect(() => {
     if (autoOpen) setOpen(true)
@@ -85,8 +85,8 @@ export function PowerMenu({ autoOpen, onClosed }: { autoOpen?: boolean; onClosed
         <Power size={14} strokeWidth={1.8} />
         {power.armed && (power.due ? clock(power.due) : label)}
       </button>
-      {open && (
-        <div className="picker-pop small power-pop" role="menu" aria-label={tr("Oprire PC")}>
+      {shown && (
+        <div className="picker-pop small power-pop" data-state={state} role="menu" aria-label={tr("Oprire PC")}>
           <div className="picker-list">
             <div className="picker-group-head">{tr("Acțiune")}</div>
             {POWER_ACTIONS.map((a) => (

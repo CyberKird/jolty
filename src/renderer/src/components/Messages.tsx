@@ -8,10 +8,13 @@ import { CopyButton } from './CopyField'
 import { MsgBar } from './MsgBar'
 import { DiffView, imageMenu, Markdown, messageMenu, plainDashes } from './Rich'
 import { tr } from '@shared/i18n'
+import { Collapse } from './Collapse'
+import { exitMs, usePresence } from '../usePresence'
 
 /** A chat image: click opens a large preview, right-click offers copy, save and open. */
 function ChatImage({ src, name }: { src: string; name: string }) {
   const [big, setBig] = useState(false)
+  const { shown, state } = usePresence(big)
   useEffect(() => {
     if (!big) return
     const onKey = (e: KeyboardEvent): void => {
@@ -23,9 +26,9 @@ function ChatImage({ src, name }: { src: string; name: string }) {
   return (
     <>
       <img className="chat-image" src={src} alt={name} title={name} onClick={() => setBig(true)} onContextMenu={(e) => imageMenu(e, src, name)} />
-      {big &&
+      {shown &&
         createPortal(
-          <div className="lightbox" role="dialog" aria-label={tr("Previzualizare imagine")} onClick={() => setBig(false)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation() }}>
+          <div className="lightbox" data-state={state} role="dialog" aria-label={tr("Previzualizare imagine")} onClick={() => setBig(false)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation() }}>
             <img src={src} alt={name} onClick={(e) => e.stopPropagation()} onContextMenu={(e) => imageMenu(e, src, name)} />
           </div>,
           document.body
@@ -133,7 +136,7 @@ const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
           {item.output ? <CopyButton icon="file" label={err ? tr("Copiază eroarea") : tr("Copiază rezultatul")} said={err ? tr("Eroare copiată") : tr("Rezultat copiat")} get={() => item.output || ''} /> : null}
         </span>
       </div>
-      {open && hasBody && (
+      <Collapse open={open && hasBody}>
         <div className="tool-body">
           {err && item.output ? (
             <div className="tool-bar">
@@ -156,7 +159,7 @@ const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
           {item.diffs?.length ? <DiffView diffs={item.diffs} /> : null}
           {item.output ? <Output text={item.output} /> : null}
         </div>
-      )}
+      </Collapse>
     </div>
   )
 })
@@ -244,10 +247,17 @@ export const MessageItem = memo(function MessageItem({ item, live, streaming = f
   }
 })
 
-export function PermissionCard({ req, onDecide }: { req: PermissionRequest; onDecide: (d: PermissionDecision) => void }) {
+export function PermissionCard({ req, onDecide: decideNow }: { req: PermissionRequest; onDecide: (d: PermissionDecision) => void }) {
   const isPlan = Boolean(req.plan)
+  // the card plays its exit, then the answer goes out (a double click answers once)
+  const [leaving, setLeaving] = useState(false)
+  const onDecide = (d: PermissionDecision): void => {
+    if (leaving) return
+    setLeaving(true)
+    window.setTimeout(() => decideNow(d), exitMs() + 20)
+  }
   return (
-    <div className="permission" role="alertdialog" aria-label={tr("Cerere de aprobare")}>
+    <div className="permission" data-state={leaving ? 'closed' : 'open'} role="alertdialog" aria-label={tr("Cerere de aprobare")}>
       <div className="row" style={{ alignItems: 'baseline', marginBottom: 6 }}>
         <div className="permission-title">{isPlan ? 'Aprobi planul?' : tr("Permiți?")}</div>
         <span className="tag volt">{toolVerb(req.toolName)}</span>

@@ -375,18 +375,11 @@ a {
   color: var(--grey-2);
 }
 .session-item .del {
-  display: none;
   border: 0;
   background: transparent;
   color: var(--grey-2);
   cursor: pointer;
   padding: 2px;
-}
-.session-item:hover .del {
-  display: block;
-}
-.session-item:hover .when {
-  display: none;
 }
 .session-item .del:hover {
   color: var(--critical);
@@ -486,15 +479,11 @@ a {
 }
 .live-x {
   flex: none;
-  display: none;
   border: 0;
   background: transparent;
   color: var(--grey-2);
   cursor: pointer;
   padding: 2px;
-}
-.live-item:hover .live-x {
-  display: block;
 }
 .live-x:hover {
   color: var(--white);
@@ -815,7 +804,6 @@ a {
   border-inline-start: 0;
   background: var(--s3);
   box-shadow: inset 2px 0 0 var(--volt), 0 20px 40px rgba(0, 0, 0, 0.5);
-  animation: slide-in 0.3s var(--ease);
   font-size: 14px;
 }
 .toast.error {
@@ -829,7 +817,6 @@ a {
   background: rgba(2, 2, 4, 0.82);
   display: grid;
   place-items: center;
-  animation: fade 0.15s;
 }
 .modal {
   width: min(580px, calc(100vw - 40px));
@@ -838,7 +825,6 @@ a {
   border: 1px solid var(--line-2);
   background: var(--s1);
   padding: 30px;
-  animation: rise 0.25s var(--ease);
 }
 .modal-title {
   font-family: var(--display);
@@ -938,7 +924,6 @@ a {
   background: var(--s2);
   white-space: pre-wrap;
   word-break: break-word;
-  animation: rise 0.3s var(--ease);
 }
 .message-attachments { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .message-attachments:first-child { margin-top: 0; }
@@ -964,7 +949,6 @@ a {
   padding: 32px;
   background: rgba(0, 0, 0, 0.88);
   cursor: zoom-out;
-  animation: fade 0.14s var(--ease);
 }
 .lightbox img {
   max-width: 100%;
@@ -1073,7 +1057,6 @@ a {
   color: var(--black);
 }
 .msg-assistant {
-  animation: fade 0.3s;
   word-break: break-word;
   font-size: 15.5px;
 }
@@ -1138,7 +1121,6 @@ a {
 .tool {
   border: 1px solid var(--line);
   background: var(--s1);
-  animation: fade 0.25s;
 }
 .tool + .tool {
   margin-top: -10px;
@@ -1390,7 +1372,6 @@ a {
   background: var(--s1);
   box-shadow: inset 2px 0 0 var(--volt);
   padding: 18px 20px;
-  animation: rise 0.3s var(--ease);
 }
 .permission-title {
   font-family: var(--display);
@@ -2349,7 +2330,6 @@ a {
   border: 1px solid var(--line-2);
   background: var(--s2);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
-  animation: fade 0.14s var(--ease);
 }
 .picker-pop.small {
   width: 290px;
@@ -2917,51 +2897,15 @@ a {
     transform: none;
   }
 }
-.picker-pop {
-  transform-origin: bottom left;
-  animation: pop 0.18s var(--ease);
-}
-/* the panel opens at once; its content slides in on the compositor, the chat never reflows mid-animation */
-@keyframes live-in {
-  from {
-    opacity: 0;
-    transform: translateX(calc(14px * var(--dir)));
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.live:not(.closed) > :not(.live-resize) {
-  animation: live-in 0.24s var(--ease);
-}
 .live.resizing {
   user-select: none;
 }
-.page {
-  animation: rise 0.32s var(--ease);
-}
-/* named only while a page switch runs: a permanent name would make the column its own stacking
-   context and the composer's menus would open under the Live panel */
-.vt-page .main {
-  view-transition-name: main;
-}
+/* the page and conversation switch (View Transitions) lives in transitions.css. Named only while it runs:
+   a permanent name would make the column its own stacking context and the composer's menus would open
+   under the Live panel */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
-}
-::view-transition-old(main) {
-  animation: vt-out 0.16s var(--ease) both;
-}
-::view-transition-new(main) {
-  animation: fade 0.26s var(--ease) both;
-}
-@keyframes vt-out {
-  to {
-    opacity: 0;
-    transform: scale(0.985);
-    filter: blur(2px);
-  }
 }
 
 /* long conversations: only what is on screen is laid out and painted */
@@ -3008,9 +2952,6 @@ a {
     z-index: 30;
     box-shadow: -18px 0 48px rgba(0, 0, 0, 0.55);
   }
-  .app:not(.no-sidebar) .live:not(.closed) {
-    animation: drawer-in 0.34s var(--ease);
-  }
   .app:not(.no-sidebar) .live.closed {
     box-shadow: none;
   }
@@ -3021,16 +2962,8 @@ a {
     grid-row: 2;
     inset: 0;
     z-index: 29;
-    background: rgba(2, 2, 4, 0.55);
-    backdrop-filter: blur(2px) saturate(0.8);
-    animation: fade 0.24s var(--ease);
+    background: rgba(2, 2, 4, 0.62);
     cursor: pointer;
-  }
-}
-@keyframes drawer-in {
-  from {
-    transform: translateX(calc(40px * var(--dir)));
-    opacity: 0.4;
   }
 }
 @media (max-width: 1080px) {
@@ -3129,7 +3062,6 @@ a {
   border: 1px solid var(--line-2);
   border-bottom: 0;
   background: var(--s1);
-  animation: pop 0.18s var(--ease);
 }
 .tasks-list {
   max-height: min(40vh, 320px);
@@ -3267,7 +3199,6 @@ a {
   background: var(--s2);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
   padding: 6px;
-  animation: pop 0.14s var(--ease);
 }
 .mention {
   display: flex;
@@ -3460,7 +3391,6 @@ a {
   text-transform: uppercase;
   cursor: pointer;
   -webkit-app-region: no-drag;
-  animation: pop 0.2s var(--ease);
 }
 .update-pill:hover {
   background: var(--volt);
@@ -3483,7 +3413,6 @@ a {
   border: 1px solid var(--line-2);
   background: var(--s2);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
-  animation: fade 0.12s var(--ease);
 }
 .ctx-item {
   display: flex;

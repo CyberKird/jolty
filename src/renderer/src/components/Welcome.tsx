@@ -4,6 +4,7 @@ import type { Profile } from '@shared/types'
 import { CONNECT_PROVIDERS, wantsOwnKeyHint } from '@shared/setup'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
+import { usePresence } from '../usePresence'
 
 const spin = { animation: 'spin 1s linear infinite' }
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
@@ -150,7 +151,7 @@ export function Welcome() {
           )}
         </div>
       ) : way === 'key' ? (
-        <div style={{ marginTop: 30 }}>
+        <div className="swap" style={{ marginTop: 30 }}>
           <ConnectKey onDone={(p) => void finish(p, p.models?.[0])} onBack={() => setWay(undefined)} />
         </div>
       ) : (
@@ -177,6 +178,7 @@ export function OwnKeyStrip() {
   const sessions = useStore((s) => s.sessions)
   const [dismissed, setDismissed] = useState(true)
   const [open, setOpen] = useState(false)
+  const modal = usePresence(open)
   useEffect(() => {
     void api.app.settings().then((s) => setDismissed(Boolean(s.ownKeyHintDismissed)))
   }, [])
@@ -192,8 +194,8 @@ export function OwnKeyStrip() {
         <button onClick={() => setOpen(true)}>{tr("Adaugă o cheie")}</button>
         <button onClick={dismiss} aria-label={tr("Nu mai arăta")} title={tr("Nu mai arăta")}>×</button>
       </div>
-      {open && (
-        <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
+      {modal.shown && (
+        <div className="modal-back" data-state={modal.state} onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
           <div className="modal">
             <h2 className="modal-title">{tr("Adaugă o cheie proprie")}</h2>
             <ConnectKey onDone={(p) => { setOpen(false); void finish(p, p.models?.[0]) }} />

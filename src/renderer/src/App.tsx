@@ -156,14 +156,14 @@ export function App() {
       </main>
       {isChat ? <LivePanel session={session} /> : <div />}
       {/* shown only while the live panel is a drawer (CSS): dims the chat, a click closes the drawer */}
-      {isChat && liveOpen && <div className="live-scrim" onClick={() => setLiveOpen(false)} aria-hidden />}
+      {isChat && <div className="live-scrim" data-state={liveOpen ? 'open' : 'closed'} onClick={() => setLiveOpen(false)} aria-hidden />}
       <ContextMenu />
       <PowerBar />
       <Mascot />
       <WhatsNewHost />
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.error ? 'error' : ''}`}>
+          <div key={t.id} className={`toast ${t.error ? 'error' : ''}`} data-state={t.closing ? 'closed' : 'open'}>
             {t.text}
           </div>
         ))}
