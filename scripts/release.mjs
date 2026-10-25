@@ -25,7 +25,17 @@ const repo = 'CyberKird/jolty'
 const token = process.env.GH_TOKEN || run('gh', ['auth', 'token'])
 if (!token) fail('no GitHub token: set GH_TOKEN or run `gh auth login`')
 const env = { ...process.env, GH_TOKEN: token }
-const gh = (...args) => run('gh', args, { env })
+// GitHub drops connections now and then (TLS timeouts while other jobs use the network): a failed call is tried again
+const gh = (...args) => {
+  for (let i = 1; ; i++) {
+    try {
+      return run('gh', args, { env })
+    } catch (e) {
+      if (i >= 4) throw e
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5000 * i)
+    }
+  }
+}
 const releasesOfTag = () => JSON.parse(gh('api', `repos/${repo}/releases?per_page=100`)).filter((r) => r.tag_name === tag)
 
 const head = run('git', ['rev-parse', 'HEAD'])
