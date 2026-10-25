@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { SkillHome, SkillInfo, SkillProblem, SkillStatus } from '@shared/skills'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
+import { useExitClose } from '../usePresence'
 
 /** The backends answer 'not-implemented' until they are in; anything else is shown as it came. */
 export const unavailable = (e: unknown): boolean => /not-implemented/.test(errMsg(e))
@@ -79,7 +80,8 @@ export function gitUrlError(url: string): string | undefined {
 export const refError = (ref: string): string | undefined =>
   !ref || (/^[A-Za-z0-9][\w./-]{0,99}$/.test(ref) && !ref.includes('..')) ? undefined : tr("Un branch, un tag sau un commit, fără spații.")
 
-function SourceModal({ s, onClose, onSaved }: { s: SkillInfo; onClose: () => void; onSaved: (s: SkillInfo) => void }) {
+function SourceModal({ s, onClose: closeNow, onSaved }: { s: SkillInfo; onClose: () => void; onSaved: (s: SkillInfo) => void }) {
+  const { state, close: onClose } = useExitClose(closeNow)
   const { toast } = useStore()
   const [url, setUrl] = useState(s.source.kind === 'git' ? s.source.url : '')
   const [ref, setRef] = useState(s.source.kind === 'git' ? s.source.ref || '' : '')
@@ -105,7 +107,7 @@ function SourceModal({ s, onClose, onSaved }: { s: SkillInfo; onClose: () => voi
     }
   }
   return (
-    <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-back" data-state={state} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <form
         className="modal"
         onSubmit={(e) => {
@@ -141,9 +143,10 @@ function SourceModal({ s, onClose, onSaved }: { s: SkillInfo; onClose: () => voi
   )
 }
 
-function ConfirmUpdate({ s, onClose, onYes }: { s: SkillInfo; onClose: () => void; onYes: () => void }) {
+function ConfirmUpdate({ s, onClose: closeNow, onYes }: { s: SkillInfo; onClose: () => void; onYes: () => void }) {
+  const { state, close: onClose } = useExitClose(closeNow)
   return (
-    <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-back" data-state={state} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" role="alertdialog" aria-labelledby="confirm-update-title">
         <h2 className="modal-title" id="confirm-update-title">
           {tr("Actualizezi {name}?", { name: s.name })}

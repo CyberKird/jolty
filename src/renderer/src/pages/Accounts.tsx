@@ -6,6 +6,7 @@ import { CONNECT_PROVIDERS } from '@shared/setup'
 import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
 import { tr } from '@shared/i18n'
+import { useExitClose } from '../usePresence'
 
 const AUTH_LABEL: Record<AuthKind, string> = {
   subscription: 'Abonament',
@@ -221,7 +222,8 @@ function ProfileCard({ profile, onEdit, dragProps }: { profile: Profile; onEdit:
   )
 }
 
-function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => void }) {
+function ProfileModal({ profile, onClose: closeNow }: { profile?: Profile; onClose: () => void }) {
+  const { state, close: onClose } = useExitClose(closeNow)
   const { loadProfiles, toast } = useStore()
   const [engine, setEngine] = useState<EngineKind>(profile?.engine || 'claude')
   const [auth, setAuth] = useState<AuthKind>(profile?.auth || 'subscription')
@@ -277,7 +279,7 @@ function ProfileModal({ profile, onClose }: { profile?: Profile; onClose: () => 
   }
 
   return (
-    <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-back" data-state={state} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <h2 className="modal-title">{editing ? tr("Editează profilul") : tr("Profil nou")}</h2>
         {!editing && (

@@ -17,6 +17,8 @@ import type {
 } from '@shared/types'
 import { dateLocale, tr } from '@shared/i18n'
 import { DEFAULT_PLAN } from '@shared/power'
+import { preloadPage } from './pageLoaders'
+import { exitMs } from './usePresence'
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
@@ -43,6 +45,8 @@ interface Toast {
   id: number
   text: string
   error?: boolean
+  /** playing its exit */
+  closing?: boolean
 }
 
 interface State {
@@ -115,11 +119,11 @@ function upsert(list: ChatItem[], item: ChatItem): ChatItem[] {
   return next
 }
 
-/** Page switches cross-fade the main column (View Transitions); instant with Reduce motion. */
+/** Page and conversation switches cross-fade the main column (View Transitions); instant with Reduce motion. */
 function swapPage(update: () => void): void {
   const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } }
   const root = document.documentElement
-  if (!doc.startViewTransition || root.classList.contains('reduce-motion')) return update()
+  if (!doc.startViewTransition || root.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches) return update()
   root.classList.add('vt-page')
   void doc
     .startViewTransition(() => flushSync(update))
@@ -156,7 +160,7 @@ export const useStore = create<State>((set, get) => ({
   sidebarOpen: true,
 
   setPage: (page) => {
-    if (get().page !== page) swapPage(() => set({ page }))
+    if (get().page !== page) void preloadPage(page).then(() => swapPage(() => set({ page })))
   },
   setLiveOpen: (liveOpen) => set({ liveOpen }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
@@ -165,7 +169,11 @@ export const useStore = create<State>((set, get) => ({
   toast: (text, error) => {
     const id = ++toastId
     set((s) => ({ toasts: [...s.toasts, { id, text, error }] }))
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), error ? 7000 : 3500)
+    // it leaves with its exit motion, then goes
+    setTimeout(() => {
+      set((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, closing: true } : t)) }))
+      setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), exitMs() + 20)
+    }, error ? 7000 : 3500)
   },
 
   loadProfiles: async () => {
@@ -203,7 +211,10 @@ export const useStore = create<State>((set, get) => ({
   openSession: async (id) => {
     // a temporary chat ends when the user leaves it: nothing of it stays, here or on disk
     const left = get().sessions.find((x) => x.id === get().activeId && x.temporary && x.id !== id)
-    set({ activeId: id, page: 'chat' })
+    // the history comes first (briefly), so the conversation fades in with its messages instead of filling in afterwards
+    const history = id && !get().transcripts[id] ? api.sessions.history(id) : undefined
+    if (history) await Promise.race([history.then(() => undefined, () => undefined), new Promise((r) => setTimeout(r, 150))])
+    if (get().activeId !== id || get().page !== 'chat') swapPage(() => set({ activeId: id, page: 'chat' }))
     if (id) get().dismissUnseen(id)
     if (left) {
       set((s) => {
@@ -213,21 +224,26 @@ export const useStore = create<State>((set, get) => ({
       void api.sessions.remove(left.id).catch(() => undefined)
     }
     if (id && !get().transcripts[id]) {
-      const items = await api.sessions.history(id)
+      const items = await (history ?? api.sessions.history(id))
       // the task list of a conversation opened again (after a restart) comes from what it saved
       const steps = get().plans[id] ? undefined : new TaskBoard().replay(items).steps()
       set((s) => ({ transcripts: { ...s.transcripts, [id]: items }, plans: steps?.length ? { ...s.plans, [id]: steps } : s.plans }))
     }
   },
 
-  activateSession: (meta) => set((s) => ({
-    sessions: [meta, ...s.sessions.filter((session) => session.id !== meta.id)],
-    activeId: meta.id,
-    page: 'chat',
-    status: { ...s.status, [meta.id]: 'running' },
-    clocks: { ...s.clocks, [meta.id]: { turn: Date.now() } },
-    transcripts: { ...s.transcripts, [meta.id]: s.transcripts[meta.id] || [] }
-  })),
+  activateSession: (meta) => {
+    const apply = (): void =>
+      set((s) => ({
+        sessions: [meta, ...s.sessions.filter((session) => session.id !== meta.id)],
+        activeId: meta.id,
+        page: 'chat',
+        status: { ...s.status, [meta.id]: 'running' },
+        clocks: { ...s.clocks, [meta.id]: { turn: Date.now() } },
+        transcripts: { ...s.transcripts, [meta.id]: s.transcripts[meta.id] || [] }
+      }))
+    if (get().activeId === meta.id && get().page === 'chat') apply()
+    else swapPage(apply)
+  },
 
   onEvent: (e) => {
     switch (e.type) {

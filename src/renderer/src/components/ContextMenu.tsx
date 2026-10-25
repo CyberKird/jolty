@@ -6,6 +6,7 @@ import { create } from 'zustand'
 import type { EditAction } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
+import { usePresence } from '../usePresence'
 
 export interface MenuItem {
   label: string
@@ -105,6 +106,10 @@ export function itemsAt(el: Element | null): Entry[] {
 
 export function ContextMenu() {
   const { at, items, hide } = useMenu()
+  const { shown, state } = usePresence(Boolean(at))
+  // what to draw while the menu fades out
+  const last = useRef({ at, items })
+  if (at) last.current = { at, items }
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ x: number; y: number }>()
   const [active, setActive] = useState(-1)
@@ -122,7 +127,8 @@ export function ContextMenu() {
   // placed after it is measured, so it never hangs off the window
   useLayoutEffect(() => {
     setActive(-1)
-    if (!at || !ref.current) return setPos(undefined)
+    if (!at) return
+    if (!ref.current) return setPos(undefined)
     const { width, height } = ref.current.getBoundingClientRect()
     setPos({ x: Math.max(8, Math.min(at.x, window.innerWidth - width - 8)), y: Math.max(8, Math.min(at.y, window.innerHeight - height - 8)) })
   }, [at, items])
@@ -162,18 +168,20 @@ export function ContextMenu() {
     }
   }, [at, items, active, hide])
 
-  if (!at) return null
+  if (!shown) return null
+  const shownAt = last.current.at!
   return (
     <div
       className="ctx"
+      data-state={state}
       ref={ref}
       role="menu"
-      style={{ left: pos?.x ?? at.x, top: pos?.y ?? at.y, visibility: pos ? 'visible' : 'hidden' }}
+      style={{ left: pos?.x ?? shownAt.x, top: pos?.y ?? shownAt.y, visibility: pos ? 'visible' : 'hidden' }}
       // a click on the menu must not take focus or the selection from the page: Cut, Copy and Paste act on it
       onMouseDown={(e) => e.preventDefault()}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {items.map((it, i) =>
+      {last.current.items.map((it, i) =>
         it === 'sep' ? (
           <div className="ctx-sep" role="separator" key={i} />
         ) : (

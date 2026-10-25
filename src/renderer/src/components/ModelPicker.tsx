@@ -7,6 +7,7 @@ import { modelScore } from '@shared/scores'
 import type { BrowserMode, EngineKind, ModelOption, PermissionMode, Profile, SiteTrust } from '@shared/types'
 import { isAcp } from '@shared/types'
 import { api, ENGINE_LABEL, errMsg } from '../store'
+import { usePresence } from '../usePresence'
 import { tr } from '@shared/i18n'
 
 export interface ModelGroup {
@@ -69,8 +70,9 @@ export const EFFORT_TITLES: Record<string, string> = {
 }
 
 /** Closes a popover on outside click or Escape, and moves focus with the arrow keys. */
-export function usePopover(): { open: boolean; setOpen: (v: boolean) => void; ref: React.RefObject<HTMLDivElement | null> } {
+export function usePopover(): { open: boolean; setOpen: (v: boolean) => void; ref: React.RefObject<HTMLDivElement | null>; shown: boolean; state: 'open' | 'closed' } {
   const [open, setOpen] = useState(false)
+  const { shown, state } = usePresence(open)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
@@ -98,7 +100,7 @@ export function usePopover(): { open: boolean; setOpen: (v: boolean) => void; re
       document.removeEventListener('keydown', onKey)
     }
   }, [open])
-  return { open, setOpen, ref }
+  return { open, setOpen, ref, shown, state }
 }
 
 export function ModelPicker(p: {
@@ -111,7 +113,7 @@ export function ModelPicker(p: {
   /** shown on models from other profiles when picking them does more than switch the model */
   otherProfileHint?: string
 }) {
-  const { open, setOpen, ref } = usePopover()
+  const { open, setOpen, ref, shown, state } = usePopover()
   const group = p.groups.find((g) => g.profile.id === p.profileId)
   const current = group?.models.find((m) => m.id === p.model) || group?.models.find((m) => m.isDefault)
   const efforts = current?.efforts || []
@@ -126,8 +128,8 @@ export function ModelPicker(p: {
         {effort && <span className="picker-effort">{effort}</span>}
         <ChevronDown size={13} />
       </button>
-      {open && (
-        <div className="picker-pop" role="menu" aria-label={tr("Model și efort")}>
+      {shown && (
+        <div className="picker-pop" data-state={state} role="menu" aria-label={tr("Model și efort")}>
           <div className="picker-legend">{tr("Numărul e inteligența (Artificial Analysis, mai mare e mai bine), cuvântul e viteza.")}</div>
           <div className="picker-list">
             {p.groups.map((g) => (
@@ -267,7 +269,7 @@ export function modesFor(engine?: EngineKind): { id: PermissionMode; label: stri
 export const OPEN_MODES: PermissionMode[] = ['project', 'full']
 
 export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onMode: (m: PermissionMode) => void; engine?: EngineKind }) {
-  const { open, setOpen, ref } = usePopover()
+  const { open, setOpen, ref, shown, state } = usePopover()
   const choices = modesFor(engine)
   // a native confirm() leaves Electron without keyboard focus (the chatbox stops taking input), so the yes is asked inline
   const [armed, setArmed] = useState(false)
@@ -303,8 +305,8 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
         <span className="ellipsis">{current.label}</span>
         <ChevronDown size={13} />
       </button>
-      {open && (
-        <div className="picker-pop small" role="menu" aria-label={tr("Permisiuni")}>
+      {shown && (
+        <div className="picker-pop small" data-state={state} role="menu" aria-label={tr("Permisiuni")}>
           <div className="picker-list">
             <div className="picker-group-head">{tr("Mod")}</div>
             {choices.map((m, i) => (
@@ -352,7 +354,7 @@ const CONNECT: { id: BrowserMode; label: string; desc: string }[] = [
 
 /** What a model may do in the browser without asking, and how it attaches to a tab. */
 export function BrowserMenu() {
-  const { open, setOpen, ref } = usePopover()
+  const { open, setOpen, ref, shown, state } = usePopover()
   const [trust, setTrust] = useState<SiteTrust>('site')
   const [mode, setMode] = useState<BrowserMode>('auto')
   useEffect(() => {
@@ -367,8 +369,8 @@ export function BrowserMenu() {
       <button className="chrome-toggle chevron" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title={tr("Permisiunile și conectarea browserului")} aria-label={tr("Permisiunile browserului")}>
         <ChevronDown size={13} />
       </button>
-      {open && (
-        <div className="picker-pop" role="menu" aria-label={tr("Permisiunile browserului")}>
+      {shown && (
+        <div className="picker-pop" data-state={state} role="menu" aria-label={tr("Permisiunile browserului")}>
           <div className="picker-list">
             <div className="picker-group-head">{tr("Cât de liber lucrează modelul")}</div>
             {TRUST.map((t) => (

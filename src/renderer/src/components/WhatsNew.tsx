@@ -5,6 +5,7 @@ import { parseChangelog, type Release } from '@shared/changelog'
 import { tr } from '@shared/i18n'
 import { Bolt } from '../App'
 import { api } from '../store'
+import { useExitClose } from '../usePresence'
 import { Markdown } from './Rich'
 import './whatsnew.css'
 
@@ -116,7 +117,8 @@ function ReleaseView({ r, latest }: { r: Release; latest: boolean }) {
   )
 }
 
-function WhatsNew({ version, onClose }: { version: string; onClose: () => void }) {
+function WhatsNew({ version, onClose: closeNow }: { version: string; onClose: () => void }) {
+  const { state, close: onClose } = useExitClose(closeNow)
   const releases = useMemo(() => parseChangelog(changelog), [])
   const [shown, setShown] = useState(PAGE)
   const [active, setActive] = useState<string | undefined>(releases[0]?.version)
@@ -156,7 +158,7 @@ function WhatsNew({ version, onClose }: { version: string; onClose: () => void }
   }
 
   return (
-    <div className="modal-back wn-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-back wn-back" data-state={state} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="wn" role="dialog" aria-modal="true" aria-labelledby="wn-title">
         <div className="wn-hero">
           <svg className="wn-bolt" viewBox="0 0 205 740" aria-hidden>

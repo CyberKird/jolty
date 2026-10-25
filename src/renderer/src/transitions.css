@@ -1,0 +1,435 @@
+/* ---------------------------------------------------------------------------
+   Motion. Every state change moves; short, eased, interruptible, compositor-only where it can be.
+   Tokens live here and nowhere else. Enter = transition + @starting-style (no keyframes, so reversing
+   mid-way continues from where it is), exit = [data-state=closed] kept mounted by usePresence for --t-exit.
+   Reduce motion (setting or OS) makes everything instant; html.low-power shortens it and drops the glow.
+   --------------------------------------------------------------------------- */
+:root {
+  --t-fast: 120ms; /* hover, press, small swaps */
+  --t-base: 180ms; /* menus, toasts, messages, lists */
+  --t-slow: 260ms; /* pages, panels, sidebar, dialogs */
+  --t-exit: 135ms; /* exits run at about 75% of --t-base */
+  --t-exit-slow: 195ms; /* ... and of --t-slow */
+  --e-out: cubic-bezier(0.22, 1, 0.36, 1); /* things arriving */
+  --e-in: cubic-bezier(0.4, 0, 1, 1); /* things leaving */
+  --e-move: cubic-bezier(0.4, 0, 0.2, 1); /* things that go there and back */
+  --stagger: 24ms;
+  --rise: 8px;
+}
+:root.reduce-motion {
+  --t-fast: 0.001ms;
+  --t-base: 0.001ms;
+  --t-slow: 0.001ms;
+  --t-exit: 0ms;
+  --t-exit-slow: 0ms;
+  --stagger: 0ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 0.001ms;
+    --t-base: 0.001ms;
+    --t-slow: 0.001ms;
+    --t-exit: 0ms;
+    --t-exit-slow: 0ms;
+    --stagger: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+html.low-power {
+  --t-fast: 80ms;
+  --t-base: 80ms;
+  --t-slow: 100ms;
+  --t-exit: 70ms;
+  --t-exit-slow: 80ms;
+  --stagger: 0ms;
+  --rise: 4px;
+}
+html.low-power :is(.live-tab-bar, .page-tab-bar, .toast, .update-pill) {
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ hover and press */
+:is(.session-item, .live-item, .tool-head, .picker-opt, .ctx-item, .mention, .live-tab, .page-tab, .change-row, .tasks-bar, .meter-row, .quote-bar button, .sel-popup button, .preview-live-bar button, .queued button, .update-pill, .live-close, .live-x, .del, .meter-refresh, .th-sort, .context-meter, .rewind) {
+  transition: background-color var(--t-fast) var(--e-move), color var(--t-fast) var(--e-move), border-color var(--t-fast) var(--e-move), opacity var(--t-fast) var(--e-move);
+}
+:is(.titlebar-btn, .chrome-toggle, .picker-btn, .btn.icon, .live-tab):active {
+  transform: scale(0.96);
+}
+.titlebar-btn,
+.chrome-toggle,
+.picker-btn {
+  transition: background-color var(--t-fast) var(--e-move), color var(--t-fast) var(--e-move), border-color var(--t-fast) var(--e-move), transform var(--t-fast) var(--e-out);
+}
+.btn {
+  transition: border-color var(--t-fast) var(--e-move), color var(--t-fast) var(--e-move), background-color var(--t-fast) var(--e-move), box-shadow var(--t-base) var(--e-move), transform var(--t-fast) var(--e-out);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+html.low-power .btn:active:not(:disabled) {
+  transform: none;
+}
+/* the delete cross and the time share a slot: they cross-fade instead of swapping with display */
+.session-item {
+  position: relative;
+}
+.session-item .del,
+.live-x {
+  display: block;
+  position: absolute;
+  inset-inline-end: 10px;
+  top: 50%;
+  translate: 0 -50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.session-item:hover .del,
+.live-item:hover .live-x,
+.live-x:focus-visible,
+.session-item .del:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.session-item:hover .when {
+  display: block;
+  opacity: 0;
+}
+.session-item .when {
+  transition: opacity var(--t-fast) var(--e-move);
+}
+
+/* ------------------------------------------------------------------ menus and popovers */
+.picker-pop,
+.ctx,
+.mentions,
+.panel.continue-pop {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--t-base) var(--e-out), transform var(--t-base) var(--e-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+.picker-pop[data-state='closed'],
+.ctx[data-state='closed'],
+.mentions[data-state='closed'],
+.panel.continue-pop[data-state='closed'] {
+  opacity: 0;
+  transform: translateY(4px) scale(0.985);
+  transition-duration: var(--t-exit);
+  transition-timing-function: var(--e-in);
+  pointer-events: none;
+}
+.picker-pop {
+  transform-origin: bottom left;
+}
+[dir='rtl'] .picker-pop {
+  transform-origin: bottom right;
+}
+/* the right-click menu opens where the pointer is: it grows from that corner, not from below */
+.ctx {
+  transform-origin: top left;
+  @starting-style {
+    transform: scale(0.97);
+  }
+}
+.ctx[data-state='closed'] {
+  transform: scale(0.97);
+}
+html.low-power :is(.picker-pop, .ctx, .mentions) {
+  @starting-style {
+    transform: none;
+  }
+}
+html.low-power :is(.picker-pop, .ctx, .mentions)[data-state='closed'] {
+  transform: none;
+}
+/* options settle in one after the other (capped, so a long list does not drag) */
+.picker-pop:not([data-state='closed']) .picker-opt {
+  animation: opt-in var(--t-base) var(--e-out) backwards;
+  animation-delay: calc(min(sibling-index(), 8) * var(--stagger));
+}
+@keyframes opt-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* ------------------------------------------------------------------ dialogs */
+.modal-back,
+.lightbox {
+  opacity: 1;
+  transition: opacity var(--t-slow) var(--e-out);
+  @starting-style {
+    opacity: 0;
+  }
+}
+.modal-back[data-state='closed'],
+.lightbox[data-state='closed'] {
+  opacity: 0;
+  transition-duration: var(--t-exit-slow);
+  transition-timing-function: var(--e-in);
+  pointer-events: none;
+}
+.modal,
+.wn,
+.lightbox img {
+  transition: opacity var(--t-slow) var(--e-out), transform var(--t-slow) var(--e-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(var(--rise)) scale(0.985);
+  }
+}
+[data-state='closed'] > :is(.modal, .wn),
+.lightbox[data-state='closed'] img {
+  opacity: 0;
+  transform: translateY(4px) scale(0.985);
+  transition-duration: var(--t-exit-slow);
+  transition-timing-function: var(--e-in);
+}
+
+/* ------------------------------------------------------------------ toasts */
+.toast {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--t-base) var(--e-out), transform var(--t-base) var(--e-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateX(calc(16px * var(--dir)));
+  }
+}
+.toast[data-state='closed'] {
+  opacity: 0;
+  transform: translateX(calc(10px * var(--dir)));
+  transition-duration: var(--t-exit);
+  transition-timing-function: var(--e-in);
+}
+
+/* ------------------------------------------------------------------ collapsing blocks (tool output, task list) */
+.collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows var(--t-base) var(--e-move), opacity var(--t-base) var(--e-move);
+  @starting-style {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+.collapse[data-state='closed'] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition-duration: var(--t-exit);
+}
+.collapse > .collapse-in {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ messages that arrive while the chat is open */
+.messages-inner[data-live] :is(.msg-user, .msg-assistant, .tool, .turn-head, .msg-notice, .permission, .reasoning) {
+  transition: opacity var(--t-base) var(--e-out), transform var(--t-base) var(--e-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(var(--rise));
+  }
+}
+.messages-inner .permission[data-state='closed'] {
+  opacity: 0;
+  transform: translateY(4px);
+  transition-duration: var(--t-exit);
+  transition-timing-function: var(--e-in);
+  pointer-events: none;
+}
+/* strips above the composer */
+:is(.advice, .verification-strip, .attachment-note, .queued, .attachment) {
+  transition: opacity var(--t-base) var(--e-out), transform var(--t-base) var(--e-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.tasks,
+.update-pill {
+  transition: opacity var(--t-base) var(--e-out), transform var(--t-base) var(--e-out), background-color var(--t-fast) var(--e-move), color var(--t-fast) var(--e-move);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.tasks-track span {
+  transition: transform var(--t-slow) var(--e-out);
+}
+.dot {
+  transition: background-color var(--t-base) var(--e-move);
+}
+
+/* ------------------------------------------------------------------ lists */
+.session-item,
+.live-item {
+  @starting-style {
+    opacity: 0;
+    transform: translateX(calc(-6px * var(--dir)));
+  }
+}
+.session-item,
+.live-item {
+  transition: opacity var(--t-base) var(--e-out), transform var(--t-base) var(--e-out), background-color var(--t-fast) var(--e-move), color var(--t-fast) var(--e-move);
+}
+
+/* ------------------------------------------------------------------ pages and conversations (View Transitions, see store.ts) */
+.page {
+  animation: rise var(--t-slow) var(--e-out);
+}
+.vt-page .main {
+  view-transition-name: main;
+}
+.vt-page .live {
+  view-transition-name: live;
+}
+::view-transition-old(main),
+::view-transition-old(live) {
+  animation: vt-out var(--t-exit) var(--e-in) both;
+}
+::view-transition-new(main),
+::view-transition-new(live) {
+  animation: vt-in var(--t-slow) var(--e-out) both;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise));
+  }
+}
+/* a conversation or page appears with its content in step, not all at once */
+.welcome :is(.headline, .context, .starts, .row, .hint, .swap) {
+  transition: opacity var(--t-slow) var(--e-out), transform var(--t-slow) var(--e-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(var(--rise));
+  }
+}
+.welcome .context {
+  transition-delay: var(--stagger);
+}
+.welcome .starts,
+.welcome .swap {
+  transition-delay: calc(var(--stagger) * 2);
+}
+.live-pane {
+  animation: live-pane var(--t-base) var(--e-out);
+}
+@keyframes live-pane {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* ------------------------------------------------------------------ nav, tabs, bars */
+.nav-glow {
+  transition: transform var(--t-slow) var(--e-out), opacity var(--t-base) var(--e-move);
+}
+.nav-item svg {
+  transition: color var(--t-base) var(--e-move), transform var(--t-slow) var(--e-out);
+}
+.live-tab-bar,
+.page-tab-bar {
+  transition: transform var(--t-slow) var(--e-out), width var(--t-slow) var(--e-out);
+}
+
+/* ------------------------------------------------------------------ sidebar */
+.app {
+  transition: grid-template-columns var(--t-slow) var(--e-move);
+}
+/* the sidebar keeps its width and slides out, so only the chat reflows while the column moves */
+.sidebar {
+  width: min(var(--side-w, 248px), 30vw);
+  justify-self: end;
+}
+@media (max-width: 1080px) {
+  .sidebar {
+    width: min(var(--side-w, 220px), 30vw);
+  }
+}
+.app.no-sidebar .sidebar {
+  visibility: hidden;
+  transition: visibility 0s linear var(--t-slow);
+}
+
+/* ------------------------------------------------------------------ live panel */
+.app {
+  --live-cap: max(300px, calc(100vw - min(var(--side-w, 248px), 30vw) - 480px));
+}
+.app.no-sidebar {
+  --live-cap: max(300px, calc(100vw - 480px));
+}
+.live {
+  transition: width var(--t-slow) var(--e-move);
+}
+.live.resizing {
+  transition: none;
+}
+/* content keeps the panel's width while the edge moves: it is revealed, not squeezed */
+.live > :not(.live-resize) {
+  min-width: min(var(--live-w, 372px), var(--live-cap));
+}
+.live.closed > :not(.live-resize) {
+  opacity: 0;
+  transition: opacity var(--t-exit) var(--e-in);
+}
+.live:not(.closed) > :not(.live-resize) {
+  transition: opacity var(--t-slow) var(--e-out);
+  @starting-style {
+    opacity: 0;
+  }
+}
+.live-scrim {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-slow) var(--e-move);
+}
+.live-scrim[data-state='open'] {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (max-width: 1180px) {
+  .app:not(.no-sidebar) .live,
+  .app:not(.no-sidebar) .live.closed {
+    width: var(--live-w, 372px);
+    transition: transform var(--t-slow) var(--e-move), visibility 0s;
+  }
+  .app:not(.no-sidebar) .live.closed {
+    transform: translateX(calc(100% * var(--dir)));
+    visibility: hidden;
+    transition: transform var(--t-exit-slow) var(--e-in), visibility 0s linear var(--t-exit-slow);
+  }
+  .app:not(.no-sidebar) .live:not(.closed) {
+    @starting-style {
+      transform: translateX(calc(100% * var(--dir)));
+    }
+  }
+  .app:not(.no-sidebar) .live > :not(.live-resize),
+  .app:not(.no-sidebar) .live.closed > :not(.live-resize) {
+    opacity: 1;
+  }
+}

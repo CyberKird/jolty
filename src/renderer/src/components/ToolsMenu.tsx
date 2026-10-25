@@ -18,7 +18,7 @@ export interface Tool {
 }
 
 export function ToolsMenu({ tools, after }: { tools: Tool[]; after?: Record<string, ReactNode> }) {
-  const { open, setOpen, ref } = usePopover()
+  const { open, setOpen, ref, shown, state } = usePopover()
   const active = tools.filter((t) => t.on)
   return (
     <>
@@ -33,8 +33,8 @@ export function ToolsMenu({ tools, after }: { tools: Tool[]; after?: Record<stri
         >
           <SlidersHorizontal size={14} strokeWidth={1.8} />
         </button>
-        {open && (
-          <div className="picker-pop small" role="menu" aria-label={tr("Unelte")}>
+        {shown && (
+          <div className="picker-pop small" data-state={state} role="menu" aria-label={tr("Unelte")}>
             <div className="picker-list">
               {tools.map((t) => (
                 <button
