@@ -1,9 +1,11 @@
 import { Paperclip } from 'lucide-react'
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ChatItem, PermissionDecision, PermissionRequest } from '@shared/types'
 import { splitQuote } from '@shared/quote'
-import { ReplyButton } from './Quote'
+import { diffText, newContent } from '@shared/copy-values'
+import { CopyButton } from './CopyField'
+import { MsgBar } from './MsgBar'
 import { DiffView, imageMenu, Markdown, messageMenu, plainDashes } from './Rich'
 import { tr } from '@shared/i18n'
 
@@ -87,31 +89,72 @@ function toolFile(t: Tool): string | undefined {
   return typeof p === 'string' && /^([a-z]:[\/]|\/)/i.test(p) ? p : undefined
 }
 
+const FOLD_OUTPUT = 14
+
+/** Long output shows its first lines with a fade; the button opens the rest. Copy always takes all of it. */
+function Output({ text }: { text: string }) {
+  const [all, setAll] = useState(false)
+  const lines = useMemo(() => text.split('\n'), [text])
+  if (lines.length <= FOLD_OUTPUT + 4) return <pre className="pre">{text}</pre>
+  return (
+    <div className={`fold ${all ? 'open' : ''}`}>
+      <pre className="pre">{all ? text : lines.slice(0, FOLD_OUTPUT).join('\n')}</pre>
+      <button type="button" className="fold-btn" aria-expanded={all} onClick={() => setAll(!all)}>
+        {all ? tr("Restrânge") : tr("Arată tot ({n} linii)", { n: lines.length })}
+      </button>
+    </div>
+  )
+}
+
 const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
   const [open, setOpen] = useState(false)
   const hasBody = Boolean(item.output || item.diffs?.length || item.images?.length)
   const state = item.status === 'running' ? tr("rulează") : item.status === 'error' ? tr("eroare") : tr("gata")
+  const kind = toolKind(item.name)
+  const file = toolFile(item)
+  const target = toolTarget(item.name, item.title, item.input)
+  const input = (item.input || {}) as Record<string, unknown>
+  const command = kind === 'run' ? (typeof input.command === 'string' && input.command) || target : ''
+  const fresh = item.diffs?.length || kind === 'write' || kind === 'edit' ? newContent(item.input, item.diffs) : ''
+  const err = item.status === 'error'
   return (
-    <div className={`tool ${item.status}`} data-path={toolFile(item)}>
-      <button className="tool-head" onClick={() => hasBody && setOpen(!open)} aria-expanded={open}>
-        <span className="tool-verb">{toolVerb(item.name)}</span>
-        <span className="tool-target">{toolTarget(item.name, item.title, item.input)}</span>
-        <span className="tool-state" style={{ color: item.status === 'running' ? 'var(--volt)' : item.status === 'error' ? 'var(--critical)' : 'var(--grey-2)' }}>
-          {state}
+    <div className={`tool ${item.status}`} data-path={file}>
+      <div className="tool-top">
+        <button className="tool-head" onClick={() => hasBody && setOpen(!open)} aria-expanded={open}>
+          <span className="tool-verb">{toolVerb(item.name)}</span>
+          <span className="tool-target">{target}</span>
+          <span className="tool-state" style={{ color: item.status === 'running' ? 'var(--volt)' : err ? 'var(--critical)' : 'var(--grey-2)' }}>
+            {state}
+          </span>
+          <span className="tool-state faint">{hasBody ? (open ? '−' : '+') : ''}</span>
+        </button>
+        <span className="tool-acts">
+          {command ? <CopyButton label={tr("Copiază comanda")} said={tr("Comandă copiată")} get={() => command} /> : file ? <CopyButton label={tr("Copiază calea")} said={tr("Cale copiată")} get={() => file} /> : null}
+          {item.output ? <CopyButton icon="file" label={err ? tr("Copiază eroarea") : tr("Copiază rezultatul")} said={err ? tr("Eroare copiată") : tr("Rezultat copiat")} get={() => item.output || ''} /> : null}
         </span>
-        <span className="tool-state faint">{hasBody ? (open ? '−' : '+') : ''}</span>
-      </button>
+      </div>
       {open && hasBody && (
         <div className="tool-body">
+          {err && item.output ? (
+            <div className="tool-bar">
+              <CopyButton text={tr("Copiază eroarea")} done={tr("Copiat")} label={tr("Copiază eroarea")} said={tr("Eroare copiată")} get={() => item.output || ''} />
+            </div>
+          ) : null}
+          {item.diffs?.length || fresh ? (
+            <div className="tool-bar">
+              {item.diffs?.length ? <CopyButton text={tr("Copiază diff-ul")} done={tr("Copiat")} label={tr("Copiază diff-ul")} said={tr("Diff copiat")} get={() => diffText(item.diffs || [])} /> : null}
+              {fresh ? <CopyButton text={tr("Copiază conținutul nou")} done={tr("Copiat")} label={tr("Copiază conținutul nou al fișierului")} said={tr("Conținut copiat")} get={() => fresh} /> : null}
+            </div>
+          ) : null}
           {item.images?.length ? (
             <div className="images tool-images">
               {item.images.map((src, i) => (
-                <ChatImage key={i} src={src} name={toolTarget(item.name, item.title, item.input).split(/[\\/]/).pop() || `imagine-${i + 1}`} />
+                <ChatImage key={i} src={src} name={target.split(/[\\/]/).pop() || `imagine-${i + 1}`} />
               ))}
             </div>
           ) : null}
           {item.diffs?.length ? <DiffView diffs={item.diffs} /> : null}
-          {item.output ? <pre className="pre">{item.output}</pre> : null}
+          {item.output ? <Output text={item.output} /> : null}
         </div>
       )}
     </div>
@@ -159,13 +202,14 @@ function Reasoning({ text, live }: { text: string; live: boolean }) {
   )
 }
 
-export const MessageItem = memo(function MessageItem({ item, live }: { item: ChatItem; live: boolean }) {
+export const MessageItem = memo(function MessageItem({ item, live, streaming = false }: { item: ChatItem; live: boolean; streaming?: boolean }) {
   switch (item.kind) {
     case 'user': {
       const { quote, body } = splitQuote(item.text)
       return (
-        <div className="msg-user" onContextMenu={(e) => messageMenu(e)}>
-          <ReplyButton text={body} />
+        <div className="msg-row" onContextMenu={(e) => messageMenu(e)}>
+          <MsgBar text={body} />
+          <div className="msg-user">
           {quote && <div className="msg-quote">{quote}</div>}
           {body && <div className="message-text">{body}</div>}
           {(item.images?.length || item.files?.length) ? (
@@ -180,14 +224,15 @@ export const MessageItem = memo(function MessageItem({ item, live }: { item: Cha
               {item.files?.length ? <div className="message-files">{item.files.map((file, i) => <span key={`${file.name}-${i}`} title={file.mime}><Paperclip size={11} />{file.name}</span>)}</div> : null}
             </div>
           ) : null}
+          </div>
         </div>
       )
     }
     case 'assistant':
       return item.text.trim() ? (
         <div className="msg-assistant" onContextMenu={(e) => messageMenu(e, item.text)}>
-          <ReplyButton text={item.text} />
-          <Markdown text={item.text} />
+          <Markdown text={item.text} streaming={streaming} />
+          {!streaming && <MsgBar text={item.text} markdown={item.text} />}
         </div>
       ) : null
     case 'reasoning':

@@ -1,0 +1,225 @@
+/* Taking things out of the chat: copy buttons, copy chips, the message toolbar, folded blocks.
+   Words on these controls are CSS content (data-t / data-ok), so a selection or innerText never carries them. */
+
+.cp {
+  --m-copy: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='14' height='14' x='8' y='8' rx='2'/><path d='M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2'/></svg>");
+  --m-check: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
+  --m-file: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z'/><path d='M14 2v4a2 2 0 0 0 2 2h4'/><path d='M16 13H8'/><path d='M16 17H8'/></svg>");
+  --m-block: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m10 9-3 3 3 3'/><path d='m14 15 3-3-3-3'/><rect x='3' y='3' width='18' height='18' rx='2'/></svg>");
+  --m-reply: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 17 4 12 9 7'/><path d='M20 18v-2a4 4 0 0 0-4-4H4'/></svg>");
+  --m-wrap: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='3' x2='21' y1='6' y2='6'/><path d='M3 12h15a3 3 0 1 1 0 6h-4'/><polyline points='16 16 14 18 16 20'/><line x1='3' x2='10' y1='18' y2='18'/></svg>");
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--line-2);
+  background: var(--s1);
+  color: var(--grey);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.cp:hover {
+  color: var(--volt);
+  border-color: var(--volt-line);
+}
+.cp:focus-visible,
+.cb-more:focus-visible,
+.fold-btn:focus-visible,
+.md code.cv:focus-visible {
+  outline: 2px solid var(--volt);
+  outline-offset: 1px;
+}
+.cp .ic {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  background: currentColor;
+  -webkit-mask: var(--m-copy) center / contain no-repeat;
+  mask: var(--m-copy) center / contain no-repeat;
+}
+.cp .ic-file { -webkit-mask-image: var(--m-file); mask-image: var(--m-file); }
+.cp .ic-block { -webkit-mask-image: var(--m-block); mask-image: var(--m-block); }
+.cp .ic-reply { -webkit-mask-image: var(--m-reply); mask-image: var(--m-reply); }
+.cp .ic-wrap { -webkit-mask-image: var(--m-wrap); mask-image: var(--m-wrap); }
+.cp .ic-more,
+.cp .ic-md,
+.cp .ic-tsv,
+.cp .ic-csv { display: none; }
+.cp[data-copied] { color: var(--volt); border-color: var(--volt-line); }
+.cp[data-copied] .ic { -webkit-mask-image: var(--m-check); mask-image: var(--m-check); }
+.cp[aria-pressed='true'] { color: var(--volt); }
+.cp .lbl { display: inline-grid; font-family: var(--label); font-weight: 500; font-size: 11.5px; letter-spacing: 0.06em; }
+.cp .lbl::before,
+.cp .lbl::after { grid-area: 1 / 1; white-space: nowrap; }
+.cp .lbl::before { content: attr(data-t); }
+.cp .lbl::after { content: attr(data-ok); visibility: hidden; }
+.cp[data-copied] .lbl::before { visibility: hidden; }
+.cp[data-copied] .lbl::after { visibility: visible; }
+
+/* code blocks */
+.cb {
+  position: relative;
+  margin: 14px 0;
+  border: 1px solid var(--line);
+  background: var(--s1);
+}
+.md .cb pre {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.cb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  padding-block: 3px;
+  padding-inline: 12px 4px;
+  user-select: none;
+}
+.cb-lang::before {
+  content: attr(data-t);
+  font-family: var(--label);
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-2);
+}
+.cb-acts,
+.tbl-acts,
+.tool-acts { display: inline-flex; gap: 4px; }
+.cb-head .cp { border-color: transparent; background: transparent; }
+.cb-head .cp:hover { border-color: var(--volt-line); }
+.cb[data-wrap] pre code { white-space: pre-wrap; word-break: break-word; }
+.cb[data-long]:not([data-open]) pre { max-height: 520px; overflow: hidden; position: relative; }
+.cb[data-long]:not([data-open]) pre::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 110px;
+  background: linear-gradient(transparent, var(--s1));
+  pointer-events: none;
+}
+.cb-more,
+.fold-btn {
+  display: block;
+  width: 100%;
+  padding: 6px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: var(--s1);
+  color: var(--grey);
+  font-family: var(--label);
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.cb-more::before { content: attr(data-t); }
+.cb[data-open] .cb-more::before { content: attr(data-t2); }
+.cb-more:hover,
+.fold-btn:hover { color: var(--white); }
+
+/* values in running text */
+.md code.cv {
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.md code.cv:hover { background: var(--volt-dim); border-color: var(--volt-line); }
+.md code.cv::before {
+  content: attr(data-t);
+  position: absolute;
+  /* below, not above: content-visibility on the message clips paint at its box, and the toolbar row leaves room under the text */
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 3px 7px;
+  border: 1px solid var(--line-2);
+  background: var(--s3);
+  color: var(--white);
+  font-family: var(--label);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.md code.cv:hover::before,
+.md code.cv:focus-visible::before { opacity: 1; }
+.md code.cv[data-copied]::before { opacity: 0; }
+.md code.cv[data-copied]::after {
+  content: '\2713';
+  position: absolute;
+  inset-block-end: -9px;
+  inset-inline-end: -5px;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  background: var(--volt);
+  color: var(--black);
+  font: 700 9px/1 var(--label);
+}
+.md a code.cv { cursor: inherit; }
+
+/* tables */
+.tbl { position: relative; margin: 12px 0; }
+.md .tbl table { margin: 0; }
+.tbl-scroll { overflow-x: auto; }
+.tbl-acts {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tbl:hover .tbl-acts,
+.tbl-acts:focus-within { opacity: 1; }
+.tbl-acts .cp { height: 20px; padding: 0 5px; background: var(--s2); }
+.tbl-acts .lbl { font-size: 10.5px; }
+
+/* message toolbar: lives in room the row keeps, so showing it moves nothing */
+.msg-assistant { padding-block-end: 22px; margin-block-end: -8px; }
+.msgbar { display: inline-flex; gap: 2px; opacity: 0; transition: opacity 0.15s; }
+.msg-assistant .msgbar { position: absolute; inset-block-end: 0; inset-inline-start: 0; }
+.msgbar .cp { height: 22px; min-width: 22px; padding: 0 5px; border-color: transparent; background: transparent; }
+.msgbar .cp:hover { border-color: var(--volt-line); }
+.msg-row { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.msg-row .msg-user { align-self: auto; min-width: 0; }
+.msg-assistant:hover .msgbar,
+.msg-row:hover .msgbar,
+.msgbar:focus-within { opacity: 1; }
+@media (hover: none) { .msgbar { opacity: 1; } }
+
+/* tool rows */
+.tool-top { display: flex; align-items: center; }
+.tool-top .tool-head { flex: 1; min-width: 0; width: auto; }
+.tool-acts { min-width: 54px; justify-content: flex-end; padding-inline-end: 8px; opacity: 0; transition: opacity 0.15s; }
+.tool:hover .tool-acts,
+.tool-acts:focus-within { opacity: 1; }
+@media (hover: none) { .tool-acts { opacity: 1; } }
+.tool-acts .cp { height: 22px; min-width: 22px; padding: 0 5px; background: transparent; border-color: transparent; }
+.tool-acts .cp:hover { border-color: var(--volt-line); }
+.tool-bar { display: flex; gap: 6px; position: sticky; top: 0; z-index: 1; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--black); }
+.fold { position: relative; }
+.fold:not(.open)::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 30px;
+  height: 56px;
+  background: linear-gradient(transparent, var(--black));
+  pointer-events: none;
+}
+.fold-btn { background: var(--black); }
