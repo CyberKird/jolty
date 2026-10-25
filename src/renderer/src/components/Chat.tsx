@@ -8,6 +8,7 @@ import { hasJoltyBrowser, hasJoltyComputer, isAcp } from '@shared/types'
 import { sameProvider } from '@shared/provider'
 import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
+import { useWindowedItems } from './useWindowedItems'
 import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODES, useAllModels, type ModelGroup } from './ModelPicker'
 import { MentionMenu, useMentions } from './Mentions'
 import { ToolsMenu } from './ToolsMenu'
@@ -806,6 +807,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
   // a chat created moments ago has no history to wait for; an old one is settled once its transcript is in
   const loaded = useStore((s) => s.transcripts[session.id] !== undefined) || Date.now() - session.createdAt < 10_000
   const settled = useSettled(loaded)
+  const { start, older } = useWindowedItems(items.length, scrollRef)
   const lastReasoning = useMemo(() => {
     for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'reasoning') return items[i].id
     return undefined
@@ -833,7 +835,13 @@ export function ChatView({ session }: { session: SessionMeta }) {
       </div>
       <div className="messages" ref={scrollRef}>
         <div className="messages-inner" data-live={settled ? '' : undefined}>
-          {items.map((it, i) => {
+          {start > 0 && (
+            <div ref={older} className="older-marker">
+              {tr("Se încarcă mesajele mai vechi ({n})", { n: start })}
+            </div>
+          )}
+          {items.slice(start).map((it, j) => {
+            const i = start + j
             const startsReply = it.kind !== 'user' && it.kind !== 'notice' && (i === 0 || items[i - 1].kind === 'user')
             return (
               <Fragment key={it.id}>

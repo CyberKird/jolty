@@ -1,0 +1,7 @@
+/* the marker above a long conversation's first loaded message; scrolling up to it loads the older ones */
+.older-marker {
+  padding: 14px 0;
+  text-align: center;
+  color: var(--grey);
+  font-size: 12px;
+}

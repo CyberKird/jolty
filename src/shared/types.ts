@@ -331,6 +331,8 @@ export interface AppSettings {
   modelAdvice?: boolean
   /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
   reduceMotion?: boolean
+  /** flat look and a lighter mascot for weak PCs; 'auto' (the default) turns on for 4 cores or fewer, or 4 GB of memory or less */
+  lowPower?: 'auto' | 'on' | 'off'
   /** Jolty the mascot runs around the interface; on unless false */
   mascot?: boolean
   /** Jolty's soft sounds; on unless false */

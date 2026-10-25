@@ -487,7 +487,10 @@ function PreviewView({ source, cwd, drafts }: { source: Source; cwd: string; dra
   useEffect(() => {
     if (source.dev || !hint) return
     let live = true
-    const look = (): void => void api.preview.probe(DEV_PORTS).then((up) => live && up.length && setProbed(`http://localhost:${up[0]}`))
+    // each look connects to every port from main: not while the window is hidden
+    const look = (): void => {
+      if (!document.hidden) void api.preview.probe(DEV_PORTS).then((up) => live && up.length && setProbed(`http://localhost:${up[0]}`))
+    }
     look()
     const t = setInterval(look, 2500)
     return () => {

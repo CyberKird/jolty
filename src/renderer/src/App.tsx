@@ -1,15 +1,16 @@
 import { ArrowDownToLine, PanelLeftClose, PanelLeftOpen, RefreshCw } from 'lucide-react'
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { ChatView, NewChat } from './components/Chat'
 import wordmark from './assets/joltarise-wordmark-volt.svg'
 import { ContextMenu } from './components/ContextMenu'
 import { LivePanel } from './components/LivePanel'
-import { Mascot } from './mascot/Mascot'
 import { WhatsNewHost } from './components/WhatsNew'
 import { Welcome } from './components/Welcome'
 import { PowerBar } from './components/PowerBar'
 import { Sidebar } from './components/Sidebar'
 import { api, liveRows, useStore } from './store'
+import { batchDeltas } from './event-batch'
+import { lowPower, setLowPowerMode } from './lowpower'
 import { getLang, isRtl, tr } from '@shared/i18n'
 
 // secondary pages load when first opened: the chat is on screen sooner
@@ -20,6 +21,8 @@ const SettingsPage = lazy(() => import('./pages/Settings').then((m) => ({ defaul
 const SystemPage = lazy(() => import('./pages/System').then((m) => ({ default: m.SystemPage })))
 const UsagePage = lazy(() => import('./pages/Usage').then((m) => ({ default: m.UsagePage })))
 const SkillsPage = lazy(() => import('./pages/Skills').then((m) => ({ default: m.SkillsPage })))
+// the mascot (and three.js with it) is not needed for the first frame: it starts once the window is idle
+const Mascot = lazy(() => import('./mascot/Mascot').then((m) => ({ default: m.Mascot })))
 const SchedulesPage = lazy(() => import('./pages/Schedules').then((m) => ({ default: m.SchedulesPage })))
 
 /** The Joltarise bolt, drawn from the brand symbol's polygon. */
@@ -71,8 +74,15 @@ function TitleBar() {
 }
 
 export function App() {
+  const [idle, setIdle] = useState(false)
   const newUser = useStore((s) => s.profilesLoaded && s.profiles.length === 0)
   const { page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent } = useStore()
+
+  useEffect(() => {
+    const ric = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 300))
+    const id = ric(() => setIdle(true), { timeout: 1500 })
+    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : clearTimeout(id))
+  }, [])
 
   // Below 1180 px (with the sidebar shown) the live panel is a drawer over the chat. Making the window
   // that narrow closes it, so it never lands on top of the conversation; widening it again brings it back.
@@ -96,10 +106,13 @@ export function App() {
   useEffect(() => {
     void loadProfiles()
     void loadSessions()
-    const off = api.sessions.onEvent(onEvent)
+    const off = api.sessions.onEvent(batchDeltas(onEvent, () => (lowPower() ? 120 : 40)))
     // limits and 24 h spend for the sidebar meter; events keep them live afterwards
     void loadUsage()
-    void api.app.settings().then((s) => document.documentElement.classList.toggle('reduce-motion', Boolean(s.reduceMotion)))
+    void api.app.settings().then((s) => {
+      document.documentElement.classList.toggle('reduce-motion', Boolean(s.reduceMotion))
+      setLowPowerMode(s.lowPower)
+    })
     document.documentElement.lang = getLang()
     document.documentElement.dir = isRtl() ? 'rtl' : 'ltr'
     void api.updates.status().then((status) => onEvent({ type: 'update', status }))
@@ -159,7 +172,11 @@ export function App() {
       {isChat && <div className="live-scrim" data-state={liveOpen ? 'open' : 'closed'} onClick={() => setLiveOpen(false)} aria-hidden />}
       <ContextMenu />
       <PowerBar />
-      <Mascot />
+      {idle && (
+        <Suspense fallback={null}>
+          <Mascot />
+        </Suspense>
+      )}
       <WhatsNewHost />
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((t) => (

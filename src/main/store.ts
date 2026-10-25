@@ -160,7 +160,15 @@ export function loadTranscript(sessionId: string): ChatItem[] {
   return slimTranscript(readJson<ChatItem[]>(path.join('transcripts', `${sessionId}.json`), []))
 }
 
+const generations = new Map<string, number>()
+
+/** Changes with every synchronous save of a transcript: an asynchronous save that started earlier must not overwrite it. */
+export function transcriptGeneration(sessionId: string): number {
+  return generations.get(sessionId) ?? 0
+}
+
 export function saveTranscript(sessionId: string, items: ChatItem[]): void {
+  generations.set(sessionId, transcriptGeneration(sessionId) + 1)
   writeJson(path.join('transcripts', `${sessionId}.json`), slimTranscript(items), false)
 }
 
