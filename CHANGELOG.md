@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.0
+
+### New
+
+- Low-power mode for weak PCs, in Settings, General: Automatic (the default, on for PCs with 4 cores or fewer, or 4 GB of memory or less), Always on, Always off. It gives a flat look with no decorative animations and a lighter mascot. On a normal PC nothing changes.
+- Copy anything from the chat in one click. Code blocks have a header with the language, a Copy button, a wrap toggle and a fold for long ones (shell commands copy without the `$ `). Paths, commands, URLs, versions and similar values in inline code are click-to-copy chips, and a right-click offers Copy as path, Open and Show in Explorer for real paths. Each message has a hover bar (copy as text or Markdown, quote, copy the last code block). Tool rows can copy the command, path, output, error, diff and new file content, and tables copy as Markdown, TSV (for Excel and Sheets) or CSV. Ctrl+Shift+C copies the last reply, Ctrl+Alt+C the last code block. Models are also told to put every copyable value in its own code block.
+- The mascot is bigger and livelier. Settings has a size choice (small, normal, big, big by default). He scratches his head while thinking, waves when a permission is waiting, facepalms on an error, dances when a task is done, dodges a chasing cursor, giggles when poked repeatedly, shadow-boxes, pushes an invisible wall and pants after a long run. He steps out of the way when you type, open a menu or select text, and never takes clicks meant for the interface.
+
+### Improvements
+
+- Every state change now moves: menus, pickers, dialogs, toasts, the sidebar, the Live panel, page changes, opening a chat, new messages and permission cards fade or slide in and out in short eased steps. They can be interrupted, follow Reduce motion, and are shorter in low-power mode.
+- Long chats open much faster: only the latest messages are drawn and older ones load as you scroll up, without a jump. Saving a long chat no longer blocks the app, and start-up does less before the window shows.
+
 ## 0.7.28
 
 ### Fixed
