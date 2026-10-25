@@ -1174,5 +1174,20 @@
  "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "「インストール」を押すと、Mozilla が署名した拡張機能を Firefox で開きます。",
  "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "Firefox が「Jolty を追加しますか?」と尋ねます。「追加」を押してください。",
  "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "完了:上の状態が「接続済み」になります。Firefox を閉じても拡張機能はインストールされたままなので、手順を繰り返す必要はありません。",
- "Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.": "プロファイル「{name}」を削除しますか? 会話は Jolty に残り、別のアカウントで続けられます。"
+ "Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.": "プロファイル「{name}」を削除しますか? 会話は Jolty に残り、別のアカウントで続けられます。",
+ "Mediu": "中",
+ "Complex": "複雑",
+ "Foarte complex": "とても複雑",
+ "refactorizare": "リファクタリング",
+ "migrare": "移行",
+ "securitate": "セキュリティ",
+ "algoritmi": "アルゴリズム",
+ "integrare": "連携",
+ "teste": "テスト",
+ "cod nou": "新規コード",
+ "formatare": "書式設定",
+ "traducere": "翻訳",
+ "Scoate {name}": "{name} を削除",
+ "alt profil": "別のプロファイル",
+ "Procesul de autentificare nu s-a oprit.": "サインインのプロセスが終了しませんでした。"
 }

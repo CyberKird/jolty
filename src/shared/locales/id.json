@@ -1174,5 +1174,20 @@
  "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "Tekan Pasang: saya membuka ekstensi yang ditandatangani Mozilla di Firefox.",
  "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "Firefox bertanya \"Tambahkan Jolty?\". Tekan \"Tambahkan\".",
  "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "Selesai: status di atas berubah menjadi \"Terhubung\". Ekstensi tetap terpasang setelah Firefox ditutup, jadi langkahnya tidak perlu diulang.",
- "Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.": "Hapus profil \"{name}\"? Percakapannya tetap ada di Jolty dan bisa dilanjutkan di akun lain."
+ "Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.": "Hapus profil \"{name}\"? Percakapannya tetap ada di Jolty dan bisa dilanjutkan di akun lain.",
+ "Mediu": "Sedang",
+ "Complex": "Kompleks",
+ "Foarte complex": "Sangat kompleks",
+ "refactorizare": "refaktor",
+ "migrare": "migrasi",
+ "securitate": "keamanan",
+ "algoritmi": "algoritma",
+ "integrare": "integrasi",
+ "teste": "tes",
+ "cod nou": "kode baru",
+ "formatare": "format",
+ "traducere": "terjemahan",
+ "Scoate {name}": "Hapus {name}",
+ "alt profil": "profil lain",
+ "Procesul de autentificare nu s-a oprit.": "Proses masuk tidak berhenti."
 }

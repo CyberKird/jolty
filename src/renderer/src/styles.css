@@ -3689,10 +3689,9 @@ a {
 .page-tabs {
   position: relative;
   display: flex;
-  overflow-x: auto;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--line);
   margin-bottom: 18px;
-  scrollbar-width: none;
 }
 .page-tab {
   flex: none;
@@ -3729,7 +3728,7 @@ a {
 .page-tab-bar {
   position: absolute;
   left: 0;
-  bottom: 0;
+  top: 0;
   height: 2px;
   background: var(--volt);
   box-shadow: 0 0 10px rgba(212, 255, 0, 0.45);

@@ -70,7 +70,14 @@ export function toolTarget(name: string, title: string, input?: unknown): string
   const s = (v: unknown): string => (typeof v === 'string' ? v : '')
   const direct = s(i.command) || s(i.file_path) || s(i.notebook_path) || s(i.pattern) || s(i.url) || s(i.query) || s(i.description)
   if (direct) return direct
-  return title.replace(/^\$ /, '').replace(/^(Citește|Editează|Scrie|Caută fișiere|Caută pe web:|Caută|Deschide|Subagent:)\s*/, '')
+  const t = title.replace(/^\$ /, '')
+  // the verb the engine put before the object, in the interface language
+  const verbs = [tr("Citește {str}", { str: '@@' }), tr("Editează {str}", { str: '@@' }), tr("Scrie {str}", { str: '@@' }), tr("Caută fișiere {str}", { str: '@@' }), tr("Caută pe web: {str}", { str: '@@' }), tr("Deschide {str}", { str: '@@' }), tr("Caută \"{str}\"", { str: '@@' }), 'Subagent: ']
+  for (const v of verbs) {
+    const head = v.split('@@')[0]
+    if (head && t.startsWith(head)) return t.slice(head.length).trimStart()
+  }
+  return t
 }
 
 /** The file a tool works on, when it is a full path (the right-click menu can then open it or show it in Explorer). */

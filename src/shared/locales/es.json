@@ -1174,5 +1174,20 @@
  "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "Pulsa Instalar: abro en Firefox la extensión firmada por Mozilla.",
  "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "Firefox pregunta «¿Añadir Jolty?». Pulsa «Añadir».",
  "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "Listo: el estado de arriba pasa a «Conectada». La extensión sigue instalada al cerrar Firefox, no repites los pasos.",
- "Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.": "¿Eliminar el perfil «{name}»? Sus conversaciones se quedan en Jolty y puedes continuarlas en otra cuenta."
+ "Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.": "¿Eliminar el perfil «{name}»? Sus conversaciones se quedan en Jolty y puedes continuarlas en otra cuenta.",
+ "Mediu": "Medio",
+ "Complex": "Complejo",
+ "Foarte complex": "Muy complejo",
+ "refactorizare": "refactorización",
+ "migrare": "migración",
+ "securitate": "seguridad",
+ "algoritmi": "algoritmos",
+ "integrare": "integración",
+ "teste": "pruebas",
+ "cod nou": "código nuevo",
+ "formatare": "formato",
+ "traducere": "traducción",
+ "Scoate {name}": "Quitar {name}",
+ "alt profil": "otro perfil",
+ "Procesul de autentificare nu s-a oprit.": "El proceso de inicio de sesión no se detuvo."
 }

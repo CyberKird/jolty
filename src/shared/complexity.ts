@@ -15,18 +15,18 @@ export interface Assessment {
   effort: 'low' | 'medium' | 'high' | 'xhigh'
 }
 
-const LABELS: Record<Level, string> = { 1: tr("Simplu"), 2: 'Mediu', 3: 'Complex', 4: 'Foarte complex' }
+const LABELS: Record<Level, string> = { 1: tr("Simplu"), 2: tr("Mediu"), 3: tr("Complex"), 4: tr("Foarte complex") }
 
 const HARD: [RegExp, string][] = [
   [/arhitectur|architect/i, tr("arhitectură")],
-  [/refactor/i, 'refactorizare'],
-  [/migr(ea|are|ează|ate|ation)/i, 'migrare'],
+  [/refactor/i, tr("refactorizare")],
+  [/migr(ea|are|ează|ate|ation)/i, tr("migrare")],
   [/de la zero|from scratch|aplicați[ea] (întreag|complet)|whole app|full app/i, tr("construit de la zero")],
   [/(tot|întreg)(ul)? (proiect|codul|repo)|entire (codebase|project|repo)|all files|toate fișierele/i, tr("tot proiectul")],
-  [/securitate|security|vulnerab|exploit|criptare|encrypt/i, 'securitate'],
+  [/securitate|security|vulnerab|exploit|criptare|encrypt/i, tr("securitate")],
   [/performan|optimiz|\blent|\bslow|\blag\b|\bfps\b|memory leak|scurgere de memorie/i, tr("performanță")],
   [/concuren|race condition|deadlock|thread|paralel|async.*bug/i, tr("concurență")],
-  [/algoritm|algorithm|matematic|physics|fizic/i, 'algoritmi'],
+  [/algoritm|algorithm|matematic|physics|fizic/i, tr("algoritmi")],
   [/multiplayer|netcode|sincroniz|websocket|real-?time|timp real/i, tr("timp real / rețea")],
   [/bază de date|baza de date|database|schema|sql|migration/i, tr("bază de date")],
   [/autentific|authentic|oauth|login|plăți|payment|stripe/i, tr("autentificare / plăți")],
@@ -40,17 +40,17 @@ const HARD: [RegExp, string][] = [
 const MEDIUM: [RegExp, string][] = [
   [/adaugă|implementează|creează|construiește|fă (o|un)|scrie (o|un)|\badd\b|implement|create|build/i, tr("funcționalitate nouă")],
   [/\bbug\b|repar|fix|nu funcționează|doesn.t work/i, tr("reparație")],
-  [/test/i, 'teste'],
-  [/componen|pagin|endpoint|funcți|clas[aă]|modul/i, 'cod nou'],
+  [/test/i, tr("teste")],
+  [/componen|pagin|endpoint|funcți|clas[aă]|modul/i, tr("cod nou")],
   [/stil|design|\bui\b|interfaț|responsive|css/i, tr("interfață")],
-  [/integr|conect|\bapi\b/i, 'integrare']
+  [/integr|conect|\bapi\b/i, tr("integrare")]
 ]
 
 const EASY: [RegExp, string][] = [
   [/^\s*(explică|ce face|ce înseamnă|ce e |cum funcționează|what does|explain|what is)/i, tr("întrebare")],
   [/redenume|rename|typo|greșeal[aă] de scriere|comentari|\bcomment/i, tr("modificare mică")],
-  [/formatea|\bformat\b|indent|lint/i, 'formatare'],
-  [/tradu|translate/i, 'traducere'],
+  [/formatea|\bformat\b|indent|lint/i, tr("formatare")],
+  [/tradu|translate/i, tr("traducere")],
   [/o (singură )?linie|one line|rapid|quick|simplu|mică|small/i, tr("cerere mică")],
   [/^\s*(salut|bună|hi|hello|mersi|mulțumesc|thanks|ok)\b/i, tr("mesaj scurt")]
 ]

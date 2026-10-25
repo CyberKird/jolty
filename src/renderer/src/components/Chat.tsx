@@ -346,7 +346,7 @@ function Composer(p: ComposerProps) {
               <div className={`attachment ${a.mime.startsWith('image/') ? 'attachment-image' : 'attachment-file'}`} key={a.id} title={a.name}>
                 {a.mime.startsWith('image/') && a.data ? <img src={`data:${a.mime};base64,${a.data}`} alt={a.name} /> : <Paperclip size={15} />}
                 {!a.mime.startsWith('image/') && <span className="attachment-name">{a.name}</span>}
-                <button onClick={() => setAtts((x) => x.filter((y) => y.id !== a.id))} aria-label={`Scoate ${a.name}`}>
+                <button onClick={() => setAtts((x) => x.filter((y) => y.id !== a.id))} aria-label={tr("Scoate {name}", { name: a.name })}>
                   <X size={11} />
                 </button>
               </div>
@@ -783,7 +783,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
     for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'reasoning') return items[i].id
     return undefined
   }, [items])
-  const how = tr("{v0} · efort {v1}", { v0: session.model || tr("model implicit"), v1: session.effort || 'implicit' })
+  const how = tr("{v0} · efort {v1}", { v0: session.model || tr("model implicit"), v1: session.effort || tr("implicit") })
   const who = `${profile?.name || ENGINE_LABEL[session.engine]} · ${how}`
 
   return (
@@ -867,7 +867,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
             .then(async (meta) => {
               await loadSessions()
               await openSession(meta.id)
-              toast(tr("Conversația continuă în {v0}", { v0: target?.name || 'alt profil' }))
+              toast(tr("Conversația continuă în {v0}", { v0: target?.name || tr("alt profil") }))
             })
             .catch((e) => toast(errMsg(e), true))
         }}

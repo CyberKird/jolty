@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.24
+
+### Fixed
+
+- Settings and other pages with tabs: when the window was narrow or the language had long names (German, French), the last tabs ran off the screen and the text was cut with no way to see it. The tabs now wrap onto a second line, so every one stays readable.
+- More texts follow the language you picked: the effort levels in the advice strip (Medium, Complex, Very complex) and the reasons next to them, the "Remove" label of an attached file, the "another profile" notice, the sign-in process error, and the verbs of tool lines in chat (Read, Edit, Search...) when they are cut down to the file or command.
+
+
 ## 0.7.23
 
 ### Improvements

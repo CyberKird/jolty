@@ -27,18 +27,18 @@ export function useSavedTab<T extends string>(key: string, ids: readonly T[]): [
 /** A page's tab strip, in the live panel's look: a volt bar slides to the tab in use. */
 export function PageTabs<T extends string>({ tabs, tab, onPick, label }: { tabs: PageTab<T>[]; tab: T; onPick: (t: T) => void; label: string }) {
   const ref = useRef<HTMLDivElement>(null)
-  const [bar, setBar] = useState<{ x: number; w: number }>()
+  const [bar, setBar] = useState<{ x: number; y: number; w: number }>()
   const counts = tabs.map((t) => t.count ?? '').join('|')
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
     const fit = (): void => {
       const on = el.querySelector<HTMLElement>('.page-tab.on')
-      if (on) setBar((b) => (b?.x === on.offsetLeft && b.w === on.offsetWidth ? b : { x: on.offsetLeft, w: on.offsetWidth }))
+      if (!on) return
+      const y = on.offsetTop + on.offsetHeight - 2
+      setBar((b) => (b?.x === on.offsetLeft && b.y === y && b.w === on.offsetWidth ? b : { x: on.offsetLeft, y, w: on.offsetWidth }))
     }
     fit()
-    // the strip scrolls with no visible scrollbar, so a tab past the edge would stay cut off
-    el.querySelector<HTMLElement>('.page-tab.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     const ro = new ResizeObserver(fit)
     ro.observe(el)
     return () => ro.disconnect()
@@ -69,7 +69,7 @@ export function PageTabs<T extends string>({ tabs, tab, onPick, label }: { tabs:
           {t.count ? <span className="page-tab-count">{t.count}</span> : null}
         </button>
       ))}
-      {bar && <span className="page-tab-bar" style={{ width: bar.w, transform: `translateX(${bar.x}px)` }} aria-hidden />}
+      {bar && <span className="page-tab-bar" style={{ width: bar.w, transform: `translate(${bar.x}px, ${bar.y}px)` }} aria-hidden />}
     </div>
   )
 }

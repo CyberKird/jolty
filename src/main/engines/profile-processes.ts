@@ -1,4 +1,5 @@
 import { execFile, type ChildProcess } from 'child_process'
+import { tr } from '../../shared/i18n'
 
 /** Child processes that must release a profile's files before it can be removed. */
 export class ProfileProcesses {
@@ -22,7 +23,7 @@ export class ProfileProcesses {
       if (!child.pid || child.exitCode !== null || child.signalCode !== null) return resolve()
       const timer = setTimeout(() => {
         child.removeListener('close', done)
-        reject(new Error('Procesul de autentificare nu s-a oprit.'))
+        reject(new Error(tr("Procesul de autentificare nu s-a oprit.")))
       }, 10000)
       const done = (): void => {
         clearTimeout(timer)

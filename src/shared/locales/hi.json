@@ -1174,5 +1174,20 @@
  "Apasă Instalează: deschid în Firefox extensia semnată de Mozilla.": "इंस्टॉल दबाएँ: मैं Mozilla द्वारा साइन किया हुआ एक्सटेंशन Firefox में खोलता हूँ।",
  "Firefox întreabă „Adaugi Jolty?”. Apasă „Adaugă”.": "Firefox पूछता है «Jolty जोड़ें?»। «जोड़ें» दबाएँ।",
  "Gata: starea de mai sus devine „Conectată”. Extensia rămâne instalată și după ce închizi Firefox, nu repeți pașii.": "हो गया: ऊपर की स्थिति «कनेक्ट» हो जाती है। Firefox बंद करने के बाद भी एक्सटेंशन इंस्टॉल रहता है, चरण दोबारा नहीं करने पड़ते।",
- "Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.": "प्रोफ़ाइल \"{name}\" हटाएँ? इसकी बातचीत Jolty में रहती है और आप उसे किसी दूसरे खाते में जारी रख सकते हैं।"
+ "Ștergi profilul „{name}”? Conversațiile lui rămân în Jolty și le poți continua pe alt cont.": "प्रोफ़ाइल \"{name}\" हटाएँ? इसकी बातचीत Jolty में रहती है और आप उसे किसी दूसरे खाते में जारी रख सकते हैं।",
+ "Mediu": "मध्यम",
+ "Complex": "जटिल",
+ "Foarte complex": "बहुत जटिल",
+ "refactorizare": "रीफैक्टरिंग",
+ "migrare": "माइग्रेशन",
+ "securitate": "सुरक्षा",
+ "algoritmi": "एल्गोरिदम",
+ "integrare": "इंटीग्रेशन",
+ "teste": "टेस्ट",
+ "cod nou": "नया कोड",
+ "formatare": "फ़ॉर्मेटिंग",
+ "traducere": "अनुवाद",
+ "Scoate {name}": "{name} हटाएँ",
+ "alt profil": "दूसरा प्रोफ़ाइल",
+ "Procesul de autentificare nu s-a oprit.": "साइन-इन प्रक्रिया बंद नहीं हुई।"
 }
