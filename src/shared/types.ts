@@ -327,6 +327,8 @@ export interface AppSettings {
   ownKeyHintDismissed?: boolean
   /** the model and thinking level each profile used last: a new chat opens on them, not on the default */
   lastModels?: Record<string, { model: string; effort?: string }>
+  /** the strip above the composer that suggests another model or effort for the task you type; on unless false */
+  modelAdvice?: boolean
   /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
   reduceMotion?: boolean
   /** Jolty the mascot runs around the interface; on unless false */

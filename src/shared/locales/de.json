@@ -1189,5 +1189,7 @@
  "traducere": "Übersetzung",
  "Scoate {name}": "{name} entfernen",
  "alt profil": "ein anderes Profil",
- "Procesul de autentificare nu s-a oprit.": "Der Anmeldeprozess wurde nicht beendet."
+ "Procesul de autentificare nu s-a oprit.": "Der Anmeldeprozess wurde nicht beendet.",
+ "Sugerează modelul potrivit": "Passendes Modell vorschlagen",
+ "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "Wenn du eine Aufgabe tippst, schlägt eine Leiste über dem Eingabefeld ein anderes Modell oder einen anderen Aufwand vor, falls der gewählte nicht passt. Ohne Haken erscheint sie nie."
 }

@@ -69,7 +69,11 @@ function Advice({ text, images, groups, profileId, model, effort, onApply }: {
 }) {
   const deferred = useDeferredValue(text)
   const limits = useStore((s) => s.limits)
-  const a = useMemo(() => assess(deferred, images), [deferred, images])
+  const [enabled, setEnabled] = useState(true)
+  useEffect(() => {
+    void api.app.settings().then((s) => setEnabled(s.modelAdvice !== false))
+  }, [])
+  const a = useMemo(() => (enabled ? assess(deferred, images) : undefined), [enabled, deferred, images])
   const r = useMemo(
     () => (a && profileId ? recommend(a, groups, { profileId, modelId: model, effort }, limits) : undefined),
     [a, groups, profileId, model, effort, limits]

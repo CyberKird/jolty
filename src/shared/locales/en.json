@@ -1189,5 +1189,7 @@
  "traducere": "translation",
  "Scoate {name}": "Remove {name}",
  "alt profil": "another profile",
- "Procesul de autentificare nu s-a oprit.": "The sign-in process did not stop."
+ "Procesul de autentificare nu s-a oprit.": "The sign-in process did not stop.",
+ "Sugerează modelul potrivit": "Suggest the right model",
+ "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "When you type a task, a strip above the box proposes another model or effort if the one you picked does not fit. Unchecked, it never shows up."
 }

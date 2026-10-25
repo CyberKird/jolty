@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.25
+
+### New
+
+- A checkbox in Settings, Models and sessions, "Suggest the right model", turns off the strip above the box that says a model is too weak for your task or proposes another effort. Unchecked, it never shows.
+
+### Fixed
+
+- The strip said "foarte complex" in the middle of an English sentence. The task levels are translated now (Medium, Complex, Very complex).
+
+
 ## 0.7.24
 
 ### Fixed

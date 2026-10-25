@@ -1189,5 +1189,7 @@
  "traducere": "अनुवाद",
  "Scoate {name}": "{name} हटाएँ",
  "alt profil": "दूसरा प्रोफ़ाइल",
- "Procesul de autentificare nu s-a oprit.": "साइन-इन प्रक्रिया बंद नहीं हुई।"
+ "Procesul de autentificare nu s-a oprit.": "साइन-इन प्रक्रिया बंद नहीं हुई।",
+ "Sugerează modelul potrivit": "सही मॉडल सुझाएँ",
+ "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "जब आप कोई काम लिखते हैं, तो चुना हुआ मॉडल या प्रयास स्तर सही न बैठे तो बॉक्स के ऊपर की पट्टी कोई और सुझाती है। अनचेक करने पर यह कभी नहीं दिखती।"
 }

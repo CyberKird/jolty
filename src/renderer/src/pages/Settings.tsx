@@ -142,6 +142,15 @@ export function SettingsPage() {
           )}
           {tab === 'models' && (
             <>
+              <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
+                <input type="checkbox" checked={s.modelAdvice !== false} onChange={async (e) => setS(await api.app.saveSettings({ modelAdvice: e.target.checked }))} />
+                <span>
+                  <b>{tr("Sugerează modelul potrivit")}</b>
+                  <span className="muted small" style={{ display: 'block' }}>
+                    {tr("Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.")}
+                  </span>
+                </span>
+              </label>
               <div className="card" style={{ marginBottom: 14 }}>
                 <div className="row" style={{ marginBottom: 10 }}>
                   <Eye size={16} color="var(--volt)" />

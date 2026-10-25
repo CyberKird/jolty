@@ -1189,5 +1189,7 @@
  "traducere": "traduction",
  "Scoate {name}": "Retirer {name}",
  "alt profil": "un autre profil",
- "Procesul de autentificare nu s-a oprit.": "Le processus de connexion ne s'est pas arrêté."
+ "Procesul de autentificare nu s-a oprit.": "Le processus de connexion ne s'est pas arrêté.",
+ "Sugerează modelul potrivit": "Suggérer le bon modèle",
+ "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "Quand vous saisissez une tâche, une barre au-dessus de la zone propose un autre modèle ou niveau d'effort si celui choisi ne convient pas. Décoché, elle n'apparaît jamais."
 }

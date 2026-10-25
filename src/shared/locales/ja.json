@@ -1189,5 +1189,7 @@
  "traducere": "翻訳",
  "Scoate {name}": "{name} を削除",
  "alt profil": "別のプロファイル",
- "Procesul de autentificare nu s-a oprit.": "サインインのプロセスが終了しませんでした。"
+ "Procesul de autentificare nu s-a oprit.": "サインインのプロセスが終了しませんでした。",
+ "Sugerează modelul potrivit": "適したモデルを提案する",
+ "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "タスクを入力すると、選んだモデルや負荷レベルが合わない場合に、入力欄の上のバーで別の候補を提案します。オフにすると表示されません。"
 }

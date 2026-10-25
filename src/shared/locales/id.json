@@ -1189,5 +1189,7 @@
  "traducere": "terjemahan",
  "Scoate {name}": "Hapus {name}",
  "alt profil": "profil lain",
- "Procesul de autentificare nu s-a oprit.": "Proses masuk tidak berhenti."
+ "Procesul de autentificare nu s-a oprit.": "Proses masuk tidak berhenti.",
+ "Sugerează modelul potrivit": "Sarankan model yang tepat",
+ "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "Saat Anda mengetik tugas, bilah di atas kotak mengusulkan model atau tingkat usaha lain jika yang dipilih kurang cocok. Jika tidak dicentang, bilah ini tidak pernah muncul."
 }

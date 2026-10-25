@@ -1189,5 +1189,7 @@
  "traducere": "ترجمة",
  "Scoate {name}": "إزالة {name}",
  "alt profil": "ملف شخصي آخر",
- "Procesul de autentificare nu s-a oprit.": "لم تتوقف عملية تسجيل الدخول."
+ "Procesul de autentificare nu s-a oprit.": "لم تتوقف عملية تسجيل الدخول.",
+ "Sugerează modelul potrivit": "اقتراح النموذج المناسب",
+ "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "عند كتابة مهمة، يقترح شريط فوق المربع نموذجًا أو مستوى جهد آخر إذا لم يناسب المختار. عند إلغاء التحديد لا يظهر أبدًا."
 }
