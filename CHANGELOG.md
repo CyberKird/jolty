@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.26
+
+### Improvements
+
+- "Improve message" no longer leans toward websites or code projects. It does not read the folder name any more, and it takes the field (an app, a company task, a text, a script) from your message and from the context it is given: your last three messages in the chat and the titles of the latest chats in the same folder. If it still cannot tell what you mean, it asks one short question in a note, and you add the answer to the message and press again.
+- It uses the cheapest model your Jolty has instead of the one picked in the chat box: a free OpenCode model if you picked one, then the small model of a Claude subscription (Haiku), Codex's mini model, an API profile's first model, and OpenCode's default. If one fails it tries the next. A one-word message keeps your interface language.
+
+### Fixed
+
+- The chat scrolled back down by itself when you started scrolling up from the bottom. Moving up by even a few pixels while the page was still growing (a streaming reply, an image, a long message settling) was treated as still being at the bottom, so the next change pulled you back like a rubber band. Going up now lets go of the bottom at once, and it only follows again when you reach the very end. A test covers it.
+
+
 ## 0.7.25
 
 ### New

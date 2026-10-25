@@ -531,8 +531,8 @@ export interface JoltyApi {
     handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string, fresh?: boolean): Promise<SessionMeta>
     /** a read-only review of the current changes by a model from the other family */
     review(sessionId: string): Promise<void>
-    /** the composer text rewritten clearer by a cheap model, in the same language; rejects when it fails */
-    improvePrompt(text: string, profileId?: string, model?: string, cwd?: string): Promise<string>
+    /** the composer text rewritten clearer by the cheapest model there is, in the same language; `question` instead of `text` when it cannot tell what the message is about; rejects when it fails */
+    improvePrompt(text: string, profileId?: string, model?: string, cwd?: string, sessionId?: string): Promise<{ text?: string; question?: string }>
     remove(sessionId: string): Promise<void>
     rename(sessionId: string, title: string): Promise<void>
     onEvent(cb: (e: ChatEvent) => void): () => void

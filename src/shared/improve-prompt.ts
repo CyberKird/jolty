@@ -1,23 +1,46 @@
-// "Improve prompt": the composer text goes once to the model picked in the composer and comes back as a better prompt; these two are the pure parts.
+// "Improve prompt": the composer text goes once to a cheap model and comes back as a better prompt; these are the pure parts.
 
 /** the text is sent to the model whole up to this many characters */
 export const IMPROVE_MAX = 8000
 
+/** What the model may read to understand the message: never copied, never a source of requirements. */
+export interface ImproveContext {
+  /** the user's last messages in this conversation, oldest first, already clipped */
+  recent?: string[]
+  /** titles of the latest conversations in the same folder */
+  titles?: string[]
+  /** the interface language's English name: the language of a message too short to tell */
+  language?: string
+}
+
+/** Cuts a message to what is enough to recognise the subject. */
+export const clipForContext = (text: string, max = 300): string => {
+  const t = text.replace(/\s+/g, ' ').trim()
+  return t.length > max ? t.slice(0, max) + '…' : t
+}
+
 /** The instruction for the model. English on purpose (for the model, not the user): the reply keeps the message's own language. */
-export function improvePrompt(text: string, project?: string): string {
-  return `You are a prompt engineer. A user is about to send the message below to an AI coding agent${project ? ` working in the project folder "${project}"` : ''}. Rewrite it into a better prompt for that agent: one that gets the job done right on the first try.
-Do not answer it, do not summarize it, do not give it a title. Return the improved prompt itself.
-How:
-- State the goal plainly, then what has to happen, as short steps or bullets when there is more than one thing to do.
-- Spell out what the user clearly expects but left implicit: what "done" means, what to check or test, what must not break or change. Only what follows from the message; never invent requirements, files, names, numbers or facts.
-- Where the message is vague and the agent would have to guess, tell the agent to look it up in the code or to ask, instead of guessing.
+export function improvePrompt(text: string, context: ImproveContext = {}): string {
+  const lines: string[] = []
+  if (context.recent?.length) lines.push('Recent messages of this conversation:', ...context.recent.map((m) => `- ${m}`))
+  if (context.titles?.length) lines.push('Earlier conversations in the same folder:', ...context.titles.map((t) => `- ${t}`))
+  return `Rewrite the message below, which the user will send to an AI assistant that can read files, run code and use tools, into a clearer prompt that works on the first try. Do not answer, summarize or title it. Reply with the improved prompt only: no preface, no quotes.
+- Goal first, then what must happen, as short steps if there are several.
+- Add what the user clearly expects but left unsaid (what "done" means, what to check, what must not break). Never invent requirements, files, names, numbers or facts.
+- Where it is vague, tell the assistant to look it up or ask, not to guess.
 - Keep file names, paths, commands, code, URLs, @mentions, /commands and quoted text exactly as written.
-- Same language and same voice as the user (first person, addressed to the agent). Fix spelling and grammar.
-- It must never come out shorter or vaguer than the original. A one-line message becomes a few clear lines, not an essay.
-Reply with the improved prompt only: no preface, no explanation, no quotation marks around it.
+- Same language and voice as the user${context.language ? ` (if the message is too short to tell, use ${context.language})` : ''}. Fix spelling. Never shorter or vaguer than the original.
+- The work can be anything (an app, a company task, code, text, data): take the field only from the message and the context, never assume a kind of project.
+- If you cannot tell what the message is about even with the context, reply only: QUESTION: <one short question, in the user's language>.${lines.length ? `\n\nContext, only to understand the message (never copy it or take requirements from it):\n${lines.join('\n')}` : ''}
 
 Message:
 ${text.slice(0, IMPROVE_MAX)}`
+}
+
+/** The model asked for what it needs instead of rewriting: the question, or undefined when the reply is a rewrite. */
+export function improveQuestion(reply: string): string | undefined {
+  const m = /^\s*QUESTION:\s*(.+)\s*$/.exec(reply.trim())
+  return m && !m[1].includes('\n') && m[1].length <= 240 ? m[1].trim() : undefined
 }
 
 /**

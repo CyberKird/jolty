@@ -55,10 +55,10 @@ import { Scheduler } from './scheduler'
 import * as modelWatch from './model-watch'
 import { candidates, FULL_PERCENT, pickAuto, type Candidate } from './auto-model'
 import type { ScheduledTask } from '@shared/schedule'
-import { tr } from '@shared/i18n'
+import { getLang, LANG_ENGLISH_NAME, tr } from '@shared/i18n'
 import { withDetectedAgents } from './first-run'
 import { withParallelInstruction } from '@shared/parallel'
-import { cleanImproved, improvePrompt } from '@shared/improve-prompt'
+import { cleanImproved, clipForContext, improvePrompt, improveQuestion } from '@shared/improve-prompt'
 
 
 export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', opencode: 'OpenCode' }
@@ -1235,27 +1235,65 @@ ${text.slice(0, 1500)}`
     }
   }
 
-  /** The composer's text rewritten once by the model picked in the composer (the image describer when that one cannot); throws when it cannot be trusted. */
-  async improvePrompt(text: string, profileId?: string, model?: string, cwd?: string): Promise<string> {
-    const picked = store.loadProfiles().find((p) => p.id === profileId)
-    // OpenCode's free models are asked directly; Hermes cannot answer once, so it uses the automatic profile
-    const viaOpencode = picked?.engine === 'opencode' && Boolean(model)
-    const own = picked && !isAcp(picked.engine)
-    const vp = own ? picked : this.visionProfile()
-    if (!viaOpencode && !vp) throw new Error(tr("Niciun profil nu poate îmbunătăți mesajul: adaugă un profil Claude sau Codex."))
-    const prompt = improvePrompt(text, cwd ? path.basename(cwd) : undefined)
-    const pick = own ? model || undefined : vp!.engine === 'claude' && vp!.auth !== 'endpoint' ? 'haiku' : undefined
-    const asked = viaOpencode ? opencodeOnce(prompt, model!) : this.driver(vp!.engine).describe(vp!, [], prompt, pick)
-    let timer: NodeJS.Timeout | undefined
-    const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(tr("Modelul nu a răspuns la timp."))), 120000) })
-    try {
-      const out = cleanImproved(text, await Promise.race([asked, late]))
-      if (!out) throw new Error(tr("Modelul nu a dat o variantă folosibilă. Mesajul rămâne cum era."))
-      return out
-    } finally {
-      clearTimeout(timer)
-      asked.catch(() => undefined)
+  /**
+   * The models that can rewrite a message, cheapest first, from whatever this Jolty has: a free OpenCode model the user picked,
+   * the subscription's small model, Codex's mini model, then an API profile's first model, then OpenCode's default.
+   */
+  private improveRunners(picked?: Profile, model?: string): ((prompt: string) => Promise<string>)[] {
+    const all = store.loadProfiles()
+    const runners: ((prompt: string) => Promise<string>)[] = []
+    if (picked?.engine === 'opencode' && model) runners.push((prompt) => opencodeOnce(prompt, model))
+    const sub = all.find((p) => p.engine === 'claude' && p.auth !== 'endpoint')
+    if (sub) runners.push((prompt) => this.claude.describe(sub, [], prompt, 'haiku'))
+    const codex = all.find((p) => p.engine === 'codex')
+    if (codex) runners.push(async (prompt) => this.codex.describe(codex, [], prompt, (await this.codex.models(codex)).find((m) => /mini/i.test(m.id))?.id))
+    const api = all.find((p) => p.engine === 'claude' && p.auth === 'endpoint' && p.models?.length)
+    if (api) runners.push((prompt) => this.claude.describe(api, [], prompt, api.models![0]))
+    const oc = all.find((p) => p.engine === 'opencode')
+    if (oc) runners.push(async (prompt) => {
+      const list = await this.opencode.models(oc)
+      const m = list.find((x) => x.isDefault) || list[0]
+      if (!m) throw new Error(tr("Niciun profil nu poate îmbunătăți mesajul: adaugă un profil Claude sau Codex."))
+      return opencodeOnce(prompt, m.id)
+    })
+    return runners
+  }
+
+  /**
+   * The composer's text rewritten once by the cheapest model this Jolty has. The model sees the user's last messages of the chat
+   * and the titles of the latest chats in the same folder, to know what the message is about. Throws when nothing can be trusted;
+   * `question` comes back instead of `text` when the model cannot tell what the message is about.
+   */
+  async improvePrompt(text: string, profileId?: string, model?: string, cwd?: string, sessionId?: string): Promise<{ text?: string; question?: string }> {
+    const runners = this.improveRunners(store.loadProfiles().find((p) => p.id === profileId), model)
+    if (!runners.length) throw new Error(tr("Niciun profil nu poate îmbunătăți mesajul: adaugă un profil Claude sau Codex."))
+    const recent = sessionId
+      ? this.transcript(sessionId).filter((i) => i.kind === 'user').slice(-3).map((i) => clipForContext((i as { text: string }).text))
+      : []
+    const titles = cwd
+      ? store.loadSessions().filter((x) => x.cwd === cwd && x.id !== sessionId).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 3).map((x) => clipForContext(x.title, 80))
+      : []
+    const prompt = improvePrompt(text, { recent, titles, language: LANG_ENGLISH_NAME[getLang()] })
+    let failure: unknown
+    for (const run of runners.slice(0, 2)) {
+      let timer: NodeJS.Timeout | undefined
+      const asked = run(prompt)
+      const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(tr("Modelul nu a răspuns la timp."))), 120000) })
+      try {
+        const reply = await Promise.race([asked, late])
+        const question = improveQuestion(reply)
+        if (question) return { question }
+        const out = cleanImproved(text, reply)
+        if (!out) throw new Error(tr("Modelul nu a dat o variantă folosibilă. Mesajul rămâne cum era."))
+        return { text: out }
+      } catch (err) {
+        failure = err
+      } finally {
+        clearTimeout(timer)
+        asked.catch(() => undefined)
+      }
     }
+    throw failure
   }
 
   async removeSession(sessionId: string): Promise<void> {

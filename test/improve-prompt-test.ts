@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { cleanImproved, improvePrompt, IMPROVE_MAX } from '../src/shared/improve-prompt'
+import { cleanImproved, clipForContext, improvePrompt, improveQuestion, IMPROVE_MAX } from '../src/shared/improve-prompt'
 
 const original = 'fa butonul din src/App.tsx sa fie albastru si verifica @src/theme.ts'
 
@@ -31,6 +31,25 @@ test('improve prompt: an empty or much shorter reply is refused', () => {
 test('improve prompt: the instruction carries the text, capped', () => {
   assert.ok(improvePrompt(original).endsWith(original))
   assert.ok(improvePrompt('x'.repeat(IMPROVE_MAX + 500)).length < IMPROVE_MAX + 2500)
-  assert.ok(improvePrompt(original, 'jolty').includes('"jolty"'))
-  assert.ok(!improvePrompt(original).includes('project folder'))
+})
+
+test('improve prompt: no kind of project is assumed, the context comes only from what is given', () => {
+  const bare = improvePrompt('scrie un email catre furnizor')
+  assert.ok(!/web ?site|landing|folder/i.test(bare))
+  assert.ok(!bare.includes('Context'))
+  const ctx = improvePrompt('continua', { recent: ['facem raportul lunar de vanzari'], titles: ['Raport vanzari octombrie'] })
+  assert.ok(ctx.includes('- facem raportul lunar de vanzari') && ctx.includes('- Raport vanzari octombrie'))
+  assert.ok(ctx.indexOf('Context') < ctx.indexOf('Message:'))
+})
+
+test('improve prompt: the context is clipped to what identifies the subject', () => {
+  assert.equal(clipForContext('a  b\n c'), 'a b c')
+  assert.equal(clipForContext('x'.repeat(500)).length, 301)
+})
+
+test('improve prompt: a question from the model is told apart from a rewrite', () => {
+  assert.equal(improveQuestion('QUESTION: Despre ce proiect e vorba?'), 'Despre ce proiect e vorba?')
+  assert.equal(improveQuestion('  QUESTION: Which file?\n'), 'Which file?')
+  assert.equal(improveQuestion('Fix the bug in src/a.ts.\nQUESTION: not at the start'), undefined)
+  assert.equal(improveQuestion('QUESTION: first\nthen a long rewrite'), undefined)
 })

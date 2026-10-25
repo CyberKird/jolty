@@ -279,8 +279,12 @@ function Composer(p: ComposerProps) {
     if (!ta || improving || !original.trim()) return
     setImproving(true)
     try {
-      const better = await api.sessions.improvePrompt(original, p.profileId, p.model, p.cwd)
+      const { text: better, question } = await api.sessions.improvePrompt(original, p.profileId, p.model, p.cwd, p.sessionId)
       if (!ta.isConnected || ta.value !== original) return
+      if (question || !better) {
+        toast(tr("Ca să îmbunătățesc mesajul, spune-mi: {question} Adaugă răspunsul în mesaj și apasă din nou.", { question: question || '' }))
+        return
+      }
       ta.readOnly = false
       ta.focus()
       ta.select()
@@ -741,10 +745,21 @@ function useStickToBottom(dep: unknown): React.RefObject<HTMLDivElement | null> 
     const el = ref.current
     if (!el) return
     let lastInput = 0
+    let lastTop = el.scrollTop
+    let held = false
     const markInput = (): void => { lastInput = Date.now() }
+    const onDown = (): void => { held = true; markInput() }
+    const onUp = (): void => { held = false }
     const onScroll = (): void => {
-      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
-      if (nearBottom || Date.now() - lastInput < 500) stick.current = nearBottom
+      const top = el.scrollTop
+      const gap = el.scrollHeight - top - el.clientHeight
+      const byUser = held || Date.now() - lastInput < 500
+      // going up lets go at once, even inside the 120 px: otherwise the next resize pulls the reader back down (the rubber band)
+      if (byUser && top < lastTop) stick.current = false
+      else if (byUser) stick.current = gap < 120
+      // not by the reader (scroll anchoring, momentum): only the very bottom follows again
+      else if (top > lastTop && gap < 2) stick.current = true
+      lastTop = top
     }
     const onKey = (event: KeyboardEvent): void => {
       if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) markInput()
@@ -752,7 +767,8 @@ function useStickToBottom(dep: unknown): React.RefObject<HTMLDivElement | null> 
     const follow = (): void => { if (stick.current) el.scrollTop = el.scrollHeight }
     el.addEventListener('wheel', markInput, { passive: true })
     el.addEventListener('touchmove', markInput, { passive: true })
-    el.addEventListener('pointerdown', markInput)
+    el.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointerup', onUp)
     el.addEventListener('keydown', onKey)
     el.addEventListener('scroll', onScroll)
     const resize = new ResizeObserver(follow)
@@ -761,7 +777,8 @@ function useStickToBottom(dep: unknown): React.RefObject<HTMLDivElement | null> 
     return () => {
       el.removeEventListener('wheel', markInput)
       el.removeEventListener('touchmove', markInput)
-      el.removeEventListener('pointerdown', markInput)
+      el.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointerup', onUp)
       el.removeEventListener('keydown', onKey)
       el.removeEventListener('scroll', onScroll)
       resize.disconnect()
