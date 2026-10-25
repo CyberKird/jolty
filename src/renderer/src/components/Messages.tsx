@@ -90,7 +90,7 @@ function toolFile(t: Tool): string | undefined {
 const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
   const [open, setOpen] = useState(false)
   const hasBody = Boolean(item.output || item.diffs?.length || item.images?.length)
-  const state = item.status === 'running' ? 'acum' : item.status === 'error' ? 'eroare' : 'gata'
+  const state = item.status === 'running' ? tr("rulează") : item.status === 'error' ? tr("eroare") : tr("gata")
   return (
     <div className={`tool ${item.status}`} data-path={toolFile(item)}>
       <button className="tool-head" onClick={() => hasBody && setOpen(!open)} aria-expanded={open}>

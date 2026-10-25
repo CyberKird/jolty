@@ -1193,5 +1193,7 @@
  "Sugerează modelul potrivit": "Sugerir o modelo certo",
  "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "Quando você digita uma tarefa, uma barra acima da caixa propõe outro modelo ou esforço se o escolhido não servir. Desmarcado, ela nunca aparece.",
  "Ca să îmbunătățesc mesajul, spune-mi: {question} Adaugă răspunsul în mesaj și apasă din nou.": "Para melhorar a mensagem preciso saber: {question} Adicione a resposta à mensagem e aperte de novo.",
- "Jolty preia mouse-ul și tastatura în 3 secunde": "O Jolty assume o mouse e o teclado em 3 segundos"
+ "Jolty preia mouse-ul și tastatura în 3 secunde": "O Jolty assume o mouse e o teclado em 3 segundos",
+ "rulează": "em execução",
+ "eroare": "erro"
 }

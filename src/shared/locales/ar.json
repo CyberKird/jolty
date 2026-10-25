@@ -1193,5 +1193,7 @@
  "Sugerează modelul potrivit": "اقتراح النموذج المناسب",
  "Când scrii o sarcină, o bară deasupra casetei îți propune alt model sau alt efort dacă cel ales nu se potrivește. Debifat, nu mai apare niciodată.": "عند كتابة مهمة، يقترح شريط فوق المربع نموذجًا أو مستوى جهد آخر إذا لم يناسب المختار. عند إلغاء التحديد لا يظهر أبدًا.",
  "Ca să îmbunătățesc mesajul, spune-mi: {question} Adaugă răspunsul în mesaj și apasă din nou.": "لتحسين الرسالة أحتاج أن أعرف: {question} أضف الإجابة إلى الرسالة ثم اضغط مرة أخرى.",
- "Jolty preia mouse-ul și tastatura în 3 secunde": "سيتولى Jolty الفأرة ولوحة المفاتيح خلال 3 ثوانٍ"
+ "Jolty preia mouse-ul și tastatura în 3 secunde": "سيتولى Jolty الفأرة ولوحة المفاتيح خلال 3 ثوانٍ",
+ "rulează": "قيد التشغيل",
+ "eroare": "خطأ"
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.28
+
+### Fixed
+
+- In a conversation, the state of each tool line (running, error, done) was always written in Romanian ("acum", "eroare", "gata"). It follows the interface language now.
+
+
 ## 0.7.27
 
 ### Improvements
