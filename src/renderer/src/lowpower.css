@@ -1,0 +1,58 @@
+/* Low-power mode (lowpower.ts puts `low-power` on <html>): the same layout, drawn flat. No decorative loops, glows,
+   large blurred shadows or backdrop blur: they cost a repaint of a big area on every frame on a weak GPU. */
+.low-power .dot.running,
+.low-power .live-icon.wait,
+.low-power .work-clock-dot,
+.low-power .plan-step.active .box,
+.low-power .cell.hot,
+.low-power .caret,
+.low-power .tasks-now.live::before {
+  animation: none;
+}
+.low-power .page,
+.low-power .live-scrim {
+  animation: none;
+}
+.low-power .live-scrim {
+  backdrop-filter: none;
+}
+.low-power .btn.primary:hover,
+.low-power .cell.hot,
+.low-power .live-tab-bar,
+.low-power .page-tab-bar,
+.low-power .sel-popup,
+.low-power .picker-pop,
+.low-power .mentions,
+.low-power .ctx,
+.low-power .power-bar {
+  box-shadow: none;
+}
+.low-power .toast {
+  box-shadow: inset 2px 0 0 var(--volt);
+}
+.low-power .toast.error {
+  box-shadow: inset 2px 0 0 var(--critical);
+}
+@media (max-width: 1180px) {
+  .low-power .app:not(.no-sidebar) .live {
+    box-shadow: none;
+    animation: none;
+  }
+}
+/* a page switch is a plain short fade: no blur, no scale */
+.low-power ::view-transition-old(main) {
+  animation: lp-out 0.1s linear both;
+}
+.low-power ::view-transition-new(main) {
+  animation: lp-in 0.12s linear both;
+}
+@keyframes lp-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes lp-in {
+  from {
+    opacity: 0;
+  }
+}

@@ -1,4 +1,4 @@
-import { Cpu, ExternalLink, Eye, FolderOpen, Globe, Info, Languages, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
+import { Cpu, ExternalLink, Eye, FolderOpen, Gauge, Globe, Info, Languages, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { isAcp } from '@shared/types'
@@ -10,6 +10,7 @@ import { setMascot } from '../mascot/Mascot'
 import { openWhatsNew } from '../components/WhatsNew'
 import { PageTabs, useSavedTab } from '../components/PageTabs'
 import { soundsOn } from '../mascot/sfx'
+import { setLowPowerMode } from '../lowpower'
 import { getLang, LANGUAGES, tr } from '@shared/i18n'
 import { GEMINI_BROWSER } from '@shared/gemini'
 
@@ -91,6 +92,29 @@ export function SettingsPage() {
                   </span>
                 </span>
               </label>
+              <div className="card" style={{ marginBottom: 14 }}>
+                <div className="row" style={{ marginBottom: 10 }}>
+                  <Gauge size={16} color="var(--volt)" />
+                  <b>{tr("Mod economic")}</b>
+                </div>
+                <p className="muted small" style={{ marginTop: 0 }}>
+                  {tr("Aspect plat, fără animații decorative și o mascotă mai ușoară, pentru PC-uri slabe. Automat îl pornește pe PC-uri cu cel mult 4 nuclee sau 4 GB de memorie.")}
+                </p>
+                <select
+                  className="select"
+                  aria-label={tr("Mod economic")}
+                  value={s.lowPower ?? 'auto'}
+                  onChange={async (e) => {
+                    const lowPower = e.target.value as 'auto' | 'on' | 'off'
+                    setLowPowerMode(lowPower)
+                    setS(await api.app.saveSettings({ lowPower }))
+                  }}
+                >
+                  <option value="auto">{tr("Automat (după PC)")}</option>
+                  <option value="on">{tr("Mereu pornit")}</option>
+                  <option value="off">{tr("Mereu oprit")}</option>
+                </select>
+              </div>
               <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
                 <input
                   type="checkbox"

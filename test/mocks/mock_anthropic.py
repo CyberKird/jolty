@@ -66,6 +66,7 @@ class H(BaseHTTPRequestHandler):
         want_tool = "RUN_TOOL" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
         want_write = "RUN_WRITE" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
         want_todo = "RUN_TODO" in tail and "TOOL_RESULT:" not in tail and req.get("tools")
+        want_stream = re.search(r"RUN_STREAM=(\d+)", tail) if "TOOL_RESULT:" not in tail else None
         model = req.get("model")
         if not req.get("stream"):
             content = [{"type": "text", "text": "Titlu test"}]
@@ -89,6 +90,15 @@ class H(BaseHTTPRequestHandler):
             sse(self, "content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": args.group(1) if args else "{}"}})
             sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})
             sse(self, "message_delta", {"type": "message_delta", "delta": {"stop_reason": "tool_use", "stop_sequence": None}, "usage": {"output_tokens": 30}})
+        elif want_stream:
+            # RUN_STREAM=n: n chunks of markdown text, 25 ms apart, like a model typing a long answer
+            sse(self, "content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}})
+            for k in range(int(want_stream.group(1))):
+                piece = f"\n\n## Part {k}\n\nSome words with `inline code` and **bold** text. " if k % 12 == 0 else "word " * 6
+                sse(self, "content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": piece}})
+                time.sleep(0.025)
+            sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})
+            sse(self, "message_delta", {"type": "message_delta", "delta": {"stop_reason": "end_turn", "stop_sequence": None}, "usage": {"output_tokens": 200}})
         elif want_todo:
             todos = [{"content": c, "activeForm": c, "status": st} for c, st in [("Citesc structura proiectului", "completed"), ("Mut clasa jucatorului in TypeScript", "completed"),
                      ("Adaug tipurile pentru inventar", "in_progress"), ("Scriu testele pentru miscare", "pending"), ("Rulez build-ul si testele", "pending")]]

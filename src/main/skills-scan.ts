@@ -149,7 +149,18 @@ export function currentRev(e: Entry, st: CheckState | undefined): string | undef
 /** Copied from a subfolder of a repo and its tree id is known: compare trees, so commits elsewhere in the repo do not count. */
 export const treeMode = (e: Entry, st: CheckState | undefined): boolean => !e.repo && e.info.source.kind === 'git' && !!e.info.source.subdir && !!(st?.tree ?? e.lockTree)
 
+/** Lets the main process answer other things between two skill folders: a scan of a big collection reads for seconds. */
+function breather(): () => Promise<void> {
+  let last = Date.now()
+  return async () => {
+    if (Date.now() - last < 8) return
+    await new Promise((r) => setImmediate(r))
+    last = Date.now()
+  }
+}
+
 export async function scan(): Promise<Entry[]> {
+  const breathe = breather()
   clearRepoCache()
   const sources = readSources()
   const state = readState()
@@ -176,6 +187,7 @@ export async function scan(): Promise<Entry[]> {
     for (const folder of names.sort()) {
       // dot folders (Codex's .system) belong to the agent itself
       if (folder.startsWith('.')) continue
+      await breathe()
       const dir = path.join(root, folder)
       let linked = false
       let real: string | undefined

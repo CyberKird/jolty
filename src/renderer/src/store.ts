@@ -17,6 +17,7 @@ import type {
 } from '@shared/types'
 import { dateLocale, tr } from '@shared/i18n'
 import { DEFAULT_PLAN } from '@shared/power'
+import { lastIndexWhere } from '@shared/last-index'
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
@@ -103,7 +104,7 @@ export { liveRows } from '@shared/live'
 export type { LiveRow, LiveState } from '@shared/live'
 
 function upsert(list: ChatItem[], item: ChatItem): ChatItem[] {
-  const i = list.findIndex((x) => x.id === item.id)
+  const i = lastIndexWhere(list, (x) => x.id === item.id)
   if (i < 0) {
     const dup = item.kind === 'assistant' || item.kind === 'reasoning' ?
       list.find(x => x.kind === item.kind && 'text' in x && x.text === item.text) : null
@@ -237,7 +238,7 @@ export const useStore = create<State>((set, get) => ({
       case 'delta':
         set((s) => {
           const list = s.transcripts[e.sessionId] || []
-          const i = list.findIndex((x) => x.id === e.itemId)
+          const i = lastIndexWhere(list, (x) => x.id === e.itemId)
           const next = list.slice()
           if (i >= 0) {
             const it = next[i]

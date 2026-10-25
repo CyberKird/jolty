@@ -2,7 +2,12 @@
 // chosen language's dictionary and falls back to the key itself, so Romanian needs no dictionary
 // and a missing entry shows the original instead of breaking. scripts/i18n-check.mjs keeps every
 // dictionary complete. The languages are the ones the Claude apps offer, plus Romanian and Arabic.
-import { LOCALES } from './locales'
+// the dictionaries are handed in (addLocales): the interface loads only the chosen one, not all eleven
+const LOCALES: Record<string, Record<string, string>> = {}
+
+export function addLocales(dicts: Record<string, Record<string, string>>): void {
+  Object.assign(LOCALES, dicts)
+}
 
 export const LANGUAGES = [
   { code: 'en', name: 'English' },

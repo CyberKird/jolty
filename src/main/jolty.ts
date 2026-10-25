@@ -57,6 +57,8 @@ import { candidates, FULL_PERCENT, pickAuto, type Candidate } from './auto-model
 import type { ScheduledTask } from '@shared/schedule'
 import { getLang, LANG_ENGLISH_NAME, tr } from '@shared/i18n'
 import { withDetectedAgents } from './first-run'
+import { saveTranscriptAsync } from './transcript-save'
+import { lastIndexWhere } from '@shared/last-index'
 import { withParallelInstruction } from '@shared/parallel'
 import { cleanImproved, clipForContext, improvePrompt, improveQuestion } from '@shared/improve-prompt'
 
@@ -119,6 +121,8 @@ export class Jolty {
   private idleWaiters = new Set<(sessionId: string) => void>()
   private transcripts = new Map<string, ChatItem[]>()
   private saveTimers = new Map<string, NodeJS.Timeout>()
+  private saving = new Set<string>()
+  private saveCost = new Map<string, number>()
   private removingProfiles = new Set<string>()
   /** "turn the PC off when the work is done", or at a time, or sleep, restart…: see power.ts */
   readonly power = new PowerGuard({
@@ -380,13 +384,28 @@ export class Jolty {
 
   private scheduleSave(sessionId: string): void {
     if (this.temps.has(sessionId) || this.saveTimers.has(sessionId)) return
+    // a long conversation takes longer to write: the next save waits in proportion, so streaming never keeps the disk busy
+    const delay = Math.min(15000, Math.max(800, (this.saveCost.get(sessionId) ?? 0) * 8))
     this.saveTimers.set(
       sessionId,
       setTimeout(() => {
         this.saveTimers.delete(sessionId)
-        store.saveTranscript(sessionId, this.transcript(sessionId))
-      }, 800)
+        void this.saveNow(sessionId)
+      }, delay)
     )
+  }
+
+  private async saveNow(sessionId: string): Promise<void> {
+    if (this.saving.has(sessionId)) return this.scheduleSave(sessionId)
+    this.saving.add(sessionId)
+    try {
+      const ms = await saveTranscriptAsync(sessionId, this.transcript(sessionId))
+      if (ms >= 0) this.saveCost.set(sessionId, ms)
+    } catch {
+      store.saveTranscript(sessionId, this.transcript(sessionId))
+    } finally {
+      this.saving.delete(sessionId)
+    }
   }
 
   private onEngineEvent(e: ChatEvent): void {
@@ -404,13 +423,13 @@ export class Jolty {
     if (e.type === 'context') this.ctxUsed.set(e.sessionId, e.used)
     if (e.type === 'item') {
       const t = this.transcript(e.sessionId)
-      const i = t.findIndex((x) => x.id === e.item.id)
+      const i = lastIndexWhere(t, (x) => x.id === e.item.id)
       if (i >= 0) t[i] = { ...e.item }
       else t.push({ ...e.item })
       this.scheduleSave(e.sessionId)
     } else if (e.type === 'delta') {
       const t = this.transcript(e.sessionId)
-      const it = t.find((x) => x.id === e.itemId)
+      const it = t[lastIndexWhere(t, (x) => x.id === e.itemId)]
       if (it && (it.kind === 'assistant' || it.kind === 'reasoning')) it.text += e.delta
       else t.push({ kind: e.kind, id: e.itemId, text: e.delta })
       this.scheduleSave(e.sessionId)

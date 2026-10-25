@@ -2,7 +2,10 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { clock } from '../src/shared/eta'
 import { TaskBoard } from '../src/shared/tasks'
-import { pickLang, setLang, tr } from '../src/shared/i18n'
+import { addLocales, pickLang, setLang, tr } from '../src/shared/i18n'
+import { LOCALES } from '../src/shared/locales'
+
+addLocales(LOCALES)
 
 test('translations: the chosen language, the Romanian original, placeholders, system fallback', () => {
   setLang('de')
