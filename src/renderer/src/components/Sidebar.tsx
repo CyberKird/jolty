@@ -1,6 +1,7 @@
 import { BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
+import { dragShield } from '../dragShield'
 import { copyItem, pathItems, showMenu } from './ContextMenu'
 import { MOVE_HINT, useProfileDrag } from '../pages/Accounts'
 import { LiveList } from './LiveList'
@@ -17,7 +18,7 @@ function money(n: number, currency = 'USD'): string {
  * While dragging the size goes straight to a CSS variable (no React render per move); it is remembered,
  * and a double click returns to the default.
  */
-function Resizer({ axis, label, storeKey, cssVar, host, size, min, max }: {
+function Resizer({ axis, label, storeKey, cssVar, host, size, min, max, preview }: {
   axis: 'x' | 'y'
   label: string
   storeKey: string
@@ -26,6 +27,9 @@ function Resizer({ axis, label, storeKey, cssVar, host, size, min, max }: {
   size: () => number
   min: number
   max: () => number
+  /** Moves the layout directly while dragging (null = clear). A variable on a high element makes the browser
+   *  restyle everything under it on every move; the variable is then set once, on release. */
+  preview?: (v: number | null) => void
 }) {
   useEffect(() => {
     try {
@@ -54,21 +58,30 @@ function Resizer({ axis, label, storeKey, cssVar, host, size, min, max }: {
     const flip = document.documentElement.dir === 'rtl' ? -1 : 1
     let v = from
     const root = document.documentElement
-    root.classList.add('resizing', `resizing-${axis}`)
+    root.classList.add('resizing')
+    const unshield = dragShield(axis === 'x' ? 'col-resize' : 'row-resize')
     const move = (ev: PointerEvent): void => {
       // the width grows toward the chat; the usage list grows upward
       const d = axis === 'x' ? (ev.clientX - x0) * flip : y0 - ev.clientY
       v = Math.round(Math.max(min, Math.min(top, from + d)))
-      host()?.style.setProperty(cssVar, `${v}px`)
+      if (preview) preview(v)
+      else host()?.style.setProperty(cssVar, `${v}px`)
     }
     const up = (): void => {
-      root.classList.remove('resizing', `resizing-${axis}`)
+      root.classList.remove('resizing')
+      unshield()
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      if (preview) {
+        host()?.style.setProperty(cssVar, `${v}px`)
+        preview(null)
+      }
       save(v)
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
   }
   return (
     <div
@@ -268,6 +281,16 @@ export function Sidebar() {
         size={() => document.querySelector('.sidebar')?.getBoundingClientRect().width || 248}
         min={200}
         max={() => Math.min(440, window.innerWidth * 0.3)}
+        preview={(v) => {
+          const app = document.querySelector<HTMLElement>('.app')
+          const side = document.querySelector<HTMLElement>('.sidebar')
+          const live = document.querySelector<HTMLElement>('.live')
+          if (!app || !side) return
+          app.style.gridTemplateColumns = v == null ? '' : `${v}px minmax(0, 1fr) auto`
+          side.style.width = v == null ? '' : `${v}px`
+          // keeps the Live panel's cap (transitions.css) in step with the column
+          if (live && window.innerWidth > 1180) live.style.maxWidth = v == null ? '' : `max(300px, calc(100vw - ${v}px - 480px))`
+        }}
       />
       <button className="btn primary new-chat" onClick={() => void openSession(undefined)}>
         <Plus size={14} strokeWidth={2.5} /> {tr("Conversație nouă")}

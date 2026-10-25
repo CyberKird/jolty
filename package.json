@@ -1,7 +1,7 @@
 {
   "name": "jolty",
   "productName": "Jolty",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Desktop app for Claude Code and Codex: multiple profiles, API keys, model picker, usage dashboard",
   "author": "CyberKird",
   "license": "SEE LICENSE IN LICENSE",
@@ -40,6 +40,7 @@
     "test:plan": "electron-vite build && node test/plan-test.mjs",
     "test:livecode": "electron-vite build && node test/livecode-test.mjs",
     "test:release": "node --test test/release-version-test.mjs",
+    "test:resize": "electron-vite build && node test/resize-test.mjs",
     "test:scroll": "electron-vite build && node test/scroll-test.mjs",
     "test:transitions": "electron-vite build && node test/transitions-test.mjs",
     "icon": "electron scripts/make-icon.cjs",

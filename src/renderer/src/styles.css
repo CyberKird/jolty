@@ -154,16 +154,6 @@ a {
 .resizing .app {
   transition: none;
 }
-.resizing,
-.resizing * {
-  user-select: none;
-}
-.resizing-x * {
-  cursor: col-resize !important;
-}
-.resizing-y * {
-  cursor: row-resize !important;
-}
 .app.no-sidebar {
   grid-template-columns: 0 minmax(0, 1fr) auto;
 }

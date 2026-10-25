@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.2
+
+### Fixed
+
+- The Live panel could not be resized when its saved width was larger than the window allows: the panel showed the smaller capped width, and the first part of every drag did nothing. A drag now starts from the width on screen.
+
+### Improvements
+
+- Dragging the sidebar edge, the line above live usage or the Live panel edge is smoother in long chats. The browser no longer restyles the whole page on every mouse move, and a drag no longer restyles every element when it starts and ends.
+
 ## 0.8.1
 
 ### Fixed

@@ -2,6 +2,7 @@ import { Code2, ExternalLink, Eye, FileDiff as DiffIcon, FolderTree, Globe, List
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
 import { clock } from '@shared/eta'
+import { dragShield } from '../dragShield'
 import { api, basename, useStore, type Draft } from '../store'
 import { toolKind } from './Messages'
 import { DiffView, highlight, highlightLive, langOf } from './Rich'
@@ -636,28 +637,35 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   const tab = picked || auto.current
 
   const [width, setWidth] = useState(savedWidth)
-  const [resizing, setResizing] = useState(false)
   const panel = useRef<HTMLElement>(null)
   const startResize = (e: React.PointerEvent): void => {
-    setResizing(true)
+    const el = panel.current
+    if (!el || e.button !== 0) return
+    e.preventDefault()
     const x0 = e.clientX
-    const w0 = width
+    // start from what is on screen: the CSS cap can hold the panel below the saved width, and then
+    // dragging from the saved width does nothing until the mouse has crossed the whole gap
+    const w0 = el.getBoundingClientRect().width
+    const cap = parseFloat(getComputedStyle(el).maxWidth)
+    const top = Math.min(window.innerWidth * 0.55, Number.isFinite(cap) ? cap : Infinity)
     let w = w0
+    el.classList.add('resizing')
+    const unshield = dragShield('col-resize')
     // the drag sets the width on the element itself; React renders the panel once, on release
     const move = (ev: PointerEvent): void => {
       // the panel sits on the left in right-to-left layouts, so dragging right widens it there
       const pull = document.documentElement.dir === 'rtl' ? ev.clientX - x0 : x0 - ev.clientX
-      w = Math.max(300, Math.min(window.innerWidth * 0.55, w0 + pull))
-      if (panel.current) {
-        panel.current.style.width = `${w}px`
-        panel.current.style.setProperty('--live-w', `${w}px`)
-      }
+      w = Math.round(Math.max(300, Math.min(top, w0 + pull)))
+      el.style.width = `${w}px`
+      el.style.setProperty('--live-w', `${w}px`)
     }
     const up = (): void => {
       setWidth(w)
-      setResizing(false)
+      el.classList.remove('resizing')
+      unshield()
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
       try {
         localStorage.setItem(WIDTH_KEY, String(Math.round(w)))
       } catch {
@@ -666,6 +674,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
   }
 
   const TABS: TabDef[] = [
@@ -679,7 +688,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   ]
 
   return (
-    <aside ref={panel} className={`live ${open ? '' : 'closed'} ${resizing ? 'resizing' : ''}`} style={{ '--live-w': `${width}px`, ...(open ? { width } : {}) } as React.CSSProperties} aria-label={tr("Ce face modelul acum")}>
+    <aside ref={panel} className={`live ${open ? '' : 'closed'}`} style={{ '--live-w': `${width}px`, ...(open ? { width } : {}) } as React.CSSProperties} aria-label={tr("Ce face modelul acum")}>
       {open && <div className="live-resize" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label={tr("Lățimea panoului")} />}
       <div className="live-section live-status">
         <div className="live-label">
