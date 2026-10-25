@@ -13,6 +13,7 @@ import { MentionMenu, useMentions } from './Mentions'
 import { ToolsMenu } from './ToolsMenu'
 import { PowerMenu } from './PowerMenu'
 import { withQuote } from '@shared/quote'
+import { ChatTools } from './ChatTools'
 import { QuoteBar, SelectionPopup } from './Quote'
 import { LimitStrip, TaskStrip, UpdateStrip, VerificationStrip, WorkClock } from './Tasks'
 import { tr } from '@shared/i18n'
@@ -841,7 +842,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
                     <MessageItem item={it} live={false} />
                   </UserTurn>
                 ) : (
-                  <MessageItem item={it} live={running && it.id === lastReasoning && i === items.length - 1} />
+                  <MessageItem item={it} live={running && it.id === lastReasoning && i === items.length - 1} streaming={running && i === items.length - 1} />
                 )}
               </Fragment>
             )
@@ -857,6 +858,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
         </div>
       </div>
       <SelectionPopup root={scrollRef} />
+      <ChatTools />
       <UpdateStrip />
       <LimitStrip session={session} />
       <TaskStrip sessionId={session.id} />

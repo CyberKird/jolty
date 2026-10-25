@@ -1,10 +1,12 @@
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js/lib/common'
 import { Marked } from 'marked'
-import { FileText } from 'lucide-react'
-import { memo, useMemo, type MouseEvent } from 'react'
+import { FileCode, FileText } from 'lucide-react'
+import { memo, useMemo, type KeyboardEvent, type MouseEvent } from 'react'
+import { isShell, shellCommand, valueKind } from '@shared/copy-values'
 import type { FileDiff } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
+import { chipText, copyText, lastCodeBlock, runAct } from '../copy'
 import { copyItem, imageItems, itemsAt, showMenu } from './ContextMenu'
 import { tr } from '@shared/i18n'
 
@@ -27,28 +29,63 @@ export function highlightLive(code: string, lang?: string): string {
   return lang && hljs.getLanguage(lang) ? highlight(code, lang) : escapeHtml(code)
 }
 
-const marked = new Marked({
-  gfm: true,
-  breaks: false,
-  walkTokens(token) {
-    if (token.type !== 'link') return
-    // A leading slash keeps Windows paths valid under the sanitizer's normal URL rules.
-    if (/^[a-z]:[\\/]/i.test(token.href)) token.href = `/${token.href}`
-    else if (/^file:\/\//i.test(token.href)) {
-      try {
-        const url = new URL(token.href)
-        if (!url.hostname) token.href = url.pathname
-      } catch {
-        // Invalid file URLs stay subject to the sanitizer's default checks.
+const attr = (s: string): string => escapeHtml(s).replace(/"/g, '&quot;')
+const unEntity = (s: string): string => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+
+/** A control inside rendered Markdown. Its words are CSS content (never in a selection or in innerText); one delegated handler runs it. */
+const control = (act: string, label: string, text = '', done = ''): string =>
+  `<button type="button" class="cp" data-act="${act}" aria-label="${attr(label)}" title="${attr(label)}"><i class="ic ic-${act}" aria-hidden="true"></i>${text ? `<span class="lbl" aria-hidden="true" data-t="${attr(text)}" data-ok="${attr(done)}"></span>` : ''}</button>`
+
+/** A block longer than this folds, with a fade and a button; the whole text is still what Copy takes. */
+const FOLD_LINES = 28
+
+function newMarked(fold: boolean): Marked {
+  return new Marked({
+    gfm: true,
+    breaks: false,
+    walkTokens,
+    renderer: {
+      code({ text, lang }) {
+        const l = (lang || '').trim().split(/\s+/)[0]
+        const lines = text.split('\n').length
+        const long = fold && lines > FOLD_LINES
+        const shell = isShell(l)
+        const copied = tr("Copiat")
+        // a terminal block copies its commands; when sample output is mixed in, the whole block is a second button
+        const main = shell ? control('cmd', tr("Copiază comanda"), tr("Comandă"), copied) : control('code', tr("Copiază codul"), tr("Copiază"), copied)
+        const all = shell && shellCommand(text) !== text ? control('code', tr("Copiază codul"), tr("Tot"), copied) : ''
+        return `<div class="cb"${long ? ' data-long' : ''}><div class="cb-head"><span class="cb-lang" data-t="${attr(l)}"></span><span class="cb-acts">${control('wrap', tr("Împachetează liniile"))}${all}${main}</span></div><pre><code class="hljs${l ? ` language-${attr(l)}` : ''}">${highlight(text, lang || undefined)}</code></pre>${
+          long ? `<button type="button" class="cb-more" data-act="more" aria-expanded="false" data-t="${attr(tr("Arată tot ({n} linii)", { n: lines }))}" data-t2="${attr(tr("Restrânge"))}"></button>` : ''
+        }</div>`
+      },
+      // a span that looks like a value to copy becomes a chip; an ordinary word stays plain code
+      codespan({ text }) {
+        const kind = valueKind(unEntity(text))
+        return kind ? `<code class="cv" data-k="${kind}" data-t="${attr(tr("Clic pentru a copia"))}" role="button" tabindex="0">${text}</code>` : `<code>${text}</code>`
       }
     }
-  },
-  renderer: {
-    code({ text, lang }) {
-      return `<pre><code class="hljs">${highlight(text, lang || undefined)}</code></pre>`
+  })
+}
+
+function walkTokens(token: { type: string; href?: string }): void {
+  if (token.type !== 'link' || !token.href) return
+  // A leading slash keeps Windows paths valid under the sanitizer's normal URL rules.
+  if (/^[a-z]:[\\/]/i.test(token.href)) token.href = `/${token.href}`
+  else if (/^file:\/\//i.test(token.href)) {
+    try {
+      const url = new URL(token.href)
+      if (!url.hostname) token.href = url.pathname
+    } catch {
+      // Invalid file URLs stay subject to the sanitizer's default checks.
     }
   }
-})
+}
+
+// a reply still arriving is not folded: the reader watches the code being written
+const marked = newMarked(true)
+const markedLive = newMarked(false)
+
+const tableOpen = (): string => `<div class="tbl"><span class="tbl-acts" role="group" aria-label="${attr(tr("Copiază tabelul"))}">${control('md', tr("Copiază tabelul ca Markdown"), 'MD', tr("Copiat"))}${control('tsv', tr("Copiază tabelul ca TSV (Excel, Sheets)"), 'TSV', tr("Copiat"))}${control('csv', tr("Copiază tabelul ca CSV"), 'CSV', tr("Copiat"))}</span><div class="tbl-scroll"><table>`
 
 /**
  * Em and en dashes in prose become plain hyphens, as the user wants none in the app. Code blocks and
@@ -82,7 +119,15 @@ function onLinkClick(e: MouseEvent<HTMLDivElement>): void {
 /** Right-click on a chat message: link actions when on a link, then copy actions. */
 export function messageMenu(e: MouseEvent<HTMLElement>, markdown?: string): void {
   const text = e.currentTarget.innerText.trim()
-  showMenu(e, [...itemsAt(e.target as Element), 'sep', ...(text ? [copyItem(tr("Copiază mesajul"), text)] : []), ...(markdown ? [copyItem(tr("Copiază ca Markdown"), markdown, FileText)] : [])])
+  const shown = markdown && plainDashes(markdown)
+  const code = shown ? lastCodeBlock(shown) : ''
+  showMenu(e, [
+    ...itemsAt(e.target as Element),
+    'sep',
+    ...(text ? [copyItem(tr("Copiază mesajul"), text)] : []),
+    ...(shown ? [copyItem(tr("Copiază ca Markdown"), shown, FileText)] : []),
+    ...(code ? [copyItem(tr("Copiază ultimul bloc de cod"), code, FileCode)] : [])
+  ])
 }
 
 export function imageMenu(e: MouseEvent<HTMLElement>, image: string, imageName: string): void {
@@ -90,9 +135,31 @@ export function imageMenu(e: MouseEvent<HTMLElement>, image: string, imageName: 
   showMenu(e, imageItems(image, imageName))
 }
 
-export const Markdown = memo(function Markdown({ text }: { text: string }) {
-  const html = useMemo(() => DOMPurify.sanitize(marked.parse(plainDashes(text), { async: false }) as string), [text])
-  return <div className="md" onClick={onLinkClick} dangerouslySetInnerHTML={{ __html: html }} />
+/** One click handler for everything inside a message: copy buttons, copy chips and links. */
+function onMdClick(e: MouseEvent<HTMLDivElement>): void {
+  const t = e.target as HTMLElement
+  const act = t.closest<HTMLElement>('[data-act]')
+  if (act) return runAct(act)
+  const chip = t.closest<HTMLElement>('code.cv')
+  // dragging over a chip to select it is not a click to copy; a chip inside a link follows the link
+  if (chip && !chip.closest('a') && window.getSelection()?.isCollapsed !== false) return copyText(chipText(chip), chip)
+  onLinkClick(e)
+}
+
+function onMdKey(e: KeyboardEvent<HTMLDivElement>): void {
+  const chip = e.target as HTMLElement
+  if ((e.key === 'Enter' || e.key === ' ') && chip.matches('code.cv')) {
+    e.preventDefault()
+    copyText(chipText(chip), chip)
+  }
+}
+
+export const Markdown = memo(function Markdown({ text, streaming = false }: { text: string; streaming?: boolean }) {
+  const html = useMemo(() => {
+    const out = (streaming ? markedLive : marked).parse(plainDashes(text), { async: false }) as string
+    return DOMPurify.sanitize(out.includes('<table>') ? out.replace(/<table>/g, tableOpen()).replace(/<\/table>/g, '</table></div></div>') : out)
+  }, [text, streaming])
+  return <div className="md" onClick={onMdClick} onKeyDown={onMdKey} dangerouslySetInnerHTML={{ __html: html }} />
 })
 
 const EXT_LANG: Record<string, string> = {

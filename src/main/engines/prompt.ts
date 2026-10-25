@@ -10,3 +10,7 @@ export const LANGUAGE_RULE =
 
 export const PLAN_RULES =
   'When a task needs several meaningful steps, publish a concise plan through the available plan or task tool and update it as each step finishes. Skip plans for simple requests.'
+
+/** Jolty shows inline code as a click-to-copy field and fenced blocks with a Copy button, so the model puts what the user will copy there. */
+export const COPY_RULE =
+  'Put every value the user may copy (command, path, URL, key name, code, config, number) in inline code or a fenced block, one value per block, never inside bold text. Never put a command and its explanation in the same block.'

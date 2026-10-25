@@ -1,9 +1,11 @@
 // The right-click menu, drawn in Jolty's theme (not the Windows one). Every place that wants a menu builds a list of
 // entries; whatever nobody claimed falls to the document-level listener, which reads links, paths, code and selections.
-import { ClipboardPaste, Copy, Download, ExternalLink, FileCode, FolderOpen, Image as ImageIcon, Link, Redo2, Scissors, TextSelect, Undo2, type LucideIcon } from 'lucide-react'
+import { ClipboardPaste, Copy, Download, ExternalLink, FileCode, FolderOpen, Image as ImageIcon, Link, Redo2, Scissors, Table2, TextSelect, Undo2, type LucideIcon } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { create } from 'zustand'
+import { quotePath, resolvePath, shellCommand, tableText } from '@shared/copy-values'
 import type { EditAction } from '@shared/types'
+import { chipText } from '../copy'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
 
@@ -65,6 +67,33 @@ export function imageItems(image: string, name: string): Entry[] {
   ]
 }
 
+/** A copy chip: its value, and for a path or a link what can be done with it. */
+function chipItems(chip: HTMLElement): Entry[] {
+  const text = chipText(chip)
+  const kind = chip.dataset.k
+  const out: Entry[] = [copyItem(tr("Copiază"), text)]
+  if (kind === 'url') out.push({ label: tr("Deschide linkul"), icon: ExternalLink, run: () => void api.app.openLink(text) })
+  if (kind === 'path') {
+    const { sessions, activeId } = useStore.getState()
+    const full = resolvePath(text, sessions.find((x) => x.id === activeId)?.cwd)
+    if (full) out.push(copyItem(tr("Copiază ca cale"), quotePath(full), Link), ...pathItems(full).slice(0, 2))
+  }
+  return out
+}
+
+/** A table or a terminal block: the copies the buttons on it offer, also on right-click. */
+function blockItems(el: Element): Entry[] {
+  const tbl = el.closest('.tbl')?.querySelector('table')
+  if (tbl) {
+    const rows = [...tbl.rows].map((r) => [...r.cells].map((c) => c.textContent || ''))
+    return (['md', 'tsv', 'csv'] as const).map((f) => copyItem(f === 'md' ? tr("Copiază tabelul ca Markdown") : f === 'tsv' ? tr("Copiază tabelul ca TSV (Excel, Sheets)") : tr("Copiază tabelul ca CSV"), tableText(rows, f), Table2))
+  }
+  const cb = el.closest('.cb')
+  const code = cb?.querySelector('pre')?.textContent || ''
+  const shell = cb && /^(sh|bash|zsh|shell|console|shell-session|powershell|ps1|pwsh|cmd|bat)$/i.test(cb.querySelector('.cb-lang')?.getAttribute('data-t') || '')
+  return shell && code ? [copyItem(tr("Copiază comanda"), shellCommand(code), FileCode)] : []
+}
+
 /** What a right-click on `el` offers by itself: text fields, links, files, code and the selected text. */
 export function itemsAt(el: Element | null): Entry[] {
   const out: Entry[] = []
@@ -94,12 +123,15 @@ export function itemsAt(el: Element | null): Entry[] {
     try { p = decodeURIComponent(p) } catch { /* Keep literal percent signs. */ }
     group(...pathItems(p))
   }
+  const chip = el?.closest<HTMLElement>('code.cv')
+  if (chip) group(...chipItems(chip))
   const path = el?.closest<HTMLElement>('[data-path]')?.dataset.path
   if (path) group(...pathItems(path))
   const selected = window.getSelection()?.toString().trim()
   if (selected) group(copyItem(tr("Copiază"), selected))
   const code = el?.closest('pre')
   if (code && !selected) group(copyItem(tr("Copiază codul"), code.innerText.trim(), FileCode))
+  if (el) group(...blockItems(el))
   return out
 }
 

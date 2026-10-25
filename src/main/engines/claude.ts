@@ -40,7 +40,7 @@ import { editDiff, partialJsonString } from './partial-json'
 import { TaskBoard } from '@shared/tasks'
 import { getSecret, loadSettings, profileDir } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
-import { LANGUAGE_RULE, PLAN_RULES, WRITING_RULES } from './prompt'
+import { COPY_RULE, LANGUAGE_RULE, PLAN_RULES, WRITING_RULES } from './prompt'
 import { SECRET_FILE_RULES, touchesSecretFile } from './secret-files'
 import { ProfileProcesses } from './profile-processes'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
@@ -72,7 +72,7 @@ const LIMIT_LABELS: Record<string, string> = {
   overage: 'Extra'
 }
 
-const APPEND_PROMPT = `You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead. ${LANGUAGE_RULE} ${WRITING_RULES} ${PLAN_RULES}`
+const APPEND_PROMPT = `You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead. ${LANGUAGE_RULE} ${WRITING_RULES} ${PLAN_RULES} ${COPY_RULE}`
 
 function percent(u: number | null | undefined): number | undefined {
   if (u == null || !Number.isFinite(u) || u < 0) return undefined

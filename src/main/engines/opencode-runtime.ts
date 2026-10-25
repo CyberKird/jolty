@@ -7,7 +7,7 @@ import { BROWSER_BLOCKED_TOOLS, BROWSER_READ_TOOLS, BROWSER_SERVER, browserPromp
 import { COMPUTER_ACT_TOOLS, COMPUTER_READ_TOOLS, COMPUTER_SERVER, computerPrompt } from '../computer/names'
 import { dataDir, loadSettings } from '../store'
 import { JsonRpcProcess } from './jsonrpc'
-import { LANGUAGE_RULE } from './prompt'
+import { COPY_RULE, LANGUAGE_RULE } from './prompt'
 import { tr } from '@shared/i18n'
 
 const EXE = process.platform === 'win32' ? 'opencode.exe' : 'opencode'
@@ -72,7 +72,7 @@ function computerRules(mode: PermissionMode): Record<string, Rule> {
 /** opencode has no system prompt over ACP: the browser and computer instructions go in as an instructions file. */
 function toolInstructions(browser: boolean, computer: boolean): string {
   const file = path.join(dataDir(), 'opencode-tools.md')
-  fs.writeFileSync(file, [LANGUAGE_RULE, browser ? browserPrompt() : '', computer ? computerPrompt() : ''].filter(Boolean).join('\n\n') + '\n')
+  fs.writeFileSync(file, [LANGUAGE_RULE, COPY_RULE, browser ? browserPrompt() : '', computer ? computerPrompt() : ''].filter(Boolean).join('\n\n') + '\n')
   return file
 }
 
