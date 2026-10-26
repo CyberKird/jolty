@@ -1387,5 +1387,6 @@
  "mesaj": "message",
  "mesaje": "messages",
  "Tokeni estimați: Gemini nu îi raportează.": "Tokens estimés : Gemini ne les communique pas.",
- "Google nu publică limitele Gemini.": "Google ne publie pas les limites de Gemini."
+ "Google nu publică limitele Gemini.": "Google ne publie pas les limites de Gemini.",
+ "Am salvat în memorie: {names}.": "Enregistré dans la mémoire : {names}."
 }

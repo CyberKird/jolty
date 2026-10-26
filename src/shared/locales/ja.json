@@ -1387,5 +1387,6 @@
  "mesaj": "件のメッセージ",
  "mesaje": "件のメッセージ",
  "Tokeni estimați: Gemini nu îi raportează.": "推定トークン数: Gemini は報告しません。",
- "Google nu publică limitele Gemini.": "Google は Gemini の上限を公開していません。"
+ "Google nu publică limitele Gemini.": "Google は Gemini の上限を公開していません。",
+ "Am salvat în memorie: {names}.": "メモリに保存しました: {names}"
 }
