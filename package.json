@@ -1,7 +1,7 @@
 {
   "name": "jolty",
   "productName": "Jolty",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "description": "Desktop app for Claude Code and Codex: multiple profiles, API keys, model picker, usage dashboard",
   "author": "CyberKird",
   "license": "SEE LICENSE IN LICENSE",
@@ -66,8 +66,8 @@
     "test:workers": "esbuild test/workers-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --outfile=out-test/workers-test.mjs --log-level=warning && node --test out-test/workers-test.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.303",
-    "@openai/codex": "^0.163.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.310",
+    "@openai/codex": "^0.164.0",
     "@playwright/mcp": "0.0.82",
     "electron-updater": "6.8.9",
     "planck": "^1.5.1",
