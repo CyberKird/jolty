@@ -14,7 +14,7 @@ export const isAcp = (engine?: EngineKind): boolean => engine === 'hermes' || en
 export const hasEffort = (engine?: EngineKind): boolean => engine !== 'hermes'
 
 /** Whether the Jolty browser can be attached: every engine but Hermes (browser tools of its own) and Gemini (it lives in the browser itself). */
-export const hasJoltyBrowser = (engine?: EngineKind): boolean => engine !== 'hermes' && engine !== 'gemini'
+export const hasJoltyBrowser = (engine?: EngineKind): boolean => engine !== 'hermes'
 /** Whether the model can be given the PC (screen, mouse, keyboard): the same engines as the browser. */
 export const hasJoltyComputer = hasJoltyBrowser
 

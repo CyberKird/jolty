@@ -34,6 +34,7 @@ import { CodexDriver } from './engines/codex'
 import { AcpDriver } from './engines/acp'
 import { GeminiWebDriver } from './engines/gemini-web'
 import { realBrowser } from './engines/gemini-browser'
+import { realTools } from './engines/gemini-real-tools'
 import { AGENTS, HERMES, OPENCODE } from './engines/acp-agent'
 import { opencodeExecutable, opencodeOnce } from './engines/opencode-runtime'
 import { hermesExecutable } from './engines/hermes-runtime'
@@ -117,7 +118,7 @@ export class Jolty {
   readonly codex = new CodexDriver()
   readonly hermes = new AcpDriver(HERMES.launch, HERMES)
   readonly opencode = new AcpDriver(OPENCODE.launch, OPENCODE)
-  readonly gemini = new GeminiWebDriver(realBrowser)
+  readonly gemini = new GeminiWebDriver(realBrowser, realTools)
   private live = new Map<string, EngineSession>()
   /** conversations with a turn under way */
   private busy = new Set<string>()
@@ -1036,10 +1037,12 @@ export class Jolty {
 
   async setBrowser(sessionId: string, on: boolean): Promise<void> {
     if (on && !hasJoltyBrowser(this.meta(sessionId).engine)) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru {agent}.", { agent: ENGINE_NAMES[this.meta(sessionId).engine] }))
-    if (on && browserMode() === 'own' && !browsers().active) throw new Error(tr("Nu găsesc niciun browser Chromium (Chrome, Vivaldi, Edge sau Brave) pentru fereastra Jolty."))
-    if (on && browserMode() === 'jolty') await this.prepareNativeBrowser()
+    // Gemini works in the Jolty browser window whatever the mode is for the others, so its tools always use that one
+    const web = this.meta(sessionId).engine === 'gemini'
+    if (on && !web && browserMode() === 'own' && !browsers().active) throw new Error(tr("Nu găsesc niciun browser Chromium (Chrome, Vivaldi, Edge sau Brave) pentru fereastra Jolty."))
+    if (on && (web || browserMode() === 'jolty')) await this.prepareNativeBrowser()
     // the separate Jolty window needs no extension at all
-    if (on && (browserMode() === 'auto' || browserMode() === 'pick') && (browserMode() === 'pick' || !store.getSecret(BROWSER_TOKEN_KEY))) {
+    if (on && !web && (browserMode() === 'auto' || browserMode() === 'pick') && (browserMode() === 'pick' || !store.getSecret(BROWSER_TOKEN_KEY))) {
       // first use: no extension yet means the page of the right browser, not a 30 s wait that ends in a timeout
       const info = browsers()
       if (!info.extension) {

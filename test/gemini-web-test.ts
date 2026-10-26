@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { ChatEvent, Profile, SessionMeta, TurnUsage } from '../src/shared/types'
-import { effortIds, GeminiWebSession, parseMenu, type GeminiBrowser, type GeminiPage } from '../src/main/engines/gemini-web'
+import { effortIds, GeminiWebSession, parseMenu, type GeminiBrowser, type GeminiPage, type GeminiTools } from '../src/main/engines/gemini-web'
+import { splitReply, type ToolSet } from '../src/main/engines/gemini-tools'
 import { ACCOUNT_SCRIPT, ATTACHED_SCRIPT, MENU_SCRIPT, PAGE_LIB, SEND_SCRIPT, STOP_SCRIPT, pickScript } from '../src/main/engines/gemini-page'
 
 const MENU = {
@@ -34,7 +35,7 @@ const meta = (over: Partial<SessionMeta> = {}): SessionMeta => ({ id: 's1', prof
 const profile: Profile = { id: 'p1', name: 'Gemini', engine: 'gemini', auth: 'existing', isDefaultDir: true, color: '#fff' }
 
 /** A gemini.google.com that answers the page scripts the way the real one did when they were written. */
-function fakePage(opts: { states: object[]; account?: object; auto?: boolean }): { page: GeminiPage; calls: string[]; disposed: () => boolean } {
+function fakePage(opts: { states: object[]; account?: object; auto?: boolean; answers?: string[] }): { page: GeminiPage; calls: string[]; disposed: () => boolean } {
   const calls: string[] = []
   let at = 0
   let responses = 1
@@ -53,7 +54,7 @@ function fakePage(opts: { states: object[]; account?: object; auto?: boolean }):
         calls.push('stop')
         return true as T
       }
-      if (script === 'window.__joltyGemini.state()') return (opts.auto ? { responses, busy: false, stop: false, markdown: 'ok', composer: true, url: 'https://gemini.google.com/app' } : opts.states[Math.min(at++, opts.states.length - 1)]) as T
+      if (script === 'window.__joltyGemini.state()') return (opts.auto ? { responses, busy: false, stop: false, markdown: opts.answers ? (opts.answers[Math.min(responses - 2, opts.answers.length - 1)] ?? '') : 'ok', composer: true, url: 'https://gemini.google.com/app' } : opts.states[Math.min(at++, opts.states.length - 1)]) as T
       if (script.includes('rich-textarea .ql-editor') && script.includes('const t =')) {
         calls.push('type:' + /const t = (.*)/.exec(script)![1])
         return { ok: true } as T
@@ -74,12 +75,12 @@ function fakePage(opts: { states: object[]; account?: object; auto?: boolean }):
   return { page, calls, disposed: () => disposed }
 }
 
-function run(opts: Parameters<typeof fakePage>[0], m: SessionMeta = meta()) {
+function run(opts: Parameters<typeof fakePage>[0], m: SessionMeta = meta(), tools?: GeminiTools) {
   const fake = fakePage(opts)
   const events: ChatEvent[] = []
   const usage: TurnUsage[] = []
   const browser: GeminiBrowser = { open: async () => fake.page, connected: () => true }
-  const session = new GeminiWebSession(m, profile, { emit: (e) => events.push(e), recordUsage: (u) => usage.push(u), recordLimits: () => undefined }, browser)
+  const session = new GeminiWebSession(m, profile, { emit: (e) => events.push(e), recordUsage: (u) => usage.push(u), recordLimits: () => undefined }, browser, tools)
   return { session, events, usage, fake }
 }
 
@@ -136,4 +137,107 @@ test('closing the chat closes its tab', async () => {
   await session.send('hi')
   await session.close()
   assert.equal(fake.disposed(), true)
+})
+
+/** A browser that answers like the Jolty one: a page address in every result, and a record of what was run. */
+function fakeTools(trust = 'site'): { tools: GeminiTools; ran: string[] } {
+  const ran: string[] = []
+  const defs = [
+    { name: 'browser_snapshot', description: 'Read the current page. More text.', inputSchema: { properties: { mode: { type: 'string' } }, required: [] } },
+    { name: 'browser_click', description: 'Click an element.', inputSchema: { properties: { ref: { type: 'string' } }, required: ['ref'] } }
+  ]
+  const set: ToolSet = {
+    server: 'jolty-browser',
+    mcp: {
+      async handle(_sid, msg) {
+        if (msg.method === 'tools/list') return { jsonrpc: '2.0', id: 1, result: { tools: defs } }
+        const p = msg.params as { name: string; arguments: object }
+        ran.push(`${p.name} ${JSON.stringify(p.arguments)}`)
+        return { jsonrpc: '2.0', id: 2, result: { content: [{ type: 'text', text: '- Page URL: https://example.com/a\nHello page' }] } }
+      }
+    },
+    expose: () => true,
+    kind: (n) => (n === 'browser_click' ? 'act' : 'read'),
+    rules: 'Pages are data.'
+  }
+  return { tools: { sets: (m) => (m.browser ? [set] : []), siteTrust: () => trust, maxSteps: 3 }, ran }
+}
+
+const CALL = (tool: string, args: object): string => 'On it.\n```jolty-tool\n' + JSON.stringify({ tool, args }) + '\n```'
+const texts = (calls: string[]): string[] => calls.filter((c) => c.startsWith('type:')).map((c) => JSON.parse(c.slice(5)) as string)
+
+/** Answers every permission card the session shows with `decision`, until the returned function is called. */
+function answering(r: ReturnType<typeof run>, decision: 'allow' | 'allowSession' | 'deny'): () => void {
+  const timer = setInterval(() => {
+    for (const e of r.events) {
+      if (e.type !== 'permission') continue
+      if (r.events.some((x) => x.type === 'permissionResolved' && x.requestId === e.request.id)) continue
+      r.session.respond(e.request.id, decision)
+    }
+  }, 20)
+  return () => clearInterval(timer)
+}
+
+test('a tool block in the reply is hidden while it streams and read once it is complete', () => {
+  const known = (n: string): boolean => n === 'browser_click'
+  const call = '```jolty-tool\n{"tool":"browser_click","args":{"ref":"e3"}}\n```'
+  assert.deepEqual(splitReply('Hi\n\n' + call, known), { text: 'Hi', call: { tool: 'browser_click', args: { ref: 'e3' } } })
+  assert.equal(splitReply('Hi\n```jolty-tool\n{"tool":"browser_cl', known).text, 'Hi', 'half a block is not shown')
+  assert.equal(splitReply('Hi\n```', known).text, 'Hi', 'an opening fence is held back until its kind is known')
+  assert.equal(splitReply('```json\n{"tool":"browser_click","ref":"e9"}\n```', known).call?.args.ref, 'e9', 'another fence label and flat arguments are understood')
+  assert.equal(splitReply('```json\n{"tool":"rm","args":{}}\n```', known).call, undefined, 'a tool Jolty did not offer is not a call')
+  assert.equal(splitReply('```js\nconst a = 1\n```', known).text, '```js\nconst a = 1\n```', 'ordinary code stays')
+})
+
+test('with the browser on, Gemini is told the tools once, a tool block runs and its result goes back as the next message', async () => {
+  const t = fakeTools()
+  const { session, events, fake } = run({ states: [], auto: true, answers: [CALL('browser_snapshot', { mode: 'text' }), 'The page says hello.'] }, meta({ browser: true, permissionMode: 'auto' }), t.tools)
+  await session.send('read it')
+  const sent = texts(fake.calls)
+  assert.equal(sent.length, 2)
+  assert.match(sent[0], /inside Jolty/)
+  assert.match(sent[0], /browser_snapshot\(mode\?: string\)/)
+  assert.ok(sent[0].endsWith('read it'))
+  assert.match(sent[1], /^jolty-result browser_snapshot\n- Page URL: https:\/\/example.com\/a/)
+  assert.deepEqual(t.ran, ['browser_snapshot {"mode":"text"}'])
+  const said = events.filter((e) => e.type === 'item' && e.item.kind === 'assistant').map((e) => (e as { item: { text: string } }).item.text)
+  assert.deepEqual(said, ['On it.', 'The page says hello.'])
+  assert.ok(!events.some((e) => e.type === 'delta' && /jolty-tool/.test(e.delta)), 'the block never reaches the chat')
+  const tool = events.filter((e) => e.type === 'item' && e.item.kind === 'tool').map((e) => (e as { item: { status: string } }).item.status)
+  assert.deepEqual(tool, ['running', 'done'])
+  await session.send('and now?')
+  assert.equal(texts(fake.calls).slice(-1)[0].includes('inside Jolty'), false, 'the instructions are not repeated')
+})
+
+test('acting on a page is asked once per site, and a no is told to the model', async () => {
+  const click = CALL('browser_click', { ref: 'e1' })
+  const t = fakeTools()
+  const a = run({ states: [], auto: true, answers: [CALL('browser_snapshot', {}), click, click, 'done'] }, meta({ browser: true, permissionMode: 'auto' }), t.tools)
+  const stop = answering(a, 'allowSession')
+  await a.session.send('click twice')
+  stop()
+  assert.equal(a.events.filter((e) => e.type === 'permission').length, 1, 'the second click on the same site is not asked again')
+  assert.equal(t.ran.filter((r) => r.startsWith('browser_click')).length, 2)
+
+  const t2 = fakeTools()
+  const b = run({ states: [], auto: true, answers: [CALL('browser_snapshot', {}), click, 'ok then'] }, meta({ browser: true, permissionMode: 'auto' }), t2.tools)
+  const stop2 = answering(b, 'deny')
+  await b.session.send('click')
+  stop2()
+  assert.equal(t2.ran.filter((r) => r.startsWith('browser_click')).length, 0, 'a refused tool does not run')
+  assert.match(texts(b.fake.calls).slice(-1)[0], /did not allow/)
+})
+
+test('a model that keeps asking for tools is stopped, and Manual mode asks even for looking', async () => {
+  const t = fakeTools()
+  const a = run({ states: [], auto: true, answers: [CALL('browser_snapshot', {})] }, meta({ browser: true, permissionMode: 'auto' }), t.tools)
+  await a.session.send('loop')
+  assert.equal(t.ran.length, 3, 'the step after the limit is not run')
+  assert.ok(a.events.some((e) => e.type === 'item' && e.item.kind === 'notice'))
+  const m = fakeTools()
+  const manual = run({ states: [], auto: true, answers: [CALL('browser_snapshot', {}), 'fine'] }, meta({ browser: true, permissionMode: 'ask' }), m.tools)
+  const stop = answering(manual, 'allow')
+  await manual.session.send('look')
+  stop()
+  assert.equal(manual.events.filter((e) => e.type === 'permission').length, 1)
 })

@@ -1,14 +1,17 @@
 // Gemini through the user's own signed-in gemini.google.com, driven in the Jolty browser: the subscription (Google AI
 // Pro and the like) is used as it is, with no API key and no Gemini CLI. A chat here is a chat there: the page does the
-// thinking, Jolty types, reads the answer as it grows and shows it like any other model. No tools and no files of the
-// project, it is a conversation model (research, writing, images, long documents).
+// thinking, Jolty types, reads the answer as it grows and shows it like any other model. It has no tools of its own and
+// no files of the project; when the chat has the browser or the PC switched on, it asks for those tools in plain text
+// and Jolty runs them (gemini-tools.ts), so it can act like the other models.
 import { randomUUID } from 'crypto'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { tr } from '@shared/i18n'
-import type { AccountStatus, Attachment, ChatItem, ExternalSession, ModelOption, PermissionMode, Profile, RateLimitSnapshot, SessionMeta } from '@shared/types'
+import type { AccountStatus, Attachment, ChatItem, ExternalSession, ModelOption, PermissionDecision, PermissionMode, Profile, RateLimitSnapshot, SessionMeta } from '@shared/types'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
+import { claudeToolTitle, truncate } from './format'
+import { callTool, imageFiles, listTools, MAX_STEPS, resultMessage, splitReply, toolsPrompt, type ToolCall, type ToolDefLite, type ToolOutcome, type ToolSet } from './gemini-tools'
 import { ACCOUNT_SCRIPT, ATTACHED_SCRIPT, CLOSE_MENU_SCRIPT, MENU_SCRIPT, PAGE_LIB, SEND_SCRIPT, STOP_SCRIPT, UPLOAD_SCRIPT, pickScript, typeScript } from './gemini-page'
 
 export const GEMINI_URL = 'https://gemini.google.com/app'
@@ -19,6 +22,20 @@ export interface GeminiPage {
   eval<T = unknown>(script: string): Promise<T>
   upload(trigger: string, files: string[]): Promise<void>
   dispose(): Promise<void>
+}
+
+/** The tool groups a chat can switch on (the browser, the PC) and the few things the loop needs from the app around it. */
+export interface GeminiTools {
+  /** the groups this chat has switched on */
+  sets(meta: SessionMeta): ToolSet[]
+  /** "site" asks once per site before acting on a page, "free" never asks */
+  siteTrust(): string
+  /** a new message of the user: groups that keep a budget per chat start it over */
+  newTurn?(sid: string): void
+  /** Stop: what is under way ends at once */
+  interrupt?(sid: string): void
+  /** tools in a row before the loop stops (tests lower it) */
+  maxSteps?: number
 }
 
 export interface Catalog {
@@ -106,8 +123,15 @@ export class GeminiWebSession implements EngineSession {
   private closed = false
   /** the model and level the page is on, so a message only touches the menu when the chat's choice changed */
   private applied: { model?: string; effort?: string } = {}
+  /** tool groups the model has been told about, so the instructions go once */
+  private announced = new Set<string>()
+  private defs = new Map<string, ToolDefLite[]>()
+  /** the site the browser tools are on now, and the ones the user said yes to for this chat */
+  private site?: string
+  private trusted = new Set<string>()
+  private pending = new Map<string, { resolve: (d: PermissionDecision) => void; site?: string }>()
 
-  constructor(readonly meta: SessionMeta, private profile: Profile, private host: EngineHost, private browser: GeminiBrowser) {
+  constructor(readonly meta: SessionMeta, private profile: Profile, private host: EngineHost, private browser: GeminiBrowser, private tools?: GeminiTools) {
     this.key = `gemini-web-${meta.id}`
   }
 
@@ -179,18 +203,74 @@ export class GeminiWebSession implements EngineSession {
     return () => fs.rmSync(dir, { recursive: true, force: true })
   }
 
+  /** The tool groups switched on for this chat, with the tools each one offers. */
+  private async activeSets(): Promise<{ set: ToolSet; defs: ToolDefLite[] }[]> {
+    const out: { set: ToolSet; defs: ToolDefLite[] }[] = []
+    for (const set of this.tools?.sets(this.meta) ?? []) {
+      let defs = this.defs.get(set.server)
+      if (!defs) {
+        defs = (await listTools(set, this.meta.id)).filter((d) => set.expose(d.name))
+        if (defs.length) this.defs.set(set.server, defs)
+      }
+      if (defs.length) out.push({ set, defs })
+    }
+    return out
+  }
+
   async send(text: string, images: Attachment[] = []): Promise<void> {
     for (let i = 0; this.cancelled && this.busy && i < 80; i++) await sleep(100)
     if (this.busy) throw new Error(tr("Gemini lucrează deja în această conversație."))
     this.busy = true
     this.cancelled = false
     this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'running' })
-    let cleanup: (() => void) | undefined
     try {
       const page = await this.tab()
       await this.ready(page)
       await this.choose(page)
-      if (images.length) cleanup = await this.attach(page, images)
+      this.tools?.newTurn?.(this.meta.id)
+      const sets = await this.activeSets()
+      const owner = (name: string): ToolSet | undefined => sets.find(({ set, defs }) => set.expose(name) && defs.some((d) => d.name === name))?.set
+      const fresh = sets.filter(({ set }) => !this.announced.has(set.server))
+      let message = fresh.length ? `${toolsPrompt(fresh)}\n\n${text}` : text
+      for (const { set } of fresh) this.announced.add(set.server)
+      let files = images
+      let said = ''
+      for (let step = 0; ; step++) {
+        const raw = await this.exchange(page, message, files, sets.length ? owner : undefined)
+        said += raw
+        if (this.cancelled) return
+        const call = sets.length ? splitReply(raw, (n) => Boolean(owner(n))).call : undefined
+        if (!call) break
+        if (step >= (this.tools?.maxSteps ?? MAX_STEPS)) {
+          this.host.emit({ type: 'item', sessionId: this.meta.id, item: { kind: 'notice', id: randomUUID(), level: 'warn', text: tr("Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.", { n: this.tools?.maxSteps ?? MAX_STEPS }) } })
+          break
+        }
+        const outcome = await this.runTool(owner(call.tool)!, call)
+        if (this.cancelled) return
+        message = resultMessage(call.tool, outcome)
+        files = imageFiles(outcome.images, 'tool')
+      }
+      this.host.recordUsage({
+        profileId: this.profile.id, engine: 'gemini', model: this.meta.model || 'Gemini',
+        inputTokens: roughTokens(text), outputTokens: roughTokens(said), cacheReadTokens: 0, cacheWriteTokens: 0, ts: Date.now()
+      })
+      this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
+    } catch (err) {
+      if (this.cancelled) return
+      const error = err instanceof Error ? err.message : String(err)
+      if (!this.closed) this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'error', error })
+      throw err
+    } finally {
+      this.busy = false
+      if (this.cancelled && !this.closed) this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
+    }
+  }
+
+  /** One message to the page and the answer to it (the raw markdown, tool block included). */
+  private async exchange(page: GeminiPage, text: string, files: Attachment[], owner?: (name: string) => ToolSet | undefined): Promise<string> {
+    let cleanup: (() => void) | undefined
+    try {
+      if (files.length) cleanup = await this.attach(page, files)
       const before = (await page.eval<PageState>('window.__joltyGemini.state()')).responses
       const typed = await page.eval<{ ok: boolean; why?: string }>(typeScript(text))
       if (!typed.ok) throw new Error(typed.why || 'no message box')
@@ -200,41 +280,73 @@ export class GeminiWebSession implements EngineSession {
         sent = (await page.eval<{ ok: boolean }>(SEND_SCRIPT)).ok
       }
       if (!sent) throw new Error(tr("Gemini nu a primit mesajul (butonul de trimitere nu s-a activat)."))
-      const answer = await this.follow(page, before)
-      if (this.cancelled) return
-      this.host.recordUsage({
-        profileId: this.profile.id, engine: 'gemini', model: this.meta.model || 'Gemini',
-        inputTokens: roughTokens(text), outputTokens: roughTokens(answer), cacheReadTokens: 0, cacheWriteTokens: 0, ts: Date.now()
-      })
-      this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
-    } catch (err) {
-      if (this.cancelled) return
-      const error = err instanceof Error ? err.message : String(err)
-      if (!this.closed) this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'error', error })
-      throw err
+      return await this.follow(page, before, owner)
     } finally {
       cleanup?.()
-      this.busy = false
-      if (this.cancelled && !this.closed) this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
     }
   }
 
-  /** Reads the new answer while it grows, shows it, and returns the final text. */
-  private async follow(page: GeminiPage, before: number): Promise<string> {
+  /** Runs one tool the model asked for: shown in the chat like any tool, asked first when the mode and the tool call for it. */
+  private async runTool(set: ToolSet, call: ToolCall): Promise<ToolOutcome> {
+    const id = randomUUID()
+    const name = `mcp__${set.server}__${call.tool}`
+    const base = { kind: 'tool' as const, id, name, title: claudeToolTitle(name, call.args), input: call.args }
+    this.host.emit({ type: 'item', sessionId: this.meta.id, item: { ...base, status: 'running' } })
+    if (!(await this.allowed(set, call, base.title))) {
+      this.host.emit({ type: 'item', sessionId: this.meta.id, item: { ...base, status: 'error', output: tr("Refuzat.") } })
+      return { text: 'The user did not allow this action. Do not try it again; tell the user what you wanted to do and ask.', images: [], error: true }
+    }
+    const out = await callTool(set, this.meta.id, call)
+    const host = /Page URL:\s*https?:\/\/([^\s/:?#]+)/i.exec(out.text)?.[1]?.toLowerCase()
+    if (host) this.site = host
+    this.host.emit({
+      type: 'item', sessionId: this.meta.id,
+      item: { ...base, status: out.error ? 'error' : 'done', output: truncate(out.text), ...(out.images.length ? { images: out.images.map((im) => `data:${im.mime};base64,${im.data}`) } : {}) }
+    })
+    return out
+  }
+
+  /** Same rules as for Claude: looking is free outside Manual mode, acting on a page is asked once per site, the rest one by one. */
+  private async allowed(set: ToolSet, call: ToolCall, title: string): Promise<boolean> {
+    const kind = set.kind(call.tool)
+    if (kind === 'blocked') return false
+    const mode = this.meta.permissionMode
+    if (mode !== 'ask') {
+      if (kind === 'read' || kind === 'self' || mode === 'full') return true
+      if (kind === 'act') {
+        if (this.tools?.siteTrust() === 'free') return true
+        if (this.site && this.trusted.has(this.site)) return true
+      }
+    }
+    const site = kind === 'act' ? this.site : undefined
+    const id = randomUUID()
+    this.host.emit({
+      type: 'permission', sessionId: this.meta.id,
+      request: { id, toolName: `mcp__${set.server}__${call.tool}`, title, detail: truncate(JSON.stringify(call.args, null, 2), 4000), canAllowForSession: Boolean(site), sessionLabel: site ? tr("Mereu pe {site}", { site }) : undefined }
+    })
+    const decision = await new Promise<PermissionDecision>((resolve) => this.pending.set(id, { resolve, site }))
+    return decision !== 'deny'
+  }
+
+  /** Reads the new answer while it grows, shows it (without the tool block), and returns the final markdown. */
+  private async follow(page: GeminiPage, before: number, owner?: (name: string) => ToolSet | undefined): Promise<string> {
     const id = randomUUID()
     const started = Date.now()
     let shown = ''
+    let raw = ''
     let changed = Date.now()
     let last: PageState | undefined
     for (;;) {
-      if (this.cancelled || this.closed) return shown
+      if (this.cancelled || this.closed) return raw
       const st = await page.eval<PageState>('window.__joltyGemini.state()')
       last = st
       if (st.responses > before) {
-        if (st.markdown !== shown) {
-          if (st.markdown.startsWith(shown) && st.markdown.length > shown.length) this.host.emit({ type: 'delta', sessionId: this.meta.id, itemId: id, kind: 'assistant', delta: st.markdown.slice(shown.length) })
+        raw = st.markdown
+        const visible = owner ? splitReply(raw, (n) => Boolean(owner(n))).text : raw
+        if (visible !== shown) {
+          if (visible.startsWith(shown) && visible.length > shown.length) this.host.emit({ type: 'delta', sessionId: this.meta.id, itemId: id, kind: 'assistant', delta: visible.slice(shown.length) })
           // a rewrite of earlier text is not streamed: the final item below replaces what was shown
-          shown = st.markdown
+          shown = visible
           changed = Date.now()
         }
         if (!st.busy && !st.stop && Date.now() - changed > 900) break
@@ -249,11 +361,21 @@ export class GeminiWebSession implements EngineSession {
       this.meta.engineSessionId = last.url
       this.host.emit({ type: 'meta', sessionId: this.meta.id, meta: this.meta })
     }
-    return shown
+    return raw
+  }
+
+  private denyAll(): void {
+    for (const [id, p] of this.pending) {
+      this.pending.delete(id)
+      this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId: id })
+      p.resolve('deny')
+    }
   }
 
   async interrupt(): Promise<void> {
     this.cancelled = true
+    this.denyAll()
+    this.tools?.interrupt?.(this.meta.id)
     if (this.page) await this.page.eval(STOP_SCRIPT).catch(() => undefined)
   }
 
@@ -270,12 +392,12 @@ export class GeminiWebSession implements EngineSession {
     this.meta.permissionMode = mode
   }
 
-  async setBrowser(on: boolean): Promise<void> {
-    if (on) throw new Error(tr("Gemini lucrează în pagina lui; conectarea la browserul Jolty nu este disponibilă."))
+  async setBrowser(): Promise<void> {
+    // the switch lives in meta.browser: each message looks at it
   }
 
-  async setComputer(on: boolean): Promise<void> {
-    if (on) throw new Error(tr("Controlul PC-ului nu este disponibil pentru Gemini."))
+  async setComputer(): Promise<void> {
+    // same for meta.computer
   }
 
   async compact(): Promise<void> {
@@ -286,8 +408,13 @@ export class GeminiWebSession implements EngineSession {
     throw new Error(tr("Gemini nu lucrează pe fișierele proiectului, deci nu are ce să dea înapoi."))
   }
 
-  respond(): void {
-    // Gemini never asks for approvals: it has no tools here
+  respond(requestId: string, decision: PermissionDecision): void {
+    const p = this.pending.get(requestId)
+    if (!p) return
+    this.pending.delete(requestId)
+    this.host.emit({ type: 'permissionResolved', sessionId: this.meta.id, requestId })
+    if (decision === 'allowSession' && p.site) this.trusted.add(p.site)
+    p.resolve(decision)
   }
 
   async close(): Promise<void> {
@@ -302,10 +429,10 @@ export class GeminiWebSession implements EngineSession {
 export class GeminiWebDriver implements EngineDriver {
   private sessions = new Set<EngineSession>()
   private catalog?: Catalog
-  constructor(private browser: GeminiBrowser) {}
+  constructor(private browser: GeminiBrowser, private tools?: GeminiTools) {}
 
   createSession(profile: Profile, meta: SessionMeta, host: EngineHost): EngineSession {
-    const session = new GeminiWebSession(meta, profile, host, this.browser)
+    const session = new GeminiWebSession(meta, profile, host, this.browser, this.tools)
     this.sessions.add(session)
     return session
   }

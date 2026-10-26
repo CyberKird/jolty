@@ -88,17 +88,22 @@ export const PAGE_LIB = String.raw`(() => {
   return true
 })()`
 
-/** Puts text into the message box (Quill) as pasted text, so line breaks stay line breaks. */
+/**
+ * Puts text into the message box (Quill) line by line, as typed text with a paragraph break between lines, so line
+ * breaks stay line breaks and Enter is never pressed (it would send). A synthetic paste event did the same job until
+ * the page stopped taking it, which is why this goes through the editing commands the page cannot tell from typing.
+ */
 export const typeScript = (text: string): string => `(() => {
   const ed = document.querySelector('rich-textarea .ql-editor')
   if (!ed) return { ok: false, why: 'no message box' }
   ed.focus()
-  const sel = getSelection()
-  sel.selectAllChildren(ed)
-  const t = ${JSON.stringify(text)}
-  const dt = new DataTransfer()
-  dt.setData('text/plain', t)
-  ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  getSelection().selectAllChildren(ed)
+  document.execCommand('delete')
+  const t = ${JSON.stringify(text.replace(/\r\n?/g, '\n'))}
+  t.split('\\n').forEach((line, i) => {
+    if (i) document.execCommand('insertParagraph')
+    if (line) document.execCommand('insertText', false, line)
+  })
   return { ok: true, length: ed.innerText.length }
 })()`
 

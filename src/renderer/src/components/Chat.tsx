@@ -514,7 +514,7 @@ function Composer(p: ComposerProps) {
               }] : []),
               {
                 id: 'browser', icon: <Globe size={14} strokeWidth={1.8} />, label: tr("Browser"), on: Boolean(p.browser), disabled: !hasJoltyBrowser(engine),
-                title: !hasJoltyBrowser(engine) ? (engine === 'gemini' ? tr("Gemini lucrează direct în pagina lui, deci browserul Jolty nu i se atașează.") : tr("Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.")) : p.browser
+                title: !hasJoltyBrowser(engine) ? tr("Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.") : p.browser
                   ? tr("Jolty în browser e pornit: modelul poate folosi browserul tău (Chrome, Vivaldi, Edge, Brave), cu login-urile tale. Clic ca să-l oprești.")
                   : tr("Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări)."),
                 onToggle: () => p.onBrowser(!p.browser)
