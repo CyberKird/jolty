@@ -159,7 +159,7 @@ test('MCP tools over the local server: token required, search, read, schedule, c
     assert.equal((await call({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, 'wrong')).status, 401)
     const list = (await (await call({ jsonrpc: '2.0', id: 1, method: 'tools/list' })).json()) as { result: { tools: { name: string }[] } }
     assert.deepEqual(list.result.tools.map((t) => t.name).sort(), [
-      'cancel_scheduled_task', 'ledger_read', 'ledger_write', 'list_scheduled_tasks', 'list_sessions', 'read_conversation', 'schedule_task', 'search_conversations', 'send_to_session', 'start_session', 'wait_for_sessions'
+      'ask_model', 'cancel_scheduled_task', 'ledger_read', 'ledger_write', 'list_models', 'list_scheduled_tasks', 'list_sessions', 'read_conversation', 'schedule_task', 'search_conversations', 'send_to_session', 'start_session', 'wait_for_sessions'
     ])
     // a session a lead started cannot start sessions of its own
     const kidList = (await (await fetch(`http://127.0.0.1:${port}/jolty/kid`, { method: 'POST', headers: { authorization: 'Bearer secret-token', 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) })).json()) as { result: { tools: { name: string }[] } }
