@@ -1331,5 +1331,7 @@
  "Compactez conversația...": "बातचीत संक्षिप्त हो रही है...",
  "Compactarea nu a reușit.": "संक्षिप्त करना सफल नहीं हुआ।",
  "Compactat: {before} la {after} tokeni": "संक्षिप्त हुआ: {before} से {after} टोकन",
- "Conversația a fost compactată.": "बातचीत को संक्षिप्त किया गया।"
+ "Conversația a fost compactată.": "बातचीत को संक्षिप्त किया गया।",
+ "Șterge conversația temporară (nu se salvează nimic din ea)": "अस्थायी चैट हटाएँ (इसका कुछ भी सहेजा नहीं जाता)",
+ "lucrează": "काम कर रहा है"
 }

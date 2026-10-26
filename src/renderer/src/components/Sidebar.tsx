@@ -1,4 +1,4 @@
-import { Loader2, BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { Loader2, MessageSquareDashed, BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { dragShield } from '../dragShield'
@@ -105,7 +105,7 @@ function isMiMoProfile(p: { auth: string; baseUrl?: string }): boolean {
 
 /** Always-visible meter: each account's 5 h / 7 d limits and its last 24 h, updated as turns finish. */
 function UsageMeter() {
-  const { profiles, limits, spend, spend7d, balances, status, setPage, loadUsage, loadSessions, toast } = useStore()
+  const { profiles, limits, spend, spend7d, balances, status, sessions, setPage, loadUsage, loadSessions, toast } = useStore()
   const running = Object.values(status).some((s) => s === 'running')
   const [refreshing, setRefreshing] = useState(false)
   useEffect(() => {
@@ -124,7 +124,9 @@ function UsageMeter() {
     }
   }, [profiles])
   // a profile with empty windows but a note (rate-limited probe) stays visible so the row does not vanish
-  const rows = profiles.filter((p) => isMiMoProfile(p) || limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id])
+  // an OpenCode or Hermes agent has no limits to read and reports its tokens only when a turn ends, so it is listed as soon as one of its chats works
+  const working = new Set(sessions.filter((x) => status[x.id] === 'running').map((x) => x.profileId))
+  const rows = profiles.filter((p) => isMiMoProfile(p) || limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id] || working.has(p.id))
   const dragProps = useProfileDrag(rows.map((p) => p.id))
   return (
     <section className="meter" aria-label={tr("Consum live")}>
@@ -174,8 +176,9 @@ function UsageMeter() {
           return (
             <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title={`${tr("Deschide Consum")}\n${MOVE_HINT}`} {...dragProps(p.id)}>
             <span className="meter-name">
-              <span className="dot" style={{ width: 6, height: 6, background: p.color }} />
+              <span className={`dot ${working.has(p.id) ? 'running' : ''}`} style={{ width: 6, height: 6, background: p.color }} />
               <span className="ellipsis">{p.name}</span>
+              {working.has(p.id) && !s?.tokens && !limits[p.id]?.windows.length && <span className="meter-24h">{tr("lucrează")}</span>}
               {!isMiMo && s?.tokens ? (
                 <span className="meter-24h" title={tr("Ultimele 24 de ore")}>
                   {fmtTokens(s.tokens)}
@@ -282,7 +285,8 @@ export function Sidebar() {
       .then((l) => useStore.getState().setSkillsAttention(l.filter((s) => needsAttention(s, useStore.getState().hiddenSkills)).length))
       .catch(() => undefined)
   }, [])
-  const saved = useMemo(() => sessions.filter((s) => !s.temporary), [sessions])
+  // temporary chats are listed too (marked); they live in memory only and are wiped when deleted or when Jolty closes
+  const saved = sessions
   const groups = useMemo(() => {
     const filtered = saved.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.cwd.toLowerCase().includes(q.toLowerCase()))
     const map = new Map<string, typeof filtered>()
@@ -403,12 +407,15 @@ export function Sidebar() {
                       onBlur={(e) => void rename(s.id, e.currentTarget.value)}
                     />
                   ) : (
-                    <span className="title" onDoubleClick={() => setRenaming(s.id)}>{s.title}</span>
+                    <span className="title" onDoubleClick={() => setRenaming(s.id)}>
+                      {s.temporary && <MessageSquareDashed size={11} className="temp-mark" aria-label={tr("Temporar")} />}
+                      {s.title}
+                    </span>
                   )}
                   <span className="when">{timeAgo(s.updatedAt)}</span>
                   <button
                     className="del"
-                    title={tr("Scoate din Jolty (sesiunea rămâne în Claude Code / Codex)")}
+                    title={s.temporary ? tr("Șterge conversația temporară (nu se salvează nimic din ea)") : tr("Scoate din Jolty (sesiunea rămâne în Claude Code / Codex)")}
                     onClick={(e) => {
                       e.stopPropagation()
                       void removeSession(s.id)

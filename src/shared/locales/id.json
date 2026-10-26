@@ -1331,5 +1331,7 @@
  "Compactez conversația...": "Memadatkan percakapan...",
  "Compactarea nu a reușit.": "Pemadatan tidak berhasil.",
  "Compactat: {before} la {after} tokeni": "Dipadatkan: {before} menjadi {after} token",
- "Conversația a fost compactată.": "Percakapan telah dipadatkan."
+ "Conversația a fost compactată.": "Percakapan telah dipadatkan.",
+ "Șterge conversația temporară (nu se salvează nimic din ea)": "Hapus obrolan sementara (tidak ada yang disimpan)",
+ "lucrează": "bekerja"
 }

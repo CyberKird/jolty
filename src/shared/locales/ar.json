@@ -1331,5 +1331,7 @@
  "Compactez conversația...": "جارٍ ضغط المحادثة...",
  "Compactarea nu a reușit.": "تعذّر الضغط.",
  "Compactat: {before} la {after} tokeni": "تم الضغط: {before} إلى {after} رمز",
- "Conversația a fost compactată.": "تم ضغط المحادثة."
+ "Conversația a fost compactată.": "تم ضغط المحادثة.",
+ "Șterge conversația temporară (nu se salvează nimic din ea)": "حذف المحادثة المؤقتة (لا يُحفظ منها شيء)",
+ "lucrează": "يعمل"
 }

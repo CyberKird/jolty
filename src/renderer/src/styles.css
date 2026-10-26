@@ -3921,3 +3921,10 @@ a {
   flex: none;
   color: var(--volt);
 }
+
+.temp-mark {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-inline-end: 4px;
+  color: var(--grey);
+}

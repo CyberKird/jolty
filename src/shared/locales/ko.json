@@ -1331,5 +1331,7 @@
  "Compactez conversația...": "대화를 압축하는 중...",
  "Compactarea nu a reușit.": "압축하지 못했습니다.",
  "Compactat: {before} la {after} tokeni": "압축됨: {before}에서 {after} 토큰으로",
- "Conversația a fost compactată.": "대화를 압축했습니다."
+ "Conversația a fost compactată.": "대화를 압축했습니다.",
+ "Șterge conversația temporară (nu se salvează nimic din ea)": "임시 대화 삭제 (아무것도 저장되지 않습니다)",
+ "lucrează": "작업 중"
 }

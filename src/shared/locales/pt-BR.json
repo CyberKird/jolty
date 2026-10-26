@@ -1331,5 +1331,7 @@
  "Compactez conversația...": "Compactando a conversa...",
  "Compactarea nu a reușit.": "A compactação não deu certo.",
  "Compactat: {before} la {after} tokeni": "Compactado: {before} para {after} tokens",
- "Conversația a fost compactată.": "A conversa foi compactada."
+ "Conversația a fost compactată.": "A conversa foi compactada.",
+ "Șterge conversația temporară (nu se salvează nimic din ea)": "Excluir o chat temporário (nada dele é salvo)",
+ "lucrează": "trabalhando"
 }
