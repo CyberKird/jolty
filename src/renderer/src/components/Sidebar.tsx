@@ -101,6 +101,12 @@ function Resizer({ axis, label, storeKey, cssVar, host, size, min, max, preview 
   )
 }
 
+/** Gemini reports no limits and no real token counts: the row shows only what was recorded locally (a rough estimate per turn). */
+function geminiFigures(x?: { tokens: number; turns: number }): string {
+  const n = x?.turns || 0
+  return `${n} ${n === 1 ? tr("mesaj") : tr("mesaje")}${x?.tokens ? ` · ~${fmtTokens(x.tokens)}` : ''}`
+}
+
 function isMiMoProfile(p: { auth: string; baseUrl?: string }): boolean {
   return p.auth === 'endpoint' && /^https:\/\/(?:api|token-plan-cn)\.xiaomimimo\.com(?:[:/]|$)/i.test(p.baseUrl || '')
 }
@@ -128,7 +134,7 @@ function UsageMeter() {
   // a profile with empty windows but a note (rate-limited probe) stays visible so the row does not vanish
   // an OpenCode or Hermes agent has no limits to read and reports its tokens only when a turn ends, so it is listed as soon as one of its chats works
   const working = new Set(sessions.filter((x) => status[x.id] === 'running').map((x) => x.profileId))
-  const rows = profiles.filter((p) => isMiMoProfile(p) || limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id] || working.has(p.id))
+  const rows = profiles.filter((p) => isMiMoProfile(p) || p.engine === 'gemini' || limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id] || working.has(p.id))
   const dragProps = useProfileDrag(rows.map((p) => p.id))
   return (
     <section className="meter" aria-label={tr("Consum live")}>
@@ -174,6 +180,7 @@ function UsageMeter() {
         {rows.map((p) => {
           const s = spend[p.id]
           const isMiMo = isMiMoProfile(p)
+          const isGemini = p.engine === 'gemini'
           const balance = balances[p.id]
           return (
             <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title={`${tr("Deschide Consum")}\n${MOVE_HINT}`} {...dragProps(p.id)}>
@@ -181,7 +188,7 @@ function UsageMeter() {
               <span className={`dot ${working.has(p.id) ? 'running' : ''}`} style={{ width: 6, height: 6, background: p.color }} />
               <span className="ellipsis">{p.name}</span>
               {working.has(p.id) && !s?.tokens && !limits[p.id]?.windows.length && <span className="meter-24h">{tr("lucrează")}</span>}
-              {!isMiMo && s?.tokens ? (
+              {!isMiMo && !isGemini && s?.tokens ? (
                 <span className="meter-24h" title={tr("Ultimele 24 de ore")}>
                   {fmtTokens(s.tokens)}
                   {s.costUsd ? ` · ${fmtUsd(s.costUsd)}` : ''}
@@ -197,6 +204,18 @@ function UsageMeter() {
                 <span className="meter-balance" title={tr("Ultimele 7 zile")}>
                   <span className="meter-limit-label">7d</span>
                   <b>{fmtTokens(spend7d[p.id]?.tokens || 0)}</b>
+                </span>
+              </>
+            )}
+            {isGemini && (
+              <>
+                <span className="meter-balance" title={`${tr("Ultimele 24 de ore")}\n${tr("Tokeni estimați: Gemini nu îi raportează.")}`}>
+                  <span className="meter-limit-label">24h</span>
+                  <b>{geminiFigures(s)}</b>
+                </span>
+                <span className="meter-balance" title={`${tr("Ultimele 7 zile")}\n${tr("Tokeni estimați: Gemini nu îi raportează.")}`}>
+                  <span className="meter-limit-label">7d</span>
+                  <b>{geminiFigures(spend7d[p.id])}</b>
                 </span>
               </>
             )}
@@ -221,6 +240,7 @@ function UsageMeter() {
               </span>
             ))}
             {!limits[p.id]?.windows.length && limits[p.id]?.note && <span className="faint small">{limits[p.id]!.note}</span>}
+            {isGemini && !limits[p.id]?.windows.length && !limits[p.id]?.note && <span className="faint small">{tr("Google nu publică limitele Gemini.")}</span>}
             </button>
           )
         })}
