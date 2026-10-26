@@ -60,7 +60,7 @@
   position: absolute;
   left: 44px;
   bottom: 52px;
-  max-width: min(560px, 56%);
+  max-width: min(620px, 60%);
   animation: wn-up 0.5s var(--ease) 0.08s both;
 }
 .wn-kicker {
@@ -81,11 +81,16 @@
   margin: 14px 0 16px;
   font-family: var(--display);
   font-weight: 400;
-  font-size: 66px;
-  line-height: 0.9;
+  font-size: 48px;
+  line-height: 0.95;
   letter-spacing: 0.01em;
   color: var(--white);
   text-wrap: balance;
+  /* a long headline must never push its first line out of the stage */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 .wn-meta {
   display: flex;
@@ -263,7 +268,7 @@
     max-width: 60%;
   }
   .wn-headline {
-    font-size: 46px;
+    font-size: 36px;
   }
   .wn-art {
     right: 0;

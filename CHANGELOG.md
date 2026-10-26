@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.3
+
+### Fixed
+
+- A long headline in the What's new window could run out of the top of the window, with its first line cut off. The headline is now smaller and limited to three lines.
+
 ## 0.8.2
 
 ### Fixed
