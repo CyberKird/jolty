@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.0
+
+### New
+
+- Any model can ask another one: two new tools, `list_models` (every connected profile with its models, intelligence and speed) and `ask_model` (one question, one answer, optional files), so a chat can get a second opinion from the profile you choose. Gemini answers one-shot questions too, with images, PDFs, audio and video.
+- Jolty now learns from your Gemini chats: after every 10 messages a background review saves the facts you stated to your memory folder and tells you in the chat what it saved. It never blocks the conversation and does nothing in temporary chats or when the learning loop is off.
+- Gemini always has a row in the usage meter in the sidebar, with the messages and estimated tokens of the last 24 hours and 7 days.
+
+### Improvements
+
+- Smoother streaming: the app no longer re-renders everything on each piece of text, finished code blocks are parsed once, and nothing reads the settings file for every chunk while Jolty is in the background.
+- The live browser view pauses while Jolty is hidden, so a minimized window stops receiving screenshots.
+- Typing a long message into Gemini keeps all its lines and confirms the text is really in the box before sending.
+
 ## 0.10.2
 
 ### Improvements
