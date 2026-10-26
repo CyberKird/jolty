@@ -89,22 +89,23 @@ export const PAGE_LIB = String.raw`(() => {
 })()`
 
 /**
- * Puts text into the message box (Quill) line by line, as typed text with a paragraph break between lines, so line
- * breaks stay line breaks and Enter is never pressed (it would send). A synthetic paste event did the same job until
- * the page stopped taking it, which is why this goes through the editing commands the page cannot tell from typing.
+ * Puts text into the message box (Quill) as typed text, one editing command for the whole message so the line breaks
+ * become paragraphs and Enter is never pressed (it would send). Typing line by line loses everything after the first
+ * break, because the editor redraws itself in between; a synthetic paste event is not taken by the page any more.
+ * It answers ok only when the text is really in the box.
  */
-export const typeScript = (text: string): string => `(() => {
+export const typeScript = (text: string): string => `(async () => {
   const ed = document.querySelector('rich-textarea .ql-editor')
   if (!ed) return { ok: false, why: 'no message box' }
   ed.focus()
   getSelection().selectAllChildren(ed)
   document.execCommand('delete')
   const t = ${JSON.stringify(text.replace(/\r\n?/g, '\n'))}
-  t.split('\\n').forEach((line, i) => {
-    if (i) document.execCommand('insertParagraph')
-    if (line) document.execCommand('insertText', false, line)
-  })
-  return { ok: true, length: ed.innerText.length }
+  document.execCommand('insertText', false, t)
+  const flat = (s) => s.replace(/\\s+/g, '')
+  for (let i = 0; i < 20 && flat(ed.innerText).length < flat(t).length; i++) await new Promise((r) => setTimeout(r, 50))
+  const got = flat(ed.innerText).length
+  return { ok: got >= flat(t).length, why: 'the message box took ' + got + ' of ' + flat(t).length + ' characters', length: got }
 })()`
 
 /** The send button, once the box has text. */
