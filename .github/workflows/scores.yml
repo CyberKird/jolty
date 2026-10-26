@@ -1,0 +1,35 @@
+name: Model scores
+
+# Keeps scores.json, the intelligence and speed table the app fetches every hour, in step with the public
+# leaderboard of Artificial Analysis. No release is needed: the app reads the file straight from main.
+# If the leaderboard page changes shape the script stops with an error and the last good file stays.
+# Run it by hand any time from the Actions tab.
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scores:
+    name: Refresh scores.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node scripts/update-scores.mjs
+      - name: Push it when it changed
+        run: |
+          if git diff --quiet -- scores.json; then
+            echo "scores are up to date"
+          else
+            git config user.name "CyberKird"
+            git config user.email "CyberKird@users.noreply.github.com"
+            git add scores.json
+            git commit -m "Model scores up to date"
+            git push origin HEAD:main
+          fi

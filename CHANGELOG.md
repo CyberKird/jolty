@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.2
+
+### Improvements
+
+- Intelligence and speed now show next to far more models in the picker, and the list keeps itself up to date: it is rebuilt every day from the Artificial Analysis leaderboard and the app picks it up without an update. New models, Gemini and the models of your own endpoints and Ollama included, get their numbers the day they are listed.
+- Model names match however they are written ("gpt-6.1-sol", "GPT 6.1 Sol", "gpt-6-1-sol"), so fewer models are left without a score.
+
 ## 0.10.1
 
 ### Improvements

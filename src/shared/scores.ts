@@ -1,8 +1,7 @@
 // Intelligence and speed shown next to every model in the picker.
 // Intelligence = Artificial Analysis Intelligence Index (higher is better), speed = their median output tokens/s.
-// Snapshot of artificialanalysis.ai/leaderboards/models taken 2026-10-03, at effort "high" where the model has levels.
-// Refresh the table when a new model shows up in the picker without a score. The same data is published as
-// scores.json at the repo root; the app fetches that file and uses it before this table, so a refresh needs no release.
+// This table is the fallback. The real one is scores.json at the repo root, rebuilt every day from the leaderboard by
+// .github/workflows/scores.yml; the app fetches it and uses it before this table, so new models need no release.
 import type { ModelOption, Profile } from './types'
 import { tr } from './i18n'
 
@@ -55,7 +54,10 @@ const SCORES: [RegExp, number, number | undefined, string][] = [
   [/gpt-oss/, 12, undefined, 'gpt-oss 120B']
 ]
 
-/** One line of scores.json: every `match` text must appear in "id label" (lowercase substrings, never patterns). */
+/** Letters and digits only: "gpt-6.1-sol", "gpt-6-1-sol" and "GPT 6.1 Sol" are the same name. */
+const squash = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/** One line of scores.json: every `match` text must appear in "id label" (substrings of the letters and digits, never patterns). */
 export interface RemoteScore {
   match: string[]
   iq: number
@@ -63,7 +65,7 @@ export interface RemoteScore {
   note: string
 }
 
-const MAX_ENTRIES = 200
+const MAX_ENTRIES = 600
 const MAX_MATCH = 4
 const MAX_TEXT = 64
 const MAX_NOTE = 200
@@ -77,7 +79,7 @@ export function parseRemoteScores(raw: unknown): RemoteScore[] | undefined {
     const { match, iq, tps, note } = (e && typeof e === 'object' ? e : {}) as Record<string, unknown>
     if (!Array.isArray(match) || match.length < 1 || match.length > MAX_MATCH) continue
     const texts = match.map((t) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))
-    if (texts.some((t) => !t || t.length > MAX_TEXT)) continue
+    if (texts.some((t) => !squash(t) || t.length > MAX_TEXT)) continue
     if (typeof iq !== 'number' || !Number.isFinite(iq) || iq < 0 || iq > 100) continue
     if (tps !== undefined && (typeof tps !== 'number' || !Number.isFinite(tps) || tps <= 0 || tps > 5000)) continue
     // eslint-disable-next-line no-control-regex
@@ -102,7 +104,8 @@ function toScore(profile: Profile, iq: number, measured: number | undefined, not
 export function modelScore(profile: Profile, m: ModelOption): ModelScore | undefined {
   if (m.score) return m.score
   const text = `${m.id} ${m.label}`.toLowerCase()
-  const r = remote.find((e) => e.match.every((t) => text.includes(t)))
+  const flat = squash(text)
+  const r = remote.find((e) => e.match.every((t) => flat.includes(squash(t))))
   // the notes in scores.json are the same Romanian texts as the table, so they translate the same way
   if (r) return toScore(profile, r.iq, r.tps, tr(r.note))
   const hit = SCORES.find(([re]) => re.test(text))
