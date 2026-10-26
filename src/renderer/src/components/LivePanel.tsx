@@ -417,10 +417,15 @@ function browserAction(t: Tool): string {
 function BrowserView({ items }: { items: ChatItem[] }) {
   const live = useStore((s) => s.browserLive)
   const actions = items.filter((i): i is Tool => i.kind === 'tool' && isBrowserTool(i.name)).slice(-4).reverse()
-  // the stream runs only while this tab is on screen
+  // the stream runs only while this tab is on screen, and pauses while the window is hidden (each frame is a JPEG over IPC)
   useEffect(() => {
-    void api.browser.live(true)
-    return () => void api.browser.live(false)
+    const follow = (): void => void api.browser.live(!document.hidden)
+    follow()
+    document.addEventListener('visibilitychange', follow)
+    return () => {
+      document.removeEventListener('visibilitychange', follow)
+      void api.browser.live(false)
+    }
   }, [])
   // the actions show even before there is a picture: they say what the model is doing right now
   const list = (
