@@ -5,6 +5,7 @@ import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, fmtTokens, fmtUsd, useStore } from '../store'
 import { LimitMeters } from './Accounts'
 import { dateLocale, tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
   const ref = useRef<HTMLDivElement>(null)
@@ -82,7 +83,7 @@ function DailyBars({ days }: { days: UsageDay[] }) {
 
 export function UsagePage() {
   const profiles = useStore((s) => s.profiles)
-  const { onEvent, toast } = useStore()
+  const { onEvent, toast } = useStore(useShallow(({ onEvent, toast }) => ({ onEvent, toast })))
   const [data, setData] = useState<UsageSummary[]>()
   const load = useCallback(async () => {
     const list = await api.usage.summary()

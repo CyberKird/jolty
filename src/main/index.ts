@@ -71,6 +71,8 @@ function send(e: ChatEvent): void {
   if (!win || win.isDestroyed()) return
   win.webContents.send('jolty:event', e)
   // while the user is elsewhere: a Windows notification that brings Jolty back (each kind has its own switch in Settings)
+  // only these two can notify: every other event (each streamed chunk) skips the settings file read below
+  if ((e.type !== 'status' || e.status === 'running') && e.type !== 'permission') return
   if (win.isFocused() || !Notification.isSupported() || process.env.JOLTY_TEST) return
   const st = store.loadSettings()
   let head: string | undefined

@@ -4,6 +4,7 @@ import type { CatalogModel, HardwareInfo, OllamaStatus } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
 import { Trans } from '../components/Trans'
+import { useShallow } from 'zustand/shallow'
 
 const FIT: Record<CatalogModel['fit'], { label: string; cls: string }> = {
   gpu: { label: tr("Rulează pe placa video · rapid"), cls: 'good' },
@@ -30,7 +31,7 @@ function PullBar({ tag }: { tag: string }) {
 }
 
 export function LocalPage() {
-  const { toast, loadProfiles } = useStore()
+  const { toast, loadProfiles } = useStore(useShallow(({ toast, loadProfiles }) => ({ toast, loadProfiles })))
   const [hw, setHw] = useState<HardwareInfo>()
   const [ollama, setOllama] = useState<OllamaStatus>()
   const [catalog, setCatalog] = useState<CatalogModel[]>()

@@ -11,6 +11,7 @@ import { useAllModels } from './ModelPicker'
 import { tr } from '@shared/i18n'
 import { compactView, RESULT_MS } from '@shared/compaction'
 import { Collapse } from './Collapse'
+import { useShallow } from 'zustand/shallow'
 
 const NONE: PlanStep[] = []
 
@@ -113,7 +114,7 @@ export function LimitStrip({ session }: { session: SessionMeta }) {
   const running = useStore((s) => s.status[session.id] === 'running')
   const profiles = useStore((s) => s.profiles)
   const limits = useStore((s) => s.limits)
-  const { loadSessions, toast } = useStore()
+  const { loadSessions, toast } = useStore(useShallow(({ loadSessions, toast }) => ({ loadSessions, toast })))
   const [busy, setBusy] = useState(false)
   if (running) return null
   let hit = false
@@ -204,7 +205,7 @@ export function VerificationStrip({ session }: { session: SessionMeta }) {
   const items = useStore((s) => s.transcripts[session.id]) || NONE_ITEMS
   const running = useStore((s) => s.status[session.id] === 'running')
   const profiles = useStore((s) => s.profiles)
-  const { loadSessions, toast } = useStore()
+  const { loadSessions, toast } = useStore(useShallow(({ loadSessions, toast }) => ({ loadSessions, toast })))
   const groups = useAllModels(profiles)
   const [dismissed, setDismissed] = useState<string>()
   const [busy, setBusy] = useState(false)

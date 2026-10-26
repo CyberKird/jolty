@@ -15,6 +15,7 @@ import { setLowPowerMode } from '../lowpower'
 import { getLang, LANGUAGES, tr } from '@shared/i18n'
 import { GEMINI_BROWSER } from '@shared/gemini'
 import { KOFI_URL } from '@shared/links'
+import { useShallow } from 'zustand/shallow'
 
 const TABS = ['general', 'account', 'models', 'tools', 'privacy', 'about'] as const
 type Tab = (typeof TABS)[number]
@@ -23,7 +24,7 @@ const NEEDS_SAVE: Tab[] = ['models', 'tools']
 
 export function SettingsPage() {
   const profiles = useStore((s) => s.profiles)
-  const { toast } = useStore()
+  const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const [s, setS] = useState<AppSettings>()
   const [version, setVersion] = useState('')
   const [tab, setTab] = useSavedTab<Tab>('jolty.settingsTab', TABS)
@@ -362,7 +363,7 @@ export function SettingsPage() {
 
 function UpdatesCard() {
   const update = useStore((s) => s.update)
-  const { onEvent } = useStore()
+  const { onEvent } = useStore(useShallow(({ onEvent }) => ({ onEvent })))
   const [busy, setBusy] = useState(false)
   const text =
     update?.state === 'ready'

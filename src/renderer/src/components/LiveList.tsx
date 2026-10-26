@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, basename, liveRows, useStore } from '../store'
 import { copyItem, showMenu } from './ContextMenu'
 import { tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 /** Time since a turn started, ticking on its own so the list does not render every second. */
 function Elapsed({ since }: { since?: number }) {
@@ -22,7 +23,7 @@ function Elapsed({ since }: { since?: number }) {
  * (with their current step) and sessions that finished while the user was elsewhere. One click switches to one.
  */
 export function LiveList() {
-  const { sessions, status, permissions, unseen, plans, clocks, activeId, page, openSession, dismissUnseen, profiles } = useStore()
+  const { sessions, status, permissions, unseen, plans, clocks, activeId, page, openSession, dismissUnseen, profiles } = useStore(useShallow(({ sessions, status, permissions, unseen, plans, clocks, activeId, page, openSession, dismissUnseen, profiles }) => ({ sessions, status, permissions, unseen, plans, clocks, activeId, page, openSession, dismissUnseen, profiles })))
   const rows = useMemo(() => liveRows({ sessions, status, permissions, unseen }), [sessions, status, permissions, unseen])
   if (!rows.length) return null
   return (

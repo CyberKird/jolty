@@ -6,6 +6,7 @@ import { ProfileDot } from '../components/Chat'
 import { modesFor } from '../components/ModelPicker'
 import { api, basename, errMsg, useStore } from '../store'
 import { dateLocale, tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 const when = (t: number): string => new Date(t).toLocaleString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -28,7 +29,7 @@ function localInput(t: number): string {
 }
 
 export function SchedulesPage() {
-  const { profiles, toast, openSession, loadSessions } = useStore()
+  const { profiles, toast, openSession, loadSessions } = useStore(useShallow(({ profiles, toast, openSession, loadSessions }) => ({ profiles, toast, openSession, loadSessions })))
   const [tasks, setTasks] = useState<ScheduledTask[]>()
   const [editing, setEditing] = useState<ScheduledTask | 'new'>()
   const [settings, setSettings] = useState<AppSettings>()
