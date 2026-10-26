@@ -24,6 +24,26 @@ export function highlight(code: string, lang?: string): string {
   return escapeHtml(code)
 }
 
+/**
+ * Colouring of finished code blocks in messages. A streaming answer is parsed again on every flush, and colouring each
+ * of its blocks again (an untagged one tries every language) cost more than the flush interval; only the block still
+ * being written is coloured afresh (and not kept). Reopening a conversation reuses them too.
+ */
+const closedFence = (raw: string): boolean => /(?:```|~~~)[ \t]*\n*$/.test(raw)
+const blockColours = new Map<string, string>()
+function highlightBlock(code: string, lang?: string): string {
+  const key = `${lang || ''}\u0000${code}`
+  let html = blockColours.get(key)
+  if (html === undefined) {
+    html = highlight(code, lang)
+    if (blockColours.size >= 200) blockColours.delete(blockColours.keys().next().value!)
+  }
+  // moved to the end: the least recently shown block is the one dropped
+  blockColours.delete(key)
+  blockColours.set(key, html)
+  return html
+}
+
 /** Colouring for a file the model is still writing: auto-detecting the language is slow, so without a known one it stays plain text. */
 export function highlightLive(code: string, lang?: string): string {
   return lang && hljs.getLanguage(lang) ? highlight(code, lang) : escapeHtml(code)
@@ -45,7 +65,7 @@ function newMarked(fold: boolean): Marked {
     breaks: false,
     walkTokens,
     renderer: {
-      code({ text, lang }) {
+      code({ text, lang, raw }) {
         const l = (lang || '').trim().split(/\s+/)[0]
         const lines = text.split('\n').length
         const long = fold && lines > FOLD_LINES
@@ -54,7 +74,7 @@ function newMarked(fold: boolean): Marked {
         // a terminal block copies its commands; when sample output is mixed in, the whole block is a second button
         const main = shell ? control('cmd', tr("Copiază comanda"), tr("Comandă"), copied) : control('code', tr("Copiază codul"), tr("Copiază"), copied)
         const all = shell && shellCommand(text) !== text ? control('code', tr("Copiază codul"), tr("Tot"), copied) : ''
-        return `<div class="cb"${long ? ' data-long' : ''}><div class="cb-head"><span class="cb-lang" data-t="${attr(l)}"></span><span class="cb-acts">${control('wrap', tr("Împachetează liniile"))}${all}${main}</span></div><pre><code class="hljs${l ? ` language-${attr(l)}` : ''}">${highlight(text, lang || undefined)}</code></pre>${
+        return `<div class="cb"${long ? ' data-long' : ''}><div class="cb-head"><span class="cb-lang" data-t="${attr(l)}"></span><span class="cb-acts">${control('wrap', tr("Împachetează liniile"))}${all}${main}</span></div><pre><code class="hljs${l ? ` language-${attr(l)}` : ''}">${(closedFence(raw) ? highlightBlock : highlight)(text, lang || undefined)}</code></pre>${
           long ? `<button type="button" class="cb-more" data-act="more" aria-expanded="false" data-t="${attr(tr("Arată tot ({n} linii)", { n: lines }))}" data-t2="${attr(tr("Restrânge"))}"></button>` : ''
         }</div>`
       },
