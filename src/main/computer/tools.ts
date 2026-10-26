@@ -2,7 +2,7 @@
 // the clipboard here; the ones that press and type are in tools-act.ts.
 import path from 'path'
 import { tr } from '@shared/i18n'
-import { displayOfRect, toPhysical, toPicture, type DisplayInfo } from './geometry'
+import { displayAt, displayLine, displayOfRect, toPhysical, toPicture, type DisplayInfo } from './geometry'
 import type { WinInfo } from './helper'
 import { appLabel, blockedReason } from './policy'
 import { ACT_TOOLS } from './tools-act'
@@ -11,14 +11,16 @@ import type { ComputerService, Session } from './service'
 
 const READ = { readOnlyHint: true }
 
-/** Where a window is, in the pixels of the latest screenshot. */
+/** Where a window is: its display, and with it the position in the pixels of the latest screenshot when that is the display shown. */
 function where(svc: ComputerService, s: Session, w: WinInfo, displays: DisplayInfo[]): string {
   if (w.minimized) return 'minimized'
   const v = svc.ensureView(s)
   const d = displayOfRect(displays, w)
-  if (!d || d.index !== v.display.index) return d ? `on display ${d.index} (not in the latest screenshot)` : 'off screen'
+  if (!d) return 'off screen'
+  const on = displays.length > 1 ? `display ${d.index}, ` : ''
+  if (d.id !== v.display.id) return `${on}not in the latest screenshot (screenshot display ${d.index} to see it)`
   const p = toPicture(v, w.x, w.y)
-  return `at (${p.x}, ${p.y}) size ${Math.round(w.w * v.scale)}x${Math.round(w.h * v.scale)}`
+  return `${on}at (${p.x}, ${p.y}) size ${Math.round(w.w * v.scale)}x${Math.round(w.h * v.scale)}`
 }
 
 const flags = (w: WinInfo): string => [w.focused ? 'in front' : '', w.maximized ? 'maximized' : ''].filter(Boolean).join(', ')
@@ -27,8 +29,8 @@ export const TOOLS: ToolDef[] = [
   {
     name: 'computer_screenshot',
     description:
-      'Takes a screenshot of one display (default: the primary one) with the mouse pointer drawn in. All coordinates you use afterwards are pixels of this image, origin top-left. The answer lists the displays, the pointer position and the window in front.',
-    inputSchema: obj({ display: { type: 'number', description: 'Display index from the list in a previous answer (0 = primary). Default: primary.' } }),
+      'Takes a screenshot of one display (default: the primary one) with the mouse pointer drawn in. All coordinates you use afterwards are pixels of this image, origin top-left, and they only reach that display: to work on another monitor, take a screenshot of it first. The answer lists the displays, the pointer position and the window in front.',
+    inputSchema: obj({ display: { type: 'number', description: 'Display index from computer_displays or the list in a previous answer (0 = primary). Default: primary.' } }),
     annotations: READ,
     async run(svc, s, a) {
       const st = await svc.begin(s, 'read')
@@ -50,11 +52,27 @@ export const TOOLS: ToolDef[] = [
             `Screenshot of display ${d.index}${d.primary ? ' (primary)' : ''}: ${v.width}x${v.height} px (the display is ${d.w}x${d.h} physical px). Coordinates: pixels of this image, origin top-left, x to the right, y down.`,
             `Pointer: ${onIt ? `at (${cur.x}, ${cur.y})` : 'not on this display'}.`,
             st.foreground ? `Window in front: "${st.foreground.title}" (${st.foreground.exe}), ${where(svc, s, st.foreground, displays)}.` : 'No window is in front.',
-            `Displays: ${displays.map((x) => `${x.index}${x.primary ? ' primary' : ''} ${x.w}x${x.h} at ${x.x},${x.y}`).join(' | ')}.`
+            ...(displays.length > 1 ? [`${displays.length} displays (screenshot another with display=N; computer_windows says which display each window is on):`, ...displays.map((x) => `- ${displayLine(x, displays)}`)] : [])
           ].join('\n') },
           image(shot.jpeg)
         ]
       }
+    }
+  },
+  {
+    name: 'computer_displays',
+    description:
+      'Lists the monitors: index, name, where each sits next to the primary one, physical size, origin in desktop pixels (negative when left of or above the primary) and Windows scaling. Says which one the latest screenshot shows, which one the pointer is on and which one the window in front is on. Take a screenshot with display=N to look at one.',
+    inputSchema: obj({}),
+    annotations: READ,
+    async run(svc, s) {
+      const st = await svc.begin(s, 'read')
+      const displays = svc.capturer.displays()
+      const shown = s.view?.display
+      const ptr = displayAt(displays, st.x, st.y)
+      const fg = st.foreground && !st.foreground.minimized ? displayOfRect(displays, st.foreground) : undefined
+      const lines = displays.map((d) => `- ${displayLine(d, displays)}${[d.id === shown?.id ? 'latest screenshot' : '', d.id === ptr?.id ? 'pointer here' : '', d.id === fg?.id ? 'window in front here' : ''].filter(Boolean).map((x, i) => (i ? `, ${x}` : `; ${x}`)).join('')}`)
+      return text(`${displays.length} display${displays.length > 1 ? 's' : ''}:\n${lines.join('\n')}`, displays.length > 1 ? 'One screenshot covers one display. Click coordinates are pixels of that screenshot and cannot reach another display.' : '')
     }
   },
   {
@@ -169,7 +187,9 @@ export const TOOLS: ToolDef[] = [
         const bits = [n.password ? 'PASSWORD FIELD' : '', n.enabled ? '' : 'disabled', n.focus ? 'focused' : ''].filter(Boolean)
         return `${'  '.repeat(Math.min(n.d, 6))}[${i}] ${n.type}${n.name ? ` "${n.name.slice(0, 80)}"` : ''}${n.id ? ` id=${n.id}` : ''} @(${c.x}, ${c.y}) ${Math.round(n.w * v.scale)}x${Math.round(n.h * v.scale)}${bits.length ? ` [${bits.join(', ')}]` : ''}${n.value && !n.password ? ` value="${n.value.replace(/\s+/g, ' ')}"` : ''}`
       })
-      const note = [r.truncated ? `Cut after ${r.nodes.length} controls; ask for another window or raise max_nodes.` : '', r.error ? `(${r.error})` : '', win.focused ? '' : 'This window is not in front.'].filter(Boolean).join(' ')
+      const wd = displayOfRect(svc.capturer.displays(), win)
+      const elsewhere = wd && wd.id !== v.display.id ? `This window is on display ${wd.index}, not on the screenshot's display ${v.display.index}: the positions below fall outside your screenshot. Screenshot display ${wd.index} first.` : ''
+      const note = [elsewhere, r.truncated ? `Cut after ${r.nodes.length} controls; ask for another window or raise max_nodes.` : '', r.error ? `(${r.error})` : '', win.focused ? '' : 'This window is not in front.'].filter(Boolean).join(' ')
       return text(`Controls of "${win.title}" (${win.exe}); @(x, y) is the center in screenshot pixels${s.view ? '' : ' of the primary display (take a screenshot before clicking)'}:\n${lines.join('\n') || '(none exposed)'}`, note)
     }
   },

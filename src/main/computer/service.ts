@@ -3,7 +3,7 @@
 // switched on, not stopped, user idle, same window as when it looked, not a forbidden window, approved.
 import { noQuestions, type PermissionDecision, type PermissionMode } from '@shared/types'
 import { tr } from '@shared/i18n'
-import { toPhysical, viewOf, type DisplayInfo, type View } from './geometry'
+import { stillThere, toPhysical, viewOf, type DisplayInfo, type View } from './geometry'
 import type { HelperState, InputBackend, PlayResult, WinInfo } from './helper'
 import { makeRng, readingPauseMs, type Humanness, type Rng } from './human'
 import type { Capturer } from './capture'
@@ -156,6 +156,7 @@ export class ComputerService {
   /** The picture the model's coordinates refer to; a click needs one. */
   needView(s: Session): View {
     if (!s.view) throw new UserError('Take a screenshot first (computer_screenshot): coordinates refer to the latest screenshot.')
+    if (!stillThere(this.capturer.displays(), s.view.display)) throw new UserError('The monitor layout changed since your last screenshot (a display was unplugged, moved or resized). Take a new screenshot; list the displays with computer_displays.')
     return s.view
   }
 
