@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.9.0
+
+### New
+
+- Back up your whole Jolty setup to a storage you own: Google Drive, OneDrive, Dropbox, Box, a private GitHub repository, WebDAV (Nextcloud, ownCloud, Synology), S3-compatible storage (AWS, Cloudflare R2, Backblaze B2) or any folder (iCloud Drive, a USB drive). Open Settings, then Account. The backup holds skills, commands, instructions, settings, accounts without keys, scheduled tasks and MCP servers. It is encrypted with a password you choose before it leaves your PC, each account keeps its own backup, and restoring goes through the same review screen as an import, with a copy of everything it replaces.
+- The connected account shows under live usage, like the account in the Claude and Codex apps.
+- Settings, Account also shows how long you have used Jolty: time spent prompting with AI and time spent in the app, as years, months and days with the total hours beside it, plus messages, conversations, tokens and active days.
+- While a conversation is being compacted, a pill with a spinner appears above the message box and a spinner on its row in the list, then the result for a few seconds. Works with Claude, Codex and OpenCode.
+- Computer use now sees every monitor. The model can list the screens, take a screenshot of the one it needs, and each window says which screen it is on.
+
+### Improvements
+
+- Temporary chats stay in the conversation list, marked with a dashed bubble, and you can delete them by hand like any other. Nothing of them is saved or remembered, and they are wiped when Jolty closes.
+- A too-big skill alert can be hidden. It leaves the badge in the sidebar and waits in a small "Hidden alerts" list on the Skills page.
+- OpenCode and Hermes agents show in live usage as soon as one of their chats works.
+
+### Fixed
+
+- The text typed in the message box was lost when you switched conversation, started a new one or restarted Jolty. It is now kept for each conversation.
+
 ## 0.8.3
 
 ### Fixed
