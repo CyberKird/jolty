@@ -1383,5 +1383,6 @@
  "Abonament Gemini": "Gemini subscription",
  "Folosești abonamentul Google direct din browserul Jolty, fără cheie.": "You use your Google subscription straight from the Jolty browser, no key needed.",
  "Folosește abonamentul tău Gemini din browserul Jolty: te conectezi o dată la Google în fereastra lui. Fără cheie.": "Uses your Gemini subscription in the Jolty browser: you sign in to Google once in its window. No key.",
- "Adaugă Gemini": "Add Gemini"
+ "Adaugă Gemini": "Add Gemini",
+ "Am salvat în memorie: {names}.": "Saved to memory: {names}."
 }

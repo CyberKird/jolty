@@ -53,6 +53,7 @@ import { removeProfileFiles } from './profile-files'
 import { bindJoltyTools } from './jolty-tools'
 import { addWorktree, removeWorktree } from './workers'
 import { learningNudge } from './learning'
+import { reviewChat, setHelper } from './gemini-learning'
 import { forget } from './recall'
 import { Scheduler } from './scheduler'
 import * as modelWatch from './model-watch'
@@ -168,6 +169,7 @@ export class Jolty {
 
   constructor(private send: (e: ChatEvent) => void) {
     this.codex.onLimits = (s) => this.recordLimits(s)
+    setHelper({ ask: (prompt) => this.helperAsk(prompt), enabled: () => store.loadSettings().learningLoop !== false })
     bindJoltyTools({
       sessions: () => store.loadSessions(),
       meta: (id) => this.findMeta(id),
@@ -438,6 +440,7 @@ export class Jolty {
       else this.busy.delete(e.sessionId)
       this.power.onStatus(e.status, e.error)
       if (e.status !== 'running') for (const w of [...this.idleWaiters]) w(e.sessionId)
+      if (e.status === 'idle') this.learnFromGemini(e.sessionId)
     }
     if (e.type === 'context') this.ctxUsed.set(e.sessionId, e.used)
     if (e.type === 'item') {
@@ -1320,6 +1323,36 @@ ${text.slice(0, 1500)}`
         asked.catch(() => undefined)
       }
     }
+  }
+
+  /** Gemini has no file tools, so Jolty runs its learning loop (gemini-learning.ts) in the background after a turn; a temporary chat leaves nothing behind. */
+  private learnFromGemini(sessionId: string): void {
+    const meta = this.live.get(sessionId)?.meta
+    if (meta?.engine !== 'gemini' || meta.temporary) return
+    void reviewChat(sessionId, this.transcript(sessionId), path.join(store.dataDir(), 'gemini-learning.json')).then((saved) => {
+      if (saved.length) this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: tr("Am salvat în memorie: {names}.", { names: saved.join(', ') }), level: 'info' } })
+    })
+  }
+
+  /** One prompt to the first helper model that answers (a model out of usage or logged out is skipped); throws when none does. */
+  private async helperAsk(prompt: string): Promise<string> {
+    for (const { key, run } of (await this.helperRunners()).slice(0, 3)) {
+      let timer: NodeJS.Timeout | undefined
+      const asked = run(prompt)
+      const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), 120000) })
+      try {
+        const out = await Promise.race([asked, late])
+        // an error text is short; a long reply may mention "quota" or "limit" because the user did
+        if (out.trim() && !(out.length < 300 && HELPER_ERROR.test(out))) return out
+        this.helperFailed(key, out)
+      } catch (err) {
+        this.helperFailed(key, err)
+      } finally {
+        clearTimeout(timer)
+        asked.catch(() => undefined)
+      }
+    }
+    throw new Error('no helper model answered')
   }
 
   /** models that just failed (out of usage, no funds, no answer): left out for a while, so the next call does not wait on them again */
