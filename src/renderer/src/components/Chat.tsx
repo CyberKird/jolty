@@ -22,6 +22,7 @@ import { VoiceButton } from './VoiceButton'
 import { Trans } from './Trans'
 import { OwnKeyStrip } from './Welcome'
 import { usePresence, useSettled } from '../usePresence'
+import { useShallow } from 'zustand/shallow'
 
 const EMPTY: ChatItem[] = []
 
@@ -692,7 +693,7 @@ function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Pr
   const [open, setOpen] = useState(false)
   const pop = usePresence(open)
   const [compact, setCompact] = useState(compactFirst)
-  const { openSession, toast, loadSessions } = useStore()
+  const { openSession, toast, loadSessions } = useStore(useShallow(({ openSession, toast, loadSessions }) => ({ openSession, toast, loadSessions })))
   const used = useStore((s) => s.contexts[session.id]?.used ?? 0)
   const me = profiles.find((p) => p.id === session.profileId)
   const targets = profiles.filter((p) => p.id !== session.profileId)
@@ -819,7 +820,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
   const items = useStore((s) => s.transcripts[session.id]) || EMPTY
   const status = useStore((s) => s.status[session.id])
   const perms = useStore((s) => s.permissions[session.id])
-  const { toast, liveOpen, setLiveOpen, loadSessions, openSession } = useStore()
+  const { toast, liveOpen, setLiveOpen, loadSessions, openSession } = useStore(useShallow(({ toast, liveOpen, setLiveOpen, loadSessions, openSession }) => ({ toast, liveOpen, setLiveOpen, loadSessions, openSession })))
   const running = status === 'running'
   const profile = profiles.find((p) => p.id === session.profileId)
   const scrollRef = useStickToBottom(items)
@@ -969,7 +970,7 @@ const STARTS = [
 
 export function NewChat() {
   const profiles = useStore((s) => s.profiles)
-  const { loadSessions, toast } = useStore()
+  const { loadSessions, toast } = useStore(useShallow(({ loadSessions, toast }) => ({ loadSessions, toast })))
   const [profileId, setProfileId] = useState<string>()
   const [model, setModel] = useState('')
   const [effort, setEffort] = useState<string>()

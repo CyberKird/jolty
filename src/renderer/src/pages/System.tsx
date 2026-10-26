@@ -3,9 +3,10 @@ import { useCallback, useEffect, useState } from 'react'
 import type { SystemCheck } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 export function SystemPage() {
-  const { toast, loadProfiles } = useStore()
+  const { toast, loadProfiles } = useStore(useShallow(({ toast, loadProfiles }) => ({ toast, loadProfiles })))
   const [checks, setChecks] = useState<SystemCheck[]>()
   const [busy, setBusy] = useState<string>()
   const load = useCallback(async () => {

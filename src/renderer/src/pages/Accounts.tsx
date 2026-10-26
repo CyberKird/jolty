@@ -7,6 +7,7 @@ import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
 import { tr } from '@shared/i18n'
 import { useExitClose } from '../usePresence'
+import { useShallow } from 'zustand/shallow'
 
 const AUTH_LABEL: Record<AuthKind, string> = {
   subscription: 'Abonament',
@@ -94,7 +95,7 @@ function ProfileCard({ profile, onEdit, dragProps }: { profile: Profile; onEdit:
   const [status, setStatus] = useState<AccountStatus>()
   const [busy, setBusy] = useState(false)
   const polling = useRef(true)
-  const { toast, loadProfiles, onEvent } = useStore()
+  const { toast, loadProfiles, onEvent } = useStore(useShallow(({ toast, loadProfiles, onEvent }) => ({ toast, loadProfiles, onEvent })))
 
   const refresh = async (): Promise<AccountStatus> => {
     const s = await api.profiles.status(profile.id)
@@ -224,7 +225,7 @@ function ProfileCard({ profile, onEdit, dragProps }: { profile: Profile; onEdit:
 
 function ProfileModal({ profile, onClose: closeNow }: { profile?: Profile; onClose: () => void }) {
   const { state, close: onClose } = useExitClose(closeNow)
-  const { loadProfiles, toast } = useStore()
+  const { loadProfiles, toast } = useStore(useShallow(({ loadProfiles, toast }) => ({ loadProfiles, toast })))
   const [engine, setEngine] = useState<EngineKind>(profile?.engine || 'claude')
   const [auth, setAuth] = useState<AuthKind>(profile?.auth || 'subscription')
   const [name, setName] = useState(profile?.name || '')
@@ -427,7 +428,7 @@ function ProfileModal({ profile, onClose: closeNow }: { profile?: Profile; onClo
 
 export function AccountsPage() {
   const profiles = useStore((s) => s.profiles)
-  const { toast, loadProfiles } = useStore()
+  const { toast, loadProfiles } = useStore(useShallow(({ toast, loadProfiles }) => ({ toast, loadProfiles })))
   const [addingGemini, setAddingGemini] = useState(false)
   /** Gemini with the subscription: the profile is made at once, the sign-in is Google's own page in the Jolty browser */
   const addGemini = async (): Promise<void> => {

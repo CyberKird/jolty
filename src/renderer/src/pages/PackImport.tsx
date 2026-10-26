@@ -4,6 +4,7 @@ import type { ImportDecision, ImportPreview, ImportResult, ImportRisk, ImportSta
 import { api, errMsg, timeAgo, useStore } from '../store'
 import { fmtSize, PART_LABEL } from './PackExport'
 import { tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 const STATE = (): Record<ImportState, { label: string; cls: string }> => ({
   new: { label: tr("Nou"), cls: 'good' },
@@ -28,7 +29,7 @@ const WARNING = (code: string): string =>
 
 /** Open a pack, decide per item what happens on a clash, apply, and take it back if needed. */
 export function PackImport({ onImported, initial, onClose }: { onImported: () => void; initial?: ImportPreview; onClose?: () => void }) {
-  const { toast } = useStore()
+  const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const [preview, setPreview] = useState<ImportPreview | undefined>(initial)
   const [decisions, setDecisions] = useState<Record<string, ImportDecision>>(() => Object.fromEntries((initial?.items ?? []).map((i) => [i.key, i.suggested])))
   const [busy, setBusy] = useState(false)

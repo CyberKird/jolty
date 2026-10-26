@@ -4,6 +4,7 @@ import type { SkillHome, SkillInfo, SkillProblem, SkillStatus } from '@shared/sk
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
 import { useExitClose } from '../usePresence'
+import { useShallow } from 'zustand/shallow'
 
 /** The backends answer 'not-implemented' until they are in; anything else is shown as it came. */
 export const unavailable = (e: unknown): boolean => /not-implemented/.test(errMsg(e))
@@ -82,7 +83,7 @@ export const refError = (ref: string): string | undefined =>
 
 function SourceModal({ s, onClose: closeNow, onSaved }: { s: SkillInfo; onClose: () => void; onSaved: (s: SkillInfo) => void }) {
   const { state, close: onClose } = useExitClose(closeNow)
-  const { toast } = useStore()
+  const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const [url, setUrl] = useState(s.source.kind === 'git' ? s.source.url : '')
   const [ref, setRef] = useState(s.source.kind === 'git' ? s.source.ref || '' : '')
   const [busy, setBusy] = useState(false)
@@ -169,7 +170,7 @@ function ConfirmUpdate({ s, onClose: closeNow, onYes }: { s: SkillInfo; onClose:
 
 /** Update, set the source, open the folder: the same buttons on every tab. */
 export function SkillActions({ s, onChanged }: { s: SkillInfo; onChanged: (s: SkillInfo) => void }) {
-  const { toast } = useStore()
+  const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [sourcing, setSourcing] = useState(false)

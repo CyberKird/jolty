@@ -4,9 +4,10 @@ import type { ExternalSession } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
 import { api, basename, ENGINE_LABEL, errMsg, timeAgo, useStore } from '../store'
 import { tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 function CodexImporter({ profileId }: { profileId: string }) {
-  const { toast } = useStore()
+  const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const [items, setItems] = useState<{ itemType: string; description: string; cwd: string | null }[]>()
   const [chosen, setChosen] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
@@ -79,7 +80,7 @@ function CodexImporter({ profileId }: { profileId: string }) {
 
 export function ImportPage() {
   const profiles = useStore((s) => s.profiles)
-  const { openSession, loadSessions, toast } = useStore()
+  const { openSession, loadSessions, toast } = useStore(useShallow(({ openSession, loadSessions, toast }) => ({ openSession, loadSessions, toast })))
   const [profileId, setProfileId] = useState<string>()
   const [list, setList] = useState<ExternalSession[]>()
   const [loading, setLoading] = useState(false)

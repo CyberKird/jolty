@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { PackItem, PackPart, PersonalKind } from '@shared/skills'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 export const PART_LABEL = (): Record<PackPart, string> => ({
   skills: tr("Skilluri"),
@@ -28,7 +29,7 @@ export const fmtSize = (n: number): string => (n < 1024 ? `${n} B` : n < 1048576
 
 /** Pick what goes into a pack and save it as one file. Keys, tokens and cookies never go in. */
 export function PackExport() {
-  const { toast } = useStore()
+  const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const [items, setItems] = useState<PackItem[]>()
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [name, setName] = useState('')

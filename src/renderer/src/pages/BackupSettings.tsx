@@ -6,10 +6,11 @@ import { tr } from '@shared/i18n'
 import { api, errMsg, timeAgo, useStore } from '../store'
 import { fmtSize } from './PackExport'
 import { PackImport } from './PackImport'
+import { useShallow } from 'zustand/shallow'
 
 /** One storage: the fields to fill, the sign-in, and once connected the backup and the restore. */
 function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Promise<void> }) {
-  const { toast } = useStore()
+  const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const { info, status } = entry
   const [open, setOpen] = useState(status.connected)
   const [values, setValues] = useState<Record<string, string>>(entry.values)
@@ -193,7 +194,7 @@ function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Pro
 export function BackupSettings() {
   const entries = useStore((s) => s.backups)
   const setBackups = useStore((s) => s.setBackups)
-  const { toast } = useStore()
+  const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const reload = (): Promise<void> => api.backup.list().then(setBackups)
   useEffect(() => {
     void reload().catch((e) => toast(errMsg(e), true))

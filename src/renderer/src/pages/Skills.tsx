@@ -8,13 +8,14 @@ import { PackImport } from './PackImport'
 import { skillError } from './SkillActions'
 import { AttentionList, SkillsTable } from './SkillsList'
 import { tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 const TABS = ['all', 'attention', 'export', 'import'] as const
 type Tab = (typeof TABS)[number]
 
 /** Skills: the inventory with update checks, what needs attention, and sharing (export and import packs). */
 export function SkillsPage() {
-  const { toast, setSkillsAttention } = useStore()
+  const { toast, setSkillsAttention } = useStore(useShallow(({ toast, setSkillsAttention }) => ({ toast, setSkillsAttention })))
   const hidden = useStore((s) => s.hiddenSkills)
   const [list, setList] = useState<SkillInfo[]>()
   const [checking, setChecking] = useState(false)

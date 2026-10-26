@@ -12,6 +12,7 @@ import { api, liveRows, useStore } from './store'
 import { batchDeltas } from './event-batch'
 import { lowPower, setLowPowerMode } from './lowpower'
 import { getLang, isRtl, tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 // secondary pages load when first opened: the chat is on screen sooner
 const AccountsPage = lazy(() => import('./pages/Accounts').then((m) => ({ default: m.AccountsPage })))
@@ -53,7 +54,7 @@ function UpdatePill() {
 
 /** Dark title bar: brand, sidebar toggle, and room for the native Windows caption buttons. */
 function TitleBar() {
-  const { sidebarOpen, setSidebarOpen } = useStore()
+  const { sidebarOpen, setSidebarOpen } = useStore(useShallow(({ sidebarOpen, setSidebarOpen }) => ({ sidebarOpen, setSidebarOpen })))
   return (
     <header className="titlebar">
       <button className="titlebar-btn" onClick={() => setSidebarOpen(!sidebarOpen)} title={sidebarOpen ? tr("Ascunde bara laterală (Ctrl+B)") : tr("Arată bara laterală (Ctrl+B)")} aria-label={sidebarOpen ? tr("Ascunde bara laterală") : tr("Arată bara laterală")}>
@@ -76,7 +77,7 @@ function TitleBar() {
 export function App() {
   const [idle, setIdle] = useState(false)
   const newUser = useStore((s) => s.profilesLoaded && s.profiles.length === 0)
-  const { page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent } = useStore()
+  const { page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent } = useStore(useShallow(({ page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent }) => ({ page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent })))
 
   useEffect(() => {
     const ric = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 300))

@@ -8,6 +8,7 @@ import { MOVE_HINT, useProfileDrag } from '../pages/Accounts'
 import { LiveList } from './LiveList'
 import { tr } from '@shared/i18n'
 import { needsAttention } from '@shared/skills'
+import { useShallow } from 'zustand/shallow'
 
 function money(n: number, currency = 'USD'): string {
   const v = n.toFixed(2)
@@ -274,7 +275,7 @@ const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
 ]
 
 export function Sidebar() {
-  const { page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast } = useStore()
+  const { page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast } = useStore(useShallow(({ page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast }) => ({ page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast })))
   const compactions = useStore((s) => s.compactions)
   const [q, setQ] = useState('')
   const [renaming, setRenaming] = useState<string>()

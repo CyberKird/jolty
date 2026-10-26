@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { AppSettings, BrowserApp, BrowserInfo, BrowserMode, NativeBrowserStatus } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 const MODES: { id: BrowserMode; label: string }[] = [
   { id: 'jolty', label: tr("Extensia Jolty (recomandat)") },
@@ -33,7 +34,7 @@ function Status({ st }: { st?: NativeBrowserStatus }) {
 }
 
 export function BrowserSettings({ s, setS }: { s: AppSettings; setS: (v: AppSettings) => void }) {
-  const { toast } = useStore()
+  const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const [info, setInfo] = useState<BrowserInfo>()
   const [native, setNative] = useState<NativeBrowserStatus>()
   const [hasToken, setHasToken] = useState(false)

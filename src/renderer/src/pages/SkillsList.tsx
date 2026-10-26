@@ -4,6 +4,7 @@ import { needsAttention, onlyTooBig, type SkillHome, type SkillInfo, type SkillS
 import { timeAgo, useStore } from '../store'
 import { HOME, problemText, SkillActions, sourceLabel, STATUS, StatusChip } from './SkillActions'
 import { tr } from '@shared/i18n'
+import { useShallow } from 'zustand/shallow'
 
 type SortKey = 'name' | 'home' | 'source' | 'status' | 'checked'
 const STATUS_ORDER: SkillStatus[] = ['broken', 'outdated', 'modified', 'unknown', 'ok']
@@ -158,7 +159,7 @@ export const reasonOf = (s: SkillInfo): Reason => (s.status === 'broken' ? 'brok
 
 /** Only what needs a look, grouped by why, with what to do. */
 export function AttentionList({ list, onChanged }: { list: SkillInfo[]; onChanged: (s: SkillInfo) => void }) {
-  const { hiddenSkills, hideSkill } = useStore()
+  const { hiddenSkills, hideSkill } = useStore(useShallow(({ hiddenSkills, hideSkill }) => ({ hiddenSkills, hideSkill })))
   const todo = list.filter((s) => needsAttention(s, hiddenSkills))
   const hidden = list.filter((s) => hiddenSkills.includes(s.id) && onlyTooBig(s))
   const reasons = REASON()
