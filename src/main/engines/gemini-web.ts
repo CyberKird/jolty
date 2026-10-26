@@ -12,6 +12,7 @@ import type { AccountStatus, Attachment, ChatItem, ExternalSession, ModelOption,
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 import { claudeToolTitle, truncate } from './format'
 import { callTool, imageFiles, listTools, MAX_STEPS, resultMessage, splitReply, toolsPrompt, type ToolCall, type ToolDefLite, type ToolOutcome, type ToolSet } from './gemini-tools'
+import { geminiOnce } from './gemini-once'
 import { ACCOUNT_SCRIPT, ATTACHED_SCRIPT, CLOSE_MENU_SCRIPT, MENU_SCRIPT, PAGE_LIB, SEND_SCRIPT, STOP_SCRIPT, UPLOAD_SCRIPT, pickScript, typeScript } from './gemini-page'
 
 export const GEMINI_URL = 'https://gemini.google.com/app'
@@ -511,8 +512,9 @@ export class GeminiWebDriver implements EngineDriver {
     return []
   }
 
-  async describe(): Promise<string> {
-    throw new Error(tr("Alege un profil cu vedere verificată pentru descrierea imaginilor."))
+  /** One question and one answer in a tab of its own (ask_model); `files` may be anything the Gemini page takes. */
+  async describe(_profile: Profile, files: Attachment[], prompt: string, model?: string): Promise<string> {
+    return geminiOnce(this.browser, prompt, files, model)
   }
 
   async history(): Promise<ChatItem[]> {

@@ -98,7 +98,12 @@ function userMessage(text: string, images: Attachment[], uuid?: string): SDKUser
   const id = uuid ? { uuid: uuid as SDKUserMessage['uuid'] } : {}
   if (!images.length) return { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null, ...id }
   const content = [
-    ...images.map((img) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: img.mime as 'image/png', data: img.data! } })),
+    // a PDF is a document block (ask_model sends them; chat messages keep PDFs as files on disk)
+    ...images.map((img) =>
+      img.mime === 'application/pdf'
+        ? { type: 'document' as const, source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: img.data! } }
+        : { type: 'image' as const, source: { type: 'base64' as const, media_type: img.mime as 'image/png', data: img.data! } }
+    ),
     { type: 'text' as const, text }
   ]
   return { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, ...id }

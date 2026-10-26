@@ -7,14 +7,15 @@ import type { ScheduledTask } from '@shared/schedule'
 import { pageOf, savedTurns, search, turnsOf } from './recall'
 import type { Scheduler } from './scheduler'
 import { projectOf, readLedger, writeLedger } from './workers'
+import { formatAskable, parseAskInput, type AskInput, type AskProfile } from './ask-model'
 
 export const JOLTY_SERVER = 'jolty'
 
 /** Tools that only read, or only touch Jolty's own notes: they run without asking, except in Manual mode. */
-export const JOLTY_READ_TOOLS = ['search_conversations', 'read_conversation', 'list_scheduled_tasks', 'list_sessions', 'wait_for_sessions', 'ledger_read', 'ledger_write']
+export const JOLTY_READ_TOOLS = ['search_conversations', 'read_conversation', 'list_scheduled_tasks', 'list_sessions', 'wait_for_sessions', 'ledger_read', 'ledger_write', 'list_models']
 
 export const JOLTY_TOOLS_PROMPT =
-  'Jolty tools (MCP server "jolty"): search_conversations and read_conversation find and read the user\'s earlier conversations in Jolty on this PC; use them when the user refers to earlier work, a past decision or "what we talked about". schedule_task runs a prompt later or on a repeat, each run in a new conversation, while Jolty is open; list_scheduled_tasks and cancel_scheduled_task manage them. Schedule only when the user asks for it. Several jobs at once: start_session gives each job its own session (own git worktree and branch when the project is a repository) with a short brief that stands on its own; wait_for_sessions returns when they end, list_sessions shows their state and last answer, send_to_session talks to one. Merging their branches is your job. ledger_read and ledger_write keep one shared notes file for the project: read it first when you start, and write decisions, state and open work there instead of re-exploring the codebase. Start sessions only when the user asked for parallel work or the task clearly splits into independent jobs.'
+  'Jolty tools (MCP server "jolty"): search_conversations and read_conversation find and read the user\'s earlier conversations in Jolty on this PC; use them when the user refers to earlier work, a past decision or "what we talked about". schedule_task runs a prompt later or on a repeat, each run in a new conversation, while Jolty is open; list_scheduled_tasks and cancel_scheduled_task manage them. Schedule only when the user asks for it. Several jobs at once: start_session gives each job its own session (own git worktree and branch when the project is a repository) with a short brief that stands on its own; wait_for_sessions returns when they end, list_sessions shows their state and last answer, send_to_session talks to one. Merging their branches is your job. ledger_read and ledger_write keep one shared notes file for the project: read it first when you start, and write decisions, state and open work there instead of re-exploring the codebase. list_models shows the other profiles and models you can ask, with their intelligence and speed; ask_model sends one question (and files) to the profile and model you or the user chose and returns its answer, with no tools: use it for a second opinion or when the user names a model, and never pick a model for them. Start sessions only when the user asked for parallel work or the task clearly splits into independent jobs.'
 
 export interface ToolHost {
   /** saved conversations (never temporary ones) */
@@ -34,6 +35,10 @@ export interface ToolHost {
   /** resolves when none of `ids` has a turn under way, or after `ms` */
   waitIdle(ids: string[], ms: number): Promise<void>
   sendTo(leadId: string, id: string, text: string): Promise<void>
+  /** every profile that can answer a question right now (signed in, not at its limit), with its models */
+  askable(): Promise<AskProfile[]>
+  /** one question to one model of one profile: no tools, one answer */
+  ask(input: AskInput): Promise<{ who: string; answer: string }>
 }
 
 let host: ToolHost | undefined
@@ -153,6 +158,28 @@ const TOOLS = [
       type: 'object',
       properties: { text: { type: 'string' }, mode: { type: 'string', enum: ['append', 'replace'] } },
       required: ['text']
+    }
+  },
+  {
+    name: 'list_models',
+    description:
+      'Lists every profile you can ask a question with ask_model right now (signed in, not at its usage limit), with the engine, the models, the intelligence and speed of each model, and which files the profile can read. Nothing is chosen for you: the user or you pick the profile and the model.',
+    inputSchema: { type: 'object', properties: {} },
+    annotations: { readOnlyHint: true }
+  },
+  {
+    name: 'ask_model',
+    description:
+      'Asks one question to a model of another profile and returns its answer: one question, one answer, no tools, no memory of this conversation, so the question must hold everything it needs. Uses that profile\'s own account and usage. Files are read from disk and sent with the question: images, PDF, audio and video go as attachments to the profiles that take them (see list_models), text files are added to the question; files that hold secrets are refused. Use it when the user asks for a second opinion or names a model; do not send anything the user would not want to leave this account.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        profile: { type: 'string', description: 'profile id or name, from list_models' },
+        question: { type: 'string', description: 'the full, self-contained question' },
+        model: { type: 'string', description: 'a model id from list_models (default: the default model of the profile)' },
+        files: { type: 'array', items: { type: 'string' }, description: 'absolute paths of files to send with the question (at most 8)' }
+      },
+      required: ['profile', 'question']
     }
   },
   {
@@ -286,6 +313,17 @@ async function run(h: ToolHost, sid: string, name: string, a: Record<string, unk
     if (!text) return fail('text is empty')
     writeLedger(projectOf(meta), text, a.mode === 'replace' ? 'replace' : 'append', meta.title)
     return ok('Written to the ledger.')
+  }
+  if (name === 'list_models') return ok(formatAskable(await h.askable()))
+  if (name === 'ask_model') {
+    let input: AskInput
+    try {
+      input = parseAskInput(a)
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : String(e))
+    }
+    const { who, answer } = await h.ask(input)
+    return ok(`Answer from ${who}:\n\n${answer}`)
   }
   return fail(`Unknown tool ${name}`)
 }

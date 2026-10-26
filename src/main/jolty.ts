@@ -51,6 +51,7 @@ import { gitDiff, reviewerFor, reviewPrompt, transcriptDiff } from './review'
 import * as store from './store'
 import { removeProfileFiles } from './profile-files'
 import { bindJoltyTools } from './jolty-tools'
+import { accepts, fileKindsOf, readAskFiles, type AskInput, type AskProfile } from './ask-model'
 import { addWorktree, removeWorktree } from './workers'
 import { learningNudge } from './learning'
 import { forget } from './recall'
@@ -179,7 +180,9 @@ export class Jolty {
       lastAnswer: (id) => this.lastAnswer(id),
       problem: (id) => this.lastProblem(id),
       waitIdle: (ids, ms) => this.waitIdle(ids, ms),
-      sendTo: (lead, id, text) => this.sendToChild(lead, id, text)
+      sendTo: (lead, id, text) => this.sendToChild(lead, id, text),
+      askable: () => this.askable(),
+      ask: (input) => this.askModel(input)
     })
     // the PC is never handed over by a switch left on from before: computer use starts off in every chat
     const left = store.loadSessions().filter((m) => m.computer)
@@ -968,6 +971,78 @@ export class Jolty {
         })
     )
     return lists.flat()
+  }
+
+  /**
+   * Profiles that can answer a question now, for list_models and ask_model: signed in, key set, not at their limit.
+   * Unlike the helpers this keeps local models and Gemini, because here the caller or the user picks, nothing is ranked.
+   */
+  private async askProfiles(): Promise<{ profile: Profile; models: ModelOption[] }[]> {
+    const limits = store.loadLimits()
+    const found = await Promise.all(
+      store
+        .loadProfiles()
+        .filter((p) => p.engine !== 'hermes' && (p.auth !== 'endpoint' || store.getSecret(p.id)) && !limits[p.id]?.windows.some((w) => w.usedPercent >= FULL_PERCENT))
+        .map(async (profile) => {
+          try {
+            const d = this.driver(profile.engine)
+            if (profile.auth === 'subscription' && profile.engine !== 'opencode' && !(await d.status(profile)).loggedIn) return []
+            const models = await Promise.race([d.models(profile), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
+            return [{ profile, models: models.filter((m) => !m.id.includes('[')) }]
+          } catch {
+            return []
+          }
+        })
+    )
+    return found.flat()
+  }
+
+  private async askable(): Promise<AskProfile[]> {
+    return (await this.askProfiles()).map(({ profile: p, models }) => ({
+      id: p.id,
+      name: p.name,
+      engine: p.engine,
+      files: fileKindsOf(p),
+      models: models.map((m) => {
+        const s = modelScore(p, m)
+        return { id: m.id, label: m.label, isDefault: m.isDefault, vision: m.vision, iq: s?.iq, tps: s?.tps, speed: s?.speed }
+      })
+    }))
+  }
+
+  /** One question to one model of a profile the caller named: no tools, no chat of ours, the answer as text. */
+  private async askModel(input: AskInput): Promise<{ who: string; answer: string }> {
+    const all = await this.askProfiles()
+    const wanted = input.profile.toLowerCase()
+    const hits = all.filter((x) => x.profile.id === input.profile)
+    const named = hits.length ? hits : all.filter((x) => x.profile.name.toLowerCase() === wanted)
+    if (named.length !== 1) {
+      throw new Error(
+        named.length
+          ? `Several profiles are called "${input.profile}": use the profile id.`
+          : `No profile "${input.profile}" can answer now. ${all.length ? `You can ask: ${all.map((x) => `${x.profile.name} (id ${x.profile.id})`).join(', ')}.` : 'None is signed in or below its limit.'}`
+      )
+    }
+    const { profile: p, models } = named[0]
+    // Gemini may have no list yet (the Jolty browser is closed): the page then answers with the model it is on
+    const free = p.engine === 'gemini' && !models.length
+    let chosen: ModelOption | undefined
+    if (input.model) {
+      const m = input.model.toLowerCase()
+      chosen = models.find((x) => x.id === input.model) ?? models.find((x) => x.id.toLowerCase() === m || x.label.toLowerCase() === m)
+      if (!chosen && !free) throw new Error(`${p.name} has no model "${input.model}". Its models: ${models.map((x) => x.id).join(', ') || 'none'}.`)
+    } else if (!free) {
+      chosen = models.find((x) => x.isDefault) ?? models[0]
+    }
+    const model = chosen?.id ?? (free ? input.model : undefined)
+    if (!model && p.engine !== 'gemini') throw new Error(`${p.name} has no model to ask.`)
+    const who = `${p.name}${model ? ` (${chosen?.label ?? model})` : ''}`
+    const files = readAskFiles(input.files, (kind) => accepts(p, chosen, kind), who)
+    const prompt = input.question + files.inlined
+    const d = this.driver(p.engine)
+    const answer = p.engine === 'opencode' ? await opencodeOnce(prompt, model!) : await d.describe(p, files.attachments, prompt, model)
+    if (!answer.trim()) throw new Error(`${who} gave no answer.`)
+    return { who, answer: answer.trim() }
   }
 
   private async sendToChild(leadId: string, id: string, text: string): Promise<void> {
