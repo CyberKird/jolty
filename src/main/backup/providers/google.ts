@@ -2,7 +2,7 @@
 // has a folder of its own.
 import { tr } from '@shared/i18n'
 import { forgetToken, oauthConnect, oauthFetch, type OAuthSpec } from '../oauth'
-import { BackupError, FILE, mockBase, type Config, type Provider } from '../types'
+import { BackupError, FILE, pictureOf, mockBase, type Config, type Provider } from '../types'
 
 const base = (): { auth: string; token: string; userinfo: string; revoke: string; drive: string; upload: string } => {
   const m = mockBase()
@@ -62,9 +62,9 @@ export const google: Provider = {
 
   async connect(cfg, open) {
     await oauthConnect(spec(cfg), open)
-    const me = (await (await oauthFetch(spec(cfg), base().userinfo)).json()) as { sub?: string; email?: string; name?: string }
+    const me = (await (await oauthFetch(spec(cfg), base().userinfo)).json()) as { sub?: string; email?: string; name?: string; picture?: string }
     if (!me.sub || !me.email) throw new BackupError(tr("Nu am aflat ce cont e."))
-    return { sub: me.sub, label: me.email, name: me.name }
+    return { sub: me.sub, label: me.email, name: me.name, ...(await pictureOf(me.picture)) }
   },
 
   async disconnect() {

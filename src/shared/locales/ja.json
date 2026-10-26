@@ -1382,5 +1382,6 @@
  "Nu m-am putut conecta la Gemini.": "Gemini に接続できませんでした。",
  "Abonament Gemini": "Gemini サブスクリプション",
  "Folosești abonamentul Google direct din browserul Jolty, fără cheie.": "Google のサブスクリプションを Jolty のブラウザからそのまま使います。キーは不要です。",
- "Folosește abonamentul tău Gemini din browserul Jolty: te conectezi o dată la Google în fereastra lui. Fără cheie.": "Jolty ブラウザ内の Gemini サブスクリプションを使います。そのウィンドウで Google に一度サインインするだけで、キーは不要です。"
+ "Folosește abonamentul tău Gemini din browserul Jolty: te conectezi o dată la Google în fereastra lui. Fără cheie.": "Jolty ブラウザ内の Gemini サブスクリプションを使います。そのウィンドウで Google に一度サインインするだけで、キーは不要です。",
+ "Adaugă Gemini": "Gemini を追加"
 }

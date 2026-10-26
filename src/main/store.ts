@@ -318,6 +318,8 @@ export interface AccountMeta {
   sub: string
   label: string
   name?: string
+  /** the account's picture as a data: URL (kept only when the storage shares one) */
+  picture?: string
   lastBackupAt?: number
   lastBackupBytes?: number
   lastBackupItems?: number

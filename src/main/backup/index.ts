@@ -55,7 +55,7 @@ function statusOf(p: Provider): BackupStatus {
     configured: configured(p),
     connected: !!m,
     hasPassword: !!m && !!getSecret(passKey(p.id, m.sub)),
-    ...(m ? { label: m.label, name: m.name, lastBackupAt: m.lastBackupAt, lastBackupBytes: m.lastBackupBytes, lastBackupItems: m.lastBackupItems } : {})
+    ...(m ? { label: m.label, name: m.name, picture: m.picture, lastBackupAt: m.lastBackupAt, lastBackupBytes: m.lastBackupBytes, lastBackupItems: m.lastBackupItems } : {})
   }
 }
 
@@ -102,7 +102,7 @@ export async function connect(id: string, open: Opener = (u) => shell.openExtern
   const prev = all[p.id]
   // another account: nothing of the first one stays here (its backup stays in its own storage)
   if (prev && prev.sub !== who.sub) setSecret(passKey(p.id, prev.sub), undefined)
-  all[p.id] = prev?.sub === who.sub ? { ...prev, label: who.label, name: who.name } : { sub: who.sub, label: who.label, name: who.name }
+  all[p.id] = prev?.sub === who.sub ? { ...prev, label: who.label, name: who.name, picture: who.picture } : { sub: who.sub, label: who.label, name: who.name, picture: who.picture }
   saveBackupAccounts(all)
   return statusOf(p)
 }

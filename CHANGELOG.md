@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.1
+
+### Improvements
+
+- Gemini models now show their intelligence and speed in the model list, like the other models.
+- Gemini can be added from Accounts and keys with one button ("Add Gemini"), and its sign-in button shows there too.
+- Backup accounts show your profile picture (Google, Dropbox, GitHub), and the Google Drive card is lined up properly.
+
 ## 0.10.0
 
 ### New

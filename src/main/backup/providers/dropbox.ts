@@ -2,7 +2,7 @@
 // A public client: PKCE instead of an app secret.
 import { tr } from '@shared/i18n'
 import { forgetToken, oauthConnect, oauthFetch, type OAuthSpec } from '../oauth'
-import { BackupError, FILE, mockBase, type Config, type Provider } from '../types'
+import { BackupError, pictureOf, FILE, mockBase, type Config, type Provider } from '../types'
 
 /** Dropbox only accepts the redirect that is registered letter for letter, so the port is fixed. */
 const PORT = 53682
@@ -49,9 +49,9 @@ export const dropbox: Provider = {
   async connect(cfg, open) {
     await oauthConnect(spec(cfg), open)
     // this endpoint takes no argument: no body and no content-type
-    const me = (await (await oauthFetch(spec(cfg), `${base().api}/users/get_current_account`, { method: 'POST' })).json()) as { account_id?: string; email?: string; name?: { display_name?: string } }
+    const me = (await (await oauthFetch(spec(cfg), `${base().api}/users/get_current_account`, { method: 'POST' })).json()) as { account_id?: string; email?: string; name?: { display_name?: string }; profile_photo_url?: string }
     if (!me.account_id || !me.email) throw new BackupError(tr("Nu am aflat ce cont e."))
-    return { sub: me.account_id, label: me.email, name: me.name?.display_name }
+    return { sub: me.account_id, label: me.email, name: me.name?.display_name, ...(await pictureOf(me.profile_photo_url)) }
   },
 
   async disconnect(cfg) {

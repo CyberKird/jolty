@@ -32,6 +32,8 @@ export interface BackupStatus {
   /** who is connected: an e-mail, a user name, a folder */
   label?: string
   name?: string
+  /** the account's picture as a data: URL */
+  picture?: string
   /** a backup password is saved on this PC for the connected account */
   hasPassword: boolean
   lastBackupAt?: number

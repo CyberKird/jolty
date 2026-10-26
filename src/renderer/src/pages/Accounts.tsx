@@ -1,4 +1,4 @@
-import { GripVertical, KeyRound, LogIn, LogOut, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { GripVertical, KeyRound, Loader2, LogIn, LogOut, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
 import type { AccountStatus, AuthKind, EngineKind, Profile, ProfileInput } from '@shared/types'
 import { isAcp } from '@shared/types'
@@ -171,7 +171,7 @@ function ProfileCard({ profile, onEdit, dragProps }: { profile: Profile; onEdit:
       {profile.auth === 'subscription' && <LimitMeters profileId={profile.id} />}
       <div className="row wrap" style={{ marginTop: 12 }}>
         {profile.auth === 'existing' && <button className="btn small" onClick={() => void refresh()}><RefreshCw size={14} /> {tr("Verifică {agent}", { agent: ENGINE_LABEL[profile.engine] })}</button>}
-        {!status?.loggedIn && profile.auth !== 'endpoint' && profile.auth !== 'existing' && (
+        {!status?.loggedIn && ((profile.auth !== 'endpoint' && profile.auth !== 'existing') || profile.engine === 'gemini') && (
           <button className="btn primary small" disabled={busy} onClick={() => void login()}>
             <LogIn size={14} /> {profile.auth === 'subscription' ? tr("Conectează contul") : tr("Conectează cheia")}
           </button>
@@ -427,6 +427,27 @@ function ProfileModal({ profile, onClose: closeNow }: { profile?: Profile; onClo
 
 export function AccountsPage() {
   const profiles = useStore((s) => s.profiles)
+  const { toast, loadProfiles } = useStore()
+  const [addingGemini, setAddingGemini] = useState(false)
+  /** Gemini with the subscription: the profile is made at once, the sign-in is Google's own page in the Jolty browser */
+  const addGemini = async (): Promise<void> => {
+    setAddingGemini(true)
+    try {
+      const { profile, loggedIn } = await api.setup.account('gemini')
+      await loadProfiles()
+      if (!loggedIn) {
+        toast(tr("Conectează-te la Google în fereastra browserului Jolty (cu abonamentul Gemini). Aștept..."))
+        const status = await api.profiles.login(profile.id)
+        if (!status.loggedIn) throw new Error(status.error || tr("Nu m-am putut conecta la Gemini."))
+      }
+      await loadProfiles()
+      toast(tr("Profil adăugat"))
+    } catch (err) {
+      toast(errMsg(err), true)
+    } finally {
+      setAddingGemini(false)
+    }
+  }
   const [modal, setModal] = useState<{ profile?: Profile } | null>(null)
   const dragProps = useProfileDrag(profiles.map((p) => p.id))
   return (
@@ -435,6 +456,11 @@ export function AccountsPage() {
         <div className="row">
           <h1 className="page-title">{tr("Conturi și chei")}</h1>
           <div className="spacer" />
+          {!profiles.some((p) => p.engine === 'gemini') && (
+            <button className="btn" disabled={addingGemini} onClick={() => void addGemini()} title={tr("Abonamentul tău Gemini din browserul Jolty")}>
+              {addingGemini ? <Loader2 size={14} className="spin" /> : <Plus size={16} />} {tr("Adaugă Gemini")}
+            </button>
+          )}
           <button className="btn primary" onClick={() => setModal({})}>
             <Plus size={16} /> {tr("Adaugă profil")}
           </button>

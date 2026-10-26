@@ -1,7 +1,7 @@
 // GitHub: the backup is one file in the root of a private repository the user created, written through the contents
 // API with a fine-grained token that can only touch that repository.
 import { tr } from '@shared/i18n'
-import { BackupError, FILE, mockBase, type Config, type Provider } from '../types'
+import { BackupError, pictureOf, FILE, mockBase, type Config, type Provider } from '../types'
 
 /** The contents API takes files up to 100 MB. */
 const MAX_BYTES = 100 * 1024 * 1024
@@ -71,14 +71,14 @@ export const github: Provider = {
 
   async connect(cfg) {
     const repo = repoOf(cfg)
-    const user = (await (await gh(cfg, '/user')).json()) as { id?: number; login?: string }
+    const user = (await (await gh(cfg, '/user')).json()) as { id?: number; login?: string; avatar_url?: string }
     if (!user.id || !user.login) throw new BackupError(tr("Nu am aflat ce cont e."))
     const res = await gh(cfg, `/repos/${repo}`, {}, [403, 404])
     if (res.status !== 200) throw new BackupError(tr("Repository-ul nu există sau tokenul nu are acces la el."))
     const info = (await res.json()) as { private?: boolean; permissions?: { push?: boolean } }
     if (!info.permissions?.push) throw new BackupError(tr("Tokenul nu poate scrie în repository (Contents: Read and write)."))
     if (info.private !== true) throw new BackupError(tr("Repository-ul e public. Folosește unul privat."))
-    return { sub: `${user.id}:${repo.toLowerCase()}`, label: `${user.login} / ${repo}`, name: user.login }
+    return { sub: `${user.id}:${repo.toLowerCase()}`, label: `${user.login} / ${repo}`, name: user.login, ...(await pictureOf(user.avatar_url)) }
   },
 
   async find(cfg) {

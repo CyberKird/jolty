@@ -41,3 +41,15 @@ test('the setup helper runs only on Claude and OpenCode, and is told its limits 
   assert.match(brief, /do not delete or move files/)
   assert.doesNotMatch(brief, /[–—]/)
 })
+
+test('an account picture is only fetched over https and never throws', async () => {
+  const { fetchPicture } = await import('../src/main/backup/types')
+  assert.equal(await fetchPicture('http://example.com/a.png'), undefined)
+  assert.equal(await fetchPicture('file:///C:/a.png'), undefined)
+  assert.equal(await fetchPicture(undefined), undefined)
+})
+test('Gemini models have intelligence scores', async () => {
+  const { modelScore } = await import('../src/shared/scores')
+  const p = { id: 'g', name: 'Gemini', engine: 'gemini', auth: 'existing', isDefaultDir: true, color: '#fff' } as never
+  for (const [name, iq] of [['3.5 Flash-Lite', 22], ['3.6 Flash', 34], ['3.1 Pro', 30], ['4 Argon', 53]] as const) assert.equal(modelScore(p, { id: name, label: name })?.iq, iq, name)
+})

@@ -86,14 +86,18 @@ function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Pro
           {connected && (
             <>
               <div className="row">
-                <span className="account-avatar">{((status.name || status.label || info.name)[0] || 'G').toUpperCase()}</span>
+                {status.picture ? (
+                  <img className="account-avatar big" src={status.picture} alt="" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="account-avatar big">{((status.name || status.label || info.name)[0] || 'G').toUpperCase()}</span>
+                )}
                 <div className="account-text">
                   <span className="ellipsis">{status.name || status.label}</span>
                   {status.name && <span className="faint small ellipsis">{status.label}</span>}
                 </div>
                 <div className="spacer" />
                 <button
-                  className="btn ghost"
+                  className="btn ghost small disconnect"
                   title={tr("Uită contul pe acest PC. Backup-ul rămâne în loc.")}
                   onClick={() =>
                     void run('connect', async () => {

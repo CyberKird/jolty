@@ -63,7 +63,7 @@ export const box: Provider = {
 
   async connect(cfg, open) {
     await oauthConnect(spec(cfg), open)
-    const me = (await (await oauthFetch(spec(cfg), `${base().api}/users/me`)).json()) as { id?: string; login?: string; name?: string }
+    const me = (await (await oauthFetch(spec(cfg), `${base().api}/users/me`)).json()) as { id?: string; login?: string; name?: string; avatar_url?: string }
     if (!me.id || !me.login) throw new BackupError(tr("Nu am aflat ce cont e."))
     return { sub: me.id, label: me.login, name: me.name }
   },

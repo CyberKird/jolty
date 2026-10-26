@@ -13,6 +13,22 @@ export interface Who {
   sub: string
   label: string
   name?: string
+  /** the account's picture as a data: URL, so the page shows it without any remote request */
+  picture?: string
+}
+
+/** A small profile picture as a data: URL; any failure just means no picture. */
+export async function fetchPicture(url: unknown, init: RequestInit = {}): Promise<string | undefined> {
+  try {
+    if (typeof url !== 'string' || !/^https:\/\//i.test(url)) return undefined
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(8000) })
+    const type = res.headers.get('content-type') || ''
+    if (!res.ok || !/^image\/(png|jpe?g|webp|gif)/i.test(type)) return undefined
+    const bytes = Buffer.from(await res.arrayBuffer())
+    return bytes.length > 0 && bytes.length <= 300_000 ? `data:${type.split(';')[0]};base64,${bytes.toString('base64')}` : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /** The one file every provider keeps, in an app folder or the place the user chose. */
@@ -32,4 +48,10 @@ export interface Provider {
   find(cfg: Config): Promise<RemoteBackup | null>
   put(cfg: Config, data: Buffer): Promise<void>
   get(cfg: Config): Promise<Buffer>
+}
+
+/** `{ picture }` for a spread into the account, or nothing. */
+export async function pictureOf(url: unknown, init: RequestInit = {}): Promise<{ picture?: string }> {
+  const picture = await fetchPicture(url, init)
+  return picture ? { picture } : {}
 }
