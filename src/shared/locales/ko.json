@@ -1327,5 +1327,9 @@
  "Restaurează din {place}": "{place}에서 복원",
  "Parola backup-ului salvat": "저장된 백업의 비밀번호",
  "Backup și conturi": "백업 및 계정",
- "Backup complet al personalizării (skilluri, comenzi, instrucțiuni, setări, conturi fără chei, sarcini programate, servere MCP) în locul ales de tine, criptat cu o parolă. Cheile API și login-urile nu se încarcă. Poți conecta mai multe locuri deodată.": "맞춤 설정(스킬, 명령, 지침, 설정, 키가 없는 계정, 예약된 작업, MCP 서버) 전체를 비밀번호로 암호화하여 선택한 위치에 백업합니다. API 키와 로그인 정보는 업로드되지 않습니다. 여러 위치를 동시에 연결할 수 있습니다."
+ "Backup complet al personalizării (skilluri, comenzi, instrucțiuni, setări, conturi fără chei, sarcini programate, servere MCP) în locul ales de tine, criptat cu o parolă. Cheile API și login-urile nu se încarcă. Poți conecta mai multe locuri deodată.": "맞춤 설정(스킬, 명령, 지침, 설정, 키가 없는 계정, 예약된 작업, MCP 서버) 전체를 비밀번호로 암호화하여 선택한 위치에 백업합니다. API 키와 로그인 정보는 업로드되지 않습니다. 여러 위치를 동시에 연결할 수 있습니다.",
+ "Compactez conversația...": "대화를 압축하는 중...",
+ "Compactarea nu a reușit.": "압축하지 못했습니다.",
+ "Compactat: {before} la {after} tokeni": "압축됨: {before}에서 {after} 토큰으로",
+ "Conversația a fost compactată.": "대화를 압축했습니다."
 }

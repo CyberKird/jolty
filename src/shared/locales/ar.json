@@ -1327,5 +1327,9 @@
  "Restaurează din {place}": "استعادة من {place}",
  "Parola backup-ului salvat": "كلمة مرور النسخة الاحتياطية المحفوظة",
  "Backup și conturi": "النسخ الاحتياطي والحسابات",
- "Backup complet al personalizării (skilluri, comenzi, instrucțiuni, setări, conturi fără chei, sarcini programate, servere MCP) în locul ales de tine, criptat cu o parolă. Cheile API și login-urile nu se încarcă. Poți conecta mai multe locuri deodată.": "نسخة احتياطية كاملة لتخصيصاتك (المهارات والأوامر والتعليمات والإعدادات والحسابات بدون مفاتيح والمهام المجدولة وخوادم MCP) في المكان الذي تختاره، مشفّرة بكلمة مرور. لا يتم رفع مفاتيح API وبيانات تسجيل الدخول. يمكنك ربط عدة أماكن في الوقت نفسه."
+ "Backup complet al personalizării (skilluri, comenzi, instrucțiuni, setări, conturi fără chei, sarcini programate, servere MCP) în locul ales de tine, criptat cu o parolă. Cheile API și login-urile nu se încarcă. Poți conecta mai multe locuri deodată.": "نسخة احتياطية كاملة لتخصيصاتك (المهارات والأوامر والتعليمات والإعدادات والحسابات بدون مفاتيح والمهام المجدولة وخوادم MCP) في المكان الذي تختاره، مشفّرة بكلمة مرور. لا يتم رفع مفاتيح API وبيانات تسجيل الدخول. يمكنك ربط عدة أماكن في الوقت نفسه.",
+ "Compactez conversația...": "جارٍ ضغط المحادثة...",
+ "Compactarea nu a reușit.": "تعذّر الضغط.",
+ "Compactat: {before} la {after} tokeni": "تم الضغط: {before} إلى {after} رمز",
+ "Conversația a fost compactată.": "تم ضغط المحادثة."
 }

@@ -1327,5 +1327,9 @@
  "Restaurează din {place}": "{place} से पुनर्स्थापित करें",
  "Parola backup-ului salvat": "सहेजे गए बैकअप का पासवर्ड",
  "Backup și conturi": "बैकअप और खाते",
- "Backup complet al personalizării (skilluri, comenzi, instrucțiuni, setări, conturi fără chei, sarcini programate, servere MCP) în locul ales de tine, criptat cu o parolă. Cheile API și login-urile nu se încarcă. Poți conecta mai multe locuri deodată.": "आपके कस्टमाइज़ेशन (skills, कमांड, निर्देश, सेटिंग्स, बिना कुंजियों वाले खाते, शेड्यूल किए गए कार्य, MCP सर्वर) का पूरा बैकअप आपकी चुनी हुई जगह पर, पासवर्ड से एन्क्रिप्ट करके। API कुंजियाँ और लॉगिन अपलोड नहीं होते। आप एक साथ कई जगहें कनेक्ट कर सकते हैं।"
+ "Backup complet al personalizării (skilluri, comenzi, instrucțiuni, setări, conturi fără chei, sarcini programate, servere MCP) în locul ales de tine, criptat cu o parolă. Cheile API și login-urile nu se încarcă. Poți conecta mai multe locuri deodată.": "आपके कस्टमाइज़ेशन (skills, कमांड, निर्देश, सेटिंग्स, बिना कुंजियों वाले खाते, शेड्यूल किए गए कार्य, MCP सर्वर) का पूरा बैकअप आपकी चुनी हुई जगह पर, पासवर्ड से एन्क्रिप्ट करके। API कुंजियाँ और लॉगिन अपलोड नहीं होते। आप एक साथ कई जगहें कनेक्ट कर सकते हैं।",
+ "Compactez conversația...": "बातचीत संक्षिप्त हो रही है...",
+ "Compactarea nu a reușit.": "संक्षिप्त करना सफल नहीं हुआ।",
+ "Compactat: {before} la {after} tokeni": "संक्षिप्त हुआ: {before} से {after} टोकन",
+ "Conversația a fost compactată.": "बातचीत को संक्षिप्त किया गया।"
 }

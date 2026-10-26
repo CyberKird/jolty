@@ -3896,6 +3896,7 @@ a {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px;
+}
 
 /* compaction: the pill above the composer and the spinner on the sidebar row */
 .compact-strip {

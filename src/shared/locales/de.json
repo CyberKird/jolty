@@ -1327,5 +1327,9 @@
  "Restaurează din {place}": "Aus {place} wiederherstellen",
  "Parola backup-ului salvat": "Passwort des gespeicherten Backups",
  "Backup și conturi": "Backup und Konten",
- "Backup complet al personalizării (skilluri, comenzi, instrucțiuni, setări, conturi fără chei, sarcini programate, servere MCP) în locul ales de tine, criptat cu o parolă. Cheile API și login-urile nu se încarcă. Poți conecta mai multe locuri deodată.": "Vollständiges Backup deiner Anpassungen (Skills, Befehle, Anweisungen, Einstellungen, Konten ohne Schlüssel, geplante Aufgaben, MCP-Server) an einem Ort deiner Wahl, mit einem Passwort verschlüsselt. API-Schlüssel und Logins werden nicht hochgeladen. Du kannst mehrere Orte gleichzeitig verbinden."
+ "Backup complet al personalizării (skilluri, comenzi, instrucțiuni, setări, conturi fără chei, sarcini programate, servere MCP) în locul ales de tine, criptat cu o parolă. Cheile API și login-urile nu se încarcă. Poți conecta mai multe locuri deodată.": "Vollständiges Backup deiner Anpassungen (Skills, Befehle, Anweisungen, Einstellungen, Konten ohne Schlüssel, geplante Aufgaben, MCP-Server) an einem Ort deiner Wahl, mit einem Passwort verschlüsselt. API-Schlüssel und Logins werden nicht hochgeladen. Du kannst mehrere Orte gleichzeitig verbinden.",
+ "Compactez conversația...": "Unterhaltung wird komprimiert...",
+ "Compactarea nu a reușit.": "Komprimieren fehlgeschlagen.",
+ "Compactat: {before} la {after} tokeni": "Komprimiert: {before} auf {after} Tokens",
+ "Conversația a fost compactată.": "Die Unterhaltung wurde komprimiert."
 }
