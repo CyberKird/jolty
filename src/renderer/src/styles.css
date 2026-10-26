@@ -3758,6 +3758,14 @@ a {
   flex-direction: column;
   gap: 6px;
 }
+.attn-hidden {
+  margin-top: 8px;
+  opacity: 0.85;
+}
+.attn-hidden summary {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
 .attn-problems li {
   display: flex;
   flex-direction: column;
@@ -3825,4 +3833,67 @@ a {
 .pack-note {
   margin: 0 0 6px 24px;
   color: var(--grey);
+}
+/* the account under live usage */
+.account-chip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--white);
+  text-align: start;
+  cursor: pointer;
+}
+.account-chip:hover {
+  background: var(--volt-dim);
+}
+.account-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--volt);
+  color: #000;
+  font: 700 12px var(--label);
+}
+.backup-head {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  gap: 8px;
+  text-align: start;
+}
+.account-avatar.off {
+  background: var(--s4);
+  color: var(--grey);
+}
+.account-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.use-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.use-metric b {
+  font: 400 26px var(--display);
+  letter-spacing: 0.02em;
+}
+.use-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
 }

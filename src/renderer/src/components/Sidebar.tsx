@@ -224,6 +224,40 @@ function UsageMeter() {
   )
 }
 
+/** The connected backup account under live usage, like the account in the Claude and Codex apps; opens Settings on the Account tab. */
+function AccountChip() {
+  const backups = useStore((s) => s.backups)
+  const setBackups = useStore((s) => s.setBackups)
+  const setPage = useStore((s) => s.setPage)
+  useEffect(() => {
+    void api.backup.list().then(setBackups).catch(() => undefined)
+  }, [setBackups])
+  if (!backups) return null
+  const connected = backups.filter((b) => b.status.connected)
+  const first = connected[0]?.status
+  const name = first ? first.name || first.label || '' : ''
+  return (
+    <button
+      className="account-chip"
+      title={tr("Deschide Cont")}
+      onClick={() => {
+        try {
+          localStorage.setItem('jolty.settingsTab', 'account')
+        } catch {
+          // the tab is only a convenience
+        }
+        setPage('settings')
+      }}
+    >
+      <span className={`account-avatar ${first ? '' : 'off'}`}>{first ? (name[0] || 'J').toUpperCase() : '+'}</span>
+      <span className="account-text">
+        <span className="ellipsis">{first ? name : tr("Conectează un cont pentru backup")}</span>
+        {first && <span className="faint small ellipsis">{connected.length > 1 ? tr("{provider} și încă {n}", { provider: connected[0].info.name, n: connected.length - 1 }) : connected[0].info.name}</span>}
+      </span>
+    </button>
+  )
+}
+
 const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
   { id: 'import', label: tr("Importă sesiuni"), icon: Download },
   { id: 'accounts', label: tr("Conturi și chei"), icon: KeyRound },
@@ -244,7 +278,7 @@ export function Sidebar() {
   useEffect(() => {
     void api.skills
       .list()
-      .then((l) => useStore.getState().setSkillsAttention(l.filter(needsAttention).length))
+      .then((l) => useStore.getState().setSkillsAttention(l.filter((s) => needsAttention(s, useStore.getState().hiddenSkills)).length))
       .catch(() => undefined)
   }, [])
   const saved = useMemo(() => sessions.filter((s) => !s.temporary), [sessions])
@@ -387,6 +421,7 @@ export function Sidebar() {
         ))}
       </div>
       <UsageMeter />
+      <AccountChip />
     </nav>
   )
 }

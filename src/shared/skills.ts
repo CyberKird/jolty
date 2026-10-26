@@ -51,13 +51,17 @@ export interface SkillInfo {
   checkedAt?: number
 }
 
-/** Shown on the "needs attention" tab: broken, outdated, modified or with problems. */
-export const needsAttention = (s: SkillInfo): boolean => s.status !== 'ok' && s.status !== 'unknown' ? true : s.problems.length > 0
+/** Nothing is wrong with it except its size: the only alert a user may hide. */
+export const onlyTooBig = (s: SkillInfo): boolean => (s.status === 'ok' || s.status === 'unknown') && s.problems.length === 1 && s.problems[0] === 'too-big'
+
+/** Shown on the "needs attention" tab: broken, outdated, modified or with problems; a hidden too-big skill is left out until it has another problem. */
+export const needsAttention = (s: SkillInfo, hidden: readonly string[] = []): boolean =>
+  hidden.includes(s.id) && onlyTooBig(s) ? false : s.status !== 'ok' && s.status !== 'unknown' ? true : s.problems.length > 0
 
 // ---------------------------------------------------------------- share packs
 
 /** What a pack can carry. Secrets (API keys, tokens, cookies, passwords) are never part of any of them. */
-export type PackPart = 'skills' | 'commands' | 'instructions' | 'settings' | 'profiles' | 'schedules'
+export type PackPart = 'skills' | 'commands' | 'instructions' | 'settings' | 'profiles' | 'schedules' | 'mcp'
 
 /** Personal information found in an item; only the kind is ever reported, never the value. */
 export type PersonalKind = 'email' | 'phone' | 'bank' | 'card' | 'home-path' | 'account-name'

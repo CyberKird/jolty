@@ -24,7 +24,11 @@ export const LIMITS = {
   packFile: 110 * 1024 * 1024
 }
 
+/** A backup is the user's own, whole and encrypted: bigger limits and one more part (MCP servers, which can hold tokens). */
+export const BACKUP_LIMITS = { ...LIMITS, total: 400 * 1024 * 1024, files: 40000, items: 5000, packFile: 450 * 1024 * 1024 }
+
 export const PARTS: PackPart[] = ['skills', 'commands', 'instructions', 'settings', 'profiles', 'schedules']
+export const BACKUP_PARTS: PackPart[] = [...PARTS, 'mcp']
 
 export interface PackFile {
   path: string
@@ -147,11 +151,12 @@ export function encodePack(meta: PackMeta, entries: PackEntry[]): Buffer {
  * unsafe paths, over the limits); drops single items whose content does not match its checksum (warning
  * 'checksum-mismatch') or whose part this version does not know ('unknown-parts').
  */
-export function decodePack(buf: Buffer): DecodedPack {
-  if (buf.length > LIMITS.packFile) fail('too-large')
+export function decodePack(buf: Buffer, backup = false): DecodedPack {
+  const L = backup ? BACKUP_LIMITS : LIMITS
+  if (buf.length > L.packFile) fail('too-large')
   if (buf.length < MAGIC.length + 4 || !buf.subarray(0, MAGIC.length).equals(MAGIC)) fail('not-a-pack')
   const hlen = buf.readUInt32BE(MAGIC.length)
-  if (hlen > LIMITS.header || MAGIC.length + 4 + hlen > buf.length) fail('bad-header')
+  if (hlen > L.header || MAGIC.length + 4 + hlen > buf.length) fail('bad-header')
   let h: Record<string, unknown>
   try {
     h = JSON.parse(buf.subarray(MAGIC.length + 4, MAGIC.length + 4 + hlen).toString('utf8')) as Record<string, unknown>
@@ -163,7 +168,7 @@ export function decodePack(buf: Buffer): DecodedPack {
   if (!safeLabel(h.name) || !isTime(h.createdAt) || typeof h.app !== 'string' || h.app.length > 40) fail('bad-header')
   if (h.author !== undefined && !safeLabel(h.author, 100)) fail('bad-header')
   if (h.note !== undefined && (typeof h.note !== 'string' || h.note.length > 4000)) fail('bad-header')
-  if (!Array.isArray(h.items) || h.items.length > LIMITS.items) fail(Array.isArray(h.items) ? 'too-many-items' : 'bad-header')
+  if (!Array.isArray(h.items) || h.items.length > L.items) fail(Array.isArray(h.items) ? 'too-many-items' : 'bad-header')
 
   // the whole header is checked before the body is inflated
   const raw = h.items as HeaderItem[]
@@ -190,17 +195,17 @@ export function decodePack(buf: Buffer): DecodedPack {
         dirs.add(parent)
       }
       paths.add(k)
-      if (!Number.isInteger(f.size) || f.size < 0 || f.size > LIMITS.file) fail('too-large')
+      if (!Number.isInteger(f.size) || f.size < 0 || f.size > L.file) fail('too-large')
       if (!Number.isInteger(f.offset) || f.offset < 0 || typeof f.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(f.sha256) || !isTime(f.modifiedAt)) fail('bad-header')
       declared += f.size
-      if (++files > LIMITS.files) fail('too-many-files')
-      if (declared > LIMITS.total) fail('too-large')
+      if (++files > L.files) fail('too-many-files')
+      if (declared > L.total) fail('too-large')
     }
   }
 
   let body: Buffer
   try {
-    body = zlib.gunzipSync(buf.subarray(MAGIC.length + 4 + hlen), { maxOutputLength: LIMITS.total })
+    body = zlib.gunzipSync(buf.subarray(MAGIC.length + 4 + hlen), { maxOutputLength: L.total })
   } catch (e) {
     return fail(e instanceof RangeError || (e as NodeJS.ErrnoException).code === 'ERR_BUFFER_TOO_LARGE' ? 'too-large' : 'bad-body')
   }
@@ -208,7 +213,7 @@ export function decodePack(buf: Buffer): DecodedPack {
   const warnings = new Set<string>()
   const entries: PackEntry[] = []
   for (const it of raw) {
-    if (!PARTS.includes(it.part as PackPart)) {
+    if (!(backup ? BACKUP_PARTS : PARTS).includes(it.part as PackPart)) {
       warnings.add('unknown-parts')
       continue
     }

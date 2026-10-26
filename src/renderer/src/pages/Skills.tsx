@@ -15,6 +15,7 @@ type Tab = (typeof TABS)[number]
 /** Skills: the inventory with update checks, what needs attention, and sharing (export and import packs). */
 export function SkillsPage() {
   const { toast, setSkillsAttention } = useStore()
+  const hidden = useStore((s) => s.hiddenSkills)
   const [list, setList] = useState<SkillInfo[]>()
   const [checking, setChecking] = useState(false)
   const [tab, setTab] = useSavedTab<Tab>('jolty.skillsTab', TABS)
@@ -22,10 +23,12 @@ export function SkillsPage() {
   const publish = useCallback(
     (next: SkillInfo[]) => {
       setList(next)
-      setSkillsAttention(next.filter(needsAttention).length)
+      setSkillsAttention(next.filter((s) => needsAttention(s, useStore.getState().hiddenSkills)).length)
     },
     [setSkillsAttention]
   )
+  // hiding or showing an alert changes the badge at once
+  useEffect(() => setSkillsAttention((list ?? []).filter((s) => needsAttention(s, hidden)).length), [hidden, list, setSkillsAttention])
   const reload = useCallback(() => api.skills.list().then(publish), [publish])
   useEffect(() => {
     void reload().catch((e) => {
@@ -46,7 +49,7 @@ export function SkillsPage() {
     }
   }
 
-  const attention = useMemo(() => (list ?? []).filter(needsAttention).length, [list])
+  const attention = useMemo(() => (list ?? []).filter((s) => needsAttention(s, hidden)).length, [list, hidden])
   const tabs = [
     { id: 'all' as const, label: tr("Toate"), icon: List, count: list?.length },
     { id: 'attention' as const, label: tr("Atenție"), icon: AlertTriangle, count: attention },

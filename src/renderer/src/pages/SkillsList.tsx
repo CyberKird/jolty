@@ -1,7 +1,7 @@
-import { AlertTriangle, ArrowDown, ArrowUp, CircleCheck, Search } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowUp, CircleCheck, Eye, EyeOff, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { needsAttention, type SkillHome, type SkillInfo, type SkillStatus } from '@shared/skills'
-import { timeAgo } from '../store'
+import { needsAttention, onlyTooBig, type SkillHome, type SkillInfo, type SkillStatus } from '@shared/skills'
+import { timeAgo, useStore } from '../store'
 import { HOME, problemText, SkillActions, sourceLabel, STATUS, StatusChip } from './SkillActions'
 import { tr } from '@shared/i18n'
 
@@ -158,18 +158,19 @@ export const reasonOf = (s: SkillInfo): Reason => (s.status === 'broken' ? 'brok
 
 /** Only what needs a look, grouped by why, with what to do. */
 export function AttentionList({ list, onChanged }: { list: SkillInfo[]; onChanged: (s: SkillInfo) => void }) {
-  const todo = list.filter(needsAttention)
-  if (!todo.length)
-    return (
-      <div className="empty skills-calm">
-        <CircleCheck size={30} strokeWidth={1.4} color="var(--volt)" />
-        <b>{tr("Toate skillurile sunt în regulă")}</b>
-        <span className="small">{tr("Niciunul nu e stricat, modificat sau rămas în urmă. Verifică acum ca să cauți versiuni noi.")}</span>
-      </div>
-    )
+  const { hiddenSkills, hideSkill } = useStore()
+  const todo = list.filter((s) => needsAttention(s, hiddenSkills))
+  const hidden = list.filter((s) => hiddenSkills.includes(s.id) && onlyTooBig(s))
   const reasons = REASON()
   return (
     <>
+      {!todo.length && (
+        <div className="empty skills-calm">
+          <CircleCheck size={30} strokeWidth={1.4} color="var(--volt)" />
+          <b>{tr("Toate skillurile sunt în regulă")}</b>
+          <span className="small">{tr("Niciunul nu e stricat, modificat sau rămas în urmă. Verifică acum ca să cauți versiuni noi.")}</span>
+        </div>
+      )}
       {(Object.keys(reasons) as Reason[]).map((r) => {
         const group = todo.filter((s) => reasonOf(s) === r).sort((a, b) => a.name.localeCompare(b.name))
         if (!group.length) return null
@@ -192,6 +193,11 @@ export function AttentionList({ list, onChanged }: { list: SkillInfo[]; onChange
                     </span>
                     <StatusChip s={s} />
                     <SkillActions s={s} onChanged={onChanged} />
+                    {onlyTooBig(s) && (
+                      <button className="btn ghost" title={tr("Ascunde alerta: nu mai apare în bara din stânga, o găsești mai jos la Alerte ascunse.")} onClick={() => hideSkill(s.id, true)}>
+                        <EyeOff size={14} /> {tr("Ascunde")}
+                      </button>
+                    )}
                   </div>
                   {s.status === 'outdated' && s.latest && <div className="faint small">{tr("Versiunea nouă: {latest}", { latest: s.latest })}</div>}
                   {s.problems.length > 0 && (
@@ -213,6 +219,23 @@ export function AttentionList({ list, onChanged }: { list: SkillInfo[]; onChange
           </section>
         )
       })}
+      {hidden.length > 0 && (
+        <details className="attn-hidden">
+          <summary className="label">{tr("Alerte ascunse ({n})", { n: hidden.length })}</summary>
+          <ul className="attn-problems">
+            {hidden.map((s) => (
+              <li key={s.id} className="row">
+                <b>{s.name}</b>
+                <span className="muted small">{problemText('too-big').label}</span>
+                <span className="spacer" />
+                <button className="btn ghost" onClick={() => hideSkill(s.id, false)}>
+                  <Eye size={14} /> {tr("Arată din nou")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </>
   )
 }

@@ -18,6 +18,8 @@ export const HOMES: SkillHome[] = ['claude', 'codex', 'agents']
  */
 export const SETTINGS_KEYS = [
   'reduceMotion',
+  'lowPower',
+  'modelAdvice',
   'mascot',
   'mascotSounds',
   'mascotSize',
@@ -41,6 +43,8 @@ export const SETTINGS_KEYS = [
 
 const SETTING_VALUES: Record<(typeof SETTINGS_KEYS)[number], (v: unknown) => boolean> = {
   reduceMotion: isBool,
+  lowPower: (v) => ['auto', 'on', 'off'].includes(v as string),
+  modelAdvice: isBool,
   mascot: isBool,
   mascotSounds: isBool,
   mascotSize: (v) => ['small', 'normal', 'big'].includes(v as string),
@@ -97,7 +101,8 @@ export interface Skipped {
 export interface LocalItem extends PackItem {
   name: string
   modifiedAt: number
-  collect(): { files: PackFile[]; skipped: Skipped[] }
+  /** `full`: a backup of your own, so credentials and personal text are kept (it is encrypted before it leaves) */
+  collect(full?: boolean): { files: PackFile[]; skipped: Skipped[] }
 }
 
 const home = (...p: string[]): string => path.join(os.homedir(), ...p)
@@ -116,12 +121,12 @@ const lstat = (p: string): fs.Stats | undefined => {
 }
 
 /** Reads files of a folder (or one file) into pack files, leaving out credentials and oversized files. */
-function readFiles(key: string, dir: string, rels: string[]): { files: PackFile[]; skipped: Skipped[] } {
+function readFiles(key: string, dir: string, rels: string[], own = false): { files: PackFile[]; skipped: Skipped[] } {
   const files: PackFile[] = []
   const skipped: Skipped[] = []
   for (const rel of rels) {
     const base = rel.split('/').pop()!
-    if (SECRET_NAME.test(base)) {
+    if (!own && SECRET_NAME.test(base)) {
       skipped.push({ key, file: rel, reason: 'secret-file' })
       continue
     }
@@ -133,7 +138,7 @@ function readFiles(key: string, dir: string, rels: string[]): { files: PackFile[
       continue
     }
     const data = fs.readFileSync(full)
-    if (looksSecret(data)) {
+    if (!own && looksSecret(data)) {
       skipped.push({ key, file: rel, reason: 'looks-like-secret' })
       continue
     }
@@ -193,7 +198,7 @@ export function skillDirs(): { home: SkillHome; folder: string; dir: string }[] 
   return out
 }
 
-export function localItems(): LocalItem[] {
+export function localItems(full = false): LocalItem[] {
   const out: LocalItem[] = []
 
   for (const s of skillDirs()) {
@@ -204,7 +209,7 @@ export function localItems(): LocalItem[] {
       continue
     }
     const key = `skills:${s.home}/${s.folder}`
-    out.push({ key, part: 'skills', name: `${s.home}/${s.folder}`, label: s.folder, detail: `~/.${s.home}/skills`, ...statsOf(s.dir, rels), collect: () => readFiles(key, s.dir, rels) })
+    out.push({ key, part: 'skills', name: `${s.home}/${s.folder}`, label: s.folder, detail: `~/.${s.home}/skills`, ...statsOf(s.dir, rels), collect: (full) => readFiles(key, s.dir, rels, full) })
   }
 
   let cmds: string[] = []
@@ -223,8 +228,8 @@ export function localItems(): LocalItem[] {
       label: rel.replace(/\.md$/i, ''),
       detail: '~/.claude/commands',
       ...statsOf(commandsRoot(), [rel]),
-      collect: () => {
-        const r = readFiles(key, commandsRoot(), [rel])
+      collect: (full) => {
+        const r = readFiles(key, commandsRoot(), [rel], full)
         return { files: r.files.map((f) => ({ ...f, path: 'item.md' })), skipped: r.skipped }
       }
     })
@@ -243,8 +248,8 @@ export function localItems(): LocalItem[] {
       detail: name === 'claude' ? '~/.claude' : '~/.codex',
       bytes: st.size,
       modifiedAt: st.mtimeMs,
-      collect: () => {
-        const r = readFiles(key, path.dirname(file), [path.basename(file)])
+      collect: (full) => {
+        const r = readFiles(key, path.dirname(file), [path.basename(file)], full)
         return { files: r.files.map((f) => ({ ...f, path: 'item.md' })), skipped: r.skipped }
       }
     })
@@ -262,12 +267,80 @@ export function localItems(): LocalItem[] {
     const e = exportSchedule(t, profiles)
     if (e && !out.some((x) => x.key === `schedules:${e.name}`)) {
       const item = jsonItem('schedules', e.name, e.name, e, t.createdAt)
-      // a prompt can hold a pasted key: the task is listed but not packed
-      if (looksSecret(Buffer.from(e.prompt))) item.collect = () => ({ files: [], skipped: [{ key: item.key, file: 'item.json', reason: 'looks-like-secret' }] })
+      // a prompt can hold a pasted key: the task is listed but not packed (a full backup keeps it)
+      if (!full && looksSecret(Buffer.from(e.prompt))) item.collect = () => ({ files: [], skipped: [{ key: item.key, file: 'item.json', reason: 'looks-like-secret' }] })
       out.push(item)
     }
   }
+  if (full)
+    for (const [name, config] of Object.entries(claudeMcpServers())) {
+      const e = exportMcp({ name, config })
+      if (e) out.push(jsonItem('mcp', e.name, e.name, e, mtime(claudeJson()), e.config.type || (e.config.url ? 'http' : 'stdio')))
+    }
   return out
+}
+
+// ---------------------------------------------------------------- MCP servers (user level, in ~/.claude.json)
+
+export const claudeJson = (): string => home('.claude.json')
+
+/** The user-level servers of ~/.claude.json; nothing else of that file (login, history, projects) is ever read out. */
+export function claudeMcpServers(): Record<string, unknown> {
+  try {
+    const v = (JSON.parse(fs.readFileSync(claudeJson(), 'utf8')) as { mcpServers?: unknown }).mcpServers
+    return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}
+
+export interface McpConfig {
+  type?: 'stdio' | 'sse' | 'http'
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  url?: string
+  headers?: Record<string, string>
+}
+export interface McpShape {
+  name: string
+  config: McpConfig
+}
+
+const strMap = (v: unknown): Record<string, string> | undefined | null => {
+  if (v === undefined) return undefined
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null
+  const e = Object.entries(v)
+  return e.length <= 200 && e.every(([k, x]) => k.length <= 200 && typeof x === 'string' && x.length <= 20000) ? (v as Record<string, string>) : null
+}
+
+/** One MCP server with only the fields Claude Code knows; anything else is dropped, a wrong kind of value rejects it. */
+export function exportMcp(v: unknown): McpShape | undefined {
+  const x = (v && typeof v === 'object' ? v : {}) as { name?: unknown; config?: unknown }
+  const c = (x.config && typeof x.config === 'object' ? x.config : {}) as Record<string, unknown>
+  if (!safeLabel(x.name, 100) || (c.type !== undefined && c.type !== 'stdio' && c.type !== 'sse' && c.type !== 'http')) return undefined
+  const out: McpConfig = {}
+  if (c.type !== undefined) out.type = c.type as McpConfig['type']
+  if (c.command !== undefined) {
+    if (typeof c.command !== 'string' || !c.command || c.command.length > 1000) return undefined
+    out.command = c.command
+  }
+  if (c.url !== undefined) {
+    if (typeof c.url !== 'string' || !c.url || c.url.length > 2000) return undefined
+    out.url = c.url
+  }
+  // a server with neither a program nor an address would not start anywhere
+  if (!out.command && !out.url) return undefined
+  if (c.args !== undefined) {
+    if (!Array.isArray(c.args) || c.args.length > 200 || !c.args.every((a) => typeof a === 'string' && a.length <= 20000)) return undefined
+    out.args = c.args as string[]
+  }
+  const env = strMap(c.env)
+  const headers = strMap(c.headers)
+  if (env === null || headers === null) return undefined
+  if (env) out.env = env
+  if (headers) out.headers = headers
+  return { name: x.name as string, config: out }
 }
 
 // ---------------------------------------------------------------- the secret-free shapes

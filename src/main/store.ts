@@ -310,6 +310,25 @@ export function saveScoresCache(raw: unknown): void {
 }
 
 // ---------------------------------------------------------------------------
+// Backup storages (main/backup): who is connected and when the last backup was, and the fields the user filled that
+// are not secret. Tokens, secret fields and backup passwords are in secrets.json.
+// ---------------------------------------------------------------------------
+export interface AccountMeta {
+  /** stable id of the account at that storage: two accounts never share one */
+  sub: string
+  label: string
+  name?: string
+  lastBackupAt?: number
+  lastBackupBytes?: number
+  lastBackupItems?: number
+}
+
+export const loadBackupAccounts = (): Record<string, AccountMeta> => readJson<Record<string, AccountMeta>>('backup-accounts.json', {})
+export const saveBackupAccounts = (all: Record<string, AccountMeta>): void => writeJson('backup-accounts.json', all)
+export const loadBackupConfig = (): Record<string, Record<string, string>> => readJson<Record<string, Record<string, string>>>('backup-config.json', {})
+export const saveBackupConfig = (all: Record<string, Record<string, string>>): void => writeJson('backup-config.json', all)
+
+// ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
 export function loadSettings(): AppSettings {

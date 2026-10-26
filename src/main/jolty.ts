@@ -117,6 +117,8 @@ export class Jolty {
   private live = new Map<string, EngineSession>()
   /** conversations with a turn under way */
   private busy = new Set<string>()
+  /** a chat is working right now (what the use-time counter reads) */
+  anyBusy = (): boolean => this.busy.size > 0
   /** conversations the user stopped whose engine has not said "idle" yet: see stop-gate.ts */
   private stopped = new Set<string>()
   /** tokens in each conversation's context after its last request, from the engine's context events */

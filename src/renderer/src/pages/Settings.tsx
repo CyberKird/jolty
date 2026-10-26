@@ -1,7 +1,8 @@
-import { Cpu, ExternalLink, Eye, FolderOpen, Gauge, Globe, Info, Languages, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
+import { Cpu, ExternalLink, UserRound, Eye, FolderOpen, Gauge, Globe, Info, Languages, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { isAcp } from '@shared/types'
+import { AccountSettings } from './AccountSettings'
 import { BrowserSettings } from './BrowserSettings'
 import { ComputerSettings } from './ComputerSettings'
 import { ChildSessionsSettings } from './ChildSessionsSettings'
@@ -14,7 +15,7 @@ import { setLowPowerMode } from '../lowpower'
 import { getLang, LANGUAGES, tr } from '@shared/i18n'
 import { GEMINI_BROWSER } from '@shared/gemini'
 
-const TABS = ['general', 'models', 'tools', 'privacy', 'about'] as const
+const TABS = ['general', 'account', 'models', 'tools', 'privacy', 'about'] as const
 type Tab = (typeof TABS)[number]
 /** the tabs with fields that wait for Save (paths, the vision profile, the browser profile) */
 const NEEDS_SAVE: Tab[] = ['models', 'tools']
@@ -42,6 +43,7 @@ export function SettingsPage() {
           onPick={setTab}
           tabs={[
             { id: 'general', label: tr("General"), icon: SlidersHorizontal },
+            { id: 'account', label: tr("Cont"), icon: UserRound },
             { id: 'models', label: tr("Modele și sesiuni"), icon: Cpu },
             { id: 'tools', label: tr("Browser și computer"), icon: Globe },
             { id: 'privacy', label: tr("Confidențialitate"), icon: ShieldCheck },
@@ -49,6 +51,7 @@ export function SettingsPage() {
           ]}
         />
         <div role="tabpanel" className="settings-pane" key={tab}>
+          {tab === 'account' && <AccountSettings />}
           {tab === 'general' && (
             <>
               <div className="card" style={{ marginBottom: 14 }}>

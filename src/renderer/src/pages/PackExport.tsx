@@ -10,7 +10,8 @@ export const PART_LABEL = (): Record<PackPart, string> => ({
   instructions: tr("Instrucțiuni"),
   settings: tr("Setări"),
   profiles: tr("Conturi (fără chei)"),
-  schedules: tr("Sarcini programate")
+  schedules: tr("Sarcini programate"),
+  mcp: tr("Servere MCP")
 })
 const ORDER: PackPart[] = ['skills', 'commands', 'instructions', 'settings', 'profiles', 'schedules']
 

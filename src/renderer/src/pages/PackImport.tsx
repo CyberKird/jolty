@@ -27,10 +27,10 @@ const WARNING = (code: string): string =>
   })[code] ?? code
 
 /** Open a pack, decide per item what happens on a clash, apply, and take it back if needed. */
-export function PackImport({ onImported }: { onImported: () => void }) {
+export function PackImport({ onImported, initial, onClose }: { onImported: () => void; initial?: ImportPreview; onClose?: () => void }) {
   const { toast } = useStore()
-  const [preview, setPreview] = useState<ImportPreview>()
-  const [decisions, setDecisions] = useState<Record<string, ImportDecision>>({})
+  const [preview, setPreview] = useState<ImportPreview | undefined>(initial)
+  const [decisions, setDecisions] = useState<Record<string, ImportDecision>>(() => Object.fromEntries((initial?.items ?? []).map((i) => [i.key, i.suggested])))
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<ImportResult>()
   const [over, setOver] = useState(false)
@@ -103,7 +103,7 @@ export function PackImport({ onImported }: { onImported: () => void }) {
           <button className="btn" disabled={busy} onClick={() => void undo()}>
             {busy ? <Loader2 size={14} className="spin" /> : <Undo2 size={14} />} {tr("Anulează importul")}
           </button>
-          <button className="btn ghost" onClick={() => setResult(undefined)}>
+          <button className="btn ghost" onClick={() => { setResult(undefined); onClose?.() }}>
             {tr("Gata")}
           </button>
         </div>
@@ -196,7 +196,7 @@ export function PackImport({ onImported }: { onImported: () => void }) {
         </tbody>
       </table>
       <div className="row">
-        <button className="btn ghost" onClick={() => setPreview(undefined)}>
+        <button className="btn ghost" onClick={() => { setPreview(undefined); onClose?.() }}>
           {tr("Renunță")}
         </button>
         <div className="spacer" />

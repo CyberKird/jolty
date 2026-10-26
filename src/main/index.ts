@@ -22,6 +22,8 @@ import * as skills from './skills'
 import * as pack from './share-pack'
 import * as system from './system'
 import * as connect from './connect'
+import * as backup from './backup'
+import * as useTime from './use-time'
 import { getLang, setLang, tr } from '@shared/i18n'
 
 /** Links from chats and pages open in the browser only when they are plain web links. */
@@ -227,6 +229,15 @@ function registerIpc(): void {
   handle('pack:apply', (previewId: string, decisions) => pack.apply(String(previewId), decisions as never))
   handle('pack:discard', (previewId: string) => pack.discard(String(previewId)))
   handle('pack:undo', (importId: string) => pack.undo(String(importId)))
+  handle('backup:list', () => backup.list())
+  handle('backup:setConfig', (id: string, values) => backup.setConfig(id, values as never))
+  handle('backup:connect', (id: string) => backup.connect(id))
+  handle('backup:disconnect', (id: string) => backup.disconnect(id))
+  handle('backup:setPassword', (id: string, password: string) => backup.setPassword(id, password))
+  handle('backup:run', (id: string) => backup.run(id))
+  handle('backup:remote', (id: string) => backup.remote(id))
+  handle('backup:restore', (id: string, password?: string) => backup.restore(id, typeof password === 'string' ? password : undefined))
+  handle('usage:time', () => useTime.stats())
   handle('sessions:improvePrompt', (text: string, profileId?: string, model?: string, cwd?: string, sessionId?: string) =>
     jolty.improvePrompt(String(text), typeof profileId === 'string' ? profileId : undefined, typeof model === 'string' ? model : undefined, typeof cwd === 'string' ? cwd : undefined, typeof sessionId === 'string' ? sessionId : undefined)
   )
@@ -352,6 +363,7 @@ if (!app.requestSingleInstanceLock()) {
       models: (id) => jolty.models(id)
     })
     void jolty.sweepTemps().catch(() => undefined)
+    if (!process.env.JOLTY_TEST) useTime.startUseTime(() => jolty.anyBusy(), () => BrowserWindow.getAllWindows().some((w) => w.isFocused()))
     // automated runs start with What's new already seen, unless the run sets an older seenVersion itself
     if (process.env.JOLTY_TEST && !store.loadSettings().seenVersion) store.saveSettings({ seenVersion: __JOLTY_VERSION__ })
     if (!process.env.JOLTY_TEST) {

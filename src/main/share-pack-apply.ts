@@ -11,7 +11,7 @@ import type { ScheduledTask } from '@shared/schedule'
 import { hashSkillDir, readSources, skillRoot, writeSource } from './skill-fs'
 import { dataDir, freeColor, loadProfiles, loadSchedules, loadSettings, saveProfiles, saveSchedules, saveSettings } from './store'
 import { PackError, sha256, type PackEntry, type PackFile } from './share-pack-format'
-import { commandsRoot, HOMES, type ProfileShape, type ScheduleShape, type SettingsShape } from './share-pack-local'
+import { claudeJson, commandsRoot, HOMES, type McpShape, type ProfileShape, type ScheduleShape, type SettingsShape } from './share-pack-local'
 
 export type Target =
   | { kind: 'dir'; root: string; path: string; home: SkillHome; folder: string }
@@ -19,6 +19,7 @@ export type Target =
   | { kind: 'settings'; shape: SettingsShape }
   | { kind: 'profile'; shape: ProfileShape }
   | { kind: 'schedule'; shape: ScheduleShape }
+  | { kind: 'mcp'; shape: McpShape }
 
 export interface Planned {
   entry: PackEntry
@@ -32,6 +33,7 @@ type Done =
   | { kind: 'settings'; prev: Record<string, unknown> }
   | { kind: 'profile'; action: 'replaced' | 'created'; id: string; prev?: Profile; secrets?: Record<string, unknown> }
   | { kind: 'schedule'; action: 'replaced' | 'created'; id: string; prev?: ScheduledTask }
+  | { kind: 'mcp'; name: string; prev: unknown }
 
 interface Manifest {
   importId: string
@@ -166,6 +168,30 @@ const writeSecretsRaw = (all: Record<string, unknown>): void => {
   fs.renameSync(tmp, secretsFile())
 }
 
+// ---------------------------------------------------------------- ~/.claude.json, only its mcpServers
+
+/** Sets (or, with undefined, removes) one user-level MCP server and leaves every other key of the file as it is. */
+function setMcp(name: string, config: unknown): void {
+  const file = claudeJson()
+  let cfg: Record<string, unknown> = {}
+  const st = lstat(file)
+  if (st) {
+    if (st.isSymbolicLink() || !st.isFile()) throw new PackError('target-is-link')
+    cfg = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>
+  }
+  const servers = { ...((cfg.mcpServers as Record<string, unknown>) || {}) }
+  if (config === undefined) delete servers[name]
+  else servers[name] = config
+  const tmp = tmpName(file, 'tmp')
+  try {
+    fs.writeFileSync(tmp, JSON.stringify({ ...cfg, mcpServers: servers }, null, 2), { flag: 'wx' })
+    fs.renameSync(tmp, file)
+  } catch (e) {
+    fs.rmSync(tmp, { force: true })
+    throw e
+  }
+}
+
 // ---------------------------------------------------------------- apply
 
 export interface PackInfo {
@@ -270,6 +296,20 @@ function applyOne(p: Planned, decision: ImportDecision, pack: PackInfo, backupDi
     return { kind: 'profile', action: 'created', id: profile.id }
   }
 
+  if (t.kind === 'mcp') {
+    const servers = ((): Record<string, unknown> => {
+      try {
+        return (JSON.parse(fs.readFileSync(claudeJson(), 'utf8')) as { mcpServers?: Record<string, unknown> }).mcpServers || {}
+      } catch {
+        return {}
+      }
+    })()
+    const name = decision === 'copy' ? freeName(t.shape.name, slug(pack.author), (x) => x in servers) : t.shape.name
+    const prev = name in servers ? servers[name] : null
+    setMcp(name, t.shape.config)
+    return { kind: 'mcp', name, prev }
+  }
+
   const all = loadSchedules()
   const s = t.shape
   const existing = decision === 'overwrite' ? all.find((x) => x.name === s.name) : undefined
@@ -359,6 +399,10 @@ function undoOne(d: Done, dir: string): void {
     if (d.action === 'created') saveProfiles(all.filter((x) => x.id !== d.id))
     else if (d.prev) saveProfiles(all.some((x) => x.id === d.id) ? all.map((x) => (x.id === d.id ? d.prev! : x)) : [...all, d.prev])
     if (d.secrets) writeSecretsRaw({ ...readSecretsRaw(), ...d.secrets })
+    return
+  }
+  if (d.kind === 'mcp') {
+    setMcp(d.name, d.prev === null ? undefined : d.prev)
     return
   }
   const all = loadSchedules()

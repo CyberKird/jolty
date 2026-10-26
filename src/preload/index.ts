@@ -67,7 +67,18 @@ const api: JoltyApi = {
     discard: (previewId) => call('pack:discard', previewId),
     undo: (importId) => call('pack:undo', importId)
   },
+  backup: {
+    list: () => call('backup:list'),
+    setConfig: (id, values) => call('backup:setConfig', id, values),
+    connect: (id) => call('backup:connect', id),
+    disconnect: (id) => call('backup:disconnect', id),
+    setPassword: (id, password) => call('backup:setPassword', id, password),
+    run: (id) => call('backup:run', id),
+    remote: (id) => call('backup:remote', id),
+    restore: (id, password) => call('backup:restore', id, password)
+  },
   usage: {
+    time: () => call('usage:time'),
     summary: () => call('usage:summary'),
     balance: (id) => call('usage:balance', id),
     refreshLimits: (id) => call('usage:refreshLimits', id)

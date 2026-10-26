@@ -20,6 +20,7 @@ import { DEFAULT_PLAN } from '@shared/power'
 import { preloadPage } from './pageLoaders'
 import { exitMs } from './usePresence'
 import { lastIndexWhere } from '@shared/last-index'
+import type { BackupEntry } from '@shared/backup'
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
@@ -87,6 +88,12 @@ interface State {
   /** skills that need attention, for the badge on the sidebar; undefined until the list was read */
   skillsAttention?: number
   setSkillsAttention(n: number | undefined): void
+  /** ids of too-big skills whose alert the user hid (kept in localStorage) */
+  hiddenSkills: string[]
+  hideSkill(id: string, hide: boolean): void
+  /** the backup storages and their accounts, for the sidebar and the Account tab */
+  backups?: BackupEntry[]
+  setBackups(b: BackupEntry[]): void
 
   setPage(p: Page): void
   toast(text: string, error?: boolean): void
@@ -132,6 +139,16 @@ function swapPage(update: () => void): void {
     .finally(() => root.classList.remove('vt-page'))
 }
 
+const HIDDEN_SKILLS = 'jolty:hiddenSkillAlerts'
+function readHiddenSkills(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(HIDDEN_SKILLS) || '[]')
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
 export const useStore = create<State>((set, get) => ({
   page: 'chat',
   profiles: [],
@@ -166,6 +183,18 @@ export const useStore = create<State>((set, get) => ({
   setLiveOpen: (liveOpen) => set({ liveOpen }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   setSkillsAttention: (skillsAttention) => set({ skillsAttention }),
+  setBackups: (backups) => set({ backups }),
+  hiddenSkills: readHiddenSkills(),
+  hideSkill: (id, hide) =>
+    set((s) => {
+      const hiddenSkills = hide ? [...new Set([...s.hiddenSkills, id])] : s.hiddenSkills.filter((x) => x !== id)
+      try {
+        localStorage.setItem(HIDDEN_SKILLS, JSON.stringify(hiddenSkills))
+      } catch {
+        // the choice lasts until the window closes
+      }
+      return { hiddenSkills }
+    }),
 
   toast: (text, error) => {
     const id = ++toastId

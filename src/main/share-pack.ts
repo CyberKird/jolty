@@ -8,10 +8,12 @@ import path from 'path'
 import type { ExportRequest, ExportResult, ImportDecision, ImportItem, ImportPreview, ImportResult, PackItem, PersonalKind } from '@shared/skills'
 import { hashSkillDir, skillFiles, skillRoot } from './skill-fs'
 import { loadProfiles, loadSchedules, loadSettings } from './store'
-import { decodePack, encodePack, EXT, FORMAT, hashFiles, LIMITS, PackError, safeLabel, safeRel, safeSegment, sha256, versionNewer, type DecodedPack, type PackEntry } from './share-pack-format'
+import { BACKUP_LIMITS, decodePack, encodePack, EXT, FORMAT, hashFiles, LIMITS, PackError, safeLabel, safeRel, safeSegment, sha256, versionNewer, type DecodedPack, type PackEntry } from './share-pack-format'
 import {
   canon,
+  claudeMcpServers,
   commandsRoot,
+  exportMcp,
   exportProfile,
   exportSchedule,
   exportSettings,
@@ -103,10 +105,14 @@ function checkRequest(req: unknown): ExportRequest {
   return { keys: [...new Set(r.keys)], name, author, note }
 }
 
-/** Builds the pack and writes it to `file` (no dialog; the testable half of exportPack). */
-export function writePack(request: ExportRequest, file: string): ExportDone {
+/**
+ * Builds the pack in memory. `full` is a backup of the user's own setup: nothing is redacted or left out for looking
+ * like a secret, MCP servers are included and the limits are the backup ones (the caller encrypts the result).
+ */
+export function buildPack(request: ExportRequest, full = false): { buf: Buffer; result: Omit<ExportDone, 'file'> } {
   const req = checkRequest(request)
-  const local = new Map(localItems().map((i) => [i.key, i]))
+  const limits = full ? BACKUP_LIMITS : LIMITS
+  const local = new Map(localItems(full).map((i) => [i.key, i]))
   const entries: PackEntry[] = []
   const skipped: Skipped[] = []
   const redacted = new Set<string>()
@@ -115,27 +121,38 @@ export function writePack(request: ExportRequest, file: string): ExportDone {
   for (const key of req.keys) {
     const it = local.get(key)
     if (!it) throw new PackError('unknown-key')
-    const got = it.collect()
+    const got = it.collect(full)
     skipped.push(...got.skipped)
     // personal information is replaced by placeholders; the rest of the item travels
-    const red = redactFiles(got.files)
-    got.files = red.files
-    if (red.kinds.length) redacted.add(key)
+    if (!full) {
+      const red = redactFiles(got.files)
+      got.files = red.files
+      if (red.kinds.length) redacted.add(key)
+    }
     // a skill without its SKILL.md (left out as a secret) would not load anywhere
     if (!got.files.length || (it.part === 'skills' && !got.files.some((f) => f.path === 'SKILL.md'))) continue
     for (const f of got.files) total += f.data.length
     count += got.files.length
-    if (total > LIMITS.total) throw new PackError('too-large')
-    if (count > LIMITS.files) throw new PackError('too-many-files')
+    if (total > limits.total) throw new PackError('too-large')
+    if (count > limits.files) throw new PackError('too-many-files')
     entries.push({ key, part: it.part, name: it.name, label: it.label, detail: it.detail, modifiedAt: it.modifiedAt, files: got.files })
   }
   if (!entries.length) throw new PackError('nothing-to-export')
   const buf = encodePack({ format: FORMAT, app: appVersion(), name: req.name, author: req.author, note: req.note, createdAt: Date.now() }, entries)
+  return { buf, result: { items: entries.length, bytes: buf.length, skipped, redacted: redacted.size } }
+}
+
+/** Builds the pack and writes it to `file` (no dialog; the testable half of exportPack). */
+export function writePack(request: ExportRequest, file: string): ExportDone {
+  const { buf, result } = buildPack(request)
   const tmp = `${file}.${process.pid}.tmp`
   fs.writeFileSync(tmp, buf)
   fs.renameSync(tmp, file)
-  return { file, items: entries.length, bytes: buf.length, skipped, redacted: redacted.size }
+  return { file, ...result }
 }
+
+/** Every key a full backup takes (all that this PC can put in a pack, plus the MCP servers). */
+export const backupKeys = (): string[] => localItems(true).map((i) => i.key)
 
 const fileBase = (name: string): string => name.replace(/[<>:"/\\|?*\u0000-\u001f]+/g, ' ').replace(/[. ]+$/, '').trim().slice(0, 80) || 'jolty'
 
@@ -204,6 +221,10 @@ function targetOf(e: PackEntry): Target | undefined {
       const shape = exportSchedule(parseJson(e), [])
       return shape && shape.name === e.name ? { kind: 'schedule', shape } : undefined
     }
+    case 'mcp': {
+      const shape = exportMcp(parseJson(e))
+      return shape && shape.name === e.name ? { kind: 'mcp', shape } : undefined
+    }
   }
   return undefined
 }
@@ -268,6 +289,12 @@ function compare(e: PackEntry, t: Target): Pick<ImportItem, 'state' | 'existing'
     const noColor = (s: unknown): unknown => ({ ...(s as object), color: undefined })
     return json(noColor(exportProfile({ ...p, isDefaultDir: false }) ?? p), noColor(t.shape))
   }
+  if (t.kind === 'mcp') {
+    const here = claudeMcpServers()[t.shape.name]
+    if (here === undefined) return { state: 'new' }
+    const bytes = Buffer.byteLength(JSON.stringify(here))
+    return { state: canon(exportMcp({ name: t.shape.name, config: here })?.config) === canon(t.shape.config) ? 'same' : 'different', existing: { bytes, modifiedAt: 0 } }
+  }
   const profiles = loadProfiles()
   const task = loadSchedules().find((x) => x.name === t.shape.name)
   if (!task) return { state: 'new' }
@@ -282,18 +309,24 @@ function risksOf(e: PackEntry, t: Target): ImportItem['risks'] {
   if (t.kind === 'file') return t.instructions ? ['changes-instructions'] : []
   if (t.kind === 'settings') return ['changes-settings']
   if (t.kind === 'profile') return ['adds-account']
+  // an MCP server is a program that starts with Claude Code, or an address that gets the chat's data
+  if (t.kind === 'mcp') return ['runs-code']
   // a scheduled prompt runs on its own, with the permissions it names
   return ['runs-code']
 }
 
 /** Reads a pack file and compares it with what is here (no dialog; the testable half of openPack). */
 export function openPackFile(file: string): ImportPreview {
-  sweep()
   const st = lstat(file)
   if (!st || !st.isFile()) throw new PackError('not-a-file')
   if (st.size > LIMITS.packFile) throw new PackError('too-large')
-  const buf = fs.readFileSync(file)
-  const pack = decodePack(buf)
+  return openPackBuffer(fs.readFileSync(file))
+}
+
+/** `backup`: the user's own backup (bigger limits, MCP servers allowed); a pack from someone else is never read that way. */
+export function openPackBuffer(buf: Buffer, backup = false): ImportPreview {
+  sweep()
+  const pack = decodePack(buf, backup)
   const warnings = new Set(pack.warnings)
   if (versionNewer(pack.meta.app, appVersion())) warnings.add('newer-app-version')
   const plan: Planned[] = []

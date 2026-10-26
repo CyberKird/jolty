@@ -143,7 +143,14 @@ interface ComposerProps {
 
 function Composer(p: ComposerProps) {
   const engine = p.profiles.find((profile) => profile.id === p.profileId)?.engine
-  const [text, setText] = useState('')
+  // what is typed stays through a switch of chat, a new chat and a restart; a temporary chat keeps it in memory only
+  const draftStore = p.temporary ? sessionStorage : localStorage
+  const draftKey = `jolty:draft:${p.sessionId ?? 'new'}`
+  const [text, setText] = useState(() => {
+    try {
+      return draftStore.getItem(draftKey) || ''
+    } catch { return '' }
+  })
   const [atts, setAtts] = useState<Attachment[]>([])
   const [dragging, setDragging] = useState(false)
   const [improving, setImproving] = useState(false)
@@ -210,6 +217,15 @@ function Composer(p: ComposerProps) {
   }, [p.running, queue, restoredQueue])
 
   useEffect(() => {
+    try {
+      if (text) draftStore.setItem(draftKey, text)
+      else draftStore.removeItem(draftKey)
+      // the temporary switch moves the draft: it must not stay on disk
+      if (p.temporary) localStorage.removeItem(draftKey)
+    } catch { /* a full or blocked storage only loses the draft */ }
+  }, [text, draftKey, draftStore, p.temporary])
+
+  useEffect(() => {
     if (p.seed) {
       setText(p.seed)
       taRef.current?.focus()
@@ -266,6 +282,8 @@ function Composer(p: ComposerProps) {
     const t = own ? withQuote(quote, own) : own
     if (quote && own && p.sessionId) store.setQuote(p.sessionId, undefined)
     setText('')
+    // at once, not on the next render: a new chat unmounts this box before the effect would run
+    try { draftStore.removeItem(draftKey) } catch { /* nothing to remove */ }
     const a = atts
     setAtts([])
     if (p.running) {

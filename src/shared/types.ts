@@ -495,6 +495,7 @@ export interface SystemCheck {
 }
 
 import type { ExportRequest, ExportResult, ImportDecision, ImportPreview, ImportResult, PackItem, SkillInfo, SkillSource } from './skills'
+import type { BackupEntry, BackupResult, BackupStatus, ProviderId, RemoteBackup, UseStats } from './backup'
 
 export interface JoltyApi {
   files: { path(file: File): string }
@@ -565,7 +566,26 @@ export interface JoltyApi {
     /** puts back what an import replaced */
     undo(importId: string): Promise<void>
   }
+  /** backup of the whole personalization to a storage of the user (main/backup/index.ts), one per provider */
+  backup: {
+    /** every provider with its fields and state */
+    list(): Promise<BackupEntry[]>
+    /** saves the fields of a provider (a field left out keeps its value; an empty string clears it) */
+    setConfig(id: ProviderId, values: Record<string, string>): Promise<BackupStatus>
+    /** signs in (the browser opens for OAuth providers) or checks the credentials */
+    connect(id: ProviderId): Promise<BackupStatus>
+    /** forgets the account on this PC; the backup stays in the storage */
+    disconnect(id: ProviderId): Promise<BackupStatus>
+    setPassword(id: ProviderId, password: string): Promise<BackupStatus>
+    run(id: ProviderId): Promise<BackupResult>
+    /** null when this account has no backup yet */
+    remote(id: ProviderId): Promise<RemoteBackup | null>
+    /** opens the backup for review like an imported pack; `password` only when it is not the saved one */
+    restore(id: ProviderId, password?: string): Promise<ImportPreview>
+  }
   usage: {
+    /** how long Jolty was used, and a few counts */
+    time(): Promise<UseStats>
     summary(): Promise<UsageSummary[]>
     refreshLimits(profileId: string): Promise<RateLimitSnapshot | undefined>
     /** undefined when the provider has no documented balance endpoint */
