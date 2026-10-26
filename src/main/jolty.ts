@@ -32,6 +32,8 @@ import { PowerGuard, systemShutdown } from './power'
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
 import { AcpDriver } from './engines/acp'
+import { GeminiWebDriver } from './engines/gemini-web'
+import { realBrowser } from './engines/gemini-browser'
 import { AGENTS, HERMES, OPENCODE } from './engines/acp-agent'
 import { opencodeExecutable, opencodeOnce } from './engines/opencode-runtime'
 import { hermesExecutable } from './engines/hermes-runtime'
@@ -54,7 +56,8 @@ import { forget } from './recall'
 import { Scheduler } from './scheduler'
 import * as modelWatch from './model-watch'
 import { modelScore } from '@shared/scores'
-import { candidates, FULL_PERCENT, pickAuto, rankHelpers, type Candidate } from './auto-model'
+import { canHelpSetup, setupHelperBrief } from '@shared/setup'
+import { candidates, FULL_PERCENT, pickAuto, rankHelpers, worthRouting, type Candidate } from './auto-model'
 import type { ScheduledTask } from '@shared/schedule'
 import { getLang, LANG_ENGLISH_NAME, tr } from '@shared/i18n'
 import { withDetectedAgents } from './first-run'
@@ -64,7 +67,7 @@ import { withParallelInstruction } from '@shared/parallel'
 import { cleanImproved, clipForContext, improvePrompt, improveQuestion } from '@shared/improve-prompt'
 
 
-export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', opencode: 'OpenCode' }
+export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', opencode: 'OpenCode', gemini: 'Gemini' }
 
 /** below this a compaction costs more than it saves (tokens in the context) */
 const COMPACT_MIN = 20000
@@ -114,6 +117,7 @@ export class Jolty {
   readonly codex = new CodexDriver()
   readonly hermes = new AcpDriver(HERMES.launch, HERMES)
   readonly opencode = new AcpDriver(OPENCODE.launch, OPENCODE)
+  readonly gemini = new GeminiWebDriver(realBrowser)
   private live = new Map<string, EngineSession>()
   /** conversations with a turn under way */
   private busy = new Set<string>()
@@ -172,6 +176,7 @@ export class Jolty {
       children: (lead) => store.loadSessions().filter((s) => s.parentId === lead),
       busy: (id) => this.busy.has(id),
       lastAnswer: (id) => this.lastAnswer(id),
+      problem: (id) => this.lastProblem(id),
       waitIdle: (ids, ms) => this.waitIdle(ids, ms),
       sendTo: (lead, id, text) => this.sendToChild(lead, id, text)
     })
@@ -201,8 +206,14 @@ export class Jolty {
    * a profile with its own login folder is created and the caller opens the sign-in.
    */
   async connectAccount(engine: unknown): Promise<{ profile: Profile; loggedIn: boolean }> {
-    if (engine !== 'claude' && engine !== 'codex') throw new Error('Motor necunoscut')
+    if (engine !== 'claude' && engine !== 'codex' && engine !== 'gemini') throw new Error('Motor necunoscut')
     const all = store.loadProfiles()
+    if (engine === 'gemini') {
+      // the subscription lives in the browser: one profile, and the sign-in happens on Google's page there
+      const existing = all.find((p) => p.engine === 'gemini')
+      const profile = existing ?? this.createProfile({ name: 'Gemini', engine: 'gemini', auth: 'existing' })
+      return { profile, loggedIn: existing ? (await this.gemini.status(existing)).loggedIn : false }
+    }
     const id = `${engine}-main`
     if (!all.some((p) => p.id === id)) {
       const main: Profile = {
@@ -219,6 +230,7 @@ export class Jolty {
   private driver(engine: EngineKind): EngineDriver {
     if (engine === 'hermes') return this.hermes
     if (engine === 'opencode') return this.opencode
+    if (engine === 'gemini') return this.gemini
     if (engine === 'claude') return this.claude
     if (engine === 'codex') return this.codex
     throw new Error('Motor necunoscut')
@@ -243,7 +255,7 @@ export class Jolty {
 
   createProfile(input: ProfileInput): Profile {
     const all = store.loadProfiles()
-    if (!['claude', 'codex', 'hermes', 'opencode'].includes(input.engine)) throw new Error('Motor necunoscut')
+    if (!['claude', 'codex', 'hermes', 'opencode', 'gemini'].includes(input.engine)) throw new Error('Motor necunoscut')
     const agent = ENGINE_NAMES[input.engine]
     if (isAcp(input.engine) !== (input.auth === 'existing')) throw new Error(tr("{agent} folosește configurația existentă.", { agent }))
     if (isAcp(input.engine) && all.some((p) => p.engine === input.engine)) throw new Error(tr("Profilul {agent} există deja.", { agent }))
@@ -487,7 +499,7 @@ export class Jolty {
   async startSession(input: StartSessionInput): Promise<SessionMeta> {
     const p = this.profile(input.profileId)
     if (isAcp(p.engine)) {
-      AGENTS[p.engine as 'hermes' | 'opencode'].modeId(input.permissionMode)
+      if (p.engine !== 'gemini') AGENTS[p.engine as 'hermes' | 'opencode'].modeId(input.permissionMode)
       if (input.browser && !hasJoltyBrowser(p.engine)) throw new Error(tr("Conectarea la browserul Jolty nu este disponibilă pentru {agent}.", { agent: ENGINE_NAMES[p.engine] }))
       if (input.computer && !hasJoltyComputer(p.engine)) throw new Error(tr("Controlul PC-ului nu este disponibil pentru {agent}.", { agent: ENGINE_NAMES[p.engine] }))
     }
@@ -714,10 +726,12 @@ export class Jolty {
     })
     // every few messages the model is reminded to save what it learned (see learning.ts); a temporary chat leaves nothing behind
     const nudge = s.meta.temporary || store.loadSettings().learningLoop === false ? undefined : learningNudge(s.meta.engine, this.transcript(sessionId).filter((i) => i.kind === 'user').length)
-    let prompt = [text, filePrompt(prepared.files), nudge].filter(Boolean).join('\n\n')
+    // Gemini cannot open a path on this PC: every file goes up to its page, video and audio included
+    const web = s.meta.engine === 'gemini'
+    let prompt = [text, web ? '' : filePrompt(prepared.files), nudge].filter(Boolean).join('\n\n')
     // for the model only: the chat and the title keep the user's words (Hermes has no Jolty tools)
     if (parallel && !isAcp(s.meta.engine)) prompt = withParallelInstruction(prompt)
-    let images = prepared.images
+    let images = web ? [...prepared.images, ...prepared.files.map((f, i): Attachment => ({ id: `file-${i}`, name: f.name, mime: f.mime, path: f.path }))] : prepared.images
     if (images.length && !(await this.canSee(s.meta))) {
       try {
         prompt = `${await this.describeImages(sessionId, images)}\n\n${prompt}`
@@ -835,6 +849,13 @@ export class Jolty {
     return text.length > 1200 ? `…${text.slice(-1200)}` : text
   }
 
+  /** A session whose last item is a warning or an error did not finish its job (Claude Code stops one that keeps refilling its context). */
+  private lastProblem(sessionId: string): string {
+    const t = this.transcript(sessionId)
+    const last = t[t.length - 1]
+    return last && last.kind === 'notice' && last.level !== 'info' ? last.text.slice(0, 400) : ''
+  }
+
   /**
    * One job of a lead session, in a session of its own that starts working at once. In a git repository it gets
    * a worktree and a branch, so the sessions never write the same files. Same account, model and effort as the
@@ -904,12 +925,36 @@ export class Jolty {
     return opus.find((c) => c.profileId === leadProfileId) ?? opus[0]
   }
 
+  /** The welcome screen's last step: routing by job size starts on when the models found give a real choice, and a choice the user already made is kept. */
+  async setupPresets(): Promise<boolean> {
+    if (store.loadSettings().childAutoModel !== undefined) return store.loadSettings().childAutoModel === true
+    const on = worthRouting(await this.usableModels())
+    if (on) store.saveSettings({ childAutoModel: true })
+    return on
+  }
+
+  /** The welcome screen's "do it for me": a chat in the no-permissions mode that gets this PC ready for Jolty. The person was told so before this runs. */
+  async startSetupHelper(profileId: unknown, model: unknown): Promise<SessionMeta> {
+    const profile = store.loadProfiles().find((p) => p.id === profileId)
+    if (!profile || !canHelpSetup(profile.engine)) throw new Error('This account cannot run the setup helper.')
+    const cwd = path.join(os.homedir(), 'Jolty')
+    fs.mkdirSync(cwd, { recursive: true })
+    const meta = await this.startSession({ profileId: profile.id, cwd, model: typeof model === 'string' ? model : undefined, permissionMode: 'full', title: tr("Configurare Jolty") })
+    meta.titled = true
+    this.saveMeta(meta)
+    void this.sendMessage(meta.id, setupHelperBrief(LANG_ENGLISH_NAME[getLang()]), [], tr("Pregătește-mi PC-ul pentru Jolty.")).catch((err) =>
+      this.send({ type: 'status', sessionId: meta.id, status: 'error', error: err instanceof Error ? err.message : String(err) })
+    )
+    return meta
+  }
+
   private async usableModels(): Promise<Candidate[]> {
     const limits = store.loadLimits()
     const lists = await Promise.all(
       store
         .loadProfiles()
-        .filter((p) => !p.local && !isAcp(p.engine) && (p.auth !== 'endpoint' || store.getSecret(p.id)) && !limits[p.id]?.windows.some((w) => w.usedPercent >= FULL_PERCENT))
+        // Hermes brings one model of its own; OpenCode lists its free models, which only small jobs go to (see pickAuto)
+        .filter((p) => !p.local && p.engine !== 'hermes' && p.engine !== 'gemini' && (p.auth !== 'endpoint' || store.getSecret(p.id)) && !limits[p.id]?.windows.some((w) => w.usedPercent >= FULL_PERCENT))
         .map(async (p) => {
           try {
             const d = this.driver(p.engine)
@@ -1291,7 +1336,7 @@ ${text.slice(0, 1500)}`
     const limits = store.loadLimits()
     const usable = store
       .loadProfiles()
-      .filter((p) => !p.local && p.engine !== 'hermes' && (p.auth !== 'endpoint' || store.getSecret(p.id)) && !limits[p.id]?.windows.some((w) => w.usedPercent >= FULL_PERCENT))
+      .filter((p) => !p.local && p.engine !== 'hermes' && p.engine !== 'gemini' && (p.auth !== 'endpoint' || store.getSecret(p.id)) && !limits[p.id]?.windows.some((w) => w.usedPercent >= FULL_PERCENT))
     const found = await Promise.all(
       usable.map(async (p) => {
         try {
@@ -1469,5 +1514,6 @@ ${text.slice(0, 1500)}`
     await this.codex.shutdown()
     await this.hermes.shutdown()
     await this.opencode.shutdown()
+    await this.gemini.shutdown()
   }
 }

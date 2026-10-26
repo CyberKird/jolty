@@ -237,6 +237,11 @@
   padding-top: 28px;
 }
 
+.wn-kofi {
+  margin-right: auto;
+  color: var(--grey);
+}
+
 @keyframes wn-up {
   from {
     opacity: 0;

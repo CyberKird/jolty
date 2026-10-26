@@ -132,6 +132,7 @@ test('MCP tools over the local server: token required, search, read, schedule, c
   const kid = { ...meta('kid', 'Job', 3), cwd: data, parentId: 'self', worktree: { path: path.join(data, 'wt'), branch: 'jolty/job-1', base: 'abc', root: data } }
   const sessions = [meta('a', 'Scroll iPhone', 1), { ...meta('self', 'Asta', 5), cwd: data, model: 'opus', permissionMode: 'full' as const }, kid]
   const started: string[] = []
+  let kidBusy = true
   bindJoltyTools({
     sessions: () => sessions,
     meta: (id) => sessions.find((s) => s.id === id),
@@ -142,8 +143,9 @@ test('MCP tools over the local server: token required, search, read, schedule, c
       return { meta: meta('new', input.title, 9), note: 'Its own worktree.' }
     },
     children: (lead) => sessions.filter((x) => x.parentId === lead),
-    busy: (id) => id === 'kid',
+    busy: (id) => id === 'kid' && kidBusy,
     lastAnswer: () => 'did the thing',
+    problem: (id) => (id === 'kid' ? 'Claude s-a oprit: autocompact thrashing' : ''),
     waitIdle: async () => undefined,
     sendTo: async (lead, id) => {
       if (id !== 'kid' || lead !== 'self') throw new Error(`No session of yours with id ${id}.`)
@@ -191,6 +193,10 @@ test('MCP tools over the local server: token required, search, read, schedule, c
     const mine = await tool('wait_for_sessions', {})
     assert.match(mine.text, /Job \(id: kid\) RUNNING, branch jolty\/job-1/)
     assert.match(mine.text, /last answer: did the thing/)
+    // the problem is only reported for a session that stopped: kid is RUNNING here
+    assert.doesNotMatch(mine.text, /ENDED WITH A PROBLEM/)
+    kidBusy = false
+    assert.match((await tool('list_sessions', {})).text, /idle[^\n]*\n  last answer: did the thing\n  ENDED WITH A PROBLEM: Claude s-a oprit: autocompact thrashing\n  If the model could not carry this job, start it again with complexity normal/)
     assert.match((await tool('list_sessions', { ids: ['nope'] })).text, /not started any session/)
     assert.match((await tool('send_to_session', { id: 'kid', message: 'continua' })).text, /Sent/)
     assert.equal((await tool('send_to_session', { id: 'a', message: 'x' })).isError, true)

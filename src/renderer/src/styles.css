@@ -3835,6 +3835,32 @@ a {
   color: var(--grey);
 }
 /* the account under live usage */
+.account-row {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--line);
+}
+.account-row .account-chip {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  border-top: 0;
+}
+.bug-btn {
+  flex: none;
+  width: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  cursor: pointer;
+}
+.bug-btn:hover {
+  color: var(--white);
+  background: var(--volt-dim);
+}
 .account-chip {
   flex: none;
   display: flex;

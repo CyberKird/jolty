@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.0
+
+### New
+
+- Gemini with your own subscription, no key and no Antigravity: Jolty uses your signed-in gemini.google.com in its browser window. Add it in the first-run screen or in Accounts. You pick the model and the thinking level from the list Gemini itself shows for your plan, answers stream in as they are written, and images, PDFs, audio and video go up with your message. It is a conversation model: it has no tools and does not touch your project files.
+- First-run setup is simpler and tells you what it found. After you connect, a "Models found" step lists every model with its intelligence and speed, says plainly when it has no data about one, and turns on automatic model choice for the sessions Jolty starts when there is a real choice.
+- "Yes, do it for me" at the end of first-run setup, for Claude and OpenCode accounts: an assistant checks the programs Jolty needs, installs what is missing and explains each step. It works without asking permission at every step, and the screen says so before you start.
+- Report a problem: a bug icon next to the account at the bottom left opens a short form that writes the email to contact@joltarise.com in your own mail app, with the Jolty version, Windows and language added. Nothing else is sent. A few reports per hour at most, and no link lists.
+- Google Drive backup needs no setup any more: sign in with your Google account. Jolty only sees a hidden folder of its own in your Drive. The backup now also carries how long you have used Jolty, and a restore on a new PC brings it back.
+- A discreet "Support Jolty" card in Settings, About, and a link in What's new, for Ko-fi.
+
+### Improvements
+
+- Free OpenCode models are used only for small jobs, and only when none of your own models fits.
+- When a session Jolty started ends with an error, the chat that started it is told what went wrong and can start the job again on a stronger model.
+- A privacy policy for the app is now on joltarise.com/jolty/privacy.
+
 ## 0.9.0
 
 ### New

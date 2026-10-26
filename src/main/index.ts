@@ -25,14 +25,11 @@ import * as connect from './connect'
 import * as backup from './backup'
 import * as useTime from './use-time'
 import { getLang, setLang, tr } from '@shared/i18n'
+import { openableUrl } from '@shared/links'
 
 /** Links from chats and pages open in the browser only when they are plain web links. */
 function openWeb(url: unknown): void {
-  try {
-    if (typeof url === 'string' && ['http:', 'https:'].includes(new URL(url).protocol)) void shell.openExternal(url)
-  } catch {
-    // not a valid URL: ignore
-  }
+  if (openableUrl(url)) void shell.openExternal(url as string)
 }
 
 const RUNNABLE = /\.(exe|com|bat|cmd|scr|msi|msp|ps1|psm1|vbs|vbe|js|jse|wsf|wsh|hta|cpl|reg|lnk|url|jar|dll|appref-ms)$/i
@@ -257,6 +254,8 @@ function registerIpc(): void {
   handle('setup:testKey', (baseUrl: unknown, model: unknown, key: unknown) => connect.testKey(baseUrl, model, key))
   handle('setup:testFree', (model: unknown) => connect.testFree(model))
   handle('setup:account', (engine: unknown) => jolty.connectAccount(engine))
+  handle('setup:presets', () => jolty.setupPresets())
+  handle('setup:helper', (profileId: unknown, model: unknown) => jolty.startSetupHelper(profileId, model))
 
   handle('system:check', () => system.check())
   handle('system:fix', async (id: string) => {

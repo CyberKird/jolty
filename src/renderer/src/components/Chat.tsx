@@ -422,6 +422,7 @@ function Composer(p: ComposerProps) {
             // Shift+Tab cycles the permission mode, like Claude Code
             if (e.key === 'Tab' && e.shiftKey) {
               e.preventDefault()
+              if (engine === 'gemini') return
               const modes = modesFor(engine).map((m) => m.id).filter((id) => isAcp(engine) || !OPEN_MODES.includes(id))
               const i = modes.findIndex((mode) => mode === p.mode)
               p.onMode(modes[(i + 1) % modes.length])
@@ -503,7 +504,7 @@ function Composer(p: ComposerProps) {
             onEffort={p.onEffort}
             otherProfileHint={p.otherProfileHint}
           />
-          <ModePicker mode={p.mode} onMode={p.onMode} engine={engine} />
+          {engine !== 'gemini' && <ModePicker mode={p.mode} onMode={p.onMode} engine={engine} />}
           <ToolsMenu
             tools={[
               ...(!isAcp(engine) ? [{
@@ -513,14 +514,14 @@ function Composer(p: ComposerProps) {
               }] : []),
               {
                 id: 'browser', icon: <Globe size={14} strokeWidth={1.8} />, label: tr("Browser"), on: Boolean(p.browser), disabled: !hasJoltyBrowser(engine),
-                title: !hasJoltyBrowser(engine) ? tr("Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.") : p.browser
+                title: !hasJoltyBrowser(engine) ? (engine === 'gemini' ? tr("Gemini lucrează direct în pagina lui, deci browserul Jolty nu i se atașează.") : tr("Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.")) : p.browser
                   ? tr("Jolty în browser e pornit: modelul poate folosi browserul tău (Chrome, Vivaldi, Edge, Brave), cu login-urile tale. Clic ca să-l oprești.")
                   : tr("Jolty în browser: modelul deschide pagini, dă clic, completează și citește în browserul tău. Merge cu orice model. Cere extensia Playwright (Setări)."),
                 onToggle: () => p.onBrowser(!p.browser)
               },
               {
                 id: 'computer', icon: <Monitor size={14} strokeWidth={1.8} />, label: tr("Computer"), on: Boolean(p.computer), disabled: !hasJoltyComputer(engine),
-                title: !hasJoltyComputer(engine) ? tr("Controlul PC-ului nu este disponibil pentru Hermes.") : p.computer
+                title: !hasJoltyComputer(engine) ? (engine === 'gemini' ? tr("Controlul PC-ului nu este disponibil pentru Gemini.") : tr("Controlul PC-ului nu este disponibil pentru Hermes.")) : p.computer
                   ? tr("Computer e pornit: modelul vede ecranul și folosește mouse-ul și tastatura. Ctrl+Alt+Esc îl oprește oricând. Clic ca să-l oprești.")
                   : tr("Computer: modelul vede ecranul și folosește mouse-ul și tastatura ca un om, în programele pe care le aprobi. Merge cu orice model."),
                 onToggle: () => p.onComputer(!p.computer)

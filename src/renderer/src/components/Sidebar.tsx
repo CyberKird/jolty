@@ -1,4 +1,5 @@
 import { Loader2, MessageSquareDashed, BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { BugReportButton } from './BugReport'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { dragShield } from '../dragShield'
@@ -430,7 +431,10 @@ export function Sidebar() {
         ))}
       </div>
       <UsageMeter />
-      <AccountChip />
+      <div className="account-row">
+        <AccountChip />
+        <BugReportButton />
+      </div>
     </nav>
   )
 }

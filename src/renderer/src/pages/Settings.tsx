@@ -1,4 +1,4 @@
-import { Cpu, ExternalLink, UserRound, Eye, FolderOpen, Gauge, Globe, Info, Languages, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
+import { Coffee, Cpu, ExternalLink, UserRound, Eye, FolderOpen, Gauge, Globe, Info, Languages, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { isAcp } from '@shared/types'
@@ -14,6 +14,7 @@ import { soundsOn } from '../mascot/sfx'
 import { setLowPowerMode } from '../lowpower'
 import { getLang, LANGUAGES, tr } from '@shared/i18n'
 import { GEMINI_BROWSER } from '@shared/gemini'
+import { KOFI_URL } from '@shared/links'
 
 const TABS = ['general', 'account', 'models', 'tools', 'privacy', 'about'] as const
 type Tab = (typeof TABS)[number]
@@ -311,6 +312,18 @@ export function SettingsPage() {
                 </span>
                 <button className="btn small" onClick={openWhatsNew}>
                   {tr("Vezi noutățile")}
+                </button>
+              </div>
+              <div className="card row" style={{ marginBottom: 14 }}>
+                <Coffee size={16} color="var(--volt)" />
+                <span style={{ flex: 1 }}>
+                  <b>{tr("Susține Jolty")}</b>
+                  <span className="muted small" style={{ display: 'block' }}>
+                    {tr("Jolty e gratuit și îl construiesc singur. Dacă îți e de folos, o cafea mă ajută să-l duc mai departe.")}
+                  </span>
+                </span>
+                <button className="btn small" onClick={() => void api.app.openExternal(KOFI_URL)}>
+                  {tr("Ko-fi")}
                 </button>
               </div>
               <div className="card row" style={{ marginBottom: 14 }}>

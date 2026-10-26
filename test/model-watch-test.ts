@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { candidates, pickAuto, rankHelpers, type HelperEntry } from '../src/main/auto-model'
+import { candidates, pickAuto, rankHelpers, worthRouting, type HelperEntry } from '../src/main/auto-model'
 import { FLAG_DAYS, flagOf, observe, parseOllamaTags, parseProviderList, withBadges } from '../src/main/model-watch-core'
 import { modelScore, parseRemoteScores, setRemoteScores } from '../src/shared/scores'
 import type { ModelOption, Profile } from '../src/shared/types'
@@ -162,6 +162,23 @@ test('auto choice: the strongest model for a hard job, the fastest good enough o
   assert.equal(pickAuto('simple', all)?.model, 'deepseek-flash')
   assert.equal(pickAuto('simple', all.filter((c) => c.profileId === 'a'))?.model, 'sonnet')
   assert.equal(pickAuto('hard', []), undefined)
+})
+
+test('free OpenCode models: only for small jobs, and only when nothing of the user qualifies; routing needs a real choice', () => {
+  const sub = { id: 'a', name: 'A', engine: 'claude', auth: 'subscription' } as Profile
+  const oc = { id: 'o', name: 'OpenCode', engine: 'opencode', auth: 'existing' } as Profile
+  const free = candidates(oc, [{ id: 'opencode/deepseek-v4.1-flash-free', label: 'deepseek-v4.1-flash-free' }, { id: 'opencode/big-pickle', label: 'big-pickle' }])
+  assert.deepEqual(free.map((c) => c.model), ['opencode/deepseek-v4.1-flash-free'], 'a model with no score is left out of the choice')
+  assert.equal(free[0].free, true)
+  assert.equal(pickAuto('hard', free), undefined)
+  assert.equal(pickAuto('simple', free)?.model, 'opencode/deepseek-v4.1-flash-free')
+  const mine = candidates(sub, [{ id: 'opus', label: 'Opus 5.5' }, { id: 'sonnet', label: 'Sonnet 5.5' }])
+  assert.equal(pickAuto('simple', [...mine, ...free])?.model, 'sonnet', 'a faster free model does not take the job of a user who pays')
+  assert.equal(pickAuto('hard', [...mine, ...free])?.model, 'opus')
+  assert.equal(worthRouting([]), false)
+  assert.equal(worthRouting(candidates(sub, [{ id: 'sonnet', label: 'Sonnet 5.5' }])), false)
+  assert.equal(worthRouting(mine), true)
+  assert.equal(worthRouting(free), false)
 })
 
 

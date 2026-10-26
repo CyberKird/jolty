@@ -287,7 +287,7 @@ function ProfileModal({ profile, onClose: closeNow }: { profile?: Profile; onClo
             <div className="field">
               <label>{tr("Motor")}</label>
               <div className="segmented">
-                {(['claude', 'codex', 'hermes', 'opencode'] as EngineKind[]).map((e) => (
+                {(['claude', 'codex', 'hermes', 'opencode', 'gemini'] as EngineKind[]).map((e) => (
                   <button
                     key={e}
                     className={engine === e ? 'on' : ''}
@@ -314,7 +314,7 @@ function ProfileModal({ profile, onClose: closeNow }: { profile?: Profile; onClo
                   ))}
               </div>
               <div className="hint">
-                {auth === 'existing' && tr("Folosește modelul, cheia, memoria și skill-urile deja configurate în {agent}. Nu trebuie să copiezi cheia aici.", { agent: ENGINE_LABEL[engine] })}
+                {auth === 'existing' && (engine === 'gemini' ? tr("Folosește abonamentul tău Gemini din browserul Jolty: te conectezi o dată la Google în fereastra lui. Fără cheie.") : tr("Folosește modelul, cheia, memoria și skill-urile deja configurate în {agent}. Nu trebuie să copiezi cheia aici.", { agent: ENGINE_LABEL[engine] }))}
                 {auth === 'subscription' &&
                   (engine === 'claude'
                     ? tr("Te conectezi cu contul tău claude.ai în fereastra oficială Claude Code. Fiecare profil are login-ul lui, deci poți avea mai multe conturi.")

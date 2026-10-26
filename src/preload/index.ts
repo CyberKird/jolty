@@ -100,7 +100,9 @@ const api: JoltyApi = {
   setup: {
     testKey: (baseUrl, model, key) => call('setup:testKey', baseUrl, model, key),
     testFree: (model) => call('setup:testFree', model),
-    account: (engine) => call('setup:account', engine)
+    account: (engine) => call('setup:account', engine),
+    presets: () => call('setup:presets'),
+    helper: (profileId, model) => call('setup:helper', profileId, model)
   },
   system: {
     check: () => call('system:check'),

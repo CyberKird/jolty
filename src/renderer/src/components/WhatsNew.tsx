@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import changelog from '../../../../CHANGELOG.md?raw'
 import { parseChangelog, type Release } from '@shared/changelog'
 import { tr } from '@shared/i18n'
+import { KOFI_URL } from '@shared/links'
 import { Bolt } from '../App'
 import { api } from '../store'
 import { useExitClose } from '../usePresence'
@@ -193,6 +194,9 @@ function WhatsNew({ version, onClose: closeNow }: { version: string; onClose: ()
               <ReleaseView key={r.version} r={r} latest={i === 0} />
             ))}
             <div className="wn-foot">
+              <button className="btn ghost wn-kofi" onClick={() => void api.app.openExternal(KOFI_URL)}>
+                {tr("Susține Jolty pe Ko-fi")}
+              </button>
               {shown < releases.length && (
                 <button className="btn" onClick={() => setShown((n) => n + PAGE + 2)}>
                   {tr("Versiuni mai vechi")}

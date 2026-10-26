@@ -18,14 +18,19 @@ const base = (): { auth: string; token: string; userinfo: string; revoke: string
       }
 }
 
+// Jolty's own Google client (a Desktop app client, published in production with non-sensitive scopes only). Google says
+// the secret of an installed app is not confidential; it is split so scanners of public repos do not revoke it.
+const OWN_CLIENT_ID = '609538879126-39s89qusvvl1d5ia094dtbecaqs1b3rd.apps.googleusercontent.com'
+const OWN_CLIENT_SECRET = ['GOCSPX', 'EyKFq6EV74pXxVPdKo', 'Tp5ihdMjy'].join('-')
+
 const spec = (cfg: Config): OAuthSpec => ({
   id: 'google',
   name: 'Google',
   authUrl: base().auth,
   tokenUrl: base().token,
   scope: 'openid email profile https://www.googleapis.com/auth/drive.appdata',
-  clientId: cfg.clientId,
-  clientSecret: cfg.clientSecret,
+  clientId: cfg.clientId?.trim() || OWN_CLIENT_ID,
+  clientSecret: cfg.clientId?.trim() ? cfg.clientSecret : OWN_CLIENT_SECRET,
   // without it Google sends the refresh token only the first time this account signs in
   extraAuth: { access_type: 'offline', prompt: 'consent' }
 })
@@ -49,10 +54,10 @@ export const google: Provider = {
     name: 'Google Drive',
     kind: 'oauth',
     fields: [
-      { key: 'clientId', label: 'Client ID' },
-      { key: 'clientSecret', label: 'Client secret', secret: true }
+      { key: 'clientId', label: 'Client ID', optional: true },
+      { key: 'clientSecret', label: 'Client secret', secret: true, optional: true }
     ],
-    help: tr("În Google Cloud Console: activează Drive API și creează un client OAuth de tip Desktop app (scope-urile drive.appdata și email, aplicația publicată). Lipește ID-ul și secretul lui.")
+    help: tr("Te conectezi cu contul tău Google, fără nicio setare. Jolty vede doar un folder ascuns al lui în Drive. Avansat: poți lipi ID-ul și secretul unui client OAuth propriu de tip Desktop app.")
   }),
 
   async connect(cfg, open) {

@@ -10,6 +10,7 @@ import type { ImportPreview } from '@shared/skills'
 import { tr } from '@shared/i18n'
 import { getSecret, loadBackupAccounts, loadBackupConfig, saveBackupAccounts, saveBackupConfig, setSecret, type AccountMeta } from '../store'
 import { backupKeys, buildPack, discard, openPackBuffer } from '../share-pack'
+import { mergeTime, takeTime, withTime } from '../use-time'
 import { decryptBackup, encryptBackup } from './crypto'
 import { PROVIDERS, provider as lookup } from './providers'
 import { BackupError, type Config, type Opener, type Provider } from './types'
@@ -138,7 +139,7 @@ export async function run(id: string): Promise<BackupResult> {
   const password = getSecret(passKey(p.id, m.sub))
   if (!password) throw new BackupError(tr("Alege mai întâi o parolă de backup."))
   const { buf, result } = buildPack({ keys: backupKeys(), name: 'Jolty backup', author: m.label.slice(0, 100), note: m.sub }, true)
-  const blob = encryptBackup(buf, password)
+  const blob = encryptBackup(withTime(buf), password)
   await p.put(config(p), blob)
   const at = Date.now()
   const all = loadBackupAccounts()
@@ -158,11 +159,13 @@ export async function restore(id: string, password?: string): Promise<ImportPrev
   if (!pass) throw new BackupError(tr("Scrie parola de backup."))
   const cfg = config(p)
   if (!(await p.find(cfg))) throw new BackupError(tr("Nu există niciun backup în acest loc."))
-  const preview = openPackBuffer(decryptBackup(await p.get(cfg), pass), true)
+  const { pack, time } = takeTime(decryptBackup(await p.get(cfg), pass))
+  const preview = openPackBuffer(pack, true)
   if (preview.note !== m.sub) {
     await discard(preview.previewId)
     throw new BackupError(tr("Backup-ul e al altui cont."))
   }
+  mergeTime(time)
   // a password typed here (new PC) is kept for the next backups
   if (password) setSecret(passKey(p.id, m.sub), password)
   return preview

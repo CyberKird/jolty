@@ -29,6 +29,8 @@ export interface ToolHost {
   busy(sessionId: string): boolean
   /** the end of the last answer of a session */
   lastAnswer(sessionId: string): string
+  /** the warning or error a session ended on (a model that ran out of context, a stop, a failure), empty when it ended normally */
+  problem(sessionId: string): string
   /** resolves when none of `ids` has a turn under way, or after `ms` */
   waitIdle(ids: string[], ms: number): Promise<void>
   sendTo(leadId: string, id: string, text: string): Promise<void>
@@ -113,7 +115,7 @@ const TOOLS = [
       properties: {
         title: { type: 'string', description: 'short name shown to the user in the sidebar' },
         brief: { type: 'string', description: 'the full, self-contained instructions for the job' },
-        complexity: { type: 'string', enum: ['simple', 'normal', 'hard'], description: 'how demanding the job is: simple (mechanical, clear steps) or hard (needs the strongest model); the user may have set a different model for each in the settings. Default normal: the model of this chat' },
+        complexity: { type: 'string', enum: ['simple', 'normal', 'hard'], description: 'how demanding the job is: simple (mechanical, clear steps, small files: renames, tests after an existing pattern, translations, running commands) or hard (needs the strongest model); the user may have set a different model for each in the settings. Simple may go to a small fast model with a short context, so never use it for judgment work: security audits, code review, debugging, design or reading a large codebase are normal or hard. Default normal: the model of this chat' },
         isolate: { type: 'boolean', description: "false: work in this chat's folder instead of a worktree (default true when the folder is a git repository)" }
       },
       required: ['title', 'brief']
@@ -259,7 +261,12 @@ async function run(h: ToolHost, sid: string, name: string, a: Record<string, unk
     if (name === 'wait_for_sessions') await h.waitIdle(kids.map((k) => k.id), 100000)
     return ok(
       kids
-        .map((k) => `- ${k.title} (id: ${k.id}) ${h.busy(k.id) ? 'RUNNING' : 'idle'}${k.worktree ? `, branch ${k.worktree.branch}, folder ${k.worktree.path}` : ''}\n  last answer: ${h.lastAnswer(k.id) || '(none yet)'}`)
+        .map((k) => {
+          const problem = h.busy(k.id) ? '' : h.problem(k.id)
+          // a session that failed looks idle with no answer: say why, and that a bigger model is the way out
+          const note = problem ? `\n  ENDED WITH A PROBLEM: ${problem}\n  If the model could not carry this job, start it again with complexity normal (the model of this chat).` : ''
+          return `- ${k.title} (id: ${k.id}) ${h.busy(k.id) ? 'RUNNING' : 'idle'}${k.worktree ? `, branch ${k.worktree.branch}, folder ${k.worktree.path}` : ''}\n  last answer: ${h.lastAnswer(k.id) || '(none yet)'}${note}`
+        })
         .join('\n')
     )
   }

@@ -31,6 +31,21 @@ export function explainKeyFailure(status: number, detail: string, model: string)
   return tr("Furnizorul a răspuns cu eroarea HTTP {status}. {detail}", { status, detail })
 }
 
+/** The engines that can run the setup helper: both work without asking permission and install programs. */
+export const canHelpSetup = (engine: Profile['engine']): boolean => engine === 'claude' || engine === 'opencode'
+
+/** What the setup helper is told. English for the model; it answers in the person's language. */
+export function setupHelperBrief(language: string): string {
+  return `You are Jolty's setup helper. The person who opened this chat is new to Jolty and may know very little about computers. Answer in ${language}, in short plain sentences, without jargon.
+
+Your only job is to get this Windows PC ready for Jolty:
+1. Check whether Git for Windows (Claude Code needs it) and the Microsoft Visual C++ Runtime are installed. Install what is missing with winget (winget install --id Git.Git -e, winget install --id Microsoft.VCRedist.2015+.x64 -e), or the official installer if winget is missing. Windows may ask for permission in its own window: tell the person to click Yes.
+2. Say what you found and what you did, one short line per item.
+3. Finish by asking what they want to do first with Jolty, and offer two or three simple ideas.
+
+Rules: before each install, say in one sentence what you are about to install and why. Touch nothing else: do not delete or move files, do not open the person's documents, photos or browser data, do not change accounts or passwords, do not install anything that is not listed. If something fails, say it simply and stop; do not try risky fixes.`
+}
+
 /**
  * The quiet "bring your own key" suggestion: only once the user has had a chat and only while every profile is
  * OpenCode's free models. Dismissing it once ends it for good.

@@ -79,8 +79,7 @@ test('the AI time estimate counts turns that follow each other and skips long br
 
 test('connect, back up everything, restore on another PC, undo', async () => {
   const one = pc()
-  assert.equal(status('google').configured, false)
-  await assert.rejects(connect('google', browser))
+  assert.equal(status('google').configured, true, 'Jolty has a Google client of its own: nothing to fill in')
   setConfig('google', { clientId: 'cid', clientSecret: 'sec' })
   assert.equal(status('google').configured, true)
   assert.equal(list().find((e) => e.info.id === 'google')!.values.clientId, 'cid')
@@ -98,6 +97,7 @@ test('connect, back up everything, restore on another PC, undo', async () => {
   assert.equal(await remote('google'), null)
 
   personalize(one.home)
+  fs.writeFileSync(path.join(one.data, 'use-time.json'), JSON.stringify({ since: 1000, appMs: 7000, aiMs: 5000, estimatedMs: 0 }))
   google.state.fail401 = 1 // one refused token on the way: the call is retried with a new one
   const r = await run('google')
   assert.ok(r.items >= 6, `items ${r.items}`)
@@ -123,6 +123,7 @@ test('connect, back up everything, restore on another PC, undo', async () => {
 
   const preview = await restore('google', 'correct horse battery')
   assert.equal(status('google').hasPassword, true, 'a password typed on the new PC is kept')
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(two.data, 'use-time.json'), 'utf8')), { since: 1000, appMs: 7000, aiMs: 5000, estimatedMs: 0 }, 'the time of use comes back with the backup')
   assert.ok(preview.items.some((i) => i.key === 'mcp:docs' && i.state === 'different'))
   assert.ok(preview.items.some((i) => i.key === 'mcp:remote' && i.state === 'new'))
   const decisions = Object.fromEntries(preview.items.map((i) => [i.key, 'overwrite' as const]))

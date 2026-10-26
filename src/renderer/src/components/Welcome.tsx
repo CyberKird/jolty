@@ -1,7 +1,7 @@
 import { ArrowRight, ExternalLink, KeyRound, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import type { Profile } from '@shared/types'
-import { CONNECT_PROVIDERS, wantsOwnKeyHint } from '@shared/setup'
+import type { ModelOption, Profile } from '@shared/types'
+import { CONNECT_PROVIDERS, canHelpSetup, wantsOwnKeyHint } from '@shared/setup'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
 import { usePresence } from '../usePresence'
@@ -76,14 +76,92 @@ export function ConnectKey({ onDone, onBack }: { onDone: (p: Profile) => void; o
   )
 }
 
-type Way = 'free' | 'key' | 'claude' | 'codex'
+/** The last step of the welcome: what Jolty found on the account, with the scores it has; a model it knows nothing about is listed too and says so. */
+function FoundModels({ profile, model, models, onDone }: { profile: Profile; model?: string; models: ModelOption[]; onDone: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+  const choice = models.filter((m) => m.score).length >= 2
+  const go = async (): Promise<void> => {
+    setBusy(true)
+    try {
+      await api.setup.presets().catch(() => false)
+      await onDone()
+    } finally {
+      setBusy(false)
+    }
+  }
+  /** the helper chat opens once the welcome is over, so the person lands in it */
+  const helper = async (): Promise<void> => {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await api.setup.presets().catch(() => false)
+      const meta = await api.setup.helper(profile.id, model)
+      await onDone()
+      useStore.getState().activateSession(meta)
+      await useStore.getState().openSession(meta.id)
+    } catch (err) {
+      setError(errMsg(err))
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="swap" style={{ marginTop: 30 }}>
+      <div className="field">
+        <label>{tr("Modele găsite")} <span className="small">({profile.name})</span></label>
+        {models.map((m) => (
+          <div key={m.id} className="row" style={{ justifyContent: 'space-between', gap: 14, padding: '4px 0' }}>
+            <span>{m.label}</span>
+            <span className="small">
+              {m.score ? `${tr("inteligență {iq}", { iq: m.score.iq })}${m.score.tps ? ` · ${tr("~{tps} tokeni/s", { tps: Math.round(m.score.tps) })}` : ''}` : tr("nu am găsit date despre acest model")}
+            </span>
+          </div>
+        ))}
+        <div className="hint">
+          {choice ? tr("Jolty alege singur modelul sesiunilor pornite de el: cel mai bun pentru joburile grele, cel mai rapid care e destul de bun pentru cele simple. Schimbi din Setări.") : tr("Nu e nimic de ales între modele: totul rămâne pe modelul chatului.")}
+        </div>
+      </div>
+      {canHelpSetup(profile.engine) && (
+        <div className="field">
+          <label>{tr("Vrei ca AI-ul să termine configurarea în locul tău?")}</label>
+          <div className="hint">{tr("Un asistent verifică programele de care are nevoie Jolty și le instalează pe cele care lipsesc, explicându-ți fiecare pas pe înțelesul tuturor.")}</div>
+          <div className="hint">
+            {tr("Ca să nu te întrebe la fiecare pas, asistentul lucrează fără permisiuni: poate instala programe pe acest PC fără să ceară acordul de fiecare dată. I-am cerut să facă doar configurarea, să nu șteargă nimic și să nu se atingă de fișierele tale. Vezi tot ce face în chat și îl oprești oricând cu Stop.")}
+          </div>
+          <div>
+            <button className="btn" disabled={busy} onClick={() => void helper()}>
+              {tr("Da, fă-o tu")}
+            </button>
+          </div>
+        </div>
+      )}
+      {error && <div className="hint" role="alert" style={{ color: 'var(--warning)', marginBottom: 10 }}>{error}</div>}
+      <div className="row">
+        <button className="btn primary" disabled={busy} onClick={() => void go()}>
+          {busy ? <Loader2 size={14} style={spin} /> : null} {tr("Continuă")}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+type Way = 'free' | 'key' | 'claude' | 'codex' | 'gemini'
 
 /** Shown instead of the new-chat screen while there are no profiles: the shortest way to a first answer. */
 export function Welcome() {
   const [way, setWay] = useState<Way>()
   const [step, setStep] = useState<string>()
   const [error, setError] = useState<string>()
+  const [found, setFound] = useState<{ profile: Profile; model?: string; models: ModelOption[] }>()
   const cancelled = useRef(false)
+
+  /** Shows what was found before the welcome ends; when nothing can be listed it ends at once. */
+  const review = async (profile: Profile, model?: string): Promise<void> => {
+    const models = await api.profiles.models(profile.id).catch(() => [] as ModelOption[])
+    if (!models.length) return finish(profile, model)
+    setStep(undefined)
+    setFound({ profile, model, models })
+  }
 
   const free = async (): Promise<void> => {
     setStep(tr("Instalez OpenCode (e o descărcare mare, poate dura)..."))
@@ -96,7 +174,7 @@ export function Welcome() {
     if (!model) throw new Error(tr("OpenCode nu are acum modele gratuite. Adaugă o cheie proprie."))
     setStep(tr("Trimit un mesaj mic modelului {model}...", { model: model.label }))
     await api.setup.testFree(model.id)
-    await finish(profile, model.id)
+    await review(profile, model.id)
   }
 
   const account = async (engine: 'claude' | 'codex'): Promise<void> => {
@@ -111,7 +189,23 @@ export function Welcome() {
         await sleep(2000)
       }
     }
-    await finish(profile)
+    await review(profile)
+  }
+
+  /** Gemini lives in the Jolty browser: the sign-in is Google's own page there, and the wait ends when the chat box shows up. */
+  const gemini = async (): Promise<void> => {
+    setStep(tr("Caut contul Gemini în browserul Jolty..."))
+    const { profile, loggedIn } = await api.setup.account('gemini')
+    if (!loggedIn) {
+      setStep(tr("Conectează-te la Google în fereastra browserului Jolty (cu abonamentul Gemini). Aștept..."))
+      const status = await api.profiles.login(profile.id)
+      if (cancelled.current) return void api.profiles.remove(profile.id).catch(() => undefined)
+      if (!status.loggedIn) {
+        void api.profiles.remove(profile.id).catch(() => undefined)
+        throw new Error(status.error || tr("Nu m-am putut conecta la Gemini."))
+      }
+    }
+    await review(profile)
   }
 
   const run = async (w: Way): Promise<void> => {
@@ -121,6 +215,7 @@ export function Welcome() {
     try {
       if (w === 'free') await free()
       else if (w === 'claude' || w === 'codex') await account(w)
+      else if (w === 'gemini') await gemini()
     } catch (err) {
       setError(errMsg(err))
       setStep(undefined)
@@ -132,7 +227,8 @@ export function Welcome() {
     { way: 'free', title: tr("Gratuit, fără cheie"), text: tr("Instalez OpenCode și folosesc modelele lui gratuite. Limitele le stabilește OpenCode.") },
     { way: 'key', title: tr("Am o cheie API"), text: tr("DeepSeek sau OpenRouter: te duc la pagina cheii, o lipești, o testez.") },
     { way: 'claude', title: tr("Abonament Claude"), text: tr("Te conectezi cu contul tău claude.ai.") },
-    { way: 'codex', title: tr("Abonament ChatGPT"), text: tr("Te conectezi cu contul ChatGPT, prin Codex.") }
+    { way: 'codex', title: tr("Abonament ChatGPT"), text: tr("Te conectezi cu contul ChatGPT, prin Codex.") },
+    { way: 'gemini', title: tr("Abonament Gemini"), text: tr("Folosești abonamentul Google direct din browserul Jolty, fără cheie.") }
   ]
   return (
     <div className="welcome">
@@ -142,17 +238,20 @@ export function Welcome() {
         {tr("lucrezi")}<span>.</span>
       </h1>
       <div className="context">{tr("Jolty nu vine cu un model al lui. Alege o variantă; o schimbi oricând din Conturi și chei.")}</div>
+      <div className="context">{tr("Nu știi ce să alegi? Prima variantă merge fără cont și fără bani.")}</div>
       {error && <div className="hint" role="alert" style={{ color: 'var(--warning)', marginTop: 14 }}>{error}</div>}
       {step ? (
         <div className="row" style={{ marginTop: 30, gap: 10 }} role="status">
           <Loader2 size={16} style={spin} /> <span>{step}</span>
-          {(way === 'claude' || way === 'codex') && (
+          {(way === 'claude' || way === 'codex' || way === 'gemini') && (
             <button className="btn small" onClick={() => { cancelled.current = true; setStep(undefined); setWay(undefined) }}>{tr("Renunță")}</button>
           )}
         </div>
+      ) : found ? (
+        <FoundModels profile={found.profile} model={found.model} models={found.models} onDone={() => finish(found.profile, found.model)} />
       ) : way === 'key' ? (
         <div className="swap" style={{ marginTop: 30 }}>
-          <ConnectKey onDone={(p) => void finish(p, p.models?.[0])} onBack={() => setWay(undefined)} />
+          <ConnectKey onDone={(p) => void review(p, p.models?.[0]).catch((err) => { setError(errMsg(err)); setWay(undefined) })} onBack={() => setWay(undefined)} />
         </div>
       ) : (
         <div className="starts">

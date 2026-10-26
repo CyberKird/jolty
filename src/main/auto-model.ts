@@ -9,6 +9,8 @@ export interface Candidate {
   label: string
   iq: number
   tps?: number
+  /** a model offered free by OpenCode: fine for small jobs, never trusted with a hard one */
+  free?: boolean
 }
 
 /** Below this the model is too weak to hand a job to, however fast it is. */
@@ -20,15 +22,23 @@ export function candidates(profile: Profile, models: ModelOption[]): Candidate[]
   const out: Candidate[] = []
   for (const m of models) {
     const s = modelScore(profile, m)
-    if (s) out.push({ profileId: profile.id, model: m.id, label: m.label, iq: s.iq, tps: s.tps })
+    if (s) out.push({ profileId: profile.id, model: m.id, label: m.label, iq: s.iq, tps: s.tps, ...(profile.engine === 'opencode' ? { free: true } : {}) })
   }
   return out
 }
 
 export function pickAuto(kind: 'simple' | 'hard', list: Candidate[]): Candidate | undefined {
   const speed = (c: Candidate): number => c.tps ?? 0
-  if (kind === 'hard') return [...list].sort((a, b) => b.iq - a.iq || speed(b) - speed(a))[0]
-  return list.filter((c) => c.iq >= MIN_IQ_SIMPLE && c.tps !== undefined).sort((a, b) => speed(b) - speed(a) || b.iq - a.iq)[0]
+  if (kind === 'hard') return list.filter((c) => !c.free).sort((a, b) => b.iq - a.iq || speed(b) - speed(a))[0]
+  const good = list.filter((c) => c.iq >= MIN_IQ_SIMPLE && c.tps !== undefined)
+  // free models only when nothing of the user's own qualifies: their prompts would otherwise leave for a free tier unasked
+  const own = good.filter((c) => !c.free)
+  return (own.length ? own : good).sort((a, b) => speed(b) - speed(a) || b.iq - a.iq)[0]
+}
+
+/** Whether routing by job size is worth turning on for a new user: with one model there is nothing to choose between. */
+export function worthRouting(list: Candidate[]): boolean {
+  return new Set(list.map((c) => `${c.profileId}|${c.model}`)).size >= 2
 }
 
 /** One model that could do a small job (a chat title, a rewritten message) and how to reach it. */
@@ -42,7 +52,7 @@ export interface HelperEntry {
 }
 
 /** Seconds a call costs before the first word: Claude Code and Codex start a process, OpenCode also loads a long system prompt. */
-const START_SECONDS: Record<EngineKind, number> = { claude: 3.5, codex: 3, opencode: 5, hermes: 5 }
+const START_SECONDS: Record<EngineKind, number> = { claude: 3.5, codex: 3, opencode: 5, hermes: 5, gemini: 8 }
 const FAST_NAME = /mini|flash|haiku|lite|nano|small|luna|instant|turbo|\bair\b|fast/i
 /** A helper below this writes titles and rewrites too badly to trust. */
 export const MIN_IQ_HELPER = 15

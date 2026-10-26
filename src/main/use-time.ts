@@ -30,7 +30,11 @@ export function estimateAiMs(turns: Pick<TurnUsage, 'ts'>[]): number {
 
 const file = (): string => path.join(dataDir(), FILE)
 
+/** the counter the running app keeps adding to; reading and merging go through it so a tick never overwrites them */
+let live: Counted | undefined
+
 function read(): Counted {
+  if (live) return live
   try {
     return JSON.parse(fs.readFileSync(file(), 'utf8')) as Counted
   } catch {
@@ -44,6 +48,42 @@ function write(c: Counted): void {
   const tmp = `${file()}.${process.pid}.tmp`
   fs.writeFileSync(tmp, JSON.stringify(c))
   fs.renameSync(tmp, file())
+}
+
+const TIME_MAGIC = Buffer.from('JTIME1' + String.fromCharCode(10))
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 1e13 ? v : 0)
+
+/** The backup carries the count in front of the pack, so the time follows the person to a new PC. */
+export function withTime(pack: Buffer): Buffer {
+  const json = Buffer.from(JSON.stringify(read()))
+  const len = Buffer.alloc(4)
+  len.writeUInt32BE(json.length)
+  return Buffer.concat([TIME_MAGIC, len, json, pack])
+}
+
+/** Takes the count off a restored backup (older backups have none) and returns the pack. */
+export function takeTime(buf: Buffer): { pack: Buffer; time?: unknown } {
+  if (buf.length < TIME_MAGIC.length + 4 || !buf.subarray(0, TIME_MAGIC.length).equals(TIME_MAGIC)) return { pack: buf }
+  const len = buf.readUInt32BE(TIME_MAGIC.length)
+  const start = TIME_MAGIC.length + 4
+  if (len > 4096 || start + len > buf.length) return { pack: buf }
+  try {
+    return { pack: buf.subarray(start + len), time: JSON.parse(buf.subarray(start, start + len).toString('utf8')) }
+  } catch {
+    return { pack: buf.subarray(start + len) }
+  }
+}
+
+/** Keeps the larger of each count: restoring on a new PC brings the time back, restoring twice changes nothing. */
+export function mergeTime(remote: unknown): void {
+  if (!remote || typeof remote !== 'object') return
+  const r = remote as Partial<Counted>
+  const c = read()
+  c.aiMs = Math.max(c.aiMs, num(r.aiMs))
+  c.appMs = Math.max(c.appMs, num(r.appMs))
+  c.estimatedMs = Math.max(c.estimatedMs, num(r.estimatedMs))
+  if (num(r.since)) c.since = Math.min(c.since, num(r.since))
+  write(c)
 }
 
 export function stats(): UseStats {
@@ -65,6 +105,7 @@ export function stats(): UseStats {
 /** Starts the count; returns the function that stops it. */
 export function startUseTime(working: () => boolean, inFront: () => boolean): () => void {
   const c = read()
+  live = c
   let last = Date.now()
   write(c)
   const timer = setInterval(() => {

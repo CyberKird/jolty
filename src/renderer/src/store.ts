@@ -403,7 +403,7 @@ export function refreshLimitsSoon(p: Profile, force = false): Promise<void> {
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
-export const ENGINE_LABEL = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', opencode: 'OpenCode' } as const
+export const ENGINE_LABEL = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', opencode: 'OpenCode', gemini: 'Gemini' } as const
 
 export function fmtTokens(n: number): string {
   if (n >= 1e9) return (n / 1e9).toFixed(1) + tr(' mld')

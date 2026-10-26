@@ -2,16 +2,19 @@
 import type { ScheduledTask, TaskInput } from './schedule'
 import type { ModelScore } from './scores'
 
-export type EngineKind = 'claude' | 'codex' | 'hermes' | 'opencode'
+export type EngineKind = 'claude' | 'codex' | 'hermes' | 'opencode' | 'gemini'
 
-/** Hermes and OpenCode are external agents Jolty drives over ACP: they keep their own model, key, tools and browser. */
-export const isAcp = (engine?: EngineKind): boolean => engine === 'hermes' || engine === 'opencode'
+/**
+ * Hermes and OpenCode are external agents Jolty drives over ACP, Gemini is the user's own gemini.google.com driven in the
+ * Jolty browser: all keep their own model, key and login, and none takes a key or an endpoint from Jolty.
+ */
+export const isAcp = (engine?: EngineKind): boolean => engine === 'hermes' || engine === 'opencode' || engine === 'gemini'
 
 /** Whether the thinking level can be set from Jolty: Hermes keeps it in its own configuration. */
 export const hasEffort = (engine?: EngineKind): boolean => engine !== 'hermes'
 
-/** Whether the Jolty browser can be attached: every engine but Hermes, which has browser tools of its own. */
-export const hasJoltyBrowser = (engine?: EngineKind): boolean => engine !== 'hermes'
+/** Whether the Jolty browser can be attached: every engine but Hermes (browser tools of its own) and Gemini (it lives in the browser itself). */
+export const hasJoltyBrowser = (engine?: EngineKind): boolean => engine !== 'hermes' && engine !== 'gemini'
 /** Whether the model can be given the PC (screen, mouse, keyboard): the same engines as the browser. */
 export const hasJoltyComputer = hasJoltyBrowser
 
@@ -616,7 +619,11 @@ export interface JoltyApi {
     /** one real prompt to a free OpenCode model */
     testFree(model: string): Promise<void>
     /** uses the Claude / Codex account already signed in on this PC, else creates a profile to sign in with */
-    account(engine: 'claude' | 'codex'): Promise<{ profile: Profile; loggedIn: boolean }>
+    account(engine: 'claude' | 'codex' | 'gemini'): Promise<{ profile: Profile; loggedIn: boolean }>
+    /** turns on routing of started sessions by job size when the models found give a choice; true when it is on */
+    presets(): Promise<boolean>
+    /** a chat in the no-permissions mode that installs what Jolty needs on this PC (Claude and OpenCode accounts only) */
+    helper(profileId: string, model?: string): Promise<SessionMeta>
   }
   system: {
     check(): Promise<SystemCheck[]>
