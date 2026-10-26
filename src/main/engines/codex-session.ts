@@ -269,6 +269,7 @@ export class CodexSession implements EngineSession, ThreadListener {
       }
       case 'item/started':
       case 'item/completed': {
+        if (p.item?.type === 'contextCompaction') this.host.emit({ type: 'compacting', sessionId: sid, active: method === 'item/started' })
         const item = p.item?.type === 'contextCompaction' && method === 'item/started'
           ? { kind: 'notice' as const, id: p.item.id, text: tr("Compactez conversația. Răspunsul continuă după compactare."), level: 'info' as const }
           : codexItem(p.item, this.liveOutput.get(p.item?.id))

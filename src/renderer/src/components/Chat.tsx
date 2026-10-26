@@ -16,7 +16,7 @@ import { PowerMenu } from './PowerMenu'
 import { withQuote } from '@shared/quote'
 import { ChatTools } from './ChatTools'
 import { QuoteBar, SelectionPopup } from './Quote'
-import { LimitStrip, TaskStrip, UpdateStrip, VerificationStrip, WorkClock } from './Tasks'
+import { CompactStrip, LimitStrip, TaskStrip, UpdateStrip, VerificationStrip, WorkClock } from './Tasks'
 import { tr } from '@shared/i18n'
 import { VoiceButton } from './VoiceButton'
 import { Trans } from './Trans'
@@ -874,6 +874,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
       <ChatTools />
       <UpdateStrip />
       <LimitStrip session={session} />
+      <CompactStrip sessionId={session.id} />
       <TaskStrip sessionId={session.id} />
       <VerificationStrip session={session} />
       <Composer

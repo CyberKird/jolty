@@ -398,10 +398,17 @@ class ClaudeSession implements EngineSession {
           this.host.emit({ type: 'meta', sessionId: sid, meta: this.meta })
         } else if (m.subtype === 'api_retry') {
           this.notice(tr("Serverul nu răspunde, reîncerc..."), 'warn')
-        } else if (m.subtype === 'compact_boundary' && m.compact_metadata.post_tokens) {
-          // a compaction has no assistant message: the meter would keep showing the size from before it
-          this.contextUsed = m.compact_metadata.post_tokens
-          this.host.emit({ type: 'context', sessionId: sid, used: this.contextUsed, window: this.contextWindow })
+        } else if (m.subtype === 'status') {
+          if (m.status === 'compacting') this.host.emit({ type: 'compacting', sessionId: sid, active: true })
+          else if (m.compact_result) this.host.emit({ type: 'compacting', sessionId: sid, active: false, failed: m.compact_result === 'failed' })
+        } else if (m.subtype === 'compact_boundary') {
+          const { pre_tokens: before, post_tokens: after } = m.compact_metadata
+          this.host.emit({ type: 'compacting', sessionId: sid, active: false, before, after })
+          if (after) {
+            // a compaction has no assistant message: the meter would keep showing the size from before it
+            this.contextUsed = after
+            this.host.emit({ type: 'context', sessionId: sid, used: this.contextUsed, window: this.contextWindow })
+          }
         }
         return
       }

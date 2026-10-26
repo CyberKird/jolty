@@ -1,4 +1,4 @@
-import { BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { Loader2, BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { dragShield } from '../dragShield'
@@ -237,6 +237,7 @@ const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
 
 export function Sidebar() {
   const { page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast } = useStore()
+  const compactions = useStore((s) => s.compactions)
   const [q, setQ] = useState('')
   const [renaming, setRenaming] = useState<string>()
   const skillsAttention = useStore((s) => s.skillsAttention)
@@ -349,6 +350,7 @@ export function Sidebar() {
                   tabIndex={0}
                 >
                   <span className={`dot ${status[s.id] === 'running' ? 'running' : ''}`} style={{ background: profile?.color }} />
+                  {compactions[s.id]?.active && <Loader2 size={11} className="spin compact-dot" aria-label={tr("Compactez conversația...")} />}
                   {s.worktree && <GitBranch size={11} className="live-branch" aria-label={s.worktree.branch} />}
                   {renaming === s.id ? (
                     <input

@@ -20,6 +20,7 @@ import { DEFAULT_PLAN } from '@shared/power'
 import { preloadPage } from './pageLoaders'
 import { exitMs } from './usePresence'
 import { lastIndexWhere } from '@shared/last-index'
+import { reduceCompaction, settleCompaction, type CompactState } from '@shared/compaction'
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
@@ -77,6 +78,8 @@ interface State {
   spend7d: Record<string, { tokens: number; costUsd: number }>
   balances: Record<string, ProviderBalance>
   contexts: Record<string, { used: number; window?: number }>
+  /** conversations being compacted, and the result of the last compaction for a few seconds */
+  compactions: Record<string, CompactState>
   update?: UpdateStatus
   pulls: Record<string, PullState>
   toasts: Toast[]
@@ -153,6 +156,7 @@ export const useStore = create<State>((set, get) => ({
   spend7d: {},
   balances: {},
   contexts: {},
+  compactions: {},
   pulls: {},
   toasts: [],
   // on a narrow window the live panel floats over the chat, so it starts closed there
@@ -272,6 +276,8 @@ export const useStore = create<State>((set, get) => ({
           clocks: e.status === 'running' && s.status[e.sessionId] !== 'running' ? { ...s.clocks, [e.sessionId]: { turn: Date.now() } } : s.clocks
         }))
         if (e.status !== 'running') {
+          const settled = settleCompaction(get().compactions[e.sessionId])
+          if (settled) set((s) => ({ compactions: { ...s.compactions, [e.sessionId]: settled } }))
           // a finished turn has no pending approvals left
           set((s) => ({ permissions: { ...s.permissions, [e.sessionId]: [] } }))
           // finished while the user looks at something else: it stays in the Live list until opened
@@ -320,6 +326,9 @@ export const useStore = create<State>((set, get) => ({
         return
       case 'update':
         set({ update: e.status })
+        return
+      case 'compacting':
+        set((s) => ({ compactions: { ...s.compactions, [e.sessionId]: reduceCompaction(s.compactions[e.sessionId], e) } }))
         return
       case 'context':
         set((s) => ({ contexts: { ...s.contexts, [e.sessionId]: { used: e.used, window: e.window ?? s.contexts[e.sessionId]?.window } } }))

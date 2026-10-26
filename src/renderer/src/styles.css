@@ -3826,3 +3826,27 @@ a {
   margin: 0 0 6px 24px;
   color: var(--grey);
 }
+
+/* compaction: the pill above the composer and the spinner on the sidebar row */
+.compact-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 8px;
+  padding: 5px 12px;
+  border: 1px solid var(--volt-line);
+  border-radius: 999px;
+  background: var(--volt-dim);
+  color: var(--white);
+  font: 600 12px var(--label);
+}
+.compact-strip.failed {
+  border-color: var(--critical);
+  color: var(--del-ink);
+}
+.compact-dot {
+  flex: none;
+  color: var(--volt);
+}
