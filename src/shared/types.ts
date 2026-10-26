@@ -260,6 +260,8 @@ export type ChatEvent =
   | { type: 'usage'; usage: TurnUsage }
   /** how full the model's context window is after the last request */
   | { type: 'context'; sessionId: string; used: number; window?: number }
+  /** a conversation is being compacted (active) or just was (before and after are context tokens when the engine says) */
+  | { type: 'compacting'; sessionId: string; active: boolean; before?: number; after?: number; failed?: boolean }
   | { type: 'update'; status: UpdateStatus }
   | { type: 'limits'; snapshot: RateLimitSnapshot }
   /** the agent's own step-by-step plan (Claude's todo list, Codex's plan) */

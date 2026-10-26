@@ -1,14 +1,15 @@
 // The agent's own task list above the composer, like the Claude app: one quiet line with the
 // progress and the current step, opening into the full checklist.
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { capability } from '@shared/complexity'
 import { clock } from '@shared/eta'
 import { sameProvider } from '@shared/provider'
 import type { ChatItem, PlanStep, SessionMeta } from '@shared/types'
-import { api, errMsg, useStore } from '../store'
+import { api, errMsg, fmtTokens, useStore } from '../store'
 import { useAllModels } from './ModelPicker'
 import { tr } from '@shared/i18n'
+import { compactView, RESULT_MS } from '@shared/compaction'
 import { Collapse } from './Collapse'
 
 const NONE: PlanStep[] = []
@@ -36,6 +37,34 @@ export function useNow(on: boolean): number {
     return () => clearInterval(t)
   }, [on])
   return now
+}
+
+/** A conversation is being compacted: a pill with a spinner above the composer, then the result for a few seconds. */
+export function CompactStrip({ sessionId }: { sessionId: string }) {
+  const state = useStore((s) => s.compactions[sessionId])
+  const [, tick] = useState(0)
+  // the result goes away by itself: one re-render when its time is up
+  useEffect(() => {
+    if (!state || state.active) return
+    const t = setTimeout(() => tick((n) => n + 1), Math.max(0, RESULT_MS - (Date.now() - state.at)) + 50)
+    return () => clearTimeout(t)
+  }, [state])
+  const view = compactView(state)
+  if (!view || !state) return null
+  const text =
+    view === 'working'
+      ? tr("Compactez conversația...")
+      : view === 'failed'
+        ? tr("Compactarea nu a reușit.")
+        : state.before && state.after
+          ? tr("Compactat: {before} la {after} tokeni", { before: fmtTokens(state.before), after: fmtTokens(state.after) })
+          : tr("Conversația a fost compactată.")
+  return (
+    <div className={`compact-strip ${view}`} role="status" aria-live="polite">
+      {view === 'working' ? <Loader2 size={13} className="spin" /> : <Check size={13} />}
+      <span>{text}</span>
+    </div>
+  )
 }
 
 export function TaskStrip({ sessionId }: { sessionId: string }) {

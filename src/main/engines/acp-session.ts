@@ -259,7 +259,14 @@ export class AcpSession implements EngineSession {
 
   async compact(): Promise<void> {
     if (!this.agent.compactCommand) throw new Error(tr("{agent} își comprimă singur conversația.", { agent: this.agent.name }))
-    await this.send(this.agent.compactCommand)
+    const sessionId = this.meta.id
+    this.host.emit({ type: 'compacting', sessionId, active: true })
+    try {
+      await this.send(this.agent.compactCommand)
+    } finally {
+      // the agent has no signal of its own: the command ending is the end of the compaction
+      this.host.emit({ type: 'compacting', sessionId, active: false })
+    }
   }
   async rewind(): Promise<never> { throw new Error(tr("{agent} nu păstrează copii ale fișierelor pe mesaj. Folosește git pentru a reveni.", { agent: this.agent.name })) }
 
