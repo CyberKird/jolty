@@ -87,6 +87,8 @@ export class ScreenOverlay implements Overlay {
       alwaysOnTop: true,
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
     })
+    // measured here: a frameless window comes out 48 px shorter than asked on both displays until the bounds are set again
+    win.setBounds(bounds)
     win.setAlwaysOnTop(true, 'screen-saver')
     win.setIgnoreMouseEvents(true)
     // out of desktopCapturer pictures: the model sees the screen, not our decoration

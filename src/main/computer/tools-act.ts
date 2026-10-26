@@ -6,6 +6,7 @@ import { appLabel, isTerminal, reachesPastApp, secretField } from './policy'
 import { num, obj, str, text, UserError, type ToolDef } from './result'
 import type { ComputerService, Session } from './service'
 import type { HelperState, WinInfo } from './helper'
+import type { View } from './geometry'
 
 const BUTTONS = ['left', 'right', 'middle']
 const XY = { x: { type: 'number', description: 'Screenshot pixel, from the left' }, y: { type: 'number', description: 'Screenshot pixel, from the top' } }
@@ -31,6 +32,9 @@ const needFront = (st: HelperState): WinInfo => {
   if (!st.foreground) throw new UserError('No window is in front. Take a screenshot, then focus one with computer_focus_window.')
   return st.foreground
 }
+
+/** Which display a coordinate refers to, for the approval text; empty on a single monitor. */
+const onDisplay = (svc: ComputerService, v: View): string => (svc.capturer.displays().length > 1 ? ` on display ${v.display.index}` : '')
 
 /** The key combo as a short readable string for messages. */
 const pretty = (combo: string): string => combo.split('+').map((p) => p.trim()).join('+')
@@ -75,7 +79,7 @@ export const ACT_TOOLS: ToolDef[] = [
       const land = clickPoint(target, mode, svc.rng, w, h)
       const win = await svc.input.windowAt(land.x, land.y)
       const what = `${count === 2 ? 'Double-click' : count === 3 ? 'Triple-click' : btn === 'left' ? 'Click' : `${btn[0].toUpperCase()}${btn.slice(1)}-click`} in ${win?.exe || 'a window'}`
-      await svc.authorize(s, win, st, { title: what, detail: `${win?.title ?? ''} at (${a.x}, ${a.y})` })
+      await svc.authorize(s, win, st, { title: what, detail: `${win?.title ?? ''} at (${a.x}, ${a.y})${onDisplay(svc, v)}` })
       const now = await fresh(svc, s)
       svc.announce(tr("Click în {app}", { app: win ? appLabel(win) : '?' }), win)
       await svc.readingPause(s, now)
@@ -112,7 +116,7 @@ export const ACT_TOOLS: ToolDef[] = [
       const start = clickPoint(from, mode, svc.rng)
       const end = clickPoint(to, mode, svc.rng)
       const w1 = await svc.input.windowAt(start.x, start.y)
-      await svc.authorize(s, w1, st, { title: `Drag in ${w1?.exe || 'a window'}`, detail: `from (${a.x}, ${a.y}) to (${a.to_x}, ${a.to_y})` })
+      await svc.authorize(s, w1, st, { title: `Drag in ${w1?.exe || 'a window'}`, detail: `from (${a.x}, ${a.y}) to (${a.to_x}, ${a.to_y})${onDisplay(svc, svc.needView(s))}` })
       const w2 = await svc.input.windowAt(end.x, end.y)
       if (w2 && w1 && w2.exe !== w1.exe) await svc.authorize(s, w2, st, { title: `Drop into ${w2.exe}`, detail: `${w2.title} at (${a.to_x}, ${a.to_y})` })
       const now = await fresh(svc, s)

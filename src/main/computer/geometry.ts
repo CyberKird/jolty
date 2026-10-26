@@ -8,6 +8,8 @@ export interface DisplayInfo extends Rect {
   primary: boolean
   /** Windows display scaling, 1 = 100 % */
   scaleFactor: number
+  /** the monitor's name from Windows, when it has one */
+  name?: string
 }
 
 /** The long edge of a screenshot and its total pixels stay inside what models read well. */
@@ -65,3 +67,21 @@ export function displayOfRect(displays: DisplayInfo[], r: Rect): DisplayInfo | u
   }
   return best
 }
+
+/** Where a display sits next to the primary one, in words the model can use ("right of the primary"). */
+export function placement(d: DisplayInfo, displays: DisplayInfo[]): string {
+  const p = displays.find((x) => x.primary)
+  if (d.primary || !p) return 'primary'
+  const dx = d.x + d.w / 2 - (p.x + p.w / 2)
+  const dy = d.y + d.h / 2 - (p.y + p.h / 2)
+  if (Math.abs(dx) >= Math.abs(dy)) return `${dx > 0 ? 'right' : 'left'} of the primary`
+  return `${dy > 0 ? 'below' : 'above'} the primary`
+}
+
+/** One line per display for the model: index, name, placement, physical size and origin, scaling. */
+export function displayLine(d: DisplayInfo, displays: DisplayInfo[]): string {
+  return `display ${d.index}${d.name ? ` "${d.name}"` : ''} (${placement(d, displays)}): ${d.w}x${d.h} physical px at (${d.x}, ${d.y}), scaling ${Math.round(d.scaleFactor * 100)}%`
+}
+
+/** A view is only good while its display is still there with the same place and size (monitors get unplugged or rearranged). */
+export const stillThere = (displays: DisplayInfo[], d: DisplayInfo): boolean => displays.some((x) => x.id === d.id && x.x === d.x && x.y === d.y && x.w === d.w && x.h === d.h)

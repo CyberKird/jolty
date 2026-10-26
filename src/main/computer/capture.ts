@@ -67,7 +67,7 @@ export const electronCapturer: Capturer = {
     const primary = screen.getPrimaryDisplay().id
     return screen.getAllDisplays().map((d, index) => {
       const r = screen.dipToScreenRect(null, d.bounds)
-      return { index, id: d.id, x: r.x, y: r.y, w: r.width, h: r.height, primary: d.id === primary, scaleFactor: d.scaleFactor }
+      return { index, id: d.id, x: r.x, y: r.y, w: r.width, h: r.height, primary: d.id === primary, scaleFactor: d.scaleFactor, name: d.label || undefined }
     })
   },
 
@@ -77,6 +77,8 @@ export const electronCapturer: Capturer = {
     if (!src || src.thumbnail.isEmpty()) throw new Error('The screen could not be captured (is it locked or asleep?).')
     let img = src.thumbnail
     const full = img.getSize()
+    // some drivers leave display_id empty and the order is the fallback: it must at least give a picture of the display's shape
+    if (Math.abs(full.width / full.height - display.w / display.h) > 0.02) throw new Error('Windows gave a picture of another display. Take the screenshot again.')
     // the thumbnail is the display at its physical size; guard against a driver that returns another size
     const fx = full.width / display.w
     const fy = full.height / display.h
