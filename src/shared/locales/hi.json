@@ -1388,5 +1388,7 @@
  "mesaje": "संदेश",
  "Tokeni estimați: Gemini nu îi raportează.": "अनुमानित टोकन: Gemini इन्हें नहीं बताता।",
  "Google nu publică limitele Gemini.": "Google Gemini की सीमाएँ प्रकाशित नहीं करता।",
- "Am salvat în memorie: {names}.": "मेमोरी में सहेजा गया: {names}।"
+ "Am salvat în memorie: {names}.": "मेमोरी में सहेजा गया: {names}।",
+ "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini ने लगातार {n} टूल इस्तेमाल किए। मैं रुक गया; आगे बढ़ाना हो तो «जारी रखो» लिखो।",
+ "Refuzat.": "अस्वीकृत।"
 }

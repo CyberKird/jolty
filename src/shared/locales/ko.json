@@ -1388,5 +1388,7 @@
  "mesaje": "개 메시지",
  "Tokeni estimați: Gemini nu îi raportează.": "추정 토큰: Gemini는 토큰 수를 알려 주지 않습니다.",
  "Google nu publică limitele Gemini.": "Google은 Gemini 한도를 공개하지 않습니다.",
- "Am salvat în memorie: {names}.": "메모리에 저장했습니다: {names}"
+ "Am salvat în memorie: {names}.": "메모리에 저장했습니다: {names}",
+ "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini가 도구를 {n}번 연속으로 사용했습니다. 여기서 멈췄습니다. 계속하려면 «계속»이라고 쓰세요.",
+ "Refuzat.": "거부됨."
 }

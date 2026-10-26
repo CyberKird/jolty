@@ -1388,5 +1388,7 @@
  "mesaje": "messaggi",
  "Tokeni estimați: Gemini nu îi raportează.": "Token stimati: Gemini non li riporta.",
  "Google nu publică limitele Gemini.": "Google non pubblica i limiti di Gemini.",
- "Am salvat în memorie: {names}.": "Salvato in memoria: {names}."
+ "Am salvat în memorie: {names}.": "Salvato in memoria: {names}.",
+ "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini ha usato {n} strumenti di fila. Mi sono fermato; scrivi «continua» se vuoi che vada avanti.",
+ "Refuzat.": "Rifiutato."
 }
