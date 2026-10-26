@@ -75,8 +75,8 @@ interface State {
   setQuote(sessionId: string, text: string | undefined): void
   limits: Record<string, RateLimitSnapshot>
   /** tokens and cost per profile over the last 24 h, kept live from usage events */
-  spend: Record<string, { tokens: number; costUsd: number }>
-  spend7d: Record<string, { tokens: number; costUsd: number }>
+  spend: Record<string, { tokens: number; costUsd: number; turns: number }>
+  spend7d: Record<string, { tokens: number; costUsd: number; turns: number }>
   balances: Record<string, ProviderBalance>
   contexts: Record<string, { used: number; window?: number }>
   /** conversations being compacted, and the result of the last compaction for a few seconds */
@@ -236,8 +236,8 @@ export const useStore = create<State>((set, get) => ({
   loadUsage: async () => {
     const list = await api.usage.summary()
     set((s) => ({
-      spend: Object.fromEntries(list.map((u) => [u.profileId, { tokens: u.last24h.tokens, costUsd: u.last24h.costUsd }])),
-      spend7d: Object.fromEntries(list.map((u) => [u.profileId, { tokens: u.last7d.tokens, costUsd: u.last7d.costUsd }])),
+      spend: Object.fromEntries(list.map((u) => [u.profileId, { tokens: u.last24h.tokens, costUsd: u.last24h.costUsd, turns: u.last24h.turns }])),
+      spend7d: Object.fromEntries(list.map((u) => [u.profileId, { tokens: u.last7d.tokens, costUsd: u.last7d.costUsd, turns: u.last7d.turns }])),
       limits: { ...s.limits, ...Object.fromEntries(list.filter((u) => u.limits && (!s.limits[u.profileId] || u.limits.updatedAt >= s.limits[u.profileId].updatedAt)).map((u) => [u.profileId, u.limits!])) }
     }))
   },
@@ -356,11 +356,11 @@ export const useStore = create<State>((set, get) => ({
         const u = e.usage
         const tokens = u.inputTokens + u.outputTokens + u.cacheReadTokens + u.cacheWriteTokens
         set((s) => {
-          const cur = s.spend[u.profileId] || { tokens: 0, costUsd: 0 }
-          const week = s.spend7d[u.profileId] || { tokens: 0, costUsd: 0 }
+          const cur = s.spend[u.profileId] || { tokens: 0, costUsd: 0, turns: 0 }
+          const week = s.spend7d[u.profileId] || { tokens: 0, costUsd: 0, turns: 0 }
           return {
-            spend: { ...s.spend, [u.profileId]: { tokens: cur.tokens + tokens, costUsd: cur.costUsd + (u.costUsd || 0) } },
-            spend7d: { ...s.spend7d, [u.profileId]: { tokens: week.tokens + tokens, costUsd: week.costUsd + (u.costUsd || 0) } }
+            spend: { ...s.spend, [u.profileId]: { tokens: cur.tokens + tokens, costUsd: cur.costUsd + (u.costUsd || 0), turns: cur.turns + 1 } },
+            spend7d: { ...s.spend7d, [u.profileId]: { tokens: week.tokens + tokens, costUsd: week.costUsd + (u.costUsd || 0), turns: week.turns + 1 } }
           }
         })
         return

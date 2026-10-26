@@ -1383,5 +1383,9 @@
  "Abonament Gemini": "Abonnement Gemini",
  "Folosești abonamentul Google direct din browserul Jolty, fără cheie.": "Tu utilises ton abonnement Google directement depuis le navigateur de Jolty, sans clé.",
  "Folosește abonamentul tău Gemini din browserul Jolty: te conectezi o dată la Google în fereastra lui. Fără cheie.": "Utilise ton abonnement Gemini dans le navigateur de Jolty : tu te connectes une fois à Google dans sa fenêtre. Sans clé.",
- "Adaugă Gemini": "Ajouter Gemini"
+ "Adaugă Gemini": "Ajouter Gemini",
+ "mesaj": "message",
+ "mesaje": "messages",
+ "Tokeni estimați: Gemini nu îi raportează.": "Tokens estimés : Gemini ne les communique pas.",
+ "Google nu publică limitele Gemini.": "Google ne publie pas les limites de Gemini."
 }
