@@ -125,6 +125,8 @@ jobs:
   macos:
     name: macOS (${{ matrix.arch }})
     needs: windows
+    # a tag needs the Windows job's release to attach the dmg to; any other run builds the Mac app even when Windows or its tests are red
+    if: ${{ !cancelled() && (needs.windows.result == 'success' || !startsWith(github.ref, 'refs/tags/v')) }}
     strategy:
       fail-fast: false
       matrix:
