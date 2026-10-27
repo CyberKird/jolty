@@ -155,6 +155,8 @@ function Composer(p: ComposerProps) {
   const [atts, setAtts] = useState<Attachment[]>([])
   const [dragging, setDragging] = useState(false)
   const [improving, setImproving] = useState(false)
+  // one slot above the box for what "improve" has to say: a newer message replaces the old one, it stays until closed or the next send
+  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null)
   const powerArmed = useStore((s) => s.power.armed)
   const [powerOpen, setPowerOpen] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -278,6 +280,7 @@ function Composer(p: ComposerProps) {
     const own = text.trim()
     if (improving || (!own && !atts.length)) return
     if (parallel && (!own || isAcp(engine))) return
+    setNotice(null)
     const store = useStore.getState()
     const quote = p.sessionId ? store.quotes[p.sessionId] : undefined
     const t = own ? withQuote(quote, own) : own
@@ -300,18 +303,19 @@ function Composer(p: ComposerProps) {
     const original = text
     if (!ta || improving || !original.trim()) return
     setImproving(true)
+    setNotice(null)
     try {
       const { text: better, question } = await api.sessions.improvePrompt(original, p.profileId, p.model, p.cwd, p.sessionId)
       if (!ta.isConnected || ta.value !== original) return
       if (question || !better) {
-        toast(tr("Ca să îmbunătățesc mesajul, spune-mi: {question} Adaugă răspunsul în mesaj și apasă din nou.", { question: question || '' }))
+        setNotice({ text: tr("Ca să îmbunătățesc mesajul, spune-mi: {question} Adaugă răspunsul în mesaj și apasă din nou.", { question: question || '' }) })
         return
       }
       ta.readOnly = false
       ta.focus()
       ta.select()
       if (!document.execCommand('insertText', false, better)) setText(better)
-    } catch (err) { toast(errMsg(err), true) }
+    } catch (err) { setNotice({ text: errMsg(err), error: true }) }
     finally { setImproving(false) }
   }
 
@@ -351,6 +355,14 @@ function Composer(p: ComposerProps) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+      {notice && (
+        <div className={`composer-notice ${notice.error ? 'error' : ''}`} role={notice.error ? 'alert' : 'status'}>
+          <span>{notice.text}</span>
+          <button onClick={() => setNotice(null)} aria-label={tr("Închide")} title={tr("Închide")}>
+            <X size={13} />
+          </button>
         </div>
       )}
       <div

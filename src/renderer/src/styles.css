@@ -1399,6 +1399,42 @@ a {
 .composer:focus-within {
   border-color: var(--line-3);
 }
+/* what "improve message" has to say: sits right above the box, stays until closed or the next send */
+.composer-notice {
+  max-width: 940px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid var(--line-2);
+  background: var(--s3);
+  box-shadow: inset 2px 0 0 var(--volt);
+  font-size: 13px;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+.composer-notice.error {
+  box-shadow: inset 2px 0 0 var(--critical);
+}
+.composer-notice span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.composer-notice button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  margin-top: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  cursor: pointer;
+}
+.composer-notice button:hover {
+  color: var(--white);
+}
 .composer.dragging {
   border-color: var(--volt);
 }

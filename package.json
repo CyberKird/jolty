@@ -52,6 +52,7 @@
     "test:computer": "esbuild test/computer-human-test.ts test/computer-gate-test.ts test/computer-release-test.ts test/computer-headsup-test.ts test/computer-displays-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outdir=out-test --log-level=warning && node --test out-test/computer-human-test.js out-test/computer-gate-test.js out-test/computer-release-test.js out-test/computer-headsup-test.js out-test/computer-displays-test.js",
     "test:chat-tools-unit": "esbuild test/chat-tools-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/chat-tools-test.cjs --log-level=warning && node --test out-test/chat-tools-test.cjs",
     "test:chat-tools": "electron-vite build && node test/chat-tools-ui.mjs",
+    "test:improve-notice": "electron-vite build && node test/improve-notice-ui.mjs",
     "test:improve": "esbuild test/improve-prompt-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/improve-prompt-test.cjs --log-level=warning && node --test out-test/improve-prompt-test.cjs",
     "test:compaction": "esbuild test/compaction-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/compaction-test.cjs --log-level=warning && node --test out-test/compaction-test.cjs",
     "test:stop": "esbuild test/stop-gate-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/stop-gate-test.cjs --log-level=warning && node --test out-test/stop-gate-test.cjs",

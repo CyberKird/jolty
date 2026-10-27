@@ -233,7 +233,7 @@ html.low-power :is(.picker-pop, .ctx, .mentions)[data-state='closed'] {
   pointer-events: none;
 }
 /* strips above the composer */
-:is(.advice, .verification-strip, .attachment-note, .queued, .attachment) {
+:is(.advice, .verification-strip, .attachment-note, .composer-notice, .queued, .attachment) {
   transition: opacity var(--t-base) var(--e-out), transform var(--t-base) var(--e-out);
   @starting-style {
     opacity: 0;
