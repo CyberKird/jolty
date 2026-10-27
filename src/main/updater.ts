@@ -69,7 +69,7 @@ export function init(onChange: (s: UpdateStatus) => void, onFocus: () => void): 
     }
   })
   autoUpdater.on('error', (err) => fail(err?.message))
-  if (!app.isPackaged || process.env.JOLTY_TEST) return
+  if (!app.isPackaged || process.platform === 'darwin' || process.env.JOLTY_TEST) return
   setTimeout(() => void check(), 15000)
   setInterval(() => void check(), EVERY)
   app.on('browser-window-focus', () => {
@@ -79,7 +79,8 @@ export function init(onChange: (s: UpdateStatus) => void, onFocus: () => void): 
 
 /** Development builds have no release to compare against, so they only say so. */
 export async function check(): Promise<UpdateStatus> {
-  if (!app.isPackaged) {
+  // Squirrel.Mac only installs updates for a signed app; the macOS build is unsigned for now (see electron-builder.yml)
+  if (!app.isPackaged || process.platform === 'darwin') {
     set({ state: 'dev' })
     return status
   }

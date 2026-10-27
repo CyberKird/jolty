@@ -1390,5 +1390,6 @@
  "Google nu publică limitele Gemini.": "Google は Gemini の上限を公開していません。",
  "Am salvat în memorie: {names}.": "メモリに保存しました: {names}",
  "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini が {n} 個のツールを続けて使いました。ここで止めました。続けたい場合は「続けて」と書いてください。",
- "Refuzat.": "拒否しました。"
+ "Refuzat.": "拒否しました。",
+ "Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.": "macOS では、アプリが署名されるまで自動アップデートは使えません。新しいバージョンは GitHub から手動でダウンロードしてください。"
 }

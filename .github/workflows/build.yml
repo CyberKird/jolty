@@ -121,3 +121,69 @@ jobs:
         run: npx electron-builder --win --x64 --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  macos:
+    name: macOS (${{ matrix.arch }})
+    needs: windows
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-latest
+            dir: mac-arm64
+          - arch: x64
+            runner: macos-15-intel
+            dir: mac
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Build the dmg
+        run: npm run dist:mac
+      - name: Start the Anthropic mock
+        run: |
+          python3 test/mocks/mock_anthropic.py 8766 "$RUNNER_TEMP/mock_anthropic.log" &
+          sleep 2
+      - name: Smoke test of the packaged app
+        run: node test/packaged-smoke.mjs
+        env:
+          MOCK_ANTHROPIC: http://127.0.0.1:8766
+          SHOT: ${{ runner.temp }}/jolty-mac-${{ matrix.arch }}.png
+      - uses: actions/upload-artifact@v6
+        if: always()
+        continue-on-error: true
+        with:
+          name: Jolty-mac-${{ matrix.arch }}-window
+          path: ${{ runner.temp }}/jolty-mac-${{ matrix.arch }}.png
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Check that the engines are bundled
+        run: |
+          res="dist/${{ matrix.dir }}/Jolty.app/Contents/Resources/app.asar.unpacked/node_modules"
+          for f in "$res/@anthropic-ai/claude-agent-sdk-darwin-${{ matrix.arch }}/claude" "$res/@openai/codex-darwin-${{ matrix.arch }}"; do
+            test -e "$f" && echo "ok  $f" || { echo "Missing from the build: $f"; exit 1; }
+          done
+      # the Windows job made the release; the dmg is added to it (no latest-mac.yml: the updater is off on macOS)
+      - name: Add the dmg to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # a tag pushed by the release script can reach this job before the Windows job has made the release
+          for i in $(seq 1 30); do gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && break; sleep 20; done
+          gh release upload "$GITHUB_REF_NAME" dist/Jolty-*.dmg --clobber
+      - uses: actions/upload-artifact@v6
+        continue-on-error: true
+        with:
+          name: Jolty-mac-${{ matrix.arch }}
+          path: dist/Jolty-*.dmg
+          if-no-files-found: error
+          retention-days: 1

@@ -118,7 +118,8 @@ export async function check(): Promise<SystemCheck[]> {
       fixLabel: tr("Deschide settings.json")
     })
   }
-  return checks
+  // Git Bash and the VC++ runtime are Windows requirements
+  return isWin ? checks : checks.filter((c) => c.id !== 'git' && c.id !== 'vcredist')
 }
 
 /** `start` goes through ShellExecute, so installers that need admin rights get the UAC prompt. */

@@ -68,8 +68,15 @@ export const isRtl = (): boolean => current === 'ar'
 /** For dates and numbers. */
 export const dateLocale = (): string => (current === 'ro' ? 'ro-RO' : current)
 
+const onMac = typeof navigator !== 'undefined' && navigator.platform.startsWith('Mac')
+
+/** Shortcut hints are written for Windows ("Ctrl+B"); on a Mac they read ⌘B. Ctrl+Alt (computer stop key) keeps Ctrl. */
+export function kbd(s: string): string {
+  return onMac ? s.replace('Ctrl+Y', '⇧⌘Z').replace(/Ctrl\+(?!Alt)/g, '⌘') : s
+}
+
 /** `tr('Continuă în {name}', { name })`: the text in the current language, with its {placeholders} filled. */
 export function tr(src: string, vars?: Record<string, unknown>): string {
-  const s = current === 'ro' ? src : (LOCALES[current]?.[src] ?? src)
+  const s = kbd(current === 'ro' ? src : (LOCALES[current]?.[src] ?? src))
   return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s
 }

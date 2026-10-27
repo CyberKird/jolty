@@ -32,20 +32,41 @@ extraResources:
   # the same extension signed by Mozilla (unlisted): installs once in Firefox and stays, see scripts/sign-firefox.mjs
   - from: browser-extension-firefox-signed
     to: browser-extension-firefox-signed
-  - from: build/icon.ico
-    to: icon.ico
-  # whisper-cli (Vulkan) for voice input, fetched by scripts/fetch-redist.mjs
-  - from: build/whisper
-    to: whisper
-  # Microsoft Visual C++ runtime, installed by the setup when missing (downloaded by CI, see README)
-  - from: build/redist/vc_redist.x64.exe
-    to: redist/vc_redist.x64.exe
 win:
+  # Windows only: the icon, the Vulkan whisper-cli build and the VC++ setup
+  extraResources:
+    - from: build/icon.ico
+      to: icon.ico
+    # whisper-cli (Vulkan) for voice input, fetched by scripts/fetch-redist.mjs
+    - from: build/whisper
+      to: whisper
+    # Microsoft Visual C++ runtime, installed by the setup when missing (downloaded by CI, see README)
+    - from: build/redist/vc_redist.x64.exe
+      to: redist/vc_redist.x64.exe
   target:
     - target: nsis
       arch: [x64]
   icon: build/icon.ico
   executableName: Jolty
+mac:
+  # one dmg for the machine that builds it: npm only installs the engine binaries of its own CPU, so the
+  # arm64 and x64 builds run on their own CI runners. No zip: it only serves the in-app updater (off on macOS)
+  target: dmg
+  # electron-builder turns the 1024px PNG into an .icns
+  icon: build/icon.png
+  category: public.app-category.developer-tools
+  extraResources:
+    # whisper-cli (Metal) for voice input, fetched by scripts/fetch-whisper-mac.mjs
+    - from: build/whisper-mac
+      to: whisper
+  # ad-hoc signature: Apple Silicon refuses unsigned code. Replace "-" with a Developer ID (and turn on
+  # hardenedRuntime + notarize) to get past Gatekeeper and to enable in-app updates (see src/main/updater.ts)
+  identity: "-"
+  hardenedRuntime: false
+  extendInfo:
+    NSMicrophoneUsageDescription: Jolty uses the microphone for voice input in the composer.
+dmg:
+  artifactName: Jolty-${version}-${arch}.${ext}
 nsis:
   oneClick: false
   perMachine: false

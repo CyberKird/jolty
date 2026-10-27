@@ -2823,6 +2823,10 @@ a {
   -webkit-app-region: drag;
   user-select: none;
 }
+.mac .titlebar {
+  /* room for the traffic lights on the left; no caption buttons on the right */
+  padding: 0 8px 0 84px;
+}
 .titlebar button {
   -webkit-app-region: no-drag;
 }

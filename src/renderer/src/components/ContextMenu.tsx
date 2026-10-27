@@ -7,7 +7,7 @@ import { quotePath, resolvePath, shellCommand, tableText } from '@shared/copy-va
 import type { EditAction } from '@shared/types'
 import { chipText } from '../copy'
 import { api, errMsg, useStore } from '../store'
-import { tr } from '@shared/i18n'
+import { kbd, tr } from '@shared/i18n'
 import { usePresence } from '../usePresence'
 
 export interface MenuItem {
@@ -49,7 +49,7 @@ export function showMenu(e: { clientX: number; clientY: number; preventDefault()
 
 export const copyItem = (label: string, text: string, icon: LucideIcon = Copy): MenuItem => ({ label, icon, run: () => void api.app.copyText(text) })
 
-const editItem = (label: string, action: EditAction, icon: LucideIcon, hint: string, disabled = false): MenuItem => ({ label, icon, hint, disabled, run: () => void api.app.edit(action) })
+const editItem = (label: string, action: EditAction, icon: LucideIcon, hint: string, disabled = false): MenuItem => ({ label, icon, hint: kbd(hint), disabled, run: () => void api.app.edit(action) })
 
 /** Items for a file or folder on disk. */
 export function pathItems(p: string): Entry[] {

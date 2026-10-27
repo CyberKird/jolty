@@ -6,3 +6,4 @@ dist/
 out-test/
 build/redist/*.exe
 build/whisper/
+build/whisper-mac/

@@ -1390,5 +1390,6 @@
  "Google nu publică limitele Gemini.": "Google tidak mempublikasikan batas Gemini.",
  "Am salvat în memorie: {names}.": "Disimpan ke memori: {names}.",
  "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini memakai {n} alat berturut-turut. Saya berhenti; tulis «lanjut» jika ingin diteruskan.",
- "Refuzat.": "Ditolak."
+ "Refuzat.": "Ditolak.",
+ "Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.": "Di macOS pembaruan otomatis tersedia setelah aplikasi ditandatangani: unduh sendiri versi baru dari GitHub."
 }

@@ -377,7 +377,9 @@ function UpdatesCard() {
             : update?.state === 'error'
               ? tr("Verificarea nu a mers: {error}", { error: update.error })
               : update?.state === 'dev'
-                ? tr("Versiune de dezvoltare: actualizările vin doar în aplicația instalată.")
+                ? navigator.platform.startsWith('Mac')
+                  ? tr("Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.")
+                  : tr("Versiune de dezvoltare: actualizările vin doar în aplicația instalată.")
                 : tr("Jolty caută singur versiuni noi la pornire, din oră în oră și când revii în aplicație, le descarcă în fundal și te anunță.")
   return (
     <div className="card row" style={{ marginBottom: 14, gap: 14, flexWrap: 'wrap' }}>

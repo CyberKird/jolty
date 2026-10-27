@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -6,6 +7,22 @@ import { getSecret, loadSettings, profileDir } from './store'
 import { tr } from '@shared/i18n'
 
 const isWin = process.platform === 'win32'
+
+/**
+ * An app opened from the Dock gets launchd's bare PATH (/usr/bin:/bin:...), without Homebrew, nvm or the
+ * tools the user installed: git, node, ollama would all look missing to Jolty and to the engines it starts.
+ * Asks the user's login shell for the real one, once at startup.
+ */
+export function importLoginPath(): void {
+  if (process.platform !== 'darwin') return
+  try {
+    const out = execFileSync(process.env.SHELL || '/bin/zsh', ['-ilc', 'echo "__JOLTY_PATH__$PATH"'], { encoding: 'utf8', timeout: 4000, stdio: ['ignore', 'pipe', 'ignore'] })
+    const found = /__JOLTY_PATH__(.+)/.exec(out)?.[1]?.trim()
+    if (found) process.env.PATH = found
+  } catch {
+    // keep the inherited PATH: engines still start, user tools may not be found
+  }
+}
 
 /** Inside a packaged app, binaries live in app.asar.unpacked, not in the asar archive. */
 function unpacked(p: string): string {

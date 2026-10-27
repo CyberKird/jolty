@@ -13,7 +13,8 @@ const MODEL = 'ggml-large-v3-turbo-q5_0.bin'
 const MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${MODEL}`
 
 export function exe(): string {
-  return app.isPackaged ? path.join(process.resourcesPath, 'whisper', 'whisper-cli.exe') : path.resolve('build/whisper/whisper-cli.exe')
+  const name = process.platform === 'win32' ? 'whisper-cli.exe' : 'whisper-cli'
+  return app.isPackaged ? path.join(process.resourcesPath, 'whisper', name) : path.resolve('build/whisper', name)
 }
 const model = (): string => path.join(dataDir(), 'models', MODEL)
 
