@@ -53,6 +53,7 @@
     "test:chat-tools-unit": "esbuild test/chat-tools-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/chat-tools-test.cjs --log-level=warning && node --test out-test/chat-tools-test.cjs",
     "test:chat-tools": "electron-vite build && node test/chat-tools-ui.mjs",
     "test:improve-notice": "electron-vite build && node test/improve-notice-ui.mjs",
+    "test:sidebar-order": "electron-vite build && node test/sidebar-order-ui.mjs",
     "test:improve": "esbuild test/improve-prompt-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/improve-prompt-test.cjs --log-level=warning && node --test out-test/improve-prompt-test.cjs",
     "test:compaction": "esbuild test/compaction-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/compaction-test.cjs --log-level=warning && node --test out-test/compaction-test.cjs",
     "test:stop": "esbuild test/stop-gate-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/stop-gate-test.cjs --log-level=warning && node --test out-test/stop-gate-test.cjs",

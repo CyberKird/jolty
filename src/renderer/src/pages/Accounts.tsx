@@ -51,9 +51,10 @@ export function LimitMeters({ profileId, compact }: { profileId: string; compact
 
 export const MOVE_HINT = tr("Trage ca să schimbi ordinea (sau Alt+săgeți)")
 
-/** Drag, or Alt+Up/Down, to reorder profiles; `ids` = the profiles on screen, in order. */
-export function useProfileDrag(ids: string[]) {
+/** Drag, or Alt+Up/Down, to reorder profiles; `ids` = the profiles on screen, in order. `move` replaces the profile order for other lists (the sidebar's sections). */
+export function useProfileDrag(ids: string[], move?: (from: string, to: string) => void) {
   const moveProfile = useStore((s) => s.moveProfile)
+  const moveItem = move ?? ((from: string, to: string) => void moveProfile(from, to))
   const [drag, setDrag] = useState<string>()
   const [over, setOver] = useState<string>()
   return (id: string) => ({
@@ -74,7 +75,7 @@ export function useProfileDrag(ids: string[]) {
     onDrop: (e: DragEvent) => {
       if (!drag) return
       e.preventDefault()
-      if (drag !== id) void moveProfile(drag, id)
+      if (drag !== id) moveItem(drag, id)
       setOver(undefined)
     },
     onDragEnd: () => {
@@ -86,7 +87,7 @@ export function useProfileDrag(ids: string[]) {
       const to = ids[ids.indexOf(id) + (e.key === 'ArrowUp' ? -1 : 1)]
       if (!to) return
       e.preventDefault()
-      void moveProfile(id, to)
+      moveItem(id, to)
     }
   })
 }

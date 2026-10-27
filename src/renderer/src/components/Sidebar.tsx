@@ -294,6 +294,36 @@ const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
   { id: 'settings', label: tr("Setări"), icon: Settings }
 ]
 
+/** A list the user reorders by dragging (or Alt+Up/Down), remembered under `storeKey`; ids not seen before go last, in their natural order. */
+function useOrder(storeKey: string, natural: string[]): [string[], (from: string, to: string) => void] {
+  const [saved, setSaved] = useState<string[]>(() => {
+    try {
+      const v: unknown = JSON.parse(localStorage.getItem(storeKey) || '[]')
+      return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+    } catch {
+      return []
+    }
+  })
+  const rank = new Map(saved.map((id, i) => [id, i]))
+  const ordered = [...natural].sort((a, b) => (rank.get(a) ?? Infinity) - (rank.get(b) ?? Infinity))
+  const move = (from: string, to: string): void => {
+    const list = [...ordered]
+    const i = list.indexOf(from)
+    const j = list.indexOf(to)
+    if (i < 0 || j < 0 || i === j) return
+    list.splice(j, 0, list.splice(i, 1)[0])
+    // ids hidden by a search keep their old place after the visible ones
+    const next = [...list, ...saved.filter((id) => !list.includes(id))]
+    setSaved(next)
+    try {
+      localStorage.setItem(storeKey, JSON.stringify(next))
+    } catch {
+      // remembering the order is a convenience only
+    }
+  }
+  return [ordered, move]
+}
+
 export function Sidebar() {
   const { page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast } = useStore(useShallow(({ page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast }) => ({ page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast })))
   const compactions = useStore((s) => s.compactions)
@@ -330,7 +360,13 @@ export function Sidebar() {
     await loadSessions()
   }
 
-  const at = NAV.findIndex((n) => n.id === page)
+  const [navIds, moveNav] = useOrder('jolty.navOrder', NAV.map((n) => n.id))
+  const nav = navIds.map((id) => NAV.find((n) => n.id === id)!)
+  const navDrag = useProfileDrag(navIds, moveNav)
+  const [groupIds, moveGroup] = useOrder('jolty.groupOrder', groups.map(([cwd]) => cwd))
+  const groupDrag = useProfileDrag(groupIds, moveGroup)
+  const orderedGroups = groupIds.map((cwd) => groups.find(([c]) => c === cwd)!)
+  const at = nav.findIndex((n) => n.id === page)
   return (
     <nav className="sidebar" aria-label={tr("Navigare")}>
       <Resizer
@@ -359,8 +395,8 @@ export function Sidebar() {
       <div className="nav">
         {/* one highlight that slides to the page in use */}
         <span className={`nav-glow ${at < 0 ? 'off' : ''}`} style={{ '--i': Math.max(at, 0) } as React.CSSProperties} aria-hidden />
-        {NAV.map((n) => (
-          <button key={n.id} className={`nav-item ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)}>
+        {nav.map((n) => (
+          <button key={n.id} className={`nav-item ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)} title={MOVE_HINT} {...navDrag(n.id)}>
             <n.icon size={15} strokeWidth={1.6} /> {n.label}
             {n.id === 'skills' && skillsAttention ? (
               <span className="count nav-alert" title={tr("{n} skilluri cer atenție", { n: skillsAttention })}>
@@ -381,9 +417,9 @@ export function Sidebar() {
       </div>
       <div className="session-list">
         {groups.length === 0 && <div className="faint small" style={{ padding: '6px 12px' }}>{tr("Nicio conversație încă.")}</div>}
-        {groups.map(([cwd, list]) => (
+        {orderedGroups.map(([cwd, list]) => (
           <div className="session-group" key={cwd}>
-            <div className="session-group-title" title={cwd} onContextMenu={(e) => showMenu(e, pathItems(cwd))}>
+            <div className="session-group-title" title={`${cwd}\n${MOVE_HINT}`} tabIndex={0} onContextMenu={(e) => showMenu(e, pathItems(cwd))} {...groupDrag(cwd)}>
               {basename(cwd)}
             </div>
             {list.map((s) => {

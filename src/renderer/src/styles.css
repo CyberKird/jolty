@@ -300,7 +300,13 @@ a {
   flex: 1 1 0;
   overflow-y: auto;
   min-height: 56px;
-  padding: 0 8px 16px;
+  /* the scrollbar sits left of the width handle on the sidebar's edge (5px), so it can be grabbed */
+  margin-inline-end: 5px;
+  padding-block: 0 16px;
+  padding-inline: 8px 3px;
+}
+.session-list::-webkit-scrollbar {
+  width: 6px;
 }
 .session-group {
   margin-bottom: 14px;
@@ -392,7 +398,9 @@ a {
   flex: none;
   max-height: 36vh;
   overflow-y: auto;
-  padding: 0 8px 8px;
+  margin-inline-end: 5px;
+  padding-block: 0 8px;
+  padding-inline: 8px 3px;
   border-bottom: 1px solid var(--line);
 }
 .live-head {
@@ -3611,10 +3619,12 @@ a {
   border-color: var(--volt-line);
   background: var(--volt-dim);
 }
-.meter-row[data-drop] {
+.meter-row[data-drop],
+.nav-item[data-drop],
+.session-group-title[data-drop] {
   box-shadow: inset 2px 0 0 var(--volt);
 }
-[dir='rtl'] .meter-row[data-drop] {
+[dir='rtl'] :is(.meter-row, .nav-item, .session-group-title)[data-drop] {
   box-shadow: inset -2px 0 0 var(--volt);
 }
 
