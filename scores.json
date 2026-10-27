@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-26",
+ "updated": "2026-10-27",
  "source": "artificialanalysis.ai/leaderboards/models",
  "entries": [
   {
@@ -21,7 +21,7 @@
     "nvidia-nemotron-3-nano-30b-a3b-reasoning"
    ],
    "iq": 9,
-   "tps": 263,
+   "tps": 272,
    "note": "NVIDIA Nemotron 3 Nano 30B A3B · reasoning"
   },
   {
@@ -29,7 +29,7 @@
     "nvidia-nemotron-nano-9b-v2-reasoning"
    ],
    "iq": 7,
-   "tps": 193,
+   "tps": 208,
    "note": "NVIDIA Nemotron Nano 9B V2 · reasoning"
   },
   {
@@ -44,7 +44,7 @@
     "nvidia-nemotron-3-ultra-550b-a55b"
    ],
    "iq": 23,
-   "tps": 196,
+   "tps": 205,
    "note": "Nemotron 3 Ultra 550B A55B · reasoning"
   },
   {
@@ -59,7 +59,7 @@
     "hermes-4-llama-3-1-405b-reasoning"
    ],
    "iq": 7,
-   "tps": 43,
+   "tps": 42,
    "note": "Hermes 4 - Llama-3.1 405B · reasoning"
   },
   {
@@ -74,7 +74,7 @@
     "qwen3-5-122b-a10b-non-reasoning"
    ],
    "iq": 18,
-   "tps": 143,
+   "tps": 146,
    "note": "Qwen3.5 122B A10B · non-reasoning"
   },
   {
@@ -97,7 +97,7 @@
     "mistral-small-4-non-reasoning"
    ],
    "iq": 9,
-   "tps": 171,
+   "tps": 160,
    "note": "Mistral Small 4 · non-reasoning"
   },
   {
@@ -105,7 +105,7 @@
     "nvidia-nemotron-3-nano-30b-a3b"
    ],
    "iq": 7,
-   "tps": 284,
+   "tps": 280,
    "note": "NVIDIA Nemotron 3 Nano 30B A3B · non-reasoning"
   },
   {
@@ -113,7 +113,7 @@
     "nvidia-nemotron-nano-12b-v2-vl"
    ],
    "iq": 6,
-   "tps": 202,
+   "tps": 203,
    "note": "NVIDIA Nemotron Nano 12B v2 VL · non-reasoning"
   },
   {
@@ -121,7 +121,7 @@
     "deepseek-v4-pro-non-reasoning"
    ],
    "iq": 20,
-   "tps": 104,
+   "tps": 103,
    "note": "DeepSeek V4 Pro 0813 · non-reasoning"
   },
   {
@@ -136,7 +136,7 @@
     "llama-3-2-instruct-11b-vision"
    ],
    "iq": 5,
-   "tps": 26,
+   "tps": 29,
    "note": "Llama 3.2 Instruct 11B · vision"
   },
   {
@@ -152,7 +152,7 @@
     "gemma-4-26b-a4b-non-reasoning"
    ],
    "iq": 13,
-   "tps": 114,
+   "tps": 122,
    "note": "Gemma 4 26B A4B · non-reasoning"
   },
   {
@@ -167,7 +167,7 @@
     "qwen3-omni-30b-a3b-reasoning"
    ],
    "iq": 8,
-   "tps": 103,
+   "tps": 102,
    "note": "Qwen3 Omni 30B A3B · reasoning"
   },
   {
@@ -205,8 +205,16 @@
     "nemotron-3-nano-omni-30b-a3b"
    ],
    "iq": 10,
-   "tps": 230,
+   "tps": 229,
    "note": "Nemotron 3 Nano Omni 30B A3B Reasoning"
+  },
+  {
+   "match": [
+    "gpt-6-1-terra-non-reasoning"
+   ],
+   "iq": 33,
+   "tps": 91,
+   "note": "GPT-6.1 Terra · non-reasoning"
   },
   {
    "match": [
@@ -229,14 +237,6 @@
    ],
    "iq": 12,
    "note": "Nemotron Cascade 2 30B A3B"
-  },
-  {
-   "match": [
-    "gpt-5-6-terra-non-reasoning"
-   ],
-   "iq": 21,
-   "tps": 115,
-   "note": "GPT-5.6 Terra · non-reasoning"
   },
   {
    "match": [
@@ -265,7 +265,7 @@
     "qwen3-8-27b-non-reasoning"
    ],
    "iq": 20,
-   "tps": 50,
+   "tps": 48,
    "note": "Qwen3.8 27B · non-reasoning"
   },
   {
@@ -280,7 +280,7 @@
     "gemma-4-e4b-non-reasoning"
    ],
    "iq": 7,
-   "tps": 45,
+   "tps": 48,
    "note": "Gemma 4 E4B · non-reasoning"
   },
   {
@@ -295,7 +295,7 @@
     "deepseek-v4-flash-vision"
    ],
    "iq": 35,
-   "tps": 175,
+   "tps": 187,
    "note": "DeepSeek V4 Flash Vision · max"
   },
   {
@@ -310,7 +310,7 @@
     "gemma-4-31b-non-reasoning"
    ],
    "iq": 14,
-   "tps": 57,
+   "tps": 55,
    "note": "Gemma 4 31B · non-reasoning"
   },
   {
@@ -325,7 +325,7 @@
     "qwen3-5-9b-non-reasoning"
    ],
    "iq": 13,
-   "tps": 82,
+   "tps": 76,
    "note": "Qwen3.5 9B · non-reasoning"
   },
   {
@@ -333,7 +333,7 @@
     "qwen3-5-4b-non-reasoning"
    ],
    "iq": 11,
-   "tps": 14,
+   "tps": 19,
    "note": "Qwen3.5 4B · non-reasoning"
   },
   {
@@ -363,7 +363,7 @@
     "trinity-large-thinking"
    ],
    "iq": 11,
-   "tps": 342,
+   "tps": 357,
    "note": "Trinity Large Thinking"
   },
   {
@@ -385,7 +385,7 @@
     "deepseek-v4-1-flash-1017"
    ],
    "iq": 45,
-   "tps": 167,
+   "tps": 170,
    "note": "DeepSeek V4.1 Flash 1017 · max"
   },
   {
@@ -407,7 +407,7 @@
     "nemotron-3-5-lightning"
    ],
    "iq": 13,
-   "tps": 299,
+   "tps": 306,
    "note": "Nemotron 3.5 Lightning"
   },
   {
@@ -429,7 +429,7 @@
     "nova-2-0-lite-reasoning"
    ],
    "iq": 13,
-   "tps": 202,
+   "tps": 207,
    "note": "Nova 2.0 Lite · high (low 12, medium 12)"
   },
   {
@@ -451,7 +451,7 @@
     "nova-2-0-pro-reasoning"
    ],
    "iq": 14,
-   "tps": 126,
+   "tps": 128,
    "note": "Nova 2.0 Pro Preview · medium (low 13)"
   },
   {
@@ -466,7 +466,7 @@
     "magistral-small-2509"
    ],
    "iq": 9,
-   "tps": 77,
+   "tps": 92,
    "note": "Magistral Small 1.2"
   },
   {
@@ -482,7 +482,7 @@
     "gemini-3-1-pro-preview"
    ],
    "iq": 30,
-   "tps": 132,
+   "tps": 141,
    "note": "Gemini 3.1 Pro Preview"
   },
   {
@@ -490,7 +490,7 @@
     "hermes-4-llama-3-1-405b"
    ],
    "iq": 7,
-   "tps": 44,
+   "tps": 43,
    "note": "Hermes 4 - Llama-3.1 405B · non-reasoning"
   },
   {
@@ -498,7 +498,7 @@
     "gemini-3-5-flash-lite"
    ],
    "iq": 22,
-   "tps": 403,
+   "tps": 419,
    "note": "Gemini 3.5 Flash-Lite"
   },
   {
@@ -520,7 +520,7 @@
     "apertus-8b-instruct"
    ],
    "iq": 5,
-   "tps": 141,
+   "tps": 148,
    "note": "Apertus 8B Instruct"
   },
   {
@@ -535,7 +535,7 @@
     "k2-horizon-375b-a23b"
    ],
    "iq": 31,
-   "tps": 919,
+   "tps": 998,
    "note": "K2 Horizon 375B A23B"
   },
   {
@@ -543,7 +543,7 @@
     "nemotron-3-5-super-vl"
    ],
    "iq": 26,
-   "tps": 451,
+   "tps": 449,
    "note": "Nemotron 3.5 Super VL"
   },
   {
@@ -572,7 +572,7 @@
     "gpt-5-5-instant-06-26"
    ],
    "iq": 26,
-   "tps": 158,
+   "tps": 161,
    "note": "GPT-5.5 Instant · june 2026"
   },
   {
@@ -608,7 +608,7 @@
     "qwen3-5-omni-flash"
    ],
    "iq": 12,
-   "tps": 233,
+   "tps": 238,
    "note": "Qwen3.5 Omni Flash"
   },
   {
@@ -623,7 +623,7 @@
     "qwen3-8-flash-next"
    ],
    "iq": 40,
-   "tps": 52,
+   "tps": 53,
    "note": "Qwen3.8-Flash-Next"
   },
   {
@@ -646,7 +646,7 @@
     "mistral-medium-3-5"
    ],
    "iq": 14,
-   "tps": 162,
+   "tps": 170,
    "note": "Mistral Medium 3.5"
   },
   {
@@ -661,7 +661,7 @@
     "qwen3-5-omni-plus"
    ],
    "iq": 20,
-   "tps": 120,
+   "tps": 115,
    "note": "Qwen3.5 Omni Plus"
   },
   {
@@ -669,7 +669,7 @@
     "claude-sonnet-5-5"
    ],
    "iq": 47,
-   "tps": 105,
+   "tps": 113,
    "note": "Claude Sonnet 5.5 · high (medium 41, xhigh 52, low 36, max 56)"
   },
   {
@@ -692,7 +692,7 @@
     "qwen3-5-122b-a10b"
    ],
    "iq": 16,
-   "tps": 131,
+   "tps": 132,
    "note": "Qwen3.5 122B A10B · reasoning"
   },
   {
@@ -728,7 +728,7 @@
     "reflection-beam"
    ],
    "iq": 30,
-   "tps": 363,
+   "tps": 384,
    "note": "Beam 1.0"
   },
   {
@@ -780,7 +780,7 @@
     "qwen3-coder-next"
    ],
    "iq": 9,
-   "tps": 96,
+   "tps": 91,
    "note": "Qwen3 Coder Next"
   },
   {
@@ -788,7 +788,7 @@
     "claude-fable-5-1"
    ],
    "iq": 51,
-   "tps": 57,
+   "tps": 59,
    "note": "Claude Fable 5.1 · high (low 47, medium 49, xhigh 53, max 53)"
   },
   {
@@ -803,7 +803,7 @@
     "north-mini-code"
    ],
    "iq": 10,
-   "tps": 66,
+   "tps": 68,
    "note": "North Mini Code"
   },
   {
@@ -819,7 +819,7 @@
     "mistral-large-4"
    ],
    "iq": 38,
-   "tps": 112,
+   "tps": 115,
    "note": "Mistral Large 4 Preview"
   },
   {
@@ -827,7 +827,7 @@
     "muse-spark-open"
    ],
    "iq": 39,
-   "tps": 165,
+   "tps": 199,
    "note": "Muse Spark Open · xhigh"
   },
   {
@@ -835,7 +835,7 @@
     "mistral-small-4"
    ],
    "iq": 11,
-   "tps": 175,
+   "tps": 180,
    "note": "Mistral Small 4 · reasoning"
   },
   {
@@ -864,7 +864,7 @@
     "ministral-3-14b"
    ],
    "iq": 6,
-   "tps": 72,
+   "tps": 73,
    "note": "Ministral 3 14B"
   },
   {
@@ -872,7 +872,7 @@
     "gemini-3-8-flash"
    ],
    "iq": 41,
-   "tps": 129,
+   "tps": 134,
    "note": "Gemini 3.8 Flash · high (medium 40, low 33)"
   },
   {
@@ -887,7 +887,7 @@
     "deepseek-v4-pro"
    ],
    "iq": 36,
-   "tps": 100,
+   "tps": 95,
    "note": "DeepSeek V4 Pro 0813 · max"
   },
   {
@@ -895,7 +895,7 @@
     "qwen3-8-2-4t-a95b"
    ],
    "iq": 40,
-   "tps": 40,
+   "tps": 41,
    "note": "Qwen3.8 2.4T A95B"
   },
   {
@@ -910,7 +910,6 @@
     "granite-4-2-30b"
    ],
    "iq": 13,
-   "tps": 41,
    "note": "Granite 4.2 30B"
   },
   {
@@ -918,7 +917,7 @@
     "mimo-v2-6-flash"
    ],
    "iq": 38,
-   "tps": 51,
+   "tps": 60,
    "note": "MiMo-V2.6-Flash"
   },
   {
@@ -926,7 +925,7 @@
     "command-a-plus"
    ],
    "iq": 13,
-   "tps": 162,
+   "tps": 152,
    "note": "Command A+"
   },
   {
@@ -934,7 +933,7 @@
     "claude-opus-5-5"
    ],
    "iq": 54,
-   "tps": 79,
+   "tps": 80,
    "note": "Claude Opus 5.5 · high (low 42, xhigh 56, medium 51, max 58)"
   },
   {
@@ -963,7 +962,7 @@
     "ministral-3-3b"
    ],
    "iq": 5,
-   "tps": 209,
+   "tps": 189,
    "note": "Ministral 3 3B"
   },
   {
@@ -971,7 +970,7 @@
     "gemma-4-26b-a4b"
    ],
    "iq": 17,
-   "tps": 95,
+   "tps": 94,
    "note": "Gemma 4 26B A4B · reasoning"
   },
   {
@@ -979,7 +978,7 @@
     "inkling-small"
    ],
    "iq": 26,
-   "tps": 223,
+   "tps": 221,
    "note": "Inkling Small"
   },
   {
@@ -1001,7 +1000,7 @@
     "qwen3-6-35b-a3b"
    ],
    "iq": 18,
-   "tps": 131,
+   "tps": 133,
    "note": "Qwen3.6 35B A3B · reasoning"
   },
   {
@@ -1009,7 +1008,7 @@
     "ministral-3-8b"
    ],
    "iq": 5,
-   "tps": 122,
+   "tps": 93,
    "note": "Ministral 3 8B"
   },
   {
@@ -1024,7 +1023,7 @@
     "gemini-4-argon"
    ],
    "iq": 53,
-   "tps": 80,
+   "tps": 81,
    "note": "Gemini 4 Argon · high"
   },
   {
@@ -1032,7 +1031,7 @@
     "granite-4-2-3b"
    ],
    "iq": 9,
-   "tps": 42,
+   "tps": 40,
    "note": "Granite 4.2 3B"
   },
   {
@@ -1068,7 +1067,7 @@
     "muse-glimmer"
    ],
    "iq": 17,
-   "tps": 104,
+   "tps": 116,
    "note": "Muse Glimmer · high"
   },
   {
@@ -1091,7 +1090,7 @@
     "ling-3-1-flash"
    ],
    "iq": 41,
-   "tps": 211,
+   "tps": 216,
    "note": "Ling 3.1 Flash"
   },
   {
@@ -1099,7 +1098,7 @@
     "llama-4-scout"
    ],
    "iq": 6,
-   "tps": 114,
+   "tps": 87,
    "note": "Llama 4 Scout"
   },
   {
@@ -1107,7 +1106,7 @@
     "granite-4-2-8b"
    ],
    "iq": 11,
-   "tps": 43,
+   "tps": 42,
    "note": "Granite 4.2 8B"
   },
   {
@@ -1136,7 +1135,7 @@
     "3-5-flash-lite"
    ],
    "iq": 22,
-   "tps": 403,
+   "tps": 419,
    "note": "Gemini 3.5 Flash-Lite"
   },
   {
@@ -1158,7 +1157,7 @@
     "glm-5-3-flash"
    ],
    "iq": 42,
-   "tps": 72,
+   "tps": 76,
    "note": "GLM-5.3-Flash"
   },
   {
@@ -1173,16 +1172,8 @@
     "mimo-v2-6-pro"
    ],
    "iq": 46,
-   "tps": 54,
+   "tps": 56,
    "note": "MiMo-V2.6-Pro"
-  },
-  {
-   "match": [
-    "gpt-5-6-terra"
-   ],
-   "iq": 34,
-   "tps": 119,
-   "note": "GPT-5.6 Terra · high (medium 30, xhigh 38, low 27, max 42)"
   },
   {
    "match": [
@@ -1211,7 +1202,7 @@
     "gpt-5-3-codex"
    ],
    "iq": 33,
-   "tps": 105,
+   "tps": 101,
    "note": "GPT-5.3 Codex · xhigh"
   },
   {
@@ -1219,7 +1210,7 @@
     "solar-mini4"
    ],
    "iq": 24,
-   "tps": 122,
+   "tps": 120,
    "note": "Solar Mini 4"
   },
   {
@@ -1234,7 +1225,7 @@
     "kimi-k3-1-pro"
    ],
    "iq": 55,
-   "tps": 51,
+   "tps": 41,
    "note": "Kimi K3.1 Pro"
   },
   {
@@ -1249,7 +1240,7 @@
     "nova-2-0-lite"
    ],
    "iq": 9,
-   "tps": 174,
+   "tps": 182,
    "note": "Nova 2.0 Lite · non-reasoning"
   },
   {
@@ -1264,7 +1255,7 @@
     "ling-3-0-tiny"
    ],
    "iq": 11,
-   "tps": 57,
+   "tps": 58,
    "note": "Ling 3.0 Tiny"
   },
   {
@@ -1284,10 +1275,18 @@
   },
   {
    "match": [
+    "gpt-6-1-terra"
+   ],
+   "iq": 44,
+   "tps": 91,
+   "note": "GPT-6.1 Terra · high (medium 41, low 36, xhigh 45, max 48)"
+  },
+  {
+   "match": [
     "gpt-oss-120b"
    ],
    "iq": 12,
-   "tps": 238,
+   "tps": 239,
    "note": "gpt-oss-120b · high (low 10)"
   },
   {
@@ -1295,7 +1294,7 @@
     "reka-flash-3"
    ],
    "iq": 6,
-   "tps": 87,
+   "tps": 90,
    "note": "Reka Flash 3"
   },
   {
@@ -1310,7 +1309,7 @@
     "quasar-438b"
    ],
    "iq": 27,
-   "tps": 156,
+   "tps": 171,
    "note": "Quasar 438B · max"
   },
   {
@@ -1325,7 +1324,7 @@
     "muse-wonder"
    ],
    "iq": 52,
-   "tps": 178,
+   "tps": 208,
    "note": "Muse Wonder · max"
   },
   {
@@ -1340,7 +1339,7 @@
     "gpt-oss-20b"
    ],
    "iq": 9,
-   "tps": 179,
+   "tps": 194,
    "note": "gpt-oss-20b · high (low 10)"
   },
   {
@@ -1348,7 +1347,7 @@
     "gpt-6-astra"
    ],
    "iq": 51,
-   "tps": 60,
+   "tps": 64,
    "note": "GPT-6 Astra · high (xhigh 52, low 46, medium 50, max 53)"
   },
   {
@@ -1356,7 +1355,7 @@
     "minimax-m3"
    ],
    "iq": 29,
-   "tps": 105,
+   "tps": 110,
    "note": "MiniMax-M3"
   },
   {
@@ -1364,7 +1363,7 @@
     "nova-micro"
    ],
    "iq": 6,
-   "tps": 303,
+   "tps": 306,
    "note": "Nova Micro"
   },
   {
@@ -1379,7 +1378,7 @@
     "longcat-2-0"
    ],
    "iq": 19,
-   "tps": 71,
+   "tps": 72,
    "note": "LongCat 2.0"
   },
   {
@@ -1387,7 +1386,7 @@
     "qwen3-8-27b"
    ],
    "iq": 34,
-   "tps": 44,
+   "tps": 42,
    "note": "Qwen3.8 27B · xhigh (medium 28, low 26)"
   },
   {
@@ -1402,7 +1401,7 @@
     "mercury-2-5"
    ],
    "iq": 12,
-   "tps": 679,
+   "tps": 728,
    "note": "Mercury 2.5"
   },
   {
@@ -1410,7 +1409,7 @@
     "nova-2-0-pro"
    ],
    "iq": 10,
-   "tps": 119,
+   "tps": 123,
    "note": "Nova 2.0 Pro Preview · non-reasoning"
   },
   {
@@ -1447,7 +1446,7 @@
     "gemma-4-e4b"
    ],
    "iq": 9,
-   "tps": 46,
+   "tps": 47,
    "note": "Gemma 4 E4B · reasoning"
   },
   {
@@ -1470,7 +1469,7 @@
     "gpt-6-1-sol"
    ],
    "iq": 50,
-   "tps": 57,
+   "tps": 64,
    "note": "GPT-6.1 Sol · high (xhigh 51, medium 48, low 42, max 52)"
   },
   {
@@ -1478,7 +1477,7 @@
     "gpt-6-luna"
    ],
    "iq": 33,
-   "tps": 121,
+   "tps": 120,
    "note": "GPT-6 Luna · high (xhigh 35, medium 30, low 22, max 38)"
   },
   {
@@ -1486,7 +1485,7 @@
     "qwen3-5-9b"
    ],
    "iq": 11,
-   "tps": 60,
+   "tps": 58,
    "note": "Qwen3.5 9B · reasoning"
   },
   {
@@ -1501,7 +1500,7 @@
     "command-a"
    ],
    "iq": 7,
-   "tps": 24,
+   "tps": 20,
    "note": "Command A"
   },
   {
@@ -1523,7 +1522,7 @@
     "qwen3-5-4b"
    ],
    "iq": 13,
-   "tps": 20,
+   "tps": 18,
    "note": "Qwen3.5 4B · reasoning"
   },
   {
@@ -1531,7 +1530,7 @@
     "celeris-1"
    ],
    "iq": 6,
-   "tps": 1481,
+   "tps": 1464,
    "note": "Celeris-1"
   },
   {
@@ -1569,7 +1568,7 @@
     "inkling"
    ],
    "iq": 25,
-   "tps": 179,
+   "tps": 178,
    "note": "Inkling · xhigh"
   },
   {
@@ -1577,7 +1576,7 @@
     "3-8-flash"
    ],
    "iq": 41,
-   "tps": 129,
+   "tps": 134,
    "note": "Gemini 3.8 Flash · high (medium 40, low 33)"
   },
   {
@@ -1585,7 +1584,7 @@
     "grok-4-7"
    ],
    "iq": 46,
-   "tps": 85,
+   "tps": 90,
    "note": "Grok 4.7 · high (low 42, max 46)"
   },
   {
@@ -1621,7 +1620,7 @@
     "qwen3-8"
    ],
    "iq": 45,
-   "tps": 41,
+   "tps": 40,
    "note": "Qwen3.8 Max · max"
   },
   {
@@ -1629,7 +1628,7 @@
     "sonnet"
    ],
    "iq": 47,
-   "tps": 105,
+   "tps": 113,
    "note": "Claude Sonnet 5.5 · high (medium 41, xhigh 52, low 36, max 56)"
   },
   {
@@ -1637,7 +1636,7 @@
     "4-argon"
    ],
    "iq": 53,
-   "tps": 80,
+   "tps": 81,
    "note": "Gemini 4 Argon · high"
   },
   {
@@ -1645,7 +1644,7 @@
     "step-5"
    ],
    "iq": 44,
-   "tps": 216,
+   "tps": 191,
    "note": "Step 5 Preview"
   },
   {
@@ -1653,7 +1652,7 @@
     "glm-5-3"
    ],
    "iq": 45,
-   "tps": 98,
+   "tps": 82,
    "note": "GLM-5.3 · max (low 34)"
   },
   {
@@ -1661,7 +1660,7 @@
     "fable"
    ],
    "iq": 51,
-   "tps": 57,
+   "tps": 59,
    "note": "Claude Fable 5.1 · high (low 47, medium 49, xhigh 53, max 53)"
   },
   {
@@ -1677,7 +1676,7 @@
     "3-1-pro"
    ],
    "iq": 30,
-   "tps": 132,
+   "tps": 141,
    "note": "Gemini 3.1 Pro Preview"
   },
   {
@@ -1707,7 +1706,7 @@
     "opus"
    ],
    "iq": 54,
-   "tps": 79,
+   "tps": 80,
    "note": "Claude Opus 5.5 · high (low 42, xhigh 56, medium 51, max 58)"
   },
   {
@@ -1715,7 +1714,7 @@
     "hy3"
    ],
    "iq": 25,
-   "tps": 81,
+   "tps": 84,
    "note": "Hy3"
   },
   {
