@@ -88,6 +88,9 @@ function gitState(cwd: string): Promise<string> {
 
 const claudeHome = (p: Profile): string => store.profileDir(p) || path.join(os.homedir(), '.claude')
 
+// Jolty's own one-shot calls (conversation titles, prompt rewrites, ask_model) leave sessions in the engine's folder; importAll must not list them as chats.
+const HELPER_PROMPT = /^(\[external unsupported block: image\]\s*)?(Name this conversation so the user can find it|Rewrite the message below|Another AI model that cannot see images|You are a prompt engineer|Attached: (part \d+ of \d+ of the )?auto-caption transcript)/
+
 /** Copies a Claude Code conversation (transcript, subagents, file checkpoints) into another profile's folder so it resumes there. */
 function copyClaudeSession(from: Profile, to: Profile, id: string): void {
   const src = claudeHome(from)
@@ -595,6 +598,7 @@ export class Jolty {
       for (const s of list) {
         if (known.has(s.engineSessionId)) continue
         known.add(s.engineSessionId)
+        if (HELPER_PROMPT.test(s.title.trim())) continue
         metas.push({
           id: randomUUID(),
           profileId: p.id,
