@@ -1,5 +1,6 @@
 import { BarChart3, CalendarClock, Cpu, Download, KeyRound, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck } from 'lucide-react'
 import { BugReportButton } from './BugReport'
+import { MergeHost } from './MergePanel'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { dragShield } from '../dragShield'
@@ -445,6 +446,7 @@ export function Sidebar() {
       <div className="account-row">
         <AccountChip />
         <BugReportButton />
+        <MergeHost />
       </div>
     </nav>
   )

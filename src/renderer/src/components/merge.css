@@ -1,0 +1,133 @@
+/* merge assistant: the panel opened from the branch mark of a session with a worktree */
+.merge-open {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--grey-2);
+  cursor: pointer;
+}
+.merge-open:hover,
+.merge-open:focus-visible {
+  color: var(--volt);
+}
+.merge-modal {
+  width: min(860px, calc(100vw - 40px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.merge-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.merge-top .modal-title {
+  flex: 1;
+  margin: 0;
+}
+.merge-session {
+  margin: -6px 0 0;
+}
+.merge-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--grey);
+}
+.merge-ref {
+  color: var(--white);
+  word-break: break-all;
+}
+.merge-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--line-2);
+  font-family: var(--label);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--grey);
+}
+.merge-chip.add {
+  border-color: var(--volt-line);
+  color: var(--volt);
+}
+.merge-chip.warn {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.merge-notes {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--warning);
+}
+.merge-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.merge-box,
+.merge-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.merge-box {
+  padding: 14px;
+  border: 1px solid var(--line-2);
+  background: var(--s2);
+}
+.merge-box.warn {
+  border-color: var(--warning);
+}
+.merge-box p,
+.merge-confirm p {
+  margin: 0;
+}
+.merge-files {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.merge-confirm .row {
+  gap: 8px;
+}
+.merge-done {
+  margin: 0;
+  color: var(--volt);
+  word-break: break-all;
+}
+.merge-error {
+  margin: 0;
+  color: var(--del-ink);
+  white-space: pre-wrap;
+}
+.merge-h {
+  margin: 8px 0 0;
+}
+.merge-commits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.merge-commits li {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+}
+.merge-stat {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  background: var(--s2);
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--grey);
+}
+.merge-diff {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  background: var(--s2);
+}

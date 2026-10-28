@@ -1,10 +1,11 @@
-import { Archive, FolderOpen, GitBranch, Link, Loader2, MessageSquare, MessageSquareDashed, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Archive, FolderOpen, GitBranch, GitMerge, Link, Loader2, MessageSquare, MessageSquareDashed, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { tr } from '@shared/i18n'
 import type { SessionMeta } from '@shared/types'
 import { api, timeAgo, useStore } from '../store'
 import { archive, togglePin } from '../organize'
 import { copyItem, showMenu, type Entry } from './ContextMenu'
+import { BranchButton, openMerge } from './MergePanel'
 
 /** One conversation in the sidebar list: open, rename (double click), pin, archive, remove. */
 export function SessionRow({ s, onRemove }: { s: SessionMeta; onRemove: (id: string) => void }) {
@@ -44,7 +45,7 @@ export function SessionRow({ s, onRemove }: { s: SessionMeta; onRemove: (id: str
           ...organize,
           { label: tr("Arată folderul în Explorer"), icon: FolderOpen, run: () => void api.app.revealPath(s.cwd) },
           copyItem(tr("Copiază calea folderului"), s.cwd, Link),
-          ...(s.worktree ? [copyItem(tr("Copiază numele branch-ului"), s.worktree.branch, GitBranch)] : []),
+          ...(s.worktree ? [{ label: tr("Asistent de merge"), icon: GitMerge, run: () => openMerge(s.id) }, copyItem(tr("Copiază numele branch-ului"), s.worktree.branch, GitBranch)] : []),
           'sep',
           { label: tr("Scoate din Jolty"), icon: Trash2, run: () => onRemove(s.id) }
         ])
@@ -54,7 +55,7 @@ export function SessionRow({ s, onRemove }: { s: SessionMeta; onRemove: (id: str
     >
       <span className={`dot ${running ? 'running' : ''}`} style={{ background: color }} />
       {compacting && <Loader2 size={11} className="spin compact-dot" aria-label={tr("Compactez conversația...")} />}
-      {s.worktree && <GitBranch size={11} className="live-branch" aria-label={s.worktree.branch} />}
+      <BranchButton s={s} />
       {renaming ? (
         <input
           className="title-edit"

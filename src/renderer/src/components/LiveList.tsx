@@ -1,7 +1,8 @@
-import { Check, CircleAlert, GitBranch, X } from 'lucide-react'
+import { Check, CircleAlert, GitBranch, GitMerge, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, liveRows, useStore } from '../store'
 import { copyItem, showMenu } from './ContextMenu'
+import { BranchButton, openMerge } from './MergePanel'
 import { tr } from '@shared/i18n'
 import { useShallow } from 'zustand/shallow'
 
@@ -53,7 +54,7 @@ export function LiveList() {
             }}
             onContextMenu={(e) =>
               showMenu(e, [
-                ...(s.worktree ? [copyItem(tr("Copiază numele branch-ului"), s.worktree.branch, GitBranch), { label: tr("Arată worktree-ul în Explorer"), run: () => void api.app.revealPath(s.worktree!.path) }] : []),
+                ...(s.worktree ? [{ label: tr("Asistent de merge"), icon: GitMerge, run: () => openMerge(s.id) }, copyItem(tr("Copiază numele branch-ului"), s.worktree.branch, GitBranch), { label: tr("Arată worktree-ul în Explorer"), run: () => void api.app.revealPath(s.worktree!.path) }] : []),
                 ...(state === 'done' ? [{ label: tr("Ascunde din Live"), run: () => dismissUnseen(s.id) }] : [])
               ])
             }
@@ -61,7 +62,7 @@ export function LiveList() {
             {state === 'waiting' ? <CircleAlert size={13} className="live-icon wait" /> : state === 'done' ? <Check size={13} className="live-icon done" /> : <span className="dot running" />}
             <span className="live-text">
               <span className="live-title">
-                {s.worktree && <GitBranch size={11} className="live-branch" aria-label={s.worktree.branch} />}
+                <BranchButton s={s} />
                 <span className="ellipsis">{s.title}</span>
               </span>
               <span className="live-sub ellipsis" style={{ ['--c' as string]: profile?.color }}>
