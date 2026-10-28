@@ -23,7 +23,7 @@ import type {
   TurnUsage,
   UsageSummary
 } from '@shared/types'
-import { hasEffort, hasJoltyBrowser, hasJoltyComputer, isAcp } from '@shared/types'
+import { hasEffort, hasJoltyBrowser, hasJoltyComputer, hasJoltyTools, isAcp } from '@shared/types'
 import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browserMode, browsers } from './browser'
 import { nativeBrowser } from './jbrowser/native'
 import { nativeComputer } from './computer/native'
@@ -741,7 +741,7 @@ export class Jolty {
     const web = s.meta.engine === 'gemini'
     let prompt = [text, web ? '' : filePrompt(prepared.files), nudge].filter(Boolean).join('\n\n')
     // for the model only: the chat and the title keep the user's words (Hermes has no Jolty tools)
-    if (parallel && !isAcp(s.meta.engine)) prompt = withParallelInstruction(prompt)
+    if (parallel && hasJoltyTools(s.meta.engine)) prompt = withParallelInstruction(prompt)
     let images = web ? [...prepared.images, ...prepared.files.map((f, i): Attachment => ({ id: `file-${i}`, name: f.name, mime: f.mime, path: f.path }))] : prepared.images
     if (images.length && !(await this.canSee(s.meta))) {
       try {

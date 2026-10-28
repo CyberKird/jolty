@@ -3,7 +3,7 @@ import path from 'node:path'
 import { test } from 'node:test'
 import { AcpDriver } from '../src/main/engines/acp'
 import { OPENCODE } from '../src/main/engines/acp-agent'
-import { opencodePermissions } from '../src/main/engines/opencode-runtime'
+import { joltyRules, opencodeMajor, opencodePermissions } from '../src/main/engines/opencode-runtime'
 import { isSecretPath, touchesSecretFile } from '../src/main/engines/secret-files'
 import { JsonRpcProcess, type RpcRequest } from '../src/main/engines/jsonrpc'
 import type { EngineHost, EngineSession } from '../src/main/engines/types'
@@ -271,10 +271,19 @@ test('OpenCode: only free models listed, modes and approvals map to its config',
   assert.deepEqual(opencodePermissions('ask'), { edit: 'ask', bash: 'ask' })
   assert.deepEqual(opencodePermissions('autoEdit'), { edit: 'allow', bash: 'ask' })
   assert.deepEqual(opencodePermissions('full'), { edit: 'allow', bash: 'allow', external_directory: 'allow', doom_loop: 'allow' })
+  // v1 lost the free models, so the system check offers OpenCode 2 for anything below it
+  assert.equal(opencodeMajor('1.19.4'), 1)
+  assert.equal(opencodeMajor('opencode v2.2.0'), 2)
+  assert.equal(opencodeMajor(undefined), 0)
   assert.equal(opencodePermissions('autoEdit', false).read, 'allow')
   assert.equal(opencodePermissions('full', true).read, undefined)
   assert.equal(OPENCODE.sessionAllow({ optionId: 'always', kind: 'allow_always' }), true)
   assert.equal(OPENCODE.sessionAllow({ optionId: 'once', kind: 'allow_once' }), false)
+  // Jolty's own tools are attached to OpenCode: reading runs on its own, starting a session asks in Manual mode
+  assert.equal(OPENCODE.joltyTools, true)
+  assert.equal(joltyRules('ask')['jolty_*'], 'ask')
+  assert.equal(joltyRules('ask').jolty_search_conversations, 'allow')
+  assert.equal(joltyRules('full')['jolty_*'], 'allow')
 })
 
 test('secret files are recognised by path, the way the Claude rules list them', () => {

@@ -12,6 +12,8 @@ export interface AcpAgent {
   launch(mode: PermissionMode, browser: boolean, computer: boolean): JsonRpcProcess
   /** whether the Jolty browser and computer use can be attached to a conversation */
   browser: boolean
+  /** whether Jolty's own tools (search, schedules, parallel sessions) are attached to a conversation */
+  joltyTools?: boolean
   /** the agent's own mode id for a Jolty permission mode; throws when the agent cannot do it */
   modeId(mode: PermissionMode): string
   /** the approval option that lasts for the conversation only, never a permanent one */
@@ -66,6 +68,7 @@ export const OPENCODE: AcpAgent = {
   name: 'OpenCode',
   launch: (mode, browser, computer) => launchOpencode(mode, browser, computer),
   browser: true,
+  joltyTools: true,
   modeId: (mode) => mode === 'plan' ? 'plan' : 'build',
   // opencode keeps an "always" answer in memory for the running process, not on disk
   sessionAllow: (o) => o.kind === 'allow_always',

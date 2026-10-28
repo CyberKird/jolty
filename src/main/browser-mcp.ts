@@ -57,6 +57,12 @@ export function acpComputerServers(sid: string): Record<string, unknown>[] {
   return c ? [{ type: 'http', name: COMPUTER_SERVER, url: c.url, headers: Object.entries(c.headers).map(([name, value]) => ({ name, value })) }] : []
 }
 
+/** Jolty's own tools for ACP agents (OpenCode): the same local server Claude and Codex get. */
+export function acpJoltyServers(sid: string): Record<string, unknown>[] {
+  const c = nativeBrowser.toolsMcp(sid)
+  return c ? [{ type: 'http', name: JOLTY_SERVER, url: c.url, headers: Object.entries(c.headers).map(([name, value]) => ({ name, value })) }] : []
+}
+
 /**
  * Computer use for Codex. Outside Manual mode every tool runs on its own: Jolty's server asks the user per application,
  * the same for all engines. In Manual mode Codex asks for each call.

@@ -4,7 +4,7 @@ import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
 import { usageRisk } from '@shared/usage-risk'
 import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
-import { hasJoltyBrowser, hasJoltyComputer, isAcp } from '@shared/types'
+import { hasJoltyBrowser, hasJoltyComputer, hasJoltyTools, isAcp } from '@shared/types'
 import { sameProvider } from '@shared/provider'
 import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
@@ -279,7 +279,7 @@ function Composer(p: ComposerProps) {
   const submit = async (parallel = false): Promise<void> => {
     const own = text.trim()
     if (improving || (!own && !atts.length)) return
-    if (parallel && (!own || isAcp(engine))) return
+    if (parallel && (!own || !hasJoltyTools(engine))) return
     setNotice(null)
     const store = useStore.getState()
     const quote = p.sessionId ? store.quotes[p.sessionId] : undefined
@@ -564,7 +564,7 @@ function Composer(p: ComposerProps) {
               <Square size={12} fill="currentColor" />
             </button>
           )}
-          {!isAcp(engine) && text.trim() && (
+          {hasJoltyTools(engine) && text.trim() && (
             <button
               className="btn send-btn"
               onClick={() => void submit(true)}

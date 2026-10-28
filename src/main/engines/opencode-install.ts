@@ -6,8 +6,9 @@ import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { tr } from '@shared/i18n'
 
-// The release OpenCode itself publishes. The "baseline" build is for CPUs without AVX2, so it is the fallback.
-const BASE = 'https://github.com/sst/opencode/releases/latest/download/'
+// OpenCode 1 stays on 1.19.4 and lost the free models, so Jolty installs OpenCode 2 from the update server.
+// The "baseline" build is for CPUs without AVX2, so it is the fallback.
+const BASE = 'https://opencode.ai/update/api/latest/cli/opencode/'
 const ZIPS = ['opencode-windows-x64.zip', 'opencode-windows-x64-baseline.zip']
 
 /** Where OpenCode's own install script puts the binary; opencodeExecutable() already looks here. */

@@ -5,6 +5,7 @@ import path from 'path'
 import type { PermissionMode } from '@shared/types'
 import { BROWSER_BLOCKED_TOOLS, BROWSER_READ_TOOLS, BROWSER_SERVER, browserPrompt } from '../browser'
 import { COMPUTER_ACT_TOOLS, COMPUTER_READ_TOOLS, COMPUTER_SERVER, computerPrompt } from '../computer/names'
+import { JOLTY_READ_TOOLS, JOLTY_SERVER, JOLTY_TOOLS_PROMPT } from '../jolty-tools'
 import { dataDir, loadSettings } from '../store'
 import { JsonRpcProcess } from './jsonrpc'
 import { COPY_RULE, LANGUAGE_RULE } from './prompt'
@@ -29,8 +30,8 @@ function nextToLauncher(dir: string): string | undefined {
 export function opencodeExecutable(): string | undefined {
   const custom = loadSettings().opencodePath
   if (custom) return fs.existsSync(custom) ? custom : undefined
-  const dirs = (process.env.PATH || process.env.Path || '').split(path.delimiter).filter(Boolean)
-  dirs.push(path.join(os.homedir(), '.opencode', 'bin'))
+  // Jolty installs OpenCode 2 here, and an older one in PATH must not win: v1 no longer has the free models
+  const dirs = [path.join(os.homedir(), '.opencode', 'bin'), ...(process.env.PATH || process.env.Path || '').split(path.delimiter).filter(Boolean)]
   for (const dir of dirs) {
     const direct = path.join(dir, EXE)
     if (fs.existsSync(direct) && fs.statSync(direct).isFile()) return direct
@@ -40,6 +41,15 @@ export function opencodeExecutable(): string | undefined {
     }
   }
   return undefined
+}
+
+/** "1.19.4" and "opencode v2.2.0" alike: the major number, 0 when the output is unreadable. */
+export function opencodeMajor(version: string | undefined): number {
+  return Number(/\d+/.exec(version || '')?.[0] || 0)
+}
+
+export function opencodeVersion(exe: string): Promise<string | undefined> {
+  return new Promise((resolve) => execFile(exe, ['--version'], { windowsHide: true, timeout: 10000 }, (error, stdout) => resolve(error ? undefined : String(stdout).trim())))
 }
 
 /** opencode asks for approvals through its own permission config, so the Jolty mode is passed in as config. */
@@ -69,10 +79,19 @@ function computerRules(mode: PermissionMode): Record<string, Rule> {
   return Object.fromEntries([...COMPUTER_READ_TOOLS, ...COMPUTER_ACT_TOOLS].map((t) => [`${COMPUTER_SERVER}_${t}`, rule]))
 }
 
-/** opencode has no system prompt over ACP: the browser and computer instructions go in as an instructions file. */
+/** Jolty's own tools: reading runs on its own outside Manual mode, acting asks there, like the browser's. */
+export function joltyRules(mode: PermissionMode): Record<string, Rule> {
+  const acting: Rule = mode === 'ask' || mode === 'plan' ? 'ask' : 'allow'
+  return {
+    [`${JOLTY_SERVER}_*`]: acting,
+    ...Object.fromEntries(JOLTY_READ_TOOLS.map((t) => [`${JOLTY_SERVER}_${t}`, 'allow' as Rule]))
+  }
+}
+
+/** opencode has no system prompt over ACP: the Jolty, browser and computer instructions go in as an instructions file. */
 function toolInstructions(browser: boolean, computer: boolean): string {
   const file = path.join(dataDir(), 'opencode-tools.md')
-  fs.writeFileSync(file, [LANGUAGE_RULE, COPY_RULE, browser ? browserPrompt() : '', computer ? computerPrompt() : ''].filter(Boolean).join('\n\n') + '\n')
+  fs.writeFileSync(file, [LANGUAGE_RULE, COPY_RULE, JOLTY_TOOLS_PROMPT, browser ? browserPrompt() : '', computer ? computerPrompt() : ''].filter(Boolean).join('\n\n') + '\n')
   return file
 }
 
@@ -111,7 +130,8 @@ export function opencodeOnce(prompt: string, model: string): Promise<string> {
   env.OPENCODE_DISABLE_CLAUDE_CODE = '1'
   env.OPENCODE_CONFIG_CONTENT = JSON.stringify({ autoupdate: false, permission: { edit: 'deny', bash: 'deny', webfetch: 'deny' } })
   return new Promise((resolve, reject) => {
-    const child = execFile(exe, ['run', '-m', model, '--format', 'json', '--dir', os.tmpdir(), prompt], { windowsHide: true, timeout: 120000, maxBuffer: 16 * 1024 * 1024, env }, (error, stdout) => {
+    // OpenCode 2 dropped `--dir`: the same thing is the working directory of the command
+    const child = execFile(exe, ['run', '-m', model, '--format', 'json', prompt], { cwd: os.tmpdir(), windowsHide: true, timeout: 120000, maxBuffer: 16 * 1024 * 1024, env }, (error, stdout) => {
       let text = ''
       let session = ''
       let failure = ''
@@ -140,7 +160,7 @@ export function launchOpencode(mode: PermissionMode = 'ask', browser = false, co
     if (value !== undefined && !/^(CLAUDECODE|CLAUDE_.*|ANTHROPIC_.*|CODEX_.*|OPENAI_.*|ELECTRON_RUN_AS_NODE)$/i.test(key)) env[key] = value
   }
   env.OPENCODE_CONFIG_CONTENT = JSON.stringify({
-    permission: { ...opencodePermissions(mode, loadSettings().protectSecretFiles !== false), ...(browser ? browserRules(mode) : {}), ...(computer ? computerRules(mode) : {}) },
+    permission: { ...opencodePermissions(mode, loadSettings().protectSecretFiles !== false), ...(browser ? browserRules(mode) : {}), ...(computer ? computerRules(mode) : {}), ...joltyRules(mode) },
     instructions: [toolInstructions(browser, computer)],
     autoupdate: false
   })

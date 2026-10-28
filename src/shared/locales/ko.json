@@ -1127,6 +1127,8 @@
  "OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.": "OpenCode가 설치되어 있지 않습니다. 시스템 점검에서 설치하거나 설정에서 opencode.exe를 선택하세요.",
  "Opțional: agentul OpenCode, cu modelele lui gratuite.": "선택 사항: 무료 모델을 쓰는 OpenCode 에이전트.",
  "Instalează OpenCode": "OpenCode 설치",
+ "Versiunea {v} nu mai are modele gratuite: actualizează OpenCode.": "버전 {v}에서는 더 이상 무료 모델을 쓸 수 없습니다: OpenCode를 업데이트하세요.",
+ "Actualizează OpenCode": "OpenCode 업데이트",
  "OpenCode a fost instalat.": "OpenCode를 설치했습니다.",
  "Control al PC-ului": "PC 제어",
  "Asistentul se construiește singur la prima folosire.": "도우미는 처음 사용할 때 스스로 만들어집니다.",

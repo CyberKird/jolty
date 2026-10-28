@@ -6,7 +6,7 @@ import type { EngineHost, EngineSession } from './types'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
 import { count, AcpEvents, list, object, str, toolDiffs, type AcpObject } from './acp-events'
 import { HERMES, type AcpAgent } from './acp-agent'
-import { acpBrowserServers, acpComputerServers } from '../browser-mcp'
+import { acpBrowserServers, acpComputerServers, acpJoltyServers } from '../browser-mcp'
 import { tr } from '@shared/i18n'
 
 export type AcpLaunch = (mode: PermissionMode, browser: boolean, computer: boolean) => JsonRpcProcess
@@ -78,7 +78,7 @@ export class AcpSession implements EngineSession {
     this.sessionId = this.meta.engineSessionId
     this.loading = true
     try {
-      const params = { cwd: this.meta.cwd, mcpServers: [...(browser ? acpBrowserServers(this.meta.id) : []), ...(computer ? acpComputerServers(this.meta.id) : [])] }
+      const params = { cwd: this.meta.cwd, mcpServers: [...(browser ? acpBrowserServers(this.meta.id) : []), ...(computer ? acpComputerServers(this.meta.id) : []), ...(this.agent.joltyTools ? acpJoltyServers(this.meta.id) : [])] }
       const response = this.sessionId
         ? await rpc.request('session/load', { ...params, sessionId: this.sessionId })
         : await rpc.request('session/new', params)

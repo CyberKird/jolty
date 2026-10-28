@@ -7,7 +7,7 @@ import { browserMode } from './browser'
 import { csc } from './computer/helper'
 import { nativeBrowser } from './jbrowser/native'
 import * as local from './local'
-import { opencodeExecutable } from './engines/opencode-runtime'
+import { opencodeExecutable, opencodeMajor, opencodeVersion } from './engines/opencode-runtime'
 import { installOpencode } from './engines/opencode-install'
 import { claudeExecutable, codexExecutable } from './runtime'
 import { tr } from '@shared/i18n'
@@ -53,6 +53,8 @@ export async function check(): Promise<SystemCheck[]> {
   const ollama = await local.status()
   const redirect = settingsRedirect()
   const opencode = opencodeExecutable()
+  const ocVersion = opencode ? await opencodeVersion(opencode) : undefined
+  const ocOld = Boolean(ocVersion) && opencodeMajor(ocVersion) < 2
   await nativeBrowser.start()
   const ext = nativeBrowser.status()
   const checks: SystemCheck[] = [
@@ -83,10 +85,14 @@ export async function check(): Promise<SystemCheck[]> {
     {
       id: 'opencode',
       label: 'OpenCode',
-      ok: Boolean(opencode),
+      ok: Boolean(opencode) && !ocOld,
       optional: true,
-      detail: opencode || tr("Opțional: agentul OpenCode, cu modelele lui gratuite."),
-      fixLabel: opencode ? undefined : tr("Instalează OpenCode")
+      detail: !opencode
+        ? tr("Opțional: agentul OpenCode, cu modelele lui gratuite.")
+        : ocOld
+          ? tr("Versiunea {v} nu mai are modele gratuite: actualizează OpenCode.", { v: ocVersion || '' })
+          : ocVersion ? `${opencode} (${ocVersion})` : opencode,
+      fixLabel: !opencode ? tr("Instalează OpenCode") : ocOld ? tr("Actualizează OpenCode") : undefined
     }
   ]
   // the computer helper builds itself on first use, with the compiler Windows ships
