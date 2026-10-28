@@ -70,6 +70,7 @@ import { saveTranscriptAsync } from './transcript-save'
 import { lastIndexWhere } from '@shared/last-index'
 import { withParallelInstruction } from '@shared/parallel'
 import { cleanImproved, clipForContext, improvePrompt, improveQuestion } from '@shared/improve-prompt'
+import { listed, sideBrief, sideStart, withBrief } from './side-chat'
 
 
 export const ENGINE_NAMES: Record<EngineKind, string> = { claude: 'Claude Code', codex: 'Codex', hermes: 'Hermes', opencode: 'OpenCode', gemini: 'Gemini' }
@@ -166,6 +167,8 @@ export class Jolty {
   private trackedTemps = new Set<string>()
   /** ended temporary chats: a late event from the dying engine must not write them back to disk */
   private wiped = new Set<string>()
+  /** side chats not sent to yet: their first message carries this brief of the main chat */
+  private sideBriefs = new Map<string, string>()
   readonly scheduler = new Scheduler({
     run: (t) => this.runTask(t),
     busy: (id) => this.busy.has(id),
@@ -473,7 +476,7 @@ export class Jolty {
   // Sessions
   // -------------------------------------------------------------------------
   sessions(): SessionMeta[] {
-    return [...store.loadSessions(), ...this.temps.values()].sort((a, b) => b.updatedAt - a.updatedAt)
+    return [...store.loadSessions(), ...[...this.temps.values()].filter(listed)].sort((a, b) => b.updatedAt - a.updatedAt)
   }
 
   private findMeta(id: string): SessionMeta | undefined {
@@ -531,6 +534,7 @@ export class Jolty {
       permissionMode: input.permissionMode,
       browser: input.browser || undefined,
       temporary: input.temporary || undefined,
+      sideOf: (input.temporary && input.sideOf) || undefined,
       engineSessionId: input.resumeEngineSessionId,
       createdAt: now,
       updatedAt: now
@@ -721,6 +725,13 @@ export class Jolty {
       text = brief(from, fromProfile, this.transcript(sessionId), await gitState(s.meta.cwd), text)
       s.meta.handoffPending = undefined
       this.saveMeta(s.meta)
+    }
+    const side = this.sideBriefs.get(sessionId)
+    if (side !== undefined) {
+      display ??= text
+      if (!s.meta.titled) s.meta.title = display.replace(/\s+/g, ' ').trim().slice(0, 60) || s.meta.title
+      text = withBrief(side, text)
+      this.sideBriefs.delete(sessionId)
     }
     const prepared = prepareAttachments(attachments)
     if (s.meta.title === tr('Conversație nouă') || s.meta.title === 'Conversație nouă') {
@@ -1334,6 +1345,7 @@ export class Jolty {
     this.live.delete(sessionId)
     this.transcripts.delete(sessionId)
     this.temps.delete(sessionId)
+    this.sideBriefs.delete(sessionId)
     this.wiped.add(sessionId)
     const p = store.loadProfiles().find((x) => x.id === meta.profileId)
     if (p && meta.engine === 'claude' && meta.engineSessionId) {
@@ -1342,6 +1354,34 @@ export class Jolty {
       await this.claude.wipeSession(p, meta.engineSessionId, meta.cwd)
       store.saveTempLeftovers(store.loadTempLeftovers().filter((x) => x.engineSessionId !== meta.engineSessionId))
     }
+  }
+
+  /** A side chat beside mainId (see side-chat.ts); the brief is returned so the panel can show what it carries. */
+  async sideChat(mainId: string, pick: { profileId?: string; model?: string; effort?: string } = {}): Promise<{ meta: SessionMeta; brief: string; tokens: number }> {
+    const main = this.findMeta(mainId)
+    if (!main || main.sideOf) throw new Error(tr("Conversația nu mai există."))
+    const meta = await this.startSession(sideStart(main, store.loadProfiles(), pick))
+    const { text, tokens } = sideBrief(main, await this.loadHistory(mainId))
+    this.sideBriefs.set(meta.id, text)
+    return { meta, brief: text, tokens }
+  }
+
+  /** The side chat becomes a normal conversation: saved, listed, no longer read-only. */
+  promoteSide(sideId: string): SessionMeta {
+    const meta = this.temps.get(sideId)
+    if (!meta?.sideOf) throw new Error(tr("Conversația nu mai există."))
+    // the running engine reads the same flags: from now on it is an ordinary chat
+    for (const m of new Set([meta, this.live.get(sideId)?.meta])) if (m) Object.assign(m, { sideOf: undefined, temporary: undefined, updatedAt: Date.now() })
+    this.temps.delete(sideId)
+    this.sideBriefs.delete(sideId)
+    if (meta.engineSessionId) {
+      this.trackedTemps.delete(meta.engineSessionId)
+      store.saveTempLeftovers(store.loadTempLeftovers().filter((x) => x.engineSessionId !== meta.engineSessionId))
+    }
+    this.saveMeta(meta)
+    store.saveTranscript(sideId, this.transcript(sideId))
+    this.send({ type: 'meta', sessionId: sideId, meta })
+    return meta
   }
 
   /** Engine files of temporary chats that were still open when Jolty last stopped. */
@@ -1547,6 +1587,7 @@ ${text.slice(0, 1500)}`
     void nativeBrowser.release(sessionId)
     this.denyComputerAsks(sessionId)
     nativeComputer.release(sessionId)
+    for (const t of [...this.temps.values()]) if (t.sideOf === sessionId) await this.wipeTemp(t.id)
     if (this.temps.has(sessionId)) return this.wipeTemp(sessionId)
     await this.live.get(sessionId)?.close()
     this.live.delete(sessionId)

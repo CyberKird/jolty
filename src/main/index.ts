@@ -255,6 +255,10 @@ function registerIpc(): void {
     await gitMerge.removeBranch(tree(id), String(tip ?? ''), lose === true)
     jolty.forgetWorktree(String(id))
   })
+  handle('sessions:side', (id: string, profileId?: string, model?: string, effort?: string) =>
+    jolty.sideChat(String(id), { profileId: typeof profileId === 'string' ? profileId : undefined, model: typeof model === 'string' ? model : undefined, effort: typeof effort === 'string' ? effort : undefined })
+  )
+  handle('sessions:promoteSide', (id: string) => jolty.promoteSide(String(id)))
   handle('skills:list', () => skills.list())
   handle('skills:check', (ids?: string[]) => skills.check(ids))
   handle('skills:update', (id: string) => skills.update(String(id)))

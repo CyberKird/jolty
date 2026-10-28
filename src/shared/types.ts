@@ -140,6 +140,8 @@ export interface SessionMeta {
   computer?: boolean
   /** temporary chat: lives only in memory, never listed or written to disk, and its engine files are wiped when it ends */
   temporary?: boolean
+  /** side chat of this main session: temporary, read-only, never listed in the sidebar */
+  sideOf?: string
   /** Claude session id or Codex thread id, once the engine has one */
   engineSessionId?: string
   createdAt: number
@@ -462,6 +464,8 @@ export interface StartSessionInput {
   /** computer use from the first message (see SessionMeta.computer) */
   computer?: boolean
   temporary?: boolean
+  /** see SessionMeta.sideOf */
+  sideOf?: string
   /** resume an existing Claude session / Codex thread */
   resumeEngineSessionId?: string
   title?: string
@@ -576,6 +580,10 @@ export interface JoltyApi {
     closed(): Promise<ClosedSession[]>
     /** brings back a removed conversation (the newest when no id) */
     restore(sessionId?: string): Promise<SessionMeta>
+    /** a throwaway read-only chat beside this one, primed with a short brief of it (shown to the user as `brief`) */
+    side(mainId: string, profileId?: string, model?: string, effort?: string): Promise<{ meta: SessionMeta; brief: string; tokens: number }>
+    /** the side chat becomes a normal saved conversation */
+    promoteSide(sideId: string): Promise<SessionMeta>
     onEvent(cb: (e: ChatEvent) => void): () => void
   }
   skills: {

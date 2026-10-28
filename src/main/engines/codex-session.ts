@@ -363,7 +363,8 @@ export class CodexSession implements EngineSession, ThreadListener {
   onRequest(r: RpcRequest): boolean {
     const p = r.params as Any
     // asked while Stop is winding the turn down: no card, the answer is no
-    if (this.stopRequested && /requestApproval$|elicitation\/request$/.test(r.method)) {
+    // a side chat is read-only: commands, edits and tool calls that ask are refused without a card
+    if ((this.stopRequested || this.meta.sideOf) && /requestApproval$|elicitation\/request$/.test(r.method)) {
       this.server.rpc?.respond(r.id, r.method.endsWith('elicitation/request') ? { action: 'decline' } : { decision: 'decline' })
       return true
     }

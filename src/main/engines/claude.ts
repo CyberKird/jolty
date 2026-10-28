@@ -45,6 +45,7 @@ import { SECRET_FILE_RULES, touchesSecretFile } from './secret-files'
 import { ProfileProcesses } from './profile-processes'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 import { tr } from '@shared/i18n'
+import { SIDE_READ_ONLY } from '../side-chat'
 
 type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
 let sdkModule: Promise<SdkModule> | undefined
@@ -575,6 +576,8 @@ class ClaudeSession implements EngineSession {
     if (reads && this.meta.permissionMode !== 'ask') {
       return Promise.resolve({ behavior: 'allow', updatedInput: input })
     }
+    // plan mode already lets reads through without asking: whatever still asks would change something
+    if (this.meta.sideOf) return Promise.resolve({ behavior: 'deny', message: SIDE_READ_ONLY })
     const acts = server === BROWSER_SERVER && BROWSER_ACT_TOOLS.includes(tool) && this.meta.permissionMode !== 'ask'
     const trust = loadSettings().siteTrust || 'site'
     if (acts && trust === 'free') return Promise.resolve({ behavior: 'allow', updatedInput: input })

@@ -24,6 +24,7 @@ import { Trans } from './Trans'
 import { OwnKeyStrip } from './Welcome'
 import { usePresence, useSettled } from '../usePresence'
 import { useShallow } from 'zustand/shallow'
+import { SideChat, SideChatButton } from './SideChat'
 
 const EMPTY: ChatItem[] = []
 
@@ -861,6 +862,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
         <MiniLimits profileId={session.profileId} />
         <ReviewButton session={session} running={running} items={items} />
         <HandoffMenu session={session} profiles={profiles} />
+        <SideChatButton session={session} />
         <button className="btn ghost small icon" onClick={() => setLiveOpen(!liveOpen)} title={liveOpen ? tr("Închide panoul Live") : tr("Arată panoul Live")}>
           {liveOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
         </button>
@@ -965,6 +967,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
           }
         }}
       />
+      <SideChat session={session} />
     </>
   )
 }

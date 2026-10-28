@@ -17,18 +17,21 @@ const head = (s: string, n: number): string => (s.length > n ? `${s.slice(0, n)}
 const tail = (s: string, n: number): string => (s.length > n ? `…${s.slice(-n)}` : s)
 
 /** The latest exchanges that fit the budget, the first request, and every file an edit touched. */
-export function digest(items: ChatItem[]): { first?: string; recent: string; dropped: number; files: string[] } {
+export function digest(
+  items: ChatItem[],
+  { budget = TEXT_BUDGET, perRequest = PER_REQUEST, perAnswer = PER_ANSWER } = {}
+): { first?: string; recent: string; dropped: number; files: string[] } {
   const files = new Set<string>()
   const turns: string[] = []
   for (const it of items) {
-    if (it.kind === 'user' && it.text.trim()) turns.push(`[User]\n${head(it.text.trim(), PER_REQUEST)}`)
-    else if (it.kind === 'assistant' && it.text.trim()) turns.push(`[Assistant]\n${tail(it.text.trim(), PER_ANSWER)}`)
+    if (it.kind === 'user' && it.text.trim()) turns.push(`[User]\n${head(it.text.trim(), perRequest)}`)
+    else if (it.kind === 'assistant' && it.text.trim()) turns.push(`[Assistant]\n${tail(it.text.trim(), perAnswer)}`)
     else if (it.kind === 'tool' && it.status !== 'error') for (const d of it.diffs || []) files.add(d.path)
   }
   const kept: string[] = []
   let size = 0
   for (let i = turns.length - 1; i >= 0; i--) {
-    if (size + turns[i].length > TEXT_BUDGET && kept.length) break
+    if (size + turns[i].length > budget && kept.length) break
     kept.unshift(turns[i])
     size += turns[i].length
   }

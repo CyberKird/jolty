@@ -318,6 +318,8 @@ export const useStore = create<State>((set, get) => ({
         set({ power: { armed: e.armed, plan: e.plan, due: e.due, seconds: e.seconds, reason: e.reason } })
         return
       case 'meta':
+        // a side chat lives in its panel, never in the list
+        if (e.meta.sideOf) return
         set((s) => {
           const exists = s.sessions.some((x) => x.id === e.meta.id)
           return { sessions: exists ? s.sessions.map((x) => (x.id === e.meta.id ? { ...x, ...e.meta } : x)) : [e.meta, ...s.sessions] }
