@@ -1390,5 +1390,17 @@
  "Google nu publică limitele Gemini.": "O Google não publica os limites do Gemini.",
  "Am salvat în memorie: {names}.": "Salvo na memória: {names}.",
  "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "O Gemini usou {n} ferramentas seguidas. Parei; escreva «continuar» se quiser que siga.",
- "Refuzat.": "Recusado."
+ "Refuzat.": "Recusado.",
+ "Actualizezi Jolty la {version}?": "Atualizar o Jolty para {version}?",
+ "Jolty se închide și se pornește din nou. Ce lucrează acum se oprește, iar conversațiile rămân și le poți continua.": "O Jolty fecha e abre de novo. O que está rodando agora para; suas conversas continuam lá e você pode retomá-las.",
+ "Jolty se închide și se pornește din nou, în câteva secunde. Conversațiile rămân.": "O Jolty fecha e abre de novo em alguns segundos. Suas conversas continuam lá.",
+ "Descarcă Jolty {version}, îl instalează și îl pornește din nou. Conversațiile rămân.": "Baixa o Jolty {version}, instala e abre o Jolty de novo. Suas conversas continuam lá.",
+ "Jolty {version} e disponibil · Actualizează": "Jolty {version} disponível · Atualizar",
+ "Actualizări automate": "Atualizações automáticas",
+ "Jolty descarcă singur versiunile noi în fundal și le instalează când închizi aplicația, fără întrebări. Debifat, doar te anunță, iar tu apeși Actualizează (și confirmi) când vrei.": "O Jolty baixa as versões novas em segundo plano e instala quando você fecha o app, sem perguntas. Desmarcado, ele só avisa, e você aperta Atualizar (e confirma) quando quiser.",
+ "Jolty {version} e disponibil. Apasă Actualizează ca să-l descarci și să-l instalezi.": "O Jolty {version} está disponível. Aperte Atualizar para baixar e instalar.",
+ "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "O Jolty procura versões novas sozinho, mas não baixa: aperte Atualizar quando quiser.",
+ "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "O Windows está bloqueando as notificações do Jolty: elas estão desativadas nas configurações do Windows, então nenhuma aparece fora da janela.",
+ "Deschide setările Windows": "Abrir as configurações do Windows",
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "O Jolty está instalado para todos os usuários, por isso o Windows pede permissão a cada atualização. Reinstale escolhendo “Instalează doar pentru mine” (instalar só para mim) e as atualizações ficam silenciosas."
 }

@@ -1390,5 +1390,17 @@
  "Google nu publică limitele Gemini.": "Google Gemini की सीमाएँ प्रकाशित नहीं करता।",
  "Am salvat în memorie: {names}.": "मेमोरी में सहेजा गया: {names}।",
  "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini ने लगातार {n} टूल इस्तेमाल किए। मैं रुक गया; आगे बढ़ाना हो तो «जारी रखो» लिखो।",
- "Refuzat.": "अस्वीकृत।"
+ "Refuzat.": "अस्वीकृत।",
+ "Actualizezi Jolty la {version}?": "Jolty को {version} पर अपडेट करें?",
+ "Jolty se închide și se pornește din nou. Ce lucrează acum se oprește, iar conversațiile rămân și le poți continua.": "Jolty बंद होकर फिर से शुरू होगा। जो अभी चल रहा है वह रुक जाएगा, लेकिन आपकी बातचीत बनी रहेगी और आप उन्हें जारी रख सकते हैं।",
+ "Jolty se închide și se pornește din nou, în câteva secunde. Conversațiile rămân.": "Jolty बंद होकर कुछ सेकंड में फिर से शुरू होगा। आपकी बातचीत बनी रहेगी।",
+ "Descarcă Jolty {version}, îl instalează și îl pornește din nou. Conversațiile rămân.": "Jolty {version} डाउनलोड करता है, इंस्टॉल करता है और Jolty को फिर से शुरू करता है। आपकी बातचीत बनी रहती है।",
+ "Jolty {version} e disponibil · Actualizează": "Jolty {version} उपलब्ध है · अपडेट करें",
+ "Actualizări automate": "ऑटोमैटिक अपडेट",
+ "Jolty descarcă singur versiunile noi în fundal și le instalează când închizi aplicația, fără întrebări. Debifat, doar te anunță, iar tu apeși Actualizează (și confirmi) când vrei.": "Jolty नए संस्करण बैकग्राउंड में डाउनलोड करता है और ऐप बंद करने पर बिना कुछ पूछे इंस्टॉल कर देता है। अनचेक करने पर वह सिर्फ़ बताता है, और जब चाहें आप अपडेट करें दबाकर (और पुष्टि करके) अपडेट करते हैं।",
+ "Jolty {version} e disponibil. Apasă Actualizează ca să-l descarci și să-l instalezi.": "Jolty {version} उपलब्ध है। डाउनलोड और इंस्टॉल करने के लिए अपडेट करें दबाएँ।",
+ "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty नए संस्करण खुद खोजता है, पर उन्हें डाउनलोड नहीं करता: जब चाहें अपडेट करें दबाएँ।",
+ "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows Jolty की सूचनाओं को रोक रहा है: वे Windows सेटिंग में बंद हैं, इसलिए विंडो के बाहर कोई सूचना नहीं दिखती।",
+ "Deschide setările Windows": "Windows सेटिंग खोलें",
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty सभी उपयोगकर्ताओं के लिए इंस्टॉल है, इसीलिए Windows हर अपडेट पर अनुमति माँगता है। इसे “Instalează doar pentru mine” (सिर्फ़ मेरे लिए इंस्टॉल करें) चुनकर दोबारा इंस्टॉल करें, तब अपडेट चुपचाप हो जाएँगे।"
 }

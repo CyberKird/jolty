@@ -28,6 +28,14 @@ export function SettingsPage() {
   const [s, setS] = useState<AppSettings>()
   const [version, setVersion] = useState('')
   const [tab, setTab] = useSavedTab<Tab>('jolty.settingsTab', TABS)
+  // read again when the user comes back from Windows' own settings
+  const [notifyBlocked, setNotifyBlocked] = useState(false)
+  useEffect(() => {
+    const read = (): void => void api.app.notificationsBlocked().then(setNotifyBlocked).catch(() => undefined)
+    read()
+    window.addEventListener('focus', read)
+    return () => window.removeEventListener('focus', read)
+  }, [])
   useEffect(() => {
     void api.app.settings().then(setS)
     void api.app.version().then(setVersion)
@@ -173,6 +181,16 @@ export function SettingsPage() {
                   <option value="big">{tr("Mare")}</option>
                 </select>
               </label>
+              {notifyBlocked && (
+                <div className="card row" style={{ marginBottom: 14, gap: 14, flexWrap: 'wrap' }}>
+                  <span className="muted small" style={{ flex: 1, minWidth: 240 }}>
+                    {tr("Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.")}
+                  </span>
+                  <button className="btn small" onClick={() => void api.app.openNotificationSettings()}>
+                    {tr("Deschide setările Windows")}
+                  </button>
+                </div>
+              )}
               {(
                 [
                   ['notifyDone', tr("Notificare la sfârșitul unei sarcini"), tr("Primești o notificare Windows când un model termină sau se oprește cu o eroare, cât timp Jolty nu e în față.")],
@@ -302,7 +320,16 @@ export function SettingsPage() {
           )}
           {tab === 'about' && (
             <>
-              <UpdatesCard />
+              <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
+                <input type="checkbox" checked={s.autoUpdate !== false} onChange={async (e) => setS(await api.app.saveSettings({ autoUpdate: e.target.checked }))} />
+                <span>
+                  <b>{tr("Actualizări automate")}</b>
+                  <span className="muted small" style={{ display: 'block' }}>
+                    {tr("Jolty descarcă singur versiunile noi în fundal și le instalează când închizi aplicația, fără întrebări. Debifat, doar te anunță, iar tu apeși Actualizează (și confirmi) când vrei.")}
+                  </span>
+                </span>
+              </label>
+              <UpdatesCard auto={s.autoUpdate !== false} />
               <div className="card row" style={{ marginBottom: 14 }}>
                 <Sparkles size={16} color="var(--volt)" />
                 <span style={{ flex: 1 }}>
@@ -361,13 +388,15 @@ export function SettingsPage() {
   )
 }
 
-function UpdatesCard() {
+function UpdatesCard({ auto }: { auto: boolean }) {
   const update = useStore((s) => s.update)
   const { onEvent } = useStore(useShallow(({ onEvent }) => ({ onEvent })))
   const [busy, setBusy] = useState(false)
   const text =
     update?.state === 'ready'
       ? tr("Jolty {version} e descărcat. Repornește ca să-l instalezi, sau se instalează când închizi aplicația.", { version: update.version })
+      : update?.state === 'available'
+        ? tr("Jolty {version} e disponibil. Apasă Actualizează ca să-l descarci și să-l instalezi.", { version: update.version })
       : update?.state === 'downloading'
         ? `Descarc Jolty ${update.version || ''}: ${update.percent ?? 0}%.`
         : update?.state === 'checking'
@@ -378,7 +407,9 @@ function UpdatesCard() {
               ? tr("Verificarea nu a mers: {error}", { error: update.error })
               : update?.state === 'dev'
                 ? tr("Versiune de dezvoltare: actualizările vin doar în aplicația instalată.")
-                : tr("Jolty caută singur versiuni noi la pornire, din oră în oră și când revii în aplicație, le descarcă în fundal și te anunță.")
+                : auto
+                  ? tr("Jolty caută singur versiuni noi la pornire, din oră în oră și când revii în aplicație, le descarcă în fundal și te anunță.")
+                  : tr("Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.")
   return (
     <div className="card row" style={{ marginBottom: 14, gap: 14, flexWrap: 'wrap' }}>
       <div style={{ flex: 1, minWidth: 240 }}>
@@ -386,10 +417,19 @@ function UpdatesCard() {
         <div className="muted small" style={{ marginTop: 4 }}>
           {text}
         </div>
+        {update?.machineWide && (
+          <div className="muted small" style={{ marginTop: 6 }}>
+            {tr("Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.")}
+          </div>
+        )}
       </div>
       {update?.state === 'ready' ? (
         <button className="btn primary small" onClick={() => void api.updates.install()}>
          {tr("Repornește și actualizează")}
+        </button>
+      ) : update?.state === 'available' ? (
+        <button className="btn primary small" onClick={() => void api.updates.install()}>
+         {tr("Actualizează")}
         </button>
       ) : (
         <button

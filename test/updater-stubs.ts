@@ -25,6 +25,13 @@ class Updater extends EventEmitter {
   quitAndInstall(): void {
     this.installs++
   }
+  /** the version downloadUpdate() reports as downloaded */
+  pending = ''
+  downloads = 0
+  async downloadUpdate(): Promise<void> {
+    this.downloads++
+    this.emit('update-downloaded', { version: this.pending })
+  }
 }
 export const autoUpdater = new Updater()
 export default { autoUpdater }

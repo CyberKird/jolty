@@ -1,6 +1,7 @@
 // first: every module after this one builds its texts in the chosen language
 import './lang'
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, Notification, session, shell } from 'electron'
+import { execFile } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -175,7 +176,24 @@ function registerIpc(): void {
   handle('browser:info', () => browsers())
   handle('updates:status', () => updater.current())
   handle('updates:check', () => updater.check())
-  handle('updates:install', () => updater.install())
+  // a manual update restarts the app, so it is asked once first (here, not in the page: a native confirm() there leaves the chat box without keyboard focus)
+  handle('updates:install', async () => {
+    const version = updater.current().version
+    const busy = jolty.anyBusy()
+    const r = await dialog.showMessageBox(win!, {
+      type: 'question',
+      title: 'Jolty',
+      message: tr("Actualizezi Jolty la {version}?", { version: version || '' }),
+      detail: busy
+        ? tr("Jolty se închide și se pornește din nou. Ce lucrează acum se oprește, iar conversațiile rămân și le poți continua.")
+        : tr("Jolty se închide și se pornește din nou, în câteva secunde. Conversațiile rămân."),
+      buttons: [tr("Actualizează"), tr("Mai târziu")],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true
+    })
+    if (r.response === 0) await updater.install()
+  })
   handle('composer:slash', (cwd?: string) => slashItems(typeof cwd === 'string' ? cwd : undefined))
   handle('composer:files', (cwd: string) => (typeof cwd === 'string' && fs.existsSync(cwd) ? projectFiles(cwd) : []))
   handle('browser:setToken', async (token: string) => {
@@ -274,6 +292,7 @@ function registerIpc(): void {
   handle('app:saveSettings', async (patch) => {
     const saved = store.saveSettings(patch as never)
     if (patch && typeof patch === 'object' && 'language' in patch) setLang(saved.language)
+    if (patch && typeof patch === 'object' && 'autoUpdate' in patch) updater.setAuto(saved.autoUpdate !== false)
     if (patch && typeof patch === 'object' && Object.keys(patch).some((k) => k.startsWith('browser'))) await jolty.reconnectBrowser()
     return saved
   })
@@ -282,6 +301,16 @@ function registerIpc(): void {
     return r.canceled ? undefined : r.filePaths[0]
   })
   handle('app:openExternal', (url: string) => openWeb(url))
+  // Windows keeps its toast switches in the registry: one for every app, one per app id. Off in either, and nothing shows outside the window.
+  handle('app:notificationsBlocked', async () => {
+    if (process.platform !== 'win32') return false
+    const off = (key: string, value: string): Promise<boolean> =>
+      new Promise((resolve) => execFile('reg', ['query', key, '/v', value], { windowsHide: true, timeout: 5000 }, (err, out) => resolve(!err && new RegExp(`${value}\\s+REG_DWORD\\s+0x0\\b`).test(out))))
+    const base = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\'
+    const [all, mine] = await Promise.all([off(base + 'PushNotifications', 'ToastEnabled'), off(base + 'Notifications\\Settings\\' + APP_ID, 'Enabled')])
+    return all || mine
+  })
+  handle('app:openNotificationSettings', () => shell.openExternal('ms-settings:notifications'))
   // the renderer only ever opens Jolty's own data folder; any other path would let a compromised page launch files
   handle('app:openPath', async (p: string) => {
     if (typeof p === 'string' && path.resolve(p) === path.resolve(store.dataDir())) await shell.openPath(p)
@@ -354,7 +383,8 @@ if (!app.requestSingleInstanceLock()) {
       () => {
         win?.show()
         win?.focus()
-      }
+      },
+      store.loadSettings().autoUpdate !== false
     )
     // model lists and the scores table refreshed in the background, so a newly released model is announced without opening the picker
     modelWatch.start({

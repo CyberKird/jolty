@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { autoUpdater, shown } from './updater-stubs'
-import { current, init, install } from '../src/main/updater'
+import { current, init, install, setAuto } from '../src/main/updater'
 
 test('one restart lands on the newest release, even one published after the download', async () => {
   init(() => undefined, () => undefined)
@@ -34,4 +34,22 @@ test('one restart lands on the newest release, even one published after the down
   autoUpdater.next = () => Promise.reject(new Error('offline'))
   await install()
   assert.equal(autoUpdater.installs, 2)
+})
+
+test('with automatic updates off, a found version waits for Update, then downloads and installs once', async () => {
+  const installs = autoUpdater.installs
+  init(() => undefined, () => undefined, false)
+  assert.equal(autoUpdater.autoDownload, false)
+  assert.equal(autoUpdater.autoInstallOnAppQuit, false)
+  autoUpdater.emit('update-available', { version: '0.6.0' })
+  assert.deepEqual([current().state, current().version, autoUpdater.downloads], ['available', '0.6.0', 0])
+
+  autoUpdater.pending = '0.6.0'
+  await install()
+  assert.deepEqual([autoUpdater.downloads, autoUpdater.installs, current().state], [1, installs + 1, 'ready'])
+
+  // switching it back on downloads by itself again
+  setAuto(true)
+  assert.equal(autoUpdater.autoDownload, true)
+  assert.equal(autoUpdater.autoInstallOnAppQuit, true)
 })

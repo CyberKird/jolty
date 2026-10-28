@@ -1390,5 +1390,17 @@
  "Google nu publică limitele Gemini.": "Google は Gemini の上限を公開していません。",
  "Am salvat în memorie: {names}.": "メモリに保存しました: {names}",
  "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini が {n} 個のツールを続けて使いました。ここで止めました。続けたい場合は「続けて」と書いてください。",
- "Refuzat.": "拒否しました。"
+ "Refuzat.": "拒否しました。",
+ "Actualizezi Jolty la {version}?": "Jolty を {version} に更新しますか?",
+ "Jolty se închide și se pornește din nou. Ce lucrează acum se oprește, iar conversațiile rămân și le poți continua.": "Jolty を閉じて再起動します。今動いている作業は止まりますが、会話は残るので続きから再開できます。",
+ "Jolty se închide și se pornește din nou, în câteva secunde. Conversațiile rămân.": "Jolty を閉じて数秒で再起動します。会話はそのまま残ります。",
+ "Descarcă Jolty {version}, îl instalează și îl pornește din nou. Conversațiile rămân.": "Jolty {version} をダウンロードしてインストールし、Jolty を再起動します。会話はそのまま残ります。",
+ "Jolty {version} e disponibil · Actualizează": "Jolty {version} が利用可能 · 更新",
+ "Actualizări automate": "自動更新",
+ "Jolty descarcă singur versiunile noi în fundal și le instalează când închizi aplicația, fără întrebări. Debifat, doar te anunță, iar tu apeși Actualizează (și confirmi) când vrei.": "Jolty は新しいバージョンをバックグラウンドでダウンロードし、アプリを閉じるときに確認なしでインストールします。オフにすると通知だけを行い、好きなタイミングで「更新」を押して(確認のうえ)更新します。",
+ "Jolty {version} e disponibil. Apasă Actualizează ca să-l descarci și să-l instalezi.": "Jolty {version} が利用可能です。「更新」を押すとダウンロードしてインストールします。",
+ "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty は新しいバージョンを自動で確認しますが、ダウンロードはしません。好きなタイミングで「更新」を押してください。",
+ "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows が Jolty の通知をブロックしています。Windows の設定でオフになっているため、ウィンドウの外には表示されません。",
+ "Deschide setările Windows": "Windows の設定を開く",
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty はすべてのユーザー向けにインストールされているため、更新のたびに Windows が許可を求めます。「Instalează doar pentru mine」(自分専用にインストール)を選んで入れ直すと、更新はサイレントになります。"
 }

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.12.0
+
+### New
+
+- The pages in the left sidebar (Import sessions, Accounts and keys, Settings and the rest) and the project groups in the conversation list can be put in the order you like: drag one, or focus it and press Alt with the up or down arrow. Jolty remembers the order.
+- Automatic updates can be turned off in Settings (About). On, Jolty does what it did before: it downloads new versions in the background and installs them when you close the app. Off, it only tells you a version is out, and you press Update in the title bar or in Settings.
+- Pressing Update or Restart now asks first, and says if something is still running, before Jolty closes and starts again.
+
+### Improvements
+
+- When "Improve message" has something to tell you (a question it needs answered, or an error), it now shows right above the message box instead of a pop-up on the right. It stays until you close it or send a message, and a newer one replaces it, so two notices never pile up.
+- Updated the bundled Claude Code and Codex engines.
+- Settings tells you when Windows has notifications turned off for everyone or for Jolty, which is why nothing shows outside the window when a task finishes or needs you, and opens the Windows setting for it.
+- If Jolty is installed for all users, Settings explains that Windows then asks for permission at every update, and how to make updates silent (reinstall choosing "Instalează doar pentru mine").
+
+### Fixed
+
+- The scrollbar of the conversation list and of the Live list could not be grabbed, because the handle that resizes the sidebar sat on top of it. The scrollbars now sit just inside it.
+- Importing sessions no longer lists Jolty's own background requests (conversation titles, message rewrites, picture descriptions) as conversations, so they stop showing up as an extra project.
+
 ## 0.11.0
 
 ### New

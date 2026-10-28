@@ -4,6 +4,8 @@
 // Anything left pending installs when the app quits. Checks go on after a download, and the restart
 // button checks once more, so a release that came out in the meantime is installed in the same restart
 // instead of one update after another.
+// Settings can turn the automatic part off: Jolty then only says a version is there ('available') and
+// downloads and installs it when the user presses Update.
 //
 // Releases are public on GitHub, so the app reads them anonymously: no credential is stored or sent.
 // electron-updater checks the SHA-512 in latest.yml.
@@ -25,11 +27,21 @@ function clean(msg?: string): string | undefined {
 
 let emit: (s: UpdateStatus) => void = () => undefined
 let focus: () => void = () => undefined
-let status: UpdateStatus = { state: 'idle', current: app.getVersion() }
+/** An all-users install lives in Program Files, where a silent update still needs administrator rights. */
+const machineWide = (): boolean => {
+  if (process.platform !== 'win32' || !app.isPackaged) return false
+  const exe = app.getPath('exe').toLowerCase()
+  return [process.env.ProgramFiles, process.env['ProgramFiles(x86)']].some((p) => Boolean(p) && exe.startsWith(p!.toLowerCase()))
+}
+let status: UpdateStatus = { state: 'idle', current: app.getVersion(), machineWide: machineWide() }
 /** version already downloaded and waiting for a restart */
 let downloaded: string | undefined
 /** the restart button was pressed: no "ready" notification for a version fetched on the way out */
 let installing = false
+/** automatic updates are on (Settings > About) */
+let auto = true
+/** Update was pressed while automatic updates are off: install as soon as the download is there */
+let installAfter = false
 
 function set(next: Partial<UpdateStatus>): void {
   status = { ...status, ...next }
@@ -46,22 +58,38 @@ export function current(): UpdateStatus {
   return status
 }
 
-export function init(onChange: (s: UpdateStatus) => void, onFocus: () => void): void {
+/** Turns the automatic part on or off; switching it on starts the download of a version that was only announced. */
+export function setAuto(on: boolean): void {
+  auto = on
+  autoUpdater.autoDownload = on
+  autoUpdater.autoInstallOnAppQuit = on
+  if (on && status.state === 'available') void check()
+}
+
+export function init(onChange: (s: UpdateStatus) => void, onFocus: () => void, autoUpdate = true): void {
   emit = onChange
   focus = onFocus
   // no updater log: nothing about the feed is written anywhere
   autoUpdater.logger = null
-  autoUpdater.autoDownload = true
-  autoUpdater.autoInstallOnAppQuit = true
+  setAuto(autoUpdate)
   // while an update waits, a new check keeps the restart button; only a newer release starts a download
   autoUpdater.on('checking-for-update', () => !downloaded && set({ state: 'checking', error: undefined }))
-  autoUpdater.on('update-available', (i) => i.version !== downloaded && set({ state: 'downloading', version: i.version, percent: 0 }))
+  autoUpdater.on('update-available', (i) => {
+    if (i.version === downloaded) return
+    set(auto || installAfter ? { state: 'downloading', version: i.version, percent: 0 } : { state: 'available', version: i.version, percent: undefined })
+  })
   autoUpdater.on('update-not-available', () => !downloaded && set({ state: 'latest', checkedAt: Date.now() }))
   autoUpdater.on('download-progress', (p) => set({ state: 'downloading', percent: Math.round(p.percent) }))
   autoUpdater.on('update-downloaded', (i) => {
     const fresh = i.version !== downloaded
     downloaded = i.version
     set({ state: 'ready', version: i.version, percent: 100, checkedAt: Date.now() })
+    if (installAfter) {
+      installAfter = false
+      installing = true
+      autoUpdater.quitAndInstall(true, true)
+      return
+    }
     if (fresh && !installing && Notification.isSupported()) {
       const n = new Notification({ title: tr("Jolty {version} e gata", { version: i.version }), body: tr("Repornește ca să actualizezi. Altfel se instalează când închizi aplicația.") })
       n.on('click', () => focus())
@@ -98,6 +126,18 @@ export async function check(): Promise<UpdateStatus> {
  * One last check first: a release newer than the downloaded one is fetched and installed instead.
  */
 export async function install(): Promise<void> {
+  if (status.state === 'available') {
+    // automatic updates are off and the user said yes: download, and the "downloaded" handler installs
+    installAfter = true
+    set({ state: 'downloading', percent: 0 })
+    try {
+      await autoUpdater.downloadUpdate()
+    } catch (err) {
+      installAfter = false
+      fail(err instanceof Error ? err.message : String(err))
+    }
+    return
+  }
   if (status.state !== 'ready') return
   installing = true
   try {

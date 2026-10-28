@@ -332,6 +332,8 @@ export interface AppSettings {
   ownKeyHintDismissed?: boolean
   /** the model and thinking level each profile used last: a new chat opens on them, not on the default */
   lastModels?: Record<string, { model: string; effort?: string }>
+  /** new versions download in the background and install when Jolty closes; off: Jolty only says one is there and you press Update; on unless false */
+  autoUpdate?: boolean
   /** the strip above the composer that suggests another model or effort for the task you type; on unless false */
   modelAdvice?: boolean
   /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
@@ -396,13 +398,15 @@ export interface NativeBrowserStatus {
 }
 
 export interface UpdateStatus {
-  /** dev: a development build, nothing to compare; latest: checked, nothing newer */
-  state: 'idle' | 'dev' | 'checking' | 'latest' | 'downloading' | 'ready' | 'error'
+  /** dev: a development build, nothing to compare; latest: checked, nothing newer; available: found but not downloaded (automatic updates are off) */
+  state: 'idle' | 'dev' | 'checking' | 'latest' | 'available' | 'downloading' | 'ready' | 'error'
   current: string
   version?: string
   percent?: number
   error?: string
   checkedAt?: number
+  /** installed for all users (Program Files): Windows asks for permission at every update */
+  machineWide?: boolean
 }
 
 export interface SlashItem {
@@ -684,6 +688,10 @@ export interface JoltyApi {
     saveSettings(patch: Partial<AppSettings>): Promise<AppSettings>
     pickFolder(): Promise<string | undefined>
     openExternal(url: string): Promise<void>
+    /** Windows has toast notifications off for everyone or for Jolty, so none can show outside the window */
+    notificationsBlocked(): Promise<boolean>
+    /** opens Windows' own notification settings */
+    openNotificationSettings(): Promise<void>
     openPath(path: string): Promise<void>
     revealPath(path: string): Promise<void>
     /** right-click menu actions: the menu itself is drawn by the renderer in Jolty's theme */

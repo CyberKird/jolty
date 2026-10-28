@@ -1390,5 +1390,17 @@
  "Google nu publică limitele Gemini.": "Google tidak mempublikasikan batas Gemini.",
  "Am salvat în memorie: {names}.": "Disimpan ke memori: {names}.",
  "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini memakai {n} alat berturut-turut. Saya berhenti; tulis «lanjut» jika ingin diteruskan.",
- "Refuzat.": "Ditolak."
+ "Refuzat.": "Ditolak.",
+ "Actualizezi Jolty la {version}?": "Perbarui Jolty ke {version}?",
+ "Jolty se închide și se pornește din nou. Ce lucrează acum se oprește, iar conversațiile rămân și le poți continua.": "Jolty akan ditutup dan dimulai lagi. Yang sedang berjalan akan berhenti; percakapanmu tetap ada dan bisa dilanjutkan.",
+ "Jolty se închide și se pornește din nou, în câteva secunde. Conversațiile rămân.": "Jolty akan ditutup dan dimulai lagi dalam beberapa detik. Percakapanmu tetap ada.",
+ "Descarcă Jolty {version}, îl instalează și îl pornește din nou. Conversațiile rămân.": "Mengunduh Jolty {version}, memasangnya, lalu membuka Jolty lagi. Percakapanmu tetap ada.",
+ "Jolty {version} e disponibil · Actualizează": "Jolty {version} tersedia · Perbarui",
+ "Actualizări automate": "Pembaruan otomatis",
+ "Jolty descarcă singur versiunile noi în fundal și le instalează când închizi aplicația, fără întrebări. Debifat, doar te anunță, iar tu apeși Actualizează (și confirmi) când vrei.": "Jolty mengunduh versi baru di latar belakang dan memasangnya saat kamu menutup aplikasi, tanpa pertanyaan. Jika tidak dicentang, Jolty hanya memberi tahu, dan kamu menekan Perbarui (lalu mengonfirmasi) kapan pun mau.",
+ "Jolty {version} e disponibil. Apasă Actualizează ca să-l descarci și să-l instalezi.": "Jolty {version} tersedia. Tekan Perbarui untuk mengunduh dan memasangnya.",
+ "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty mencari versi baru sendiri tetapi tidak mengunduhnya: tekan Perbarui kapan pun kamu mau.",
+ "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows memblokir notifikasi Jolty: notifikasi dimatikan di pengaturan Windows, sehingga tidak ada yang muncul di luar jendela.",
+ "Deschide setările Windows": "Buka pengaturan Windows",
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty terpasang untuk semua pengguna, sehingga Windows meminta izin pada setiap pembaruan. Pasang ulang dengan memilih “Instalează doar pentru mine” (pasang hanya untuk saya), dan pembaruan akan berjalan senyap."
 }

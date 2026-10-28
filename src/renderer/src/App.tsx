@@ -44,6 +44,12 @@ function UpdatePill() {
         <ArrowDownToLine size={12} /> {tr("Actualizare")} {update.percent ?? 0}%
       </span>
     )
+  if (update?.state === 'available')
+    return (
+      <button className="update-pill" onClick={() => void api.updates.install()} title={tr("Descarcă Jolty {version}, îl instalează și îl pornește din nou. Conversațiile rămân.", { version: update.version || '' })}>
+        <ArrowDownToLine size={12} /> {tr("Jolty {version} e disponibil · Actualizează", { version: update.version || '' })}
+      </button>
+    )
   if (update?.state !== 'ready') return null
   return (
     <button className="update-pill" onClick={() => void api.updates.install()} title={tr("Închide Jolty, instalează noua versiune și îl pornește din nou. Conversațiile rămân.")}>

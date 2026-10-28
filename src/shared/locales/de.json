@@ -1390,5 +1390,17 @@
  "Google nu publică limitele Gemini.": "Google veröffentlicht keine Gemini-Limits.",
  "Am salvat în memorie: {names}.": "In den Speicher übernommen: {names}.",
  "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini hat {n} Werkzeuge hintereinander benutzt. Ich habe angehalten; schreib „weiter“, wenn es weitergehen soll.",
- "Refuzat.": "Abgelehnt."
+ "Refuzat.": "Abgelehnt.",
+ "Actualizezi Jolty la {version}?": "Jolty auf {version} aktualisieren?",
+ "Jolty se închide și se pornește din nou. Ce lucrează acum se oprește, iar conversațiile rămân și le poți continua.": "Jolty wird geschlossen und neu gestartet. Was gerade läuft, wird gestoppt; deine Unterhaltungen bleiben erhalten und du kannst sie fortsetzen.",
+ "Jolty se închide și se pornește din nou, în câteva secunde. Conversațiile rămân.": "Jolty wird geschlossen und startet in wenigen Sekunden neu. Deine Unterhaltungen bleiben erhalten.",
+ "Descarcă Jolty {version}, îl instalează și îl pornește din nou. Conversațiile rămân.": "Lädt Jolty {version} herunter, installiert es und startet Jolty neu. Deine Unterhaltungen bleiben erhalten.",
+ "Jolty {version} e disponibil · Actualizează": "Jolty {version} ist verfügbar · Aktualisieren",
+ "Actualizări automate": "Automatische Updates",
+ "Jolty descarcă singur versiunile noi în fundal și le instalează când închizi aplicația, fără întrebări. Debifat, doar te anunță, iar tu apeși Actualizează (și confirmi) când vrei.": "Jolty lädt neue Versionen im Hintergrund herunter und installiert sie beim Schließen der App, ohne Rückfragen. Ist die Option aus, informiert Jolty dich nur, und du klickst auf Aktualisieren (und bestätigst), wann du willst.",
+ "Jolty {version} e disponibil. Apasă Actualizează ca să-l descarci și să-l instalezi.": "Jolty {version} ist verfügbar. Klicke auf Aktualisieren, um es herunterzuladen und zu installieren.",
+ "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty sucht selbst nach neuen Versionen, lädt sie aber nicht herunter: Klicke auf Aktualisieren, wenn du möchtest.",
+ "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows blockiert die Jolty-Benachrichtigungen: Sie sind in den Windows-Einstellungen ausgeschaltet, deshalb erscheint außerhalb des Fensters nichts.",
+ "Deschide setările Windows": "Windows-Einstellungen öffnen",
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty ist für alle Benutzer installiert, deshalb fragt Windows bei jedem Update nach Erlaubnis. Installiere es neu und wähle „Instalează doar pentru mine“ (nur für mich installieren), dann laufen Updates still."
 }

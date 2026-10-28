@@ -1390,5 +1390,17 @@
  "Google nu publică limitele Gemini.": "Google non pubblica i limiti di Gemini.",
  "Am salvat în memorie: {names}.": "Salvato in memoria: {names}.",
  "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "Gemini ha usato {n} strumenti di fila. Mi sono fermato; scrivi «continua» se vuoi che vada avanti.",
- "Refuzat.": "Rifiutato."
+ "Refuzat.": "Rifiutato.",
+ "Actualizezi Jolty la {version}?": "Aggiornare Jolty alla versione {version}?",
+ "Jolty se închide și se pornește din nou. Ce lucrează acum se oprește, iar conversațiile rămân și le poți continua.": "Jolty si chiude e si riavvia. Quello che sta lavorando adesso si ferma; le conversazioni restano e puoi continuarle.",
+ "Jolty se închide și se pornește din nou, în câteva secunde. Conversațiile rămân.": "Jolty si chiude e si riavvia in pochi secondi. Le conversazioni restano.",
+ "Descarcă Jolty {version}, îl instalează și îl pornește din nou. Conversațiile rămân.": "Scarica Jolty {version}, lo installa e riavvia Jolty. Le conversazioni restano.",
+ "Jolty {version} e disponibil · Actualizează": "Jolty {version} è disponibile · Aggiorna",
+ "Actualizări automate": "Aggiornamenti automatici",
+ "Jolty descarcă singur versiunile noi în fundal și le instalează când închizi aplicația, fără întrebări. Debifat, doar te anunță, iar tu apeși Actualizează (și confirmi) când vrei.": "Jolty scarica da solo le nuove versioni in background e le installa quando chiudi l'app, senza domande. Se disattivato, ti avvisa soltanto e premi Aggiorna (e confermi) quando vuoi.",
+ "Jolty {version} e disponibil. Apasă Actualizează ca să-l descarci și să-l instalezi.": "Jolty {version} è disponibile. Premi Aggiorna per scaricarlo e installarlo.",
+ "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty cerca da solo le nuove versioni ma non le scarica: premi Aggiorna quando vuoi.",
+ "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows sta bloccando le notifiche di Jolty: sono disattivate nelle impostazioni di Windows, quindi non compaiono fuori dalla finestra.",
+ "Deschide setările Windows": "Apri le impostazioni di Windows",
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty è installato per tutti gli utenti, per questo Windows chiede il permesso a ogni aggiornamento. Reinstallalo scegliendo «Instalează doar pentru mine» (installa solo per me) e gli aggiornamenti diventeranno silenziosi."
 }

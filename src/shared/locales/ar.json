@@ -1390,5 +1390,17 @@
  "Google nu publică limitele Gemini.": "لا تنشر Google حدود Gemini.",
  "Am salvat în memorie: {names}.": "تم الحفظ في الذاكرة: {names}.",
  "Gemini a folosit {n} unelte la rând. M-am oprit; scrie «continuă» dacă vrei să meargă mai departe.": "استخدم Gemini ‏{n} أدوات متتالية. توقفت؛ اكتب «تابع» إذا أردت أن يكمل.",
- "Refuzat.": "تم الرفض."
+ "Refuzat.": "تم الرفض.",
+ "Actualizezi Jolty la {version}?": "تحديث Jolty إلى {version}؟",
+ "Jolty se închide și se pornește din nou. Ce lucrează acum se oprește, iar conversațiile rămân și le poți continua.": "يُغلق Jolty ثم يعمل من جديد. ما يعمل الآن يتوقف، وتبقى محادثاتك ويمكنك متابعتها.",
+ "Jolty se închide și se pornește din nou, în câteva secunde. Conversațiile rămân.": "يُغلق Jolty ثم يعمل من جديد خلال ثوانٍ. تبقى محادثاتك كما هي.",
+ "Descarcă Jolty {version}, îl instalează și îl pornește din nou. Conversațiile rămân.": "ينزّل Jolty {version} ويثبّته ثم يشغّله مجددًا. تبقى محادثاتك كما هي.",
+ "Jolty {version} e disponibil · Actualizează": "Jolty {version} متاح · تحديث",
+ "Actualizări automate": "التحديثات التلقائية",
+ "Jolty descarcă singur versiunile noi în fundal și le instalează când închizi aplicația, fără întrebări. Debifat, doar te anunță, iar tu apeși Actualizează (și confirmi) când vrei.": "ينزّل Jolty الإصدارات الجديدة في الخلفية ويثبّتها عند إغلاق التطبيق دون أي أسئلة. عند إلغاء التحديد يُعلمك فقط، وتضغط أنت تحديث (وتؤكد) متى شئت.",
+ "Jolty {version} e disponibil. Apasă Actualizează ca să-l descarci și să-l instalezi.": "Jolty {version} متاح. اضغط تحديث لتنزيله وتثبيته.",
+ "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "يبحث Jolty عن إصدارات جديدة بنفسه لكنه لا ينزّلها: اضغط تحديث متى شئت.",
+ "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "يحظر Windows إشعارات Jolty: هي متوقفة في إعدادات Windows، لذلك لا يظهر أي إشعار خارج النافذة.",
+ "Deschide setările Windows": "فتح إعدادات Windows",
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "تم تثبيت Jolty لجميع المستخدمين، ولذلك يطلب Windows الإذن عند كل تحديث. أعد تثبيته مع اختيار «Instalează doar pentru mine» (التثبيت لي فقط) وستصبح التحديثات صامتة."
 }
