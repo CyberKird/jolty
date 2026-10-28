@@ -191,6 +191,17 @@ export function App() {
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.error ? 'error' : ''}`} data-state={t.closing ? 'closed' : 'open'}>
             {t.text}
+            {t.action && (
+              <button
+                className="toast-action"
+                onClick={() => {
+                  t.action!.run()
+                  useStore.getState().dismissToast(t.id)
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
           </div>
         ))}
       </div>

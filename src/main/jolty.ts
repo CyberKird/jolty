@@ -9,6 +9,7 @@ import type {
   Attachment,
   ChatEvent,
   ChatItem,
+  ClosedSession,
   EngineKind,
   ExternalSession,
   ModelOption,
@@ -53,6 +54,7 @@ import { removeProfileFiles } from './profile-files'
 import { bindJoltyTools } from './jolty-tools'
 import { accepts, fileKindsOf, readAskFiles, type AskInput, type AskProfile } from './ask-model'
 import { addWorktree, removeWorktree } from './workers'
+import * as trash from './trash'
 import { learningNudge } from './learning'
 import { reviewChat, setHelper } from './gemini-learning'
 import { forget } from './recall'
@@ -1539,18 +1541,58 @@ ${text.slice(0, 1500)}`
     if (this.temps.has(sessionId)) return this.wipeTemp(sessionId)
     await this.live.get(sessionId)?.close()
     this.live.delete(sessionId)
+    clearTimeout(this.saveTimers.get(sessionId))
+    this.saveTimers.delete(sessionId)
+    const gone = store.loadSessions().find((s) => s.id === sessionId)
+    // kept in the trash until Jolty closes (trash.ts) so it can be reopened; its worktree goes when it falls out of the trash
+    if (gone) for (const old of trash.stash(gone, this.transcript(sessionId))) if (old.worktree) void removeWorktree(old.worktree)
     this.transcripts.delete(sessionId)
     forget(sessionId)
     store.removeTranscript(sessionId)
-    const gone = store.loadSessions().find((s) => s.id === sessionId)
     store.saveSessions(store.loadSessions().filter((s) => s.id !== sessionId))
-    // an unused worktree goes with its session; one with changes or commits stays, on its branch
-    if (gone?.worktree) void removeWorktree(gone.worktree)
+  }
+
+  /** Removed conversations from the last start of the app are gone for good: only their worktrees are left to clean. */
+  sweepTrash(): void {
+    for (const m of trash.purge()) if (m.worktree) void removeWorktree(m.worktree)
+  }
+
+  closedSessions(): ClosedSession[] {
+    return trash.closed()
+  }
+
+  /** Brings a removed conversation back into the list; its engine session resumes as before. */
+  restoreSession(sessionId?: string): SessionMeta {
+    const meta = trash.restore(sessionId)
+    this.send({ type: 'meta', sessionId: meta.id, meta })
+    return meta
+  }
+
+  /** Pins / archives conversations without touching their last-activity time (saveMeta would bump it). */
+  setFlags(ids: string[], flags: { pinned?: boolean; archived?: boolean }): void {
+    const patch: Pick<SessionMeta, 'pinned' | 'archived'> = {}
+    if (typeof flags.pinned === 'boolean') patch.pinned = flags.pinned
+    if (typeof flags.archived === 'boolean') patch.archived = flags.archived
+    const want = new Set(ids)
+    for (const id of want) {
+      const temp = this.temps.get(id)
+      if (temp) Object.assign(temp, patch)
+      // the live copy is what a later saveMeta writes back
+      const live = this.live.get(id)?.meta
+      if (live) Object.assign(live, patch)
+    }
+    store.saveSessions(store.loadSessions().map((m) => (want.has(m.id) ? { ...m, ...patch } : m)))
+    for (const id of want) {
+      const meta = this.findMeta(id)
+      if (meta) this.send({ type: 'meta', sessionId: id, meta })
+    }
   }
 
   /** One run of a scheduled task: a new conversation that gets the task's prompt, as if the user had sent it. */
   private async runTask(t: ScheduledTask): Promise<string> {
     const meta = await this.startSession({ profileId: t.profileId, cwd: t.cwd, model: t.model, effort: t.effort, permissionMode: t.permissionMode, title: t.name })
+    meta.scheduled = true
+    this.saveMeta(meta)
     this.send({ type: 'meta', sessionId: meta.id, meta })
     // for the model only: the chat shows the prompt as written
     const head = `[Scheduled task "${t.name}", started by Jolty on ${new Date().toString()}. Nobody is watching this run live: do the task, then end with a short summary of the result.]`
@@ -1625,6 +1667,7 @@ ${text.slice(0, 1500)}`
       store.saveTranscript(id, this.transcript(id))
     }
     for (const id of [...this.temps.keys()]) await this.wipeTemp(id)
+    trash.purge(true)
     await this.claude.shutdown()
     await this.codex.shutdown()
     await this.hermes.shutdown()

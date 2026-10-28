@@ -1,11 +1,16 @@
-import { Loader2, MessageSquareDashed, BarChart3, CalendarClock, Cpu, Download, FolderOpen, GitBranch, KeyRound, Link, MessageSquare, Pencil, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react'
+import { BarChart3, CalendarClock, Cpu, Download, KeyRound, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck } from 'lucide-react'
 import { BugReportButton } from './BugReport'
 import { useEffect, useMemo, useState } from 'react'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { dragShield } from '../dragShield'
-import { copyItem, pathItems, showMenu } from './ContextMenu'
+import { pathItems, showMenu } from './ContextMenu'
 import { MOVE_HINT, useProfileDrag } from '../pages/Accounts'
 import { LiveList } from './LiveList'
+import { SessionRow } from './SessionRow'
+import { ArchivedSection } from './ArchivedSection'
+import { OrganizeMenu } from './OrganizeMenu'
+import { reopenClosed } from '../organize'
+import { splitSessions } from '@shared/organize'
 import { tr } from '@shared/i18n'
 import { needsAttention } from '@shared/skills'
 import { useShallow } from 'zustand/shallow'
@@ -329,7 +334,6 @@ export function Sidebar() {
   const { page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast } = useStore(useShallow(({ page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast }) => ({ page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast })))
   const compactions = useStore((s) => s.compactions)
   const [q, setQ] = useState('')
-  const [renaming, setRenaming] = useState<string>()
   const skillsAttention = useStore((s) => s.skillsAttention)
   // the badge is there before the Skills page is ever opened; that page keeps it current afterwards
   useEffect(() => {
@@ -340,25 +344,21 @@ export function Sidebar() {
   }, [])
   // temporary chats are listed too (marked); they live in memory only and are wiped when deleted or when Jolty closes
   const saved = sessions
-  const groups = useMemo(() => {
-    const filtered = saved.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.cwd.toLowerCase().includes(q.toLowerCase()))
-    const map = new Map<string, typeof filtered>()
-    for (const s of filtered) map.set(s.cwd, [...(map.get(s.cwd) || []), s])
-    return [...map.entries()]
+  const { groups, pinned, archived } = useMemo(() => {
+    const parts = splitSessions(saved.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.cwd.toLowerCase().includes(q.toLowerCase())))
+    const map = new Map<string, typeof parts.rest>()
+    for (const s of parts.rest) map.set(s.cwd, [...(map.get(s.cwd) || []), s])
+    return { groups: [...map.entries()], pinned: parts.pinned, archived: parts.archived }
   }, [saved, q])
 
   const removeSession = async (id: string): Promise<void> => {
+    const temporary = saved.find((s) => s.id === id)?.temporary
+    const wasActive = activeId === id
     await api.sessions.remove(id)
-    if (activeId === id) await openSession(undefined)
+    if (wasActive) await openSession(undefined)
     await loadSessions()
-    toast(tr("Conversația a fost scoasă din Jolty"))
-  }
-
-  const rename = async (id: string, title: string): Promise<void> => {
-    setRenaming(undefined)
-    if (!title.trim()) return
-    await api.sessions.rename(id, title)
-    await loadSessions()
+    // a temporary chat leaves nothing behind, so there is nothing to bring back
+    toast(tr("Conversația a fost scoasă din Jolty"), false, temporary ? undefined : { label: tr("Anulează"), run: () => reopenClosed(id, wasActive) })
   }
 
   const [navIds, moveNav] = useOrder('jolty.navOrder', NAV.map((n) => n.id))
@@ -410,83 +410,36 @@ export function Sidebar() {
       <LiveList />
       <div className="side-head">
         <span className="label">{tr("Conversații")}</span>
-        <span className="label">{saved.length}</span>
+        <span className="head-right">
+          <span className="label">{saved.length - archived.length}</span>
+          <OrganizeMenu />
+        </span>
       </div>
       <div className="search">
         <Search size={13} />
         <input placeholder={tr("Caută conversații")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={tr("Caută conversații")} />
       </div>
       <div className="session-list">
-        {groups.length === 0 && <div className="faint small" style={{ padding: '6px 12px' }}>{tr("Nicio conversație încă.")}</div>}
+        {groups.length === 0 && pinned.length === 0 && archived.length === 0 && <div className="faint small" style={{ padding: '6px 12px' }}>{tr("Nicio conversație încă.")}</div>}
+        {pinned.length > 0 && (
+          <div className="session-group pinned">
+            <div className="session-group-title">{tr("Fixate")}</div>
+            {pinned.map((s) => (
+              <SessionRow key={s.id} s={s} onRemove={(id) => void removeSession(id)} />
+            ))}
+          </div>
+        )}
         {orderedGroups.map(([cwd, list]) => (
           <div className="session-group" key={cwd}>
             <div className="session-group-title" title={`${cwd}\n${MOVE_HINT}`} tabIndex={0} onContextMenu={(e) => showMenu(e, pathItems(cwd))} {...groupDrag(cwd)}>
               {basename(cwd)}
             </div>
-            {list.map((s) => {
-              const profile = profiles.find((p) => p.id === s.profileId)
-              return (
-                <div
-                  key={s.id}
-                  className={`session-item ${page === 'chat' && activeId === s.id ? 'active' : ''}`}
-                  onClick={() => void openSession(s.id)}
-                  onContextMenu={(e) =>
-                    showMenu(e, [
-                      { label: tr("Deschide conversația"), icon: MessageSquare, run: () => void openSession(s.id) },
-                      { label: tr("Redenumește"), icon: Pencil, run: () => setRenaming(s.id) },
-                      copyItem(tr("Copiază titlul"), s.title),
-                      'sep',
-                      { label: tr("Arată folderul în Explorer"), icon: FolderOpen, run: () => void api.app.revealPath(s.cwd) },
-                      copyItem(tr("Copiază calea folderului"), s.cwd, Link),
-                      ...(s.worktree ? [copyItem(tr("Copiază numele branch-ului"), s.worktree.branch, GitBranch)] : []),
-                      'sep',
-                      { label: tr("Scoate din Jolty"), icon: Trash2, run: () => void removeSession(s.id) }
-                    ])
-                  }
-                  role="button"
-                  tabIndex={0}
-                >
-                  <span className={`dot ${status[s.id] === 'running' ? 'running' : ''}`} style={{ background: profile?.color }} />
-                  {compactions[s.id]?.active && <Loader2 size={11} className="spin compact-dot" aria-label={tr("Compactez conversația...")} />}
-                  {s.worktree && <GitBranch size={11} className="live-branch" aria-label={s.worktree.branch} />}
-                  {renaming === s.id ? (
-                    <input
-                      className="title-edit"
-                      autoFocus
-                      defaultValue={s.title}
-                      maxLength={80}
-                      aria-label={tr("Titlul conversației")}
-                      onFocus={(e) => e.currentTarget.select()}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => {
-                        e.stopPropagation()
-                        if (e.key === 'Enter') void rename(s.id, e.currentTarget.value)
-                        if (e.key === 'Escape') setRenaming(undefined)
-                      }}
-                      onBlur={(e) => void rename(s.id, e.currentTarget.value)}
-                    />
-                  ) : (
-                    <span className="title" onDoubleClick={() => setRenaming(s.id)}>
-                      {s.temporary && <MessageSquareDashed size={11} className="temp-mark" aria-label={tr("Temporar")} />}
-                      {s.title}
-                    </span>
-                  )}
-                  <span className="when">{timeAgo(s.updatedAt)}</span>
-                  <button
-                    className="del"
-                    title={s.temporary ? tr("Șterge conversația temporară (nu se salvează nimic din ea)") : tr("Scoate din Jolty (sesiunea rămâne în Claude Code / Codex)")}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void removeSession(s.id)
-                    }}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              )
-            })}
+            {list.map((s) => (
+              <SessionRow key={s.id} s={s} onRemove={(id) => void removeSession(id)} />
+            ))}
           </div>
         ))}
+        <ArchivedSection list={archived} onRemove={(id) => void removeSession(id)} />
       </div>
       <UsageMeter />
       <div className="account-row">

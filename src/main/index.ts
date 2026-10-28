@@ -235,6 +235,9 @@ function registerIpc(): void {
   )
   handle('sessions:remove', (id: string) => jolty.removeSession(id))
   handle('sessions:rename', (id: string, title: string) => jolty.renameSession(String(id), String(title)))
+  handle('sessions:setFlags', (ids: unknown, flags: { pinned?: boolean; archived?: boolean }) => jolty.setFlags(Array.isArray(ids) ? ids.map(String) : [], flags ?? {}))
+  handle('sessions:closed', () => jolty.closedSessions())
+  handle('sessions:restore', (id?: string) => jolty.restoreSession(id === undefined ? undefined : String(id)))
   handle('sessions:review', (id: string) => jolty.review(String(id)))
   handle('skills:list', () => skills.list())
   handle('skills:check', (ids?: string[]) => skills.check(ids))
@@ -403,6 +406,7 @@ if (!app.requestSingleInstanceLock()) {
       globalShortcut.register(obsidian.SHORTCUT, () => void obsidian.toggle())
       void obsidian.backup(vault, store.loadSettings().obsidianBackupDir || obsidian.defaultBackupDir())
     }
+    jolty.sweepTrash()
     if (!process.env.JOLTY_TEST) useTime.startUseTime(() => jolty.anyBusy(), () => BrowserWindow.getAllWindows().some((w) => w.isFocused()))
     // automated runs start with What's new already seen, unless the run sets an older seenVersion itself
     if (process.env.JOLTY_TEST && !store.loadSettings().seenVersion) store.saveSettings({ seenVersion: __JOLTY_VERSION__ })

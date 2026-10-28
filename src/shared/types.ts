@@ -152,6 +152,20 @@ export interface SessionMeta {
   parentId?: string
   /** a git worktree of the project made for this session: `root` is the repository, `base` the commit it was cut from */
   worktree?: { path: string; branch: string; base: string; root: string }
+  /** pinned: listed in a section at the top of the sidebar */
+  pinned?: boolean
+  /** archived: hidden from the main list, shown under "Arhivate" */
+  archived?: boolean
+  /** a run of a scheduled task (started by Jolty, nobody typed in it) */
+  scheduled?: boolean
+}
+
+/** A conversation the user removed this run: Jolty keeps it until it closes so it can be reopened. */
+export interface ClosedSession {
+  id: string
+  title: string
+  cwd: string
+  deletedAt: number
 }
 
 export interface ExternalSession {
@@ -555,6 +569,12 @@ export interface JoltyApi {
     improvePrompt(text: string, profileId?: string, model?: string, cwd?: string, sessionId?: string): Promise<{ text?: string; question?: string }>
     remove(sessionId: string): Promise<void>
     rename(sessionId: string, title: string): Promise<void>
+    /** pin / archive; neither changes the conversation's last-activity time */
+    setFlags(sessionIds: string[], flags: { pinned?: boolean; archived?: boolean }): Promise<void>
+    /** removed this run, newest first */
+    closed(): Promise<ClosedSession[]>
+    /** brings back a removed conversation (the newest when no id) */
+    restore(sessionId?: string): Promise<SessionMeta>
     onEvent(cb: (e: ChatEvent) => void): () => void
   }
   skills: {

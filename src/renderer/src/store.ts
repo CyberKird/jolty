@@ -50,6 +50,8 @@ interface Toast {
   error?: boolean
   /** playing its exit */
   closing?: boolean
+  /** a button on the toast (Undo): it closes the toast and runs */
+  action?: { label: string; run: () => void }
 }
 
 interface State {
@@ -99,7 +101,8 @@ interface State {
   setBackups(b: BackupEntry[]): void
 
   setPage(p: Page): void
-  toast(text: string, error?: boolean): void
+  toast(text: string, error?: boolean, action?: Toast['action']): void
+  dismissToast(id: number): void
   loadProfiles(): Promise<void>
   /** puts `from` where `to` is (after it when moving down) and saves the order */
   moveProfile(from: string, to: string): Promise<void>
@@ -200,14 +203,17 @@ export const useStore = create<State>((set, get) => ({
       return { hiddenSkills }
     }),
 
-  toast: (text, error) => {
+  toast: (text, error, action) => {
     const id = ++toastId
-    set((s) => ({ toasts: [...s.toasts, { id, text, error }] }))
-    // it leaves with its exit motion, then goes
-    setTimeout(() => {
-      set((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, closing: true } : t)) }))
-      setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), exitMs() + 20)
-    }, error ? 7000 : 3500)
+    set((s) => ({ toasts: [...s.toasts, { id, text, error, action }] }))
+    // it leaves with its exit motion, then goes; one with a button stays long enough to be used
+    setTimeout(() => get().dismissToast(id), error ? 7000 : action ? 9000 : 3500)
+  },
+
+  dismissToast: (id) => {
+    if (get().toasts.find((t) => t.id === id)?.closing) return
+    set((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, closing: true } : t)) }))
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), exitMs() + 20)
   },
 
   loadProfiles: async () => {
