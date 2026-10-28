@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.2
+
+### Improvements
+
+- OpenCode has a row of its own in the usage meter, next to Gemini: the tokens of the last 24 hours and 7 days, as OpenCode reports them for each turn. OpenCode does not publish how much of the free daily allowance is left, so the row shows what was used, not what remains.
+
 ## 0.13.1
 
 ### Fixed

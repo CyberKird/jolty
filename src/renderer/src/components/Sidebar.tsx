@@ -132,9 +132,9 @@ function UsageMeter() {
     }
   }, [profiles])
   // a profile with empty windows but a note (rate-limited probe) stays visible so the row does not vanish
-  // an OpenCode or Hermes agent has no limits to read and reports its tokens only when a turn ends, so it is listed as soon as one of its chats works
+  // OpenCode publishes no limits, so its row stays like Gemini's; Hermes is listed as soon as one of its chats works
   const working = new Set(sessions.filter((x) => status[x.id] === 'running').map((x) => x.profileId))
-  const rows = profiles.filter((p) => isMiMoProfile(p) || p.engine === 'gemini' || limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id] || working.has(p.id))
+  const rows = profiles.filter((p) => isMiMoProfile(p) || p.engine === 'gemini' || p.engine === 'opencode' || limits[p.id]?.windows.length || limits[p.id]?.note || spend[p.id]?.tokens || balances[p.id] || working.has(p.id))
   const dragProps = useProfileDrag(rows.map((p) => p.id))
   return (
     <section className="meter" aria-label={tr("Consum live")}>
@@ -181,6 +181,7 @@ function UsageMeter() {
           const s = spend[p.id]
           const isMiMo = isMiMoProfile(p)
           const isGemini = p.engine === 'gemini'
+          const isOpencode = p.engine === 'opencode'
           const balance = balances[p.id]
           return (
             <button key={p.id} className="meter-row" onClick={() => setPage('usage')} title={`${tr("Deschide Consum")}\n${MOVE_HINT}`} {...dragProps(p.id)}>
@@ -188,14 +189,14 @@ function UsageMeter() {
               <span className={`dot ${working.has(p.id) ? 'running' : ''}`} style={{ width: 6, height: 6, background: p.color }} />
               <span className="ellipsis">{p.name}</span>
               {working.has(p.id) && !s?.tokens && !limits[p.id]?.windows.length && <span className="meter-24h">{tr("lucrează")}</span>}
-              {!isMiMo && !isGemini && s?.tokens ? (
+              {!isMiMo && !isGemini && !isOpencode && s?.tokens ? (
                 <span className="meter-24h" title={tr("Ultimele 24 de ore")}>
                   {fmtTokens(s.tokens)}
                   {s.costUsd ? ` · ${fmtUsd(s.costUsd)}` : ''}
                 </span>
               ) : null}
             </span>
-            {isMiMo && (
+            {(isMiMo || isOpencode) && (
               <>
                 <span className="meter-balance" title={tr("Ultimele 24 de ore")}>
                   <span className="meter-limit-label">24h</span>
