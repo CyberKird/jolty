@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.1
+
+### Fixed
+
+- OpenCode stopped answering because OpenCode 1 no longer has the free models at all. Jolty now installs OpenCode 2 (with a fallback build for older CPUs) and prefers it over an older copy on the PC; System check finds a 1.x install and offers the update. The free models come with a daily quota set by OpenCode.
+- OpenCode conversations now have Jolty's own tools (conversation search, schedules, `ask_model`), so parallel sessions work with OpenCode the same as with Claude and Codex: the button appears for it and the model is told to start and wait for the sessions.
+
 ## 0.13.0
 
 ### New
