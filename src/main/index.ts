@@ -367,6 +367,8 @@ if (!app.requestSingleInstanceLock()) {
   app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
   app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
   app.commandLine.appendSwitch('disable-renderer-backgrounding')
+  // the CI runner has no GPU: software WebGL lets the 3D mascot start there (tests only, users keep their own GPU path)
+  if (process.env.JOLTY_TEST) app.commandLine.appendSwitch('enable-unsafe-swiftshader')
   app.on('second-instance', () => {
     if (!win || win.isDestroyed()) return
     if (win.isMinimized()) win.restore()

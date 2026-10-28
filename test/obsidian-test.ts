@@ -7,7 +7,8 @@ import test from 'node:test'
 import { execFileSync } from 'node:child_process'
 import { backup } from '../src/main/obsidian'
 
-test('backup zips the notes without scratch files and prunes old days', async () => {
+// the feature is Windows-only (bsdtar in System32 writes the zip)
+test('backup zips the notes without scratch files and prunes old days', { skip: process.platform !== 'win32' }, async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-obsidian-'))
   const vault = path.join(tmp, 'hub')
   const out = path.join(tmp, 'out')
