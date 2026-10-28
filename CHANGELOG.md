@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.0
+
+### New
+
+- Obsidian can run quietly in the background while Jolty is open: set `obsidianVault` in settings.json to your vault folder. Jolty starts Obsidian hidden (no window, no taskbar button), Ctrl+Alt+O shows or hides it, and it closes when Jolty closes. Nothing is synced. Your vault is also zipped to a folder at start and at quit, one file per day with the last 14 kept (`obsidianBackupDir` in settings.json picks the folder; the default is `.claude/backups/obsidian` in your user folder).
+
 ## 0.12.0
 
 ### New

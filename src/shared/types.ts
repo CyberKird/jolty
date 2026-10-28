@@ -354,6 +354,10 @@ export interface AppSettings {
   notifySound?: boolean
   /** the version What's new was last shown for: it opens once after each update */
   seenVersion?: string
+  /** vault folder: while Jolty runs, Obsidian runs hidden on it and the vault is zipped to a folder; off when empty */
+  obsidianVault?: string
+  /** where those zips go; ~/.claude/backups/obsidian when empty */
+  obsidianBackupDir?: string
   /** interface language code (see shared/i18n.ts); unset follows the system */
   language?: string
   /** Chrome profile folder for Jolty in Chrome ("Default", "Profile 1"); the last used one when empty */

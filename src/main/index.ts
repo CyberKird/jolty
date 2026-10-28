@@ -1,6 +1,6 @@
 // first: every module after this one builds its texts in the chosen language
 import './lang'
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, Notification, session, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, globalShortcut, ipcMain, nativeImage, Notification, session, shell } from 'electron'
 import { execFile } from 'child_process'
 import fs from 'fs'
 import os from 'os'
@@ -25,6 +25,7 @@ import * as system from './system'
 import * as connect from './connect'
 import * as backup from './backup'
 import * as useTime from './use-time'
+import * as obsidian from './obsidian'
 import { getLang, setLang, tr } from '@shared/i18n'
 import { openableUrl } from '@shared/links'
 
@@ -394,6 +395,12 @@ if (!app.requestSingleInstanceLock()) {
       models: (id) => jolty.models(id)
     })
     void jolty.sweepTemps().catch(() => undefined)
+    const vault = store.loadSettings().obsidianVault
+    if (vault && !process.env.JOLTY_TEST) {
+      void obsidian.start()
+      globalShortcut.register(obsidian.SHORTCUT, () => void obsidian.toggle())
+      void obsidian.backup(vault, store.loadSettings().obsidianBackupDir || obsidian.defaultBackupDir())
+    }
     if (!process.env.JOLTY_TEST) useTime.startUseTime(() => jolty.anyBusy(), () => BrowserWindow.getAllWindows().some((w) => w.isFocused()))
     // automated runs start with What's new already seen, unless the run sets an older seenVersion itself
     if (process.env.JOLTY_TEST && !store.loadSettings().seenVersion) store.saveSettings({ seenVersion: __JOLTY_VERSION__ })
@@ -412,7 +419,11 @@ app.on('before-quit', (e) => {
   e.preventDefault()
   quitting = true
   preview.stop()
-  void Promise.all([nativeComputer.stop().catch(() => undefined), jolty.shutdown()]).then(() => nativeBrowser.stop()).finally(() => app.quit())
+  const vault = store.loadSettings().obsidianVault
+  const obsidianDone = vault
+    ? obsidian.backup(vault, store.loadSettings().obsidianBackupDir || obsidian.defaultBackupDir()).catch(() => undefined).then(() => obsidian.stop())
+    : undefined
+  void Promise.all([nativeComputer.stop().catch(() => undefined), jolty.shutdown(), obsidianDone]).then(() => nativeBrowser.stop()).finally(() => app.quit())
 })
 
 app.on('window-all-closed', () => {
