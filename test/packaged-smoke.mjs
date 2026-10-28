@@ -4,9 +4,10 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-const dir = fs.readdirSync('dist').find((d) => d.endsWith('-unpacked'))
-if (!dir) throw new Error('no dist/*-unpacked folder: run electron-builder --dir first')
-const exe = ['Jolty.exe', 'jolty', 'Jolty'].map((n) => path.resolve('dist', dir, n)).find((p) => fs.existsSync(p))
+// win-unpacked / linux-unpacked, or dist/mac-arm64/Jolty.app (dist/mac for Intel) on macOS
+const dir = fs.readdirSync('dist').find((d) => d.endsWith('-unpacked') || /^mac(-arm64)?$/.test(d))
+if (!dir) throw new Error('no packaged app in dist/: build it first')
+const exe = ['Jolty.exe', 'jolty', 'Jolty', 'Jolty.app/Contents/MacOS/Jolty'].map((n) => path.resolve('dist', dir, n)).find((p) => fs.existsSync(p))
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-smoke-'))
 // with the Anthropic mock running (test/README.md), also hold a conversation through the packaged engine
 const mock = process.env.MOCK_ANTHROPIC
@@ -28,9 +29,12 @@ if (mock) {
 }
 await win.click('.nav-item:has-text("Verificare sistem")')
 await win.waitForSelector('.check-row', { timeout: 60000 })
+// SHOT=<file>: a picture of the packaged window, for runs where nobody can look at the screen (CI on macOS)
+if (process.env.SHOT) await win.screenshot({ path: process.env.SHOT })
 const rows = await win.$$eval('.check-row', (els) => els.map((e) => e.textContent || ''))
 await win.click('.nav-item:has-text("Setări")')
-await win.waitForSelector('.lead')
+// the system page has a .lead of its own: wait until the Settings page has replaced it
+await win.waitForFunction(() => /Jolty \d+\.\d+\.\d+/.test(document.querySelector('.lead')?.textContent || ''), undefined, { timeout: 30000 })
 const version = await win.textContent('.lead')
 await app.close()
 fs.rmSync(data, { recursive: true, force: true })

@@ -1402,5 +1402,6 @@
  "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty가 새 버전을 스스로 찾지만 내려받지는 않습니다. 원할 때 업데이트를 누르세요.",
  "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows가 Jolty 알림을 차단하고 있습니다. Windows 설정에서 꺼져 있어서 창 밖에는 알림이 나타나지 않습니다.",
  "Deschide setările Windows": "Windows 설정 열기",
- "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty가 모든 사용자용으로 설치되어 있어 업데이트할 때마다 Windows가 권한을 요청합니다. “Instalează doar pentru mine”(나만 사용)를 선택해 다시 설치하면 업데이트가 조용히 진행됩니다."
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty가 모든 사용자용으로 설치되어 있어 업데이트할 때마다 Windows가 권한을 요청합니다. “Instalează doar pentru mine”(나만 사용)를 선택해 다시 설치하면 업데이트가 조용히 진행됩니다.",
+ "Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.": "macOS에서는 앱이 서명된 뒤에야 자동 업데이트가 제공됩니다. 새 버전은 GitHub에서 직접 내려받으세요."
 }

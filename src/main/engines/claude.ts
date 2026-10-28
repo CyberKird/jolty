@@ -40,6 +40,7 @@ import { editDiff, partialJsonString } from './partial-json'
 import { TaskBoard } from '@shared/tasks'
 import { getSecret, loadSettings, profileDir } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
+import { learnNowRule } from '../learning'
 import { COPY_RULE, LANGUAGE_RULE, PLAN_RULES, WRITING_RULES } from './prompt'
 import { SECRET_FILE_RULES, touchesSecretFile } from './secret-files'
 import { ProfileProcesses } from './profile-processes'
@@ -351,7 +352,7 @@ class ClaudeSession implements EngineSession {
       // a backup before every edit, so any message can be undone with rewind()
       enableFileCheckpointing: true,
       settingSources: ['user', 'project', 'local'],
-      systemPrompt: { type: 'preset', preset: 'claude_code', append: [APPEND_PROMPT, JOLTY_TOOLS_PROMPT, this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' ') },
+      systemPrompt: { type: 'preset', preset: 'claude_code', append: [APPEND_PROMPT, JOLTY_TOOLS_PROMPT, this.meta.temporary || loadSettings().learningLoop === false ? '' : learnNowRule('claude'), this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' ') },
       mcpServers: this.mcpServers(),
       disallowedTools: ['AskUserQuestion', ...BROWSER_BLOCKED_TOOLS.map((t) => `mcp__${BROWSER_SERVER}__${t}`)],
       settings: {

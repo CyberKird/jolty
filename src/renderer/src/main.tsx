@@ -7,6 +7,9 @@ import './windowed.css'
 import { setLowPowerMode } from './lowpower'
 import { addLocales, getLang } from '@shared/i18n'
 
+// the traffic lights sit on the left of the title bar on macOS (styles.css)
+if (navigator.platform.startsWith('Mac')) document.documentElement.classList.add('mac')
+
 // the saved choice arrives with the settings (App); until then the machine decides, so a weak PC never paints the full look first
 setLowPowerMode('auto')
 

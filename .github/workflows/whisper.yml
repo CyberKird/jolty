@@ -1,4 +1,4 @@
-# Builds whisper.cpp's whisper-cli for Windows with the Vulkan backend (any GPU: AMD, NVIDIA, Intel; CPU when
+# Builds whisper.cpp's whisper-cli for Windows with the Vulkan backend (and, in the mac job, for macOS with Metal) (any GPU: AMD, NVIDIA, Intel; CPU when
 # there is none) and attaches it to a prerelease, never Latest, so the app updater ignores it.
 # scripts/fetch-redist.mjs downloads it into the installer. Run by hand when whisper.cpp needs an update.
 name: whisper
@@ -38,3 +38,30 @@ jobs:
           tag="whisper-${{ inputs.ref }}"
           gh release view "$tag" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create "$tag" -R "$GITHUB_REPOSITORY" --prerelease --latest=false --title "whisper.cpp ${{ inputs.ref }} (Vulkan) for Jolty" --notes "whisper-cli built with Vulkan, used by Jolty's voice input. MIT, see LICENSE-whisper.cpp.txt."
           gh release upload "$tag" whisper-vulkan-win-x64.zip -R "$GITHUB_REPOSITORY" --clobber
+  mac:
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-latest
+          - arch: x64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: ggml-org/whisper.cpp
+          ref: ${{ inputs.ref }}
+      # Metal shaders embedded in the binary, system frameworks only: one file to ship
+      - name: Build
+        run: |
+          cmake -B build -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON -DGGML_NATIVE=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_SERVER=OFF
+          cmake --build build --config Release -j 4 --target whisper-cli
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir out && cp build/bin/whisper-cli out/ && cp LICENSE out/LICENSE-whisper.cpp.txt
+          (cd out && zip -r ../whisper-metal-mac-${{ matrix.arch }}.zip .)
+          gh release upload "whisper-${{ inputs.ref }}" whisper-metal-mac-${{ matrix.arch }}.zip -R "$GITHUB_REPOSITORY" --clobber

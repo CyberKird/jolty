@@ -3,6 +3,7 @@
 // model, since both engines just see an MCP server. It runs on Jolty's own Electron binary.
 import { execFileSync, spawn } from 'child_process'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import type { BrowserApp, BrowserInfo, BrowserMode } from '@shared/types'
 import { overlayFile } from './browser-overlay'
@@ -80,8 +81,23 @@ export interface StdioServer {
 
 const env = (k: string): string => process.env[k] || ''
 
+const mac = process.platform === 'darwin'
+const home = os.homedir()
+const macApp = (bundle: string, binary: string): string[] => ['/Applications', path.join(home, 'Applications')].map((d) => path.join(d, `${bundle}.app/Contents/MacOS/${binary}`))
+const macData = (...p: string[]): string => path.join(home, 'Library/Application Support', ...p)
+
+/** Where each Chromium browser keeps its executable and profiles on macOS (progId only means something on Windows). */
+const MAC_BROWSERS: Record<BrowserApp, { name: string; exe: string[]; data: string; progId: RegExp }> = {
+  chrome: { name: 'Chrome', exe: macApp('Google Chrome', 'Google Chrome'), data: macData('Google/Chrome'), progId: /$^/ },
+  vivaldi: { name: 'Vivaldi', exe: macApp('Vivaldi', 'Vivaldi'), data: macData('Vivaldi'), progId: /$^/ },
+  edge: { name: 'Edge', exe: macApp('Microsoft Edge', 'Microsoft Edge'), data: macData('Microsoft Edge'), progId: /$^/ },
+  brave: { name: 'Brave', exe: macApp('Brave Browser', 'Brave Browser'), data: macData('BraveSoftware/Brave-Browser'), progId: /$^/ },
+  opera: { name: 'Opera', exe: macApp('Opera', 'Opera'), data: macData('com.operasoftware.Opera'), progId: /$^/ },
+  firefox: { name: 'Firefox', exe: macApp('Firefox', 'firefox'), data: '', progId: /$^/ }
+}
+
 /** Where each Chromium browser keeps its executable and profiles on Windows. */
-const BROWSERS: Record<BrowserApp, { name: string; exe: string[]; data: string; progId: RegExp }> = {
+const WIN_BROWSERS: Record<BrowserApp, { name: string; exe: string[]; data: string; progId: RegExp }> = {
   chrome: {
     name: 'Chrome',
     exe: [path.join(env('PROGRAMFILES'), 'Google/Chrome/Application/chrome.exe'), path.join(env('LOCALAPPDATA'), 'Google/Chrome/Application/chrome.exe')],
@@ -119,6 +135,8 @@ const BROWSERS: Record<BrowserApp, { name: string; exe: string[]; data: string; 
     progId: /^FirefoxURL/i
   }
 }
+
+const BROWSERS = mac ? MAC_BROWSERS : WIN_BROWSERS
 
 let defaultCache: BrowserApp | null | undefined
 

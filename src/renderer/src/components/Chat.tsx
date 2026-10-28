@@ -441,7 +441,7 @@ function Composer(p: ComposerProps) {
               p.onMode(modes[(i + 1) % modes.length])
               return
             }
-            if (e.key === 'Enter' && e.ctrlKey && e.shiftKey && !e.nativeEvent.isComposing) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
               void submit(true)
               return

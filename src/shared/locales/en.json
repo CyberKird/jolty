@@ -1402,5 +1402,6 @@
  "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty looks for new versions by itself but does not download them: press Update when you want.",
  "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows is blocking Jolty notifications: they are turned off in Windows settings, so none appear outside the window.",
  "Deschide setările Windows": "Open Windows settings",
- "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty is installed for all users, so Windows asks for permission at every update. Reinstall it choosing “Instalează doar pentru mine” (install only for me) and updates become silent."
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty is installed for all users, so Windows asks for permission at every update. Reinstall it choosing “Instalează doar pentru mine” (install only for me) and updates become silent.",
+ "Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.": "On macOS automatic updates arrive once the app is signed: download the new version from GitHub yourself."
 }

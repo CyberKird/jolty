@@ -15,6 +15,7 @@ import { nativeBrowser } from './jbrowser/native'
 import { nativeComputer } from './computer/native'
 import { projectFiles, slashItems } from './composer'
 import { Jolty } from './jolty'
+import { importLoginPath } from './runtime'
 import * as updater from './updater'
 import * as local from './local'
 import * as modelWatch from './model-watch'
@@ -106,7 +107,8 @@ function createWindow(): void {
     show: false,
     // our own dark title bar with the native Windows caption buttons on top of it
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#060709', symbolColor: '#a3a3a3', height: 36 },
+    // macOS draws its own traffic lights (no overlay option there), centred in the 36px bar
+    ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 14, y: 12 } } : { titleBarOverlay: { color: '#060709', symbolColor: '#a3a3a3', height: 36 } }),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -362,6 +364,7 @@ if (!app.requestSingleInstanceLock()) {
   app.exit(0)
 } else {
   app.setAppUserModelId(APP_ID)
+  importLoginPath()
   // a window behind other windows (or without focus) keeps painting: the Live panel's browser picture and the
   // preview must follow the model while the user works in another app, not only when Jolty is on top
   app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
