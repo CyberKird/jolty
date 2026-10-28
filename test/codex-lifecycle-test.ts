@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { test } from 'node:test'
 import { CodexDriver } from '../src/main/engines/codex'
 import { setLang } from '../src/shared/i18n'
 import type { ChatEvent, SessionMeta } from '../src/shared/types'
+
+// the session reads the settings for the learning rule: an empty data folder, not the user's
+process.env.JOLTY_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-codex-lifecycle-'))
 
 // the assertions below read the Romanian messages
 setLang('ro')

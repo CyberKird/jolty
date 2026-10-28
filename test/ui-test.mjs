@@ -88,13 +88,13 @@ await shot('01-welcome')
 // the complexity advice while typing, on a Claude profile (real model list with effort levels)
 // the model menu: every profile's models in one list, effort underneath, like the Claude app
 const pickModel = async (profileName, nth = 0) => {
-  await win.click('.composer .picker-btn >> nth=0')
+  await win.click('.composer .picker-btn:not(.cwd-btn) >> nth=0')
   const opt = win.locator(`.picker-group:has(.picker-group-head:has-text("${profileName}")) .picker-opt`).nth(nth)
   await opt.waitFor({ timeout: 30000 })
   await opt.click()
 }
 // the menu itself; subscription accounts are logged out on CI, so nothing here depends on a login
-await win.click('.composer .picker-btn >> nth=0')
+await win.click('.composer .picker-btn:not(.cwd-btn) >> nth=0')
 await win.waitForSelector('.picker-opt', { timeout: 30000 })
 await win.waitForTimeout(1500)
 await shot('01a-model-menu')
@@ -132,7 +132,7 @@ await win.fill('.composer textarea', 'Refactorizează tot proiectul să foloseas
 await win.waitForTimeout(800)
 await shot('01e-advice-weak')
 // the mode menu, Claude style; 2 = Manual so the write below asks for approval
-await win.click('.composer .picker-btn >> nth=1')
+await win.click('.composer .picker-btn:not(.cwd-btn) >> nth=1')
 await shot('01d-mode-menu')
 await win.keyboard.press('2')
 
