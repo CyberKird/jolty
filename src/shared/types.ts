@@ -525,6 +525,7 @@ export interface SystemCheck {
 
 import type { ExportRequest, ExportResult, ImportDecision, ImportPreview, ImportResult, PackItem, SkillInfo, SkillSource } from './skills'
 import type { BackupEntry, BackupResult, BackupStatus, ProviderId, RemoteBackup, UseStats } from './backup'
+import type { MergeAction, MergeCheck, MergeStatus } from './merge'
 
 export interface JoltyApi {
   files: { path(file: File): string }
@@ -730,5 +731,14 @@ export interface JoltyApi {
     /** an http(s) link in the browser Jolty uses for its own browsing */
     openLink(url: string): Promise<void>
     version(): Promise<string>
+  }
+  /** the merge assistant for a session's worktree branch; every call that changes git state is a user click */
+  merge: {
+    status(sessionId: string): Promise<MergeStatus>
+    check(sessionId: string, action: MergeAction): Promise<MergeCheck>
+    run(sessionId: string, action: MergeAction, seen: Pick<MergeCheck, 'tip' | 'baseTip'>): Promise<void>
+    /** pushes the branch and opens a PR; returns its address */
+    pr(sessionId: string, title: string, body: string): Promise<string>
+    remove(sessionId: string, tip: string, lose: boolean): Promise<void>
   }
 }

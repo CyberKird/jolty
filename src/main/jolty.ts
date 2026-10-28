@@ -1363,6 +1363,15 @@ export class Jolty {
     if (t) this.setTitle(sessionId, t)
   }
 
+  /** the merge assistant removed this session's worktree and branch: the chat stays, without them */
+  forgetWorktree(sessionId: string): void {
+    const meta = this.live.get(sessionId)?.meta ?? this.meta(sessionId)
+    // undefined, not delete: saveMeta spreads over the stored record
+    meta.worktree = undefined
+    this.saveMeta(meta)
+    this.send({ type: 'meta', sessionId, meta })
+  }
+
   private setTitle(sessionId: string, title: string): void {
     const meta = this.live.get(sessionId)?.meta ?? this.meta(sessionId)
     meta.title = title

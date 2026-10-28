@@ -165,6 +165,13 @@ const api: JoltyApi = {
     openLocal: (p) => call('app:openLocal', p),
     openLink: (u) => call('app:openLink', u),
     version: () => call('app:version')
+  },
+  merge: {
+    status: (id) => call('merge:status', id),
+    check: (id, action) => call('merge:check', id, action),
+    run: (id, action, seen) => call('merge:run', id, action, seen),
+    pr: (id, title, body) => call('merge:pr', id, title, body),
+    remove: (id, tip, lose) => call('merge:remove', id, tip, lose)
   }
 }
 

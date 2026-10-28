@@ -26,6 +26,7 @@ import * as connect from './connect'
 import * as backup from './backup'
 import * as useTime from './use-time'
 import * as obsidian from './obsidian'
+import * as gitMerge from './git-merge'
 import { getLang, setLang, tr } from '@shared/i18n'
 import { openableUrl } from '@shared/links'
 
@@ -239,6 +240,21 @@ function registerIpc(): void {
   handle('sessions:closed', () => jolty.closedSessions())
   handle('sessions:restore', (id?: string) => jolty.restoreSession(id === undefined ? undefined : String(id)))
   handle('sessions:review', (id: string) => jolty.review(String(id)))
+  // the worktree comes from the session's own record, never from a path the renderer sends
+  const tree = (id: unknown) => {
+    const w = jolty.sessions().find((s) => s.id === id)?.worktree
+    if (!w) throw new Error(tr("Conversația nu are un worktree."))
+    return w
+  }
+  const seen = (v: unknown) => ({ tip: String((v as { tip?: unknown })?.tip ?? ''), baseTip: String((v as { baseTip?: unknown })?.baseTip ?? '') })
+  handle('merge:status', (id: string) => gitMerge.mergeStatus(tree(id)))
+  handle('merge:check', (id: string, action) => gitMerge.mergeCheck(tree(id), action === 'rebase' ? 'rebase' : 'merge'))
+  handle('merge:run', (id: string, action, s) => (action === 'rebase' ? gitMerge.rebaseBranch(tree(id), seen(s)) : gitMerge.mergeBranch(tree(id), seen(s))))
+  handle('merge:pr', (id: string, title, body) => gitMerge.createPr(tree(id), String(title ?? ''), String(body ?? '')))
+  handle('merge:remove', async (id: string, tip, lose) => {
+    await gitMerge.removeBranch(tree(id), String(tip ?? ''), lose === true)
+    jolty.forgetWorktree(String(id))
+  })
   handle('skills:list', () => skills.list())
   handle('skills:check', (ids?: string[]) => skills.check(ids))
   handle('skills:update', (id: string) => skills.update(String(id)))
