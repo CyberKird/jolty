@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { chunksToReach } from '@shared/find'
 import { lowPower } from '../lowpower'
 
 const chunk = (): number => (lowPower() ? 60 : 120)
@@ -8,7 +9,7 @@ const chunk = (): number => (lowPower() ? 60 : 120)
  * the older ones come in, a chunk at a time, as the reader scrolls up to them. `start` is where the visible part
  * begins in `items`; new messages only add at the end, so what the reader sees does not shift.
  */
-export function useWindowedItems(count: number, scroller: RefObject<HTMLElement | null>): { start: number; older: (el: HTMLElement | null) => void } {
+export function useWindowedItems(count: number, scroller: RefObject<HTMLElement | null>): { start: number; older: (el: HTMLElement | null) => void; reveal: (index: number) => void } {
   // the length when the conversation first had messages: the window ends there and grows upwards
   const base = useRef(0)
   const [chunks, setChunks] = useState(1)
@@ -28,6 +29,8 @@ export function useWindowedItems(count: number, scroller: RefObject<HTMLElement 
     keep.current = undefined
     if (el && was) el.scrollTop = was.top + (el.scrollHeight - was.height)
   }, [start, scroller])
+  // the find bar: bring an old message into the page
+  const reveal = useCallback((index: number) => setChunks((n) => Math.max(n, chunksToReach(index, base.current, chunk()))), [])
   const older = useCallback(
     (el: HTMLElement | null) => {
       watcher.current?.disconnect()
@@ -39,5 +42,5 @@ export function useWindowedItems(count: number, scroller: RefObject<HTMLElement 
     },
     [more, start]
   )
-  return { start, older }
+  return { start, older, reveal }
 }

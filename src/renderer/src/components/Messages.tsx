@@ -121,7 +121,7 @@ const ToolRow = memo(function ToolRow({ item }: { item: Tool }) {
   const fresh = item.diffs?.length || kind === 'write' || kind === 'edit' ? newContent(item.input, item.diffs) : ''
   const err = item.status === 'error'
   return (
-    <div className={`tool ${item.status}`} data-path={file}>
+    <div className={`tool ${item.status}`} data-path={file} data-item={item.id}>
       <div className="tool-top">
         <button className="tool-head" onClick={() => hasBody && setOpen(!open)} aria-expanded={open}>
           <span className="tool-verb">{toolVerb(item.name)}</span>
@@ -210,7 +210,7 @@ export const MessageItem = memo(function MessageItem({ item, live, streaming = f
     case 'user': {
       const { quote, body } = splitQuote(item.text)
       return (
-        <div className="msg-row" onContextMenu={(e) => messageMenu(e)}>
+        <div className="msg-row" data-item={item.id} onContextMenu={(e) => messageMenu(e)}>
           <MsgBar text={body} />
           <div className="msg-user">
           {quote && <div className="msg-quote">{quote}</div>}
@@ -233,7 +233,7 @@ export const MessageItem = memo(function MessageItem({ item, live, streaming = f
     }
     case 'assistant':
       return item.text.trim() ? (
-        <div className="msg-assistant" onContextMenu={(e) => messageMenu(e, item.text)}>
+        <div className="msg-assistant" data-item={item.id} onContextMenu={(e) => messageMenu(e, item.text)}>
           <Markdown text={item.text} streaming={streaming} />
           {!streaming && <MsgBar text={item.text} markdown={item.text} />}
         </div>

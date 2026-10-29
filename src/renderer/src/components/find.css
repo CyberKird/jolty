@@ -1,0 +1,132 @@
+/* Find in the conversation (Ctrl+F) and the keyboard shortcuts sheet (Ctrl+/). Logical properties, so Arabic mirrors. */
+.find-anchor {
+  position: relative;
+  flex: none;
+  height: 0;
+  z-index: 6;
+}
+.find-bar {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-block: 5px;
+  padding-inline: 10px 6px;
+  border: 1px solid var(--line-2);
+  background: color-mix(in srgb, var(--s2) 92%, transparent);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(14px);
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--t-base) var(--e-out), transform var(--t-base) var(--e-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.find-bar[data-state='closed'] {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition-duration: var(--t-exit);
+  transition-timing-function: var(--e-in);
+  pointer-events: none;
+}
+.find-input {
+  width: 220px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--white);
+  font-size: 13px;
+  outline: none;
+}
+.find-count {
+  min-width: 52px;
+  text-align: end;
+  font-family: var(--label);
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--grey-2);
+}
+.find-count.none {
+  color: var(--serious);
+}
+.find-bar .btn.icon:disabled {
+  opacity: 0.35;
+}
+
+/* the hits: every one, and the one being read */
+::highlight(find-all) {
+  background: rgba(212, 255, 0, 0.22);
+  color: inherit;
+}
+::highlight(find-current) {
+  background: var(--volt);
+  color: #020204;
+}
+
+/* shortcuts sheet */
+.modal-back.keys-back {
+  z-index: 70;
+}
+.modal.keys {
+  width: min(620px, calc(100vw - 40px));
+}
+.keys-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.keys-head .modal-title {
+  margin-bottom: 18px;
+}
+.keys-group + .keys-group {
+  margin-top: 20px;
+}
+.keys-group h3 {
+  margin: 0 0 6px;
+  font-family: var(--label);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--volt);
+}
+.keys-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.keys-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.keys-plus {
+  color: var(--grey-2);
+  font-size: 11px;
+}
+.keys kbd {
+  min-width: 24px;
+  padding: 2px 7px;
+  border: 1px solid var(--line-2);
+  border-bottom-width: 2px;
+  background: var(--s3);
+  font-family: var(--label);
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--white);
+}

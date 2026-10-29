@@ -9,6 +9,7 @@ import { sameProvider } from '@shared/provider'
 import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
 import { useWindowedItems } from './useWindowedItems'
+import { FindBar } from './FindBar'
 import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODES, useAllModels, type ModelGroup } from './ModelPicker'
 import { MentionMenu, useMentions } from './Mentions'
 import { ToolsMenu } from './ToolsMenu'
@@ -838,7 +839,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
   // a chat created moments ago has no history to wait for; an old one is settled once its transcript is in
   const loaded = useStore((s) => s.transcripts[session.id] !== undefined) || Date.now() - session.createdAt < 10_000
   const settled = useSettled(loaded)
-  const { start, older } = useWindowedItems(items.length, scrollRef)
+  const { start, older, reveal } = useWindowedItems(items.length, scrollRef)
   const lastReasoning = useMemo(() => {
     for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'reasoning') return items[i].id
     return undefined
@@ -864,6 +865,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
           {liveOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
         </button>
       </div>
+      <FindBar items={items} scroller={scrollRef} start={start} reveal={reveal} />
       <div className="messages" ref={scrollRef}>
         <div className="messages-inner" data-live={settled ? '' : undefined}>
           {start > 0 && (
