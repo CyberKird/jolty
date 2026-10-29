@@ -1,0 +1,16 @@
+{
+  "Arhivate": "Archived",
+  "Arhivează": "Archive",
+  "Arhivează cele terminate": "Archive finished",
+  "Arhivează cele terminate ({n})": "Archive finished ({n})",
+  "Conversația a fost arhivată": "Conversation archived",
+  "{n} conversații arhivate": "{n} conversations archived",
+  "Dezarhivează": "Unarchive",
+  "Elimină fixarea": "Unpin",
+  "Fixate": "Pinned",
+  "Fixată": "Pinned",
+  "Fixează sus": "Pin to top",
+  "Mai multe pentru conversații": "More for conversations",
+  "Redeschide ultima conversație închisă": "Reopen last closed conversation",
+  "Redeschide: {title}": "Reopen: {title}"
+}

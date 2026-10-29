@@ -33,6 +33,8 @@ export function reopenClosed(id?: string, open = true): void {
   void api.sessions
     .restore(id)
     .then(async (meta) => {
+      // reopening on purpose takes it out of the archive; Undo (open = false) puts it back as it was
+      if (open && meta.archived) await api.sessions.setFlags([meta.id], { archived: false })
       await st().loadSessions()
       if (open) await st().openSession(meta.id)
     })

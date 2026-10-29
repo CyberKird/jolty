@@ -36,6 +36,7 @@
     "test:engines": "esbuild test/engine-test.ts --bundle --platform=node --format=cjs --external:electron --external:@anthropic-ai/claude-agent-sdk --external:@playwright/mcp --alias:@shared=./src/shared --outfile=out-test/engine-test.js --log-level=warning && electron --no-sandbox out-test/engine-test.js",
     "test:acp": "esbuild test/acp-test.ts --bundle --platform=node --format=cjs --external:electron --alias:@shared=./src/shared --outfile=out-test/acp-test.cjs --log-level=warning && node --test out-test/acp-test.cjs",
     "test:ui": "electron-vite build && node test/ui-test.mjs",
+    "test:organize-ui": "electron-vite build && node test/organize-ui.mjs",
     "test:links": "electron-vite build && node test/links-test.mjs",
     "test:mascot": "electron-vite build && node test/mascot-test.mjs",
     "test:obstruct": "electron-vite build && node test/mascot-obstruct-test.mjs",
