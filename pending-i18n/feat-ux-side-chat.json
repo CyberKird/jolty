@@ -1,0 +1,20 @@
+{
+  "Închide conversația laterală (Ctrl+Shift+S)": "Close the side chat (Ctrl+Shift+S)",
+  "Conversație laterală: o întrebare rapidă, fără să încarce conversația (Ctrl+Shift+S)": "Side chat: a quick question that does not load the conversation (Ctrl+Shift+S)",
+  "Conversația laterală e acum o conversație obișnuită.": "The side chat is now a regular conversation.",
+  "Conversație laterală": "Side chat",
+  "Nu scrie în conversația principală și nu modifică fișiere.": "It does not write to the main conversation and does not change files.",
+  "doar citire": "read-only",
+  "Fă din ea o conversație obișnuită": "Make it a regular conversation",
+  "Închide (rămâne până închizi Jolty)": "Close (it stays until you close Jolty)",
+  "Context din conversație: ~{n} tokeni": "Context from the conversation: ~{n} tokens",
+  "Pregătesc conversația laterală…": "Preparing the side chat…",
+  "Încearcă din nou": "Try again",
+  "Întreabă ceva despre conversație. Răspunsul nu ajunge în ea și nu costă contextul ei.": "Ask something about the conversation. The answer does not reach it and does not cost its context.",
+  "Pune ultimul răspuns ca citat în mesajul conversației principale": "Put the last answer as a quote in the main conversation's message",
+  "Inserează răspunsul": "Insert the answer",
+  "Începe din nou": "Start over",
+  "Întrebare rapidă…": "Quick question…",
+  "Conversația nu mai există.": "The conversation no longer exists.",
+  "Conversația laterală are nevoie de un cont Claude sau Codex.": "The side chat needs a Claude or Codex account."
+}
