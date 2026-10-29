@@ -5,6 +5,7 @@ import wordmark from './assets/joltarise-wordmark-volt.svg'
 import { ContextMenu } from './components/ContextMenu'
 import { LivePanel } from './components/LivePanel'
 import { WhatsNewHost } from './components/WhatsNew'
+import { ShortcutsHost } from './components/Shortcuts'
 import { Welcome } from './components/Welcome'
 import { PowerBar } from './components/PowerBar'
 import { Sidebar } from './components/Sidebar'
@@ -185,6 +186,7 @@ export function App() {
         </Suspense>
       )}
       <WhatsNewHost />
+      <ShortcutsHost />
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.error ? 'error' : ''}`} data-state={t.closing ? 'closed' : 'open'}>

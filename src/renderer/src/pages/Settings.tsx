@@ -1,4 +1,4 @@
-import { Coffee, Cpu, ExternalLink, UserRound, Eye, FolderOpen, Gauge, Globe, Info, Languages, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
+import { Coffee, Cpu, Keyboard, ExternalLink, UserRound, Eye, FolderOpen, Gauge, Globe, Info, Languages, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { isAcp } from '@shared/types'
@@ -9,6 +9,7 @@ import { ChildSessionsSettings } from './ChildSessionsSettings'
 import { api, timeAgo, useStore } from '../store'
 import { setMascot, setMascotSize } from '../mascot/Mascot'
 import { openWhatsNew } from '../components/WhatsNew'
+import { openShortcuts } from '../components/Shortcuts'
 import { PageTabs, useSavedTab } from '../components/PageTabs'
 import { soundsOn } from '../mascot/sfx'
 import { setLowPowerMode } from '../lowpower'
@@ -340,6 +341,18 @@ export function SettingsPage() {
                 </span>
                 <button className="btn small" onClick={openWhatsNew}>
                   {tr("Vezi noutățile")}
+                </button>
+              </div>
+              <div className="card row" style={{ marginBottom: 14 }}>
+                <Keyboard size={16} color="var(--volt)" />
+                <span style={{ flex: 1 }}>
+                  <b>{tr("Scurtături de tastatură")}</b>
+                  <span className="muted small" style={{ display: 'block' }}>
+                    {tr("Toate combinațiile de taste din Jolty. Le deschizi oricând cu Ctrl+/.")}
+                  </span>
+                </span>
+                <button className="btn small" onClick={openShortcuts}>
+                  {tr("Vezi lista")}
                 </button>
               </div>
               <div className="card row" style={{ marginBottom: 14 }}>
