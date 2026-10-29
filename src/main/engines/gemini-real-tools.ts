@@ -4,6 +4,7 @@ import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, BROWSER_READ_TOOLS, BROWSER_R
 import { COMPUTER_ACT_TOOLS, COMPUTER_READ_TOOLS, COMPUTER_RULES, COMPUTER_SERVER } from '../computer/names'
 import { nativeComputer } from '../computer/native'
 import { nativeBrowser } from '../jbrowser/native'
+import { handleJoltyTools, JOLTY_READ_TOOLS, JOLTY_SERVER, JOLTY_TOOLS_PROMPT } from '../jolty-tools'
 import { loadSettings } from '../store'
 import type { GeminiTools } from './gemini-web'
 import type { ToolSet } from './gemini-tools'
@@ -28,8 +29,17 @@ const computerSet: ToolSet = {
   rules: `The PC tools: start with computer_screenshot (coordinates are pixels of the latest screenshot, origin top-left), look again after anything that changes the screen, and use them only for what a browser page cannot do. ${COMPUTER_RULES}`
 }
 
+// parallel sessions, search and schedules: always on, like for Claude; acting asks in Manual mode only
+const joltySet: ToolSet = {
+  server: JOLTY_SERVER,
+  mcp: { handle: (sid, msg) => handleJoltyTools(sid, msg) },
+  expose: () => true,
+  kind: (n) => (JOLTY_READ_TOOLS.includes(n) ? 'read' : 'self'),
+  rules: JOLTY_TOOLS_PROMPT
+}
+
 export const realTools: GeminiTools = {
-  sets: (meta) => [...(meta.browser ? [browserSet] : []), ...(meta.computer ? [computerSet] : [])],
+  sets: (meta) => [joltySet, ...(meta.browser ? [browserSet] : []), ...(meta.computer ? [computerSet] : [])],
   siteTrust: () => loadSettings().siteTrust || 'site',
   newTurn: (sid) => nativeComputer.newTurn(sid),
   interrupt: (sid) => nativeComputer.interrupt(sid)

@@ -39,6 +39,7 @@ export const HERMES: AcpAgent = {
   name: 'Hermes',
   launch: () => launchHermes(),
   browser: false,
+  joltyTools: true,
   modeId(mode) {
     if (mode === 'plan') throw new Error(tr("Hermes ACP nu oferă un mod Plan protejat. Alege aprobarea editărilor."))
     return mode === 'autoEdit' ? 'accept_edits' : mode === 'full' ? 'dont_ask' : 'default'

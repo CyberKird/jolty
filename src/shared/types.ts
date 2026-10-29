@@ -18,7 +18,7 @@ export const hasJoltyBrowser = (engine?: EngineKind): boolean => engine !== 'her
 /** Whether the model can be given the PC (screen, mouse, keyboard): the same engines as the browser. */
 export const hasJoltyComputer = hasJoltyBrowser
 /** Whether Jolty's own tools are attached: conversation search, schedules, ask_model and parallel sessions. */
-export const hasJoltyTools = (engine?: EngineKind): boolean => engine === 'claude' || engine === 'codex' || engine === 'opencode'
+export const hasJoltyTools = (engine?: EngineKind): boolean => engine !== undefined
 
 /**
  * subscription: the official CLI login (claude.ai or ChatGPT) stored in the profile's config dir.
