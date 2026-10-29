@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.14.0
+
+### New
+
+- Find in a conversation: Ctrl+F opens a search bar over the messages, with the number of hits and next and previous. Ctrl+/ opens a sheet with every keyboard shortcut, also reachable from Settings.
+- Pin, archive and reopen: pin a conversation to keep it on top, archive the ones you are done with (or all finished ones at once), and bring back a closed conversation with Ctrl+Shift+T or from the sidebar menu.
+- Jolty can keep running in the tray when you close the window, and a global shortcut opens a small quick entry box to start a chat from anywhere. Both are set in Settings, under "Background and quick entry".
+- Merge assistant for session branches: a session that works in its own worktree gets a panel to check the merge, merge or rebase it, open a pull request and remove the branch, with a warning before anything is lost.
+- Side chat: a quick read-only question beside a long conversation, primed with a short brief of it. It leaves nothing in the main chat; Promote saves it as a normal conversation.
+- Gemini chats have the permission picker: approve each tool, or let Gemini use the browser, the PC and Jolty's tools without asking.
+
+### Fixed
+
+- OpenCode no longer needs a manual reinstall: before an OpenCode chat starts, Jolty replaces an older copy (version 1, which lost the free models) with version 2 on its own.
+- The parallel button now works with every engine, Gemini and Hermes included, not only Claude, Codex and OpenCode.
+
 ## 0.13.2
 
 ### Improvements
