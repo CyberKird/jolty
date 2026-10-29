@@ -259,9 +259,16 @@ const OPENCODE_MODES = [
   { id: 'full' as const, label: tr("Fără întrebări"), desc: tr("Editează și rulează comenzi fără acord"), title: tr("OpenCode editează și rulează comenzi fără să întrebe.") }
 ]
 
+// Gemini has no files or commands of its own: the only thing to approve is a tool of the browser, the PC or Jolty
+const GEMINI_MODES = [
+  { id: 'ask' as const, label: tr("Aprobă uneltele"), desc: tr("Cere acordul înainte de fiecare unealtă"), title: tr("Cere acordul înainte de fiecare unealtă") },
+  { id: 'full' as const, label: tr("Fără întrebări"), desc: tr("Folosește uneltele fără să întrebe"), title: tr("Folosește uneltele fără să întrebe") }
+]
+
 /** The modes this engine offers. */
 export function modesFor(engine?: EngineKind): { id: PermissionMode; label: string; desc: string; title: string }[] {
   if (engine === 'opencode') return OPENCODE_MODES
+  if (engine === 'gemini') return GEMINI_MODES
   return isAcp(engine) ? HERMES_MODES : MODES.filter((m) => !m.only || m.only === engine)
 }
 

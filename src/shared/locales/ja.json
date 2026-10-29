@@ -1404,5 +1404,8 @@
  "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty は新しいバージョンを自動で確認しますが、ダウンロードはしません。好きなタイミングで「更新」を押してください。",
  "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows が Jolty の通知をブロックしています。Windows の設定でオフになっているため、ウィンドウの外には表示されません。",
  "Deschide setările Windows": "Windows の設定を開く",
- "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty はすべてのユーザー向けにインストールされているため、更新のたびに Windows が許可を求めます。「Instalează doar pentru mine」(自分専用にインストール)を選んで入れ直すと、更新はサイレントになります。"
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty はすべてのユーザー向けにインストールされているため、更新のたびに Windows が許可を求めます。「Instalează doar pentru mine」(自分専用にインストール)を選んで入れ直すと、更新はサイレントになります。",
+ "Aprobă uneltele": "ツールを承認",
+ "Cere acordul înainte de fiecare unealtă": "ツールを使う前に毎回確認",
+ "Folosește uneltele fără să întrebe": "確認なしでツールを使う"
 }

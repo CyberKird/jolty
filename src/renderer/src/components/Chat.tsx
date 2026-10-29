@@ -435,7 +435,6 @@ function Composer(p: ComposerProps) {
             // Shift+Tab cycles the permission mode, like Claude Code
             if (e.key === 'Tab' && e.shiftKey) {
               e.preventDefault()
-              if (engine === 'gemini') return
               const modes = modesFor(engine).map((m) => m.id).filter((id) => isAcp(engine) || !OPEN_MODES.includes(id))
               const i = modes.findIndex((mode) => mode === p.mode)
               p.onMode(modes[(i + 1) % modes.length])
@@ -517,7 +516,7 @@ function Composer(p: ComposerProps) {
             onEffort={p.onEffort}
             otherProfileHint={p.otherProfileHint}
           />
-          {engine !== 'gemini' && <ModePicker mode={p.mode} onMode={p.onMode} engine={engine} />}
+          <ModePicker mode={p.mode} onMode={p.onMode} engine={engine} />
           <ToolsMenu
             tools={[
               ...(!isAcp(engine) ? [{

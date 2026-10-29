@@ -1404,5 +1404,8 @@
  "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty नए संस्करण खुद खोजता है, पर उन्हें डाउनलोड नहीं करता: जब चाहें अपडेट करें दबाएँ।",
  "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows Jolty की सूचनाओं को रोक रहा है: वे Windows सेटिंग में बंद हैं, इसलिए विंडो के बाहर कोई सूचना नहीं दिखती।",
  "Deschide setările Windows": "Windows सेटिंग खोलें",
- "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty सभी उपयोगकर्ताओं के लिए इंस्टॉल है, इसीलिए Windows हर अपडेट पर अनुमति माँगता है। इसे “Instalează doar pentru mine” (सिर्फ़ मेरे लिए इंस्टॉल करें) चुनकर दोबारा इंस्टॉल करें, तब अपडेट चुपचाप हो जाएँगे।"
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty सभी उपयोगकर्ताओं के लिए इंस्टॉल है, इसीलिए Windows हर अपडेट पर अनुमति माँगता है। इसे “Instalează doar pentru mine” (सिर्फ़ मेरे लिए इंस्टॉल करें) चुनकर दोबारा इंस्टॉल करें, तब अपडेट चुपचाप हो जाएँगे।",
+ "Aprobă uneltele": "टूल्स को मंज़ूरी दें",
+ "Cere acordul înainte de fiecare unealtă": "हर टूल से पहले पूछता है",
+ "Folosește uneltele fără să întrebe": "बिना पूछे टूल्स इस्तेमाल करता है"
 }

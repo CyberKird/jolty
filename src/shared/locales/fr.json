@@ -1404,5 +1404,8 @@
  "Jolty caută singur versiuni noi, dar nu le descarcă: apeși Actualizează când vrei.": "Jolty cherche tout seul les nouvelles versions mais ne les télécharge pas : clique sur Mettre à jour quand tu veux.",
  "Windows blochează notificările Jolty: sunt oprite în setările Windows, așa că nu apar în afara ferestrei.": "Windows bloque les notifications de Jolty : elles sont désactivées dans les paramètres Windows, donc aucune n'apparaît en dehors de la fenêtre.",
  "Deschide setările Windows": "Ouvrir les paramètres Windows",
- "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty est installé pour tous les utilisateurs, c'est pourquoi Windows demande l'autorisation à chaque mise à jour. Réinstalle-le en choisissant « Instalează doar pentru mine » (installer seulement pour moi) et les mises à jour deviennent silencieuses."
+ "Jolty e instalat pentru toți utilizatorii, de aceea Windows cere permisiunea la fiecare actualizare. Reinstalează-l alegând „Instalează doar pentru mine” și actualizările devin silențioase.": "Jolty est installé pour tous les utilisateurs, c'est pourquoi Windows demande l'autorisation à chaque mise à jour. Réinstalle-le en choisissant « Instalează doar pentru mine » (installer seulement pour moi) et les mises à jour deviennent silencieuses.",
+ "Aprobă uneltele": "Approuver les outils",
+ "Cere acordul înainte de fiecare unealtă": "Demande avant chaque outil",
+ "Folosește uneltele fără să întrebe": "Utilise les outils sans demander"
 }
