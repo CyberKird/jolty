@@ -1571,5 +1571,16 @@
  "Implicit": "Default",
  "Enter în intrarea rapidă": "Enter di input cepat",
  "Deschide conversația în fereastra Jolty": "Membuka percakapan di jendela Jolty",
- "O pornește în fundal și anunță printr-o notificare": "Memulainya di latar belakang dan memberi tahu lewat notifikasi"
+ "O pornește în fundal și anunță printr-o notificare": "Memulainya di latar belakang dan memberi tahu lewat notifikasi",
+ "Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.": "Di macOS pembaruan otomatis tersedia setelah aplikasi ditandatangani: unduh sendiri versi baru dari GitHub.",
+ "Verific ce mai are nevoie Jolty...": "Memeriksa apa lagi yang dibutuhkan Jolty...",
+ "Instalez {name}...": "Memasang {name}...",
+ "Adaugă extensia Jolty în pagina de extensii a browserului. Aștept conectarea...": "Tambahkan ekstensi Jolty di halaman ekstensi browser. Menunggu koneksi...",
+ "Import sesiunile din conturile conectate...": "Mengimpor sesi dari akun yang terhubung...",
+ "Sari peste": "Lewati",
+ "Arată Modele locale (Ollama)": "Tampilkan Model lokal (Ollama)",
+ "Pagina Modele locale și rândul Ollama din Verificare sistem apar singure dacă Ollama e instalat. Jolty nu îl instalează niciodată singur.": "Halaman Model lokal dan baris Ollama di Pemeriksaan sistem muncul sendiri jika Ollama terpasang. Jolty tidak pernah memasangnya sendiri.",
+ "parole scrise în text": "kata sandi yang tertulis di teks",
+ "{n} elemente cu conținut pentru adulți au rămas în afara pachetului.": "{n} item berisi konten dewasa tidak dimasukkan ke paket.",
+ "Conținut pentru adulți: nu se exportă.": "Konten dewasa: tidak diekspor."
 }

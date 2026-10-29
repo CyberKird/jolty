@@ -24,7 +24,7 @@ import {
   type ScheduleShape,
   type Skipped
 } from './share-pack-local'
-import { personalOf, redactFiles } from './share-pack-personal'
+import { adultIn, personalOf, redactFiles } from './share-pack-personal'
 import { applyPlan, undoImport, type Planned, type Target } from './share-pack-apply'
 
 export { undoImport as undo }
@@ -64,28 +64,31 @@ const focused = (): BrowserWindow | undefined => BrowserWindow?.getFocusedWindow
 // ---------------------------------------------------------------- export
 
 // the scan reads every file, so its answer is kept until the item changes
-const personalCache = new Map<string, { sig: string; kinds: PersonalKind[] }>()
-function personalFor(it: LocalItem): PersonalKind[] {
+const personalCache = new Map<string, { sig: string; kinds: PersonalKind[]; adult: boolean }>()
+function scanFor(it: LocalItem): { kinds: PersonalKind[]; adult: boolean } {
   const sig = `${it.bytes}:${it.modifiedAt}`
   // an item over the pack limit cannot be exported, so reading all of it just to scan it is wasted
-  if (it.bytes > LIMITS.total) return []
+  if (it.bytes > LIMITS.total) return { kinds: [], adult: false }
   const hit = personalCache.get(it.key)
-  if (hit?.sig === sig) return hit.kinds
+  if (hit?.sig === sig) return hit
   let kinds: PersonalKind[] = []
+  let adult = false
   try {
-    kinds = personalOf(it.collect().files)
+    const files = it.collect().files
+    kinds = personalOf(files)
+    adult = Boolean(adultIn(files, it.label))
   } catch {
     // unreadable files are left out of the pack anyway
   }
-  personalCache.set(it.key, { sig, kinds })
-  return kinds
+  personalCache.set(it.key, { sig, kinds, adult })
+  return { kinds, adult }
 }
 
 export function items(): Promise<PackItem[]> {
   return Promise.resolve(
     localItems().map((it) => {
-      const personal = personalFor(it)
-      return { key: it.key, part: it.part, label: it.label, ...(it.detail ? { detail: it.detail } : {}), bytes: it.bytes, ...(personal.length ? { personal } : {}) }
+      const { kinds: personal, adult } = scanFor(it)
+      return { key: it.key, part: it.part, label: it.label, ...(it.detail ? { detail: it.detail } : {}), bytes: it.bytes, ...(personal.length ? { personal } : {}), ...(adult ? { adult } : {}) }
     })
   )
 }
@@ -123,6 +126,12 @@ export function buildPack(request: ExportRequest, full = false): { buf: Buffer; 
     if (!it) throw new PackError('unknown-key')
     const got = it.collect(full)
     skipped.push(...got.skipped)
+    // adult content stays on this PC: the whole item is left out (a backup of your own keeps everything)
+    const adult = full ? undefined : adultIn(got.files, it.label)
+    if (adult) {
+      skipped.push({ key, file: adult, reason: 'adult' })
+      continue
+    }
     // personal information is replaced by placeholders; the rest of the item travels
     if (!full) {
       const red = redactFiles(got.files)

@@ -253,6 +253,15 @@ export function SettingsPage() {
                   </span>
                 </span>
               </label>
+              <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
+                <input type="checkbox" checked={Boolean(s.localModels)} onChange={async (e) => { setS(await api.app.saveSettings({ localModels: e.target.checked })); window.dispatchEvent(new Event('jolty-local-models')) }} />
+                <span>
+                  <b>{tr("Arată Modele locale (Ollama)")}</b>
+                  <span className="muted small" style={{ display: 'block' }}>
+                    {tr("Pagina Modele locale și rândul Ollama din Verificare sistem apar singure dacă Ollama e instalat. Jolty nu îl instalează niciodată singur.")}
+                  </span>
+                </span>
+              </label>
               <div className="card" style={{ marginBottom: 14 }}>
                 <b>{tr("Motoare")}</b>
                 <p className="muted small">{tr("Claude Code și Codex sunt incluse. Hermes folosește instalarea de pe PC. Completează doar dacă vrei alt executabil.")}</p>

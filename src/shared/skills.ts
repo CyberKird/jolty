@@ -64,7 +64,7 @@ export const needsAttention = (s: SkillInfo, hidden: readonly string[] = []): bo
 export type PackPart = 'skills' | 'commands' | 'instructions' | 'settings' | 'profiles' | 'schedules' | 'mcp'
 
 /** Personal information found in an item; only the kind is ever reported, never the value. */
-export type PersonalKind = 'email' | 'phone' | 'bank' | 'card' | 'home-path' | 'account-name'
+export type PersonalKind = 'email' | 'phone' | 'bank' | 'card' | 'home-path' | 'account-name' | 'password'
 
 /** One thing that can go into a pack, as the export page lists it. */
 export interface PackItem {
@@ -76,6 +76,8 @@ export interface PackItem {
   bytes: number
   /** found by the scan; the export replaces it with placeholders (<email>, <user> ...) */
   personal?: PersonalKind[]
+  /** adult (NSFW) content found: the item is never put in a pack */
+  adult?: boolean
 }
 
 export interface ExportRequest {

@@ -1571,5 +1571,16 @@
  "Implicit": "デフォルト",
  "Enter în intrarea rapidă": "クイック入力での Enter",
  "Deschide conversația în fereastra Jolty": "会話を Jolty のウィンドウで開きます",
- "O pornește în fundal și anunță printr-o notificare": "バックグラウンドで開始し、通知でお知らせします"
+ "O pornește în fundal și anunță printr-o notificare": "バックグラウンドで開始し、通知でお知らせします",
+ "Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.": "macOS では、アプリが署名されるまで自動アップデートは使えません。新しいバージョンは GitHub から手動でダウンロードしてください。",
+ "Verific ce mai are nevoie Jolty...": "Jolty に必要なものを確認しています...",
+ "Instalez {name}...": "{name} をインストールしています...",
+ "Adaugă extensia Jolty în pagina de extensii a browserului. Aștept conectarea...": "ブラウザの拡張機能ページで Jolty 拡張機能を追加してください。接続を待っています...",
+ "Import sesiunile din conturile conectate...": "接続したアカウントのセッションをインポートしています...",
+ "Sari peste": "スキップ",
+ "Arată Modele locale (Ollama)": "ローカルモデル (Ollama) を表示",
+ "Pagina Modele locale și rândul Ollama din Verificare sistem apar singure dacă Ollama e instalat. Jolty nu îl instalează niciodată singur.": "Ollama がインストールされていれば、ローカルモデルのページとシステムチェックの Ollama の行は自動で表示されます。Jolty が自動でインストールすることはありません。",
+ "parole scrise în text": "テキストに書かれたパスワード",
+ "{n} elemente cu conținut pentru adulți au rămas în afara pachetului.": "成人向けコンテンツを含む {n} 件はパックに含まれませんでした。",
+ "Conținut pentru adulți: nu se exportă.": "成人向けコンテンツ: エクスポートされません。"
 }

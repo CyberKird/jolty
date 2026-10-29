@@ -22,7 +22,8 @@ const PERSONAL = (): Record<PersonalKind, string> => ({
   bank: tr("IBAN"),
   card: tr("numere de card"),
   'home-path': tr("căi cu numele tău de utilizator"),
-  'account-name': tr("numele contului tău de Windows")
+  'account-name': tr("numele contului tău de Windows"),
+  password: tr("parole scrise în text")
 })
 
 export const fmtSize = (n: number): string => (n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`)
@@ -63,6 +64,8 @@ export function PackExport() {
       const r = await api.pack.export({ keys: [...picked], name: name.trim(), author: author.trim() || undefined, note: note.trim() || undefined })
       if (r) {
         toast(tr("Pachet salvat: {n} elemente, {size}.", { n: r.items, size: fmtSize(r.bytes) }))
+        const adult = (r.skipped ?? []).filter((s) => s.reason === 'adult').length
+        if (adult) toast(tr("{n} elemente cu conținut pentru adulți au rămas în afara pachetului.", { n: adult }))
         if (r.redacted) toast(tr("{n} elemente aveau date personale, înlocuite cu marcaje precum <email> sau <user>.", { n: r.redacted }))
       }
     } catch (e) {
@@ -78,7 +81,7 @@ export function PackExport() {
       <p className="muted small">{tr("Alege ce vrei să trimiți. Pachetul e un singur fișier .joltypack pe care celălalt îl deschide la Import. Cheile API, tokenurile și cookie-urile nu intră niciodată în el.")}</p>
       {groups.length === 0 && <div className="empty">{tr("Nu e nimic de exportat încă.")}</div>}
       {groups.map(({ part, rows }) => {
-        const keys = rows.map((r) => r.key)
+        const keys = rows.filter((r) => !r.adult).map((r) => r.key)
         const all = keys.length > 0 && keys.every((k) => picked.has(k))
         return (
           <section key={part} className="pack-group">
@@ -91,11 +94,12 @@ export function PackExport() {
             {rows.map((i) => (
               <div key={i.key}>
                 <label className="pack-row">
-                  <input type="checkbox" checked={picked.has(i.key)} onChange={(e) => toggle([i.key], e.target.checked)} />
+                  <input type="checkbox" disabled={i.adult} checked={picked.has(i.key) && !i.adult} onChange={(e) => toggle([i.key], e.target.checked)} />
                   <span className="ellipsis">{i.label}</span>
                   {i.detail && <span className="faint small ellipsis">{i.detail}</span>}
                   <span className="faint small pack-size">{fmtSize(i.bytes)}</span>
                 </label>
+                {i.adult ? <div className="pack-note small">{tr("Conținut pentru adulți: nu se exportă.")}</div> : null}
                 {i.personal?.length ? (
                   <div className="pack-note small">{tr("Date personale înlocuite la export: {kinds}.", { kinds: i.personal.map((k) => PERSONAL()[k]).join(", ") })}</div>
                 ) : null}

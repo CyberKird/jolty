@@ -118,7 +118,8 @@ const NO_PROFILES: Profile[] = []
 interface ComposerProps {
   sessionId?: string
   running: boolean
-  onSend: (text: string, attachments: Attachment[], parallel?: boolean) => Promise<void> | void
+  /** false: nothing was sent (no project folder yet, the chat did not start), so the message goes back into the box */
+  onSend: (text: string, attachments: Attachment[], parallel?: boolean) => Promise<void | boolean> | void | boolean
   onStop?: () => void
   profiles: Profile[]
   /** models already loaded by the parent; loaded here when not given */
@@ -296,7 +297,10 @@ function Composer(p: ComposerProps) {
       setQueue((q) => [...q, { id: crypto.randomUUID(), text: t, atts: a, parallel: parallel || undefined }])
       return
     }
-    await p.onSend(t, a, parallel || undefined)
+    if ((await p.onSend(t, a, parallel || undefined)) === false) {
+      setText((cur) => cur || own)
+      setAtts((cur) => (cur.length ? cur : a))
+    }
   }
 
   // the box is read-only while the model rewrites it; the result goes in as a paste over the old text, so Ctrl+Z brings the old one back
@@ -1104,7 +1108,7 @@ export function NewChat() {
           if (!cwd) {
             toast(tr("Alege întâi folderul proiectului."), true)
             await pickCwd()
-            return
+            return false
           }
           if (!profileId) return
           launching.current = true
@@ -1135,6 +1139,8 @@ export function NewChat() {
           } catch (err) {
             if (meta) useStore.getState().onEvent({ type: 'status', sessionId: meta.id, status: 'error', error: errMsg(err) })
             toast(errMsg(err), true)
+            // the chat never started: the message must not be lost with it
+            if (!meta) return false
           } finally {
             launching.current = false
             launchQueue.current = []

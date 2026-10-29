@@ -282,15 +282,25 @@ export class CodexDriver implements EngineDriver {
 
   async externalSessions(profile: Profile, cwd?: string): Promise<ExternalSession[]> {
     const rpc = await this.server(profile).get()
-    const r = await rpc.request<Any>('thread/list', cwd ? { cwd, limit: 40 } : { limit: 200 })
-    return (r?.data || []).map((t: Any) => ({
-      engine: 'codex',
-      profileId: profile.id,
-      engineSessionId: t.id,
-      title: t.name || t.preview || t.id,
-      cwd: t.cwd,
-      updatedAt: (t.updatedAt || t.createdAt || 0) * 1000
-    }))
+    const out: ExternalSession[] = []
+    let cursor: string | null = null
+    // the whole list for the import (a fixed first page left older conversations out for good); a folder's list stays short
+    for (let page = 0; page < 50; page++) {
+      const r: Any = await rpc.request('thread/list', { ...(cwd ? { cwd, limit: 40 } : { limit: 200 }), ...(cursor ? { cursor } : {}) })
+      for (const t of r?.data || []) {
+        out.push({
+          engine: 'codex',
+          profileId: profile.id,
+          engineSessionId: t.id,
+          title: t.name || t.preview || t.id,
+          cwd: t.cwd,
+          updatedAt: (t.updatedAt || t.createdAt || 0) * 1000
+        })
+      }
+      cursor = r?.nextCursor ?? null
+      if (!cursor || cwd) break
+    }
+    return out
   }
 
   async history(profile: Profile, engineSessionId: string): Promise<ChatItem[]> {

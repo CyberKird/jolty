@@ -350,6 +350,8 @@ export interface AppSettings {
   lastProfileId?: string
   /** the "add your own key" suggestion after the first free chat was closed: it does not come back */
   ownKeyHintDismissed?: boolean
+  /** the Local models page and the Ollama row of the system check show up for Ollama users; this turns them on for everyone else */
+  localModels?: boolean
   /** the model and thinking level each profile used last: a new chat opens on them, not on the default */
   lastModels?: Record<string, { model: string; effort?: string }>
   /** new versions download in the background and install when Jolty closes; off: Jolty only says one is there and you press Update; on unless false */

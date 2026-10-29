@@ -881,7 +881,7 @@ export class ClaudeDriver implements EngineDriver {
 
   async externalSessions(profile: Profile, cwd?: string): Promise<ExternalSession[]> {
     const sdk = await loadSdk()
-    const list = await this.withConfigDir(profile, () => sdk.listSessions(cwd ? { dir: cwd, limit: 40 } : { limit: 300 }))
+    const list = await this.withConfigDir(profile, () => sdk.listSessions(cwd ? { dir: cwd, limit: 40 } : {}))
     return list.map((s) => ({
       engine: 'claude',
       profileId: profile.id,

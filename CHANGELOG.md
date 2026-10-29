@@ -1,10 +1,22 @@
 # Changelog
 
-## 0.14.1
+## 0.15.0
+
+### New
+
+- First setup is automatic: after you pick an account or key, Jolty checks Git, the Visual C++ runtime and the browser extension, installs what is missing, and imports the sessions it finds. You can skip it while it runs. Windows may still ask for permission to install.
+- Local models (Ollama) are hidden until Ollama is installed or you turn them on in Settings.
+
+### Fixed
+
+- Import sessions missed older conversations: Claude history was cut to the newest 300 (many of them Jolty helper chats) and Codex only read its first page. Both are read in full now.
+- Less lag with a long conversation list: the sidebar only draws the rows on screen, grouping is faster and the usage meter no longer redraws on every change.
+- A message typed before choosing the project folder is no longer lost: it comes back, attachments included, after the folder prompt or if the chat fails to start.
+- Installing a missing tool from System check no longer ends in a crash when `cmd.exe` cannot start, and the Visual C++ check no longer reports a false miss.
 
 ### Improvements
 
-- Exporting a pack now applies smarter rules about what is safe to include.
+- Exporting a pack applies smarter rules about what is safe to include.
 
 ## 0.14.0
 

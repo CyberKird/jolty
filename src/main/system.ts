@@ -7,6 +7,7 @@ import { browserMode } from './browser'
 import { csc } from './computer/helper'
 import { nativeBrowser } from './jbrowser/native'
 import * as local from './local'
+import { loadSettings } from './store'
 import { opencodeExecutable, opencodeMajor, opencodeVersion } from './engines/opencode-runtime'
 import { installOpencode } from './engines/opencode-install'
 import { claudeExecutable, codexExecutable } from './runtime'
@@ -32,6 +33,9 @@ async function gitBash(): Promise<string | undefined> {
 
 async function vcRuntime(): Promise<boolean> {
   if (!isWin) return true
+  // some Windows 11 builds have the runtime without the registry key, so the DLLs themselves count too
+  const system32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32')
+  if (['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll'].every((f) => fs.existsSync(path.join(system32, f)))) return true
   const out = await run('reg', ['query', 'HKLM\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64', '/v', 'Installed'])
   return /Installed\s+REG_DWORD\s+0x1/i.test(out)
 }
@@ -57,6 +61,7 @@ export async function check(): Promise<SystemCheck[]> {
   const ocOld = Boolean(ocVersion) && opencodeMajor(ocVersion) < 2
   await nativeBrowser.start()
   const ext = nativeBrowser.status()
+  const showOllama = ollama.installed || ollama.running || loadSettings().localModels
   const checks: SystemCheck[] = [
     { id: 'claude', label: tr("Claude Code (inclus în Jolty)"), ok: Boolean(claude), detail: claude || tr("Binarul inclus lipsește: reinstalează Jolty.") },
     { id: 'codex', label: tr("Codex (inclus în Jolty)"), ok: Boolean(codex), detail: codex || tr("Binarul inclus lipsește: reinstalează Jolty.") },
@@ -124,12 +129,21 @@ export async function check(): Promise<SystemCheck[]> {
       fixLabel: tr("Deschide settings.json")
     })
   }
-  return checks
+  // Git Bash and the VC++ runtime are Windows requirements
+  return (isWin ? checks : checks.filter((c) => c.id !== 'git' && c.id !== 'vcredist')).filter((c) => c.id !== 'ollama' || showOllama)
 }
 
 /** `start` goes through ShellExecute, so installers that need admin rights get the UAC prompt. */
-function startDetached(args: string): void {
-  spawn('cmd.exe', ['/d', '/s', '/c', `"start ${args}"`], { detached: true, stdio: 'ignore', windowsVerbatimArguments: true }).unref()
+function startDetached(args: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('cmd.exe', ['/d', '/s', '/c', `"start ${args}"`], { detached: true, stdio: 'ignore', windowsVerbatimArguments: true })
+    // without a listener a failed start (no cmd.exe on the PATH) would be an uncaught error that stops the whole app
+    child.once('error', reject)
+    child.once('spawn', () => {
+      child.unref()
+      resolve()
+    })
+  })
 }
 
 /** winget ships with Windows 10 1809+ but is missing on some PCs (LTSC, stripped images), so the official installer is the fallback. */
@@ -140,7 +154,7 @@ export async function install(id: string, title: string, installerUrl: () => Pro
   if (!res.ok) throw new Error(`${title}: HTTP ${res.status}`)
   const file = path.join(os.tmpdir(), `jolty-${id}.exe`)
   fs.writeFileSync(file, Buffer.from(await res.arrayBuffer()))
-  startDetached(`"" "${file}" ${args}`)
+  await startDetached(`"" "${file}" ${args}`)
 }
 
 async function gitInstallerUrl(): Promise<string> {
@@ -155,7 +169,7 @@ export async function fix(id: string, openPath: (p: string) => Promise<string>):
   else if (id === 'vcredist') {
     // the installer ships Microsoft's redistributable; winget is only the fallback
     const bundled = path.join(process.resourcesPath || '', 'redist', 'vc_redist.x64.exe')
-    if (isWin && fs.existsSync(bundled)) startDetached(`"" "${bundled}" /install /passive /norestart`)
+    if (isWin && fs.existsSync(bundled)) await startDetached(`"" "${bundled}" /install /passive /norestart`)
     else await install('Microsoft.VCRedist.2015+.x64', 'Jolty - instalare Visual C++', async () => 'https://aka.ms/vs/17/release/vc_redist.x64.exe', '/install /passive /norestart')
   }
   else if (id === 'ollama') await install('Ollama.Ollama', 'Jolty - instalare Ollama', async () => 'https://ollama.com/download/OllamaSetup.exe', '/SILENT')

@@ -119,7 +119,7 @@ function isMiMoProfile(p: { auth: string; baseUrl?: string }): boolean {
 
 /** Always-visible meter: each account's 5 h / 7 d limits and its last 24 h, updated as turns finish. */
 function UsageMeter() {
-  const { profiles, limits, spend, spend7d, balances, status, sessions, setPage, loadUsage, loadSessions, toast } = useStore()
+  const { profiles, limits, spend, spend7d, balances, status, sessions, setPage, loadUsage, loadSessions, toast } = useStore(useShallow((st) => ({ profiles: st.profiles, limits: st.limits, spend: st.spend, spend7d: st.spend7d, balances: st.balances, status: st.status, sessions: st.sessions, setPage: st.setPage, loadUsage: st.loadUsage, loadSessions: st.loadSessions, toast: st.toast })))
   const running = Object.values(status).some((s) => s === 'running')
   const [refreshing, setRefreshing] = useState(false)
   useEffect(() => {
@@ -348,7 +348,11 @@ export function Sidebar() {
   const { groups, pinned, archived } = useMemo(() => {
     const parts = splitSessions(saved.filter((s) => !q || s.title.toLowerCase().includes(q.toLowerCase()) || s.cwd.toLowerCase().includes(q.toLowerCase())))
     const map = new Map<string, typeof parts.rest>()
-    for (const s of parts.rest) map.set(s.cwd, [...(map.get(s.cwd) || []), s])
+    for (const s of parts.rest) {
+      const g = map.get(s.cwd)
+      if (g) g.push(s)
+      else map.set(s.cwd, [s])
+    }
     return { groups: [...map.entries()], pinned: parts.pinned, archived: parts.archived }
   }, [saved, q])
 
@@ -363,7 +367,15 @@ export function Sidebar() {
   }
 
   const [navIds, moveNav] = useOrder('jolty.navOrder', NAV.map((n) => n.id))
-  const nav = navIds.map((id) => NAV.find((n) => n.id === id)!)
+  const [localOn, setLocalOn] = useState(false)
+  useEffect(() => {
+    // the Local models page is for people who use Ollama (or turned it on in Settings); everyone else never sees it
+    const look = (): void => void Promise.all([api.app.settings(), api.local.status().catch(() => undefined)]).then(([s, o]) => setLocalOn(Boolean(s.localModels || o?.installed || o?.running)))
+    look()
+    window.addEventListener('jolty-local-models', look)
+    return () => window.removeEventListener('jolty-local-models', look)
+  }, [])
+  const nav = navIds.filter((id) => id !== 'local' || localOn).map((id) => NAV.find((n) => n.id === id)!)
   const navDrag = useProfileDrag(navIds, moveNav)
   const [groupIds, moveGroup] = useOrder('jolty.groupOrder', groups.map(([cwd]) => cwd))
   const groupDrag = useProfileDrag(groupIds, moveGroup)

@@ -1,7 +1,7 @@
 import { ArrowRight, ExternalLink, KeyRound, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { ModelOption, Profile } from '@shared/types'
-import { CONNECT_PROVIDERS, canHelpSetup, wantsOwnKeyHint } from '@shared/setup'
+import { CONNECT_PROVIDERS, wantsOwnKeyHint } from '@shared/setup'
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
 import { usePresence } from '../usePresence'
@@ -14,6 +14,35 @@ async function finish(profile: Profile, model?: string): Promise<void> {
   const last = (await api.app.settings()).lastModels
   await api.app.saveSettings({ lastProfileId: profile.id, ...(model ? { lastModels: { ...last, [profile.id]: { model } } } : {}) })
   await useStore.getState().loadProfiles()
+}
+
+/** What the welcome sets up by itself; Ollama and OpenCode are never installed here. */
+const AUTO_FIX = ['git', 'vcredist', 'extension']
+
+/**
+ * Once an account is connected: the programs Jolty needs are installed, the browser extension is put in place and the
+ * conversations already on this PC are imported, with no questions. Windows may still ask for permission in its own window.
+ */
+async function autoSetup(say: (s: string) => void, skipped: () => boolean): Promise<void> {
+  say(tr("Verific ce mai are nevoie Jolty..."))
+  const extensionIn = (await api.browser.native().catch(() => undefined))?.installed
+  const todo = (await api.system.check()).filter((c) => !c.ok && !c.optional && c.fixLabel && AUTO_FIX.includes(c.id) && !(c.id === 'extension' && extensionIn))
+  const need: typeof todo = []
+  for (const c of todo) {
+    say(tr("Instalez {name}...", { name: c.label }))
+    // an install that could not even start is not waited for
+    if (await api.system.fix(c.id).then(() => true, () => false)) need.push(c)
+  }
+  // installers run on their own; the extension waits for the person to add it in the browser's extensions page
+  const end = Date.now() + 4 * 60e3
+  while (need.length && Date.now() < end && !skipped()) {
+    const left = (await api.system.check()).filter((c) => !c.ok && need.some((n) => n.id === c.id))
+    if (!left.length) break
+    if (left.some((c) => c.id === 'extension')) say(tr("Adaugă extensia Jolty în pagina de extensii a browserului. Aștept conectarea..."))
+    await sleep(2000)
+  }
+  say(tr("Import sesiunile din conturile conectate..."))
+  await api.sessions.importAll().catch(() => undefined)
 }
 
 /** Pick a provider, open its key page, paste the key: it is only kept after one small request has been answered. */
@@ -79,7 +108,6 @@ export function ConnectKey({ onDone, onBack }: { onDone: (p: Profile) => void; o
 /** The last step of the welcome: what Jolty found on the account, with the scores it has; a model it knows nothing about is listed too and says so. */
 function FoundModels({ profile, model, models, onDone }: { profile: Profile; model?: string; models: ModelOption[]; onDone: () => Promise<void> }) {
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string>()
   const choice = models.filter((m) => m.score).length >= 2
   const go = async (): Promise<void> => {
     setBusy(true)
@@ -87,21 +115,6 @@ function FoundModels({ profile, model, models, onDone }: { profile: Profile; mod
       await api.setup.presets().catch(() => false)
       await onDone()
     } finally {
-      setBusy(false)
-    }
-  }
-  /** the helper chat opens once the welcome is over, so the person lands in it */
-  const helper = async (): Promise<void> => {
-    setBusy(true)
-    setError(undefined)
-    try {
-      await api.setup.presets().catch(() => false)
-      const meta = await api.setup.helper(profile.id, model)
-      await onDone()
-      useStore.getState().activateSession(meta)
-      await useStore.getState().openSession(meta.id)
-    } catch (err) {
-      setError(errMsg(err))
       setBusy(false)
     }
   }
@@ -121,21 +134,6 @@ function FoundModels({ profile, model, models, onDone }: { profile: Profile; mod
           {choice ? tr("Jolty alege singur modelul sesiunilor pornite de el: cel mai bun pentru joburile grele, cel mai rapid care e destul de bun pentru cele simple. Schimbi din Setări.") : tr("Nu e nimic de ales între modele: totul rămâne pe modelul chatului.")}
         </div>
       </div>
-      {canHelpSetup(profile.engine) && (
-        <div className="field">
-          <label>{tr("Vrei ca AI-ul să termine configurarea în locul tău?")}</label>
-          <div className="hint">{tr("Un asistent verifică programele de care are nevoie Jolty și le instalează pe cele care lipsesc, explicându-ți fiecare pas pe înțelesul tuturor.")}</div>
-          <div className="hint">
-            {tr("Ca să nu te întrebe la fiecare pas, asistentul lucrează fără permisiuni: poate instala programe pe acest PC fără să ceară acordul de fiecare dată. I-am cerut să facă doar configurarea, să nu șteargă nimic și să nu se atingă de fișierele tale. Vezi tot ce face în chat și îl oprești oricând cu Stop.")}
-          </div>
-          <div>
-            <button className="btn" disabled={busy} onClick={() => void helper()}>
-              {tr("Da, fă-o tu")}
-            </button>
-          </div>
-        </div>
-      )}
-      {error && <div className="hint" role="alert" style={{ color: 'var(--warning)', marginBottom: 10 }}>{error}</div>}
       <div className="row">
         <button className="btn primary" disabled={busy} onClick={() => void go()}>
           {busy ? <Loader2 size={14} style={spin} /> : null} {tr("Continuă")}
@@ -153,10 +151,16 @@ export function Welcome() {
   const [step, setStep] = useState<string>()
   const [error, setError] = useState<string>()
   const [found, setFound] = useState<{ profile: Profile; model?: string; models: ModelOption[] }>()
+  const [settingUp, setSettingUp] = useState(false)
   const cancelled = useRef(false)
+  const skipSetup = useRef(false)
 
   /** Shows what was found before the welcome ends; when nothing can be listed it ends at once. */
   const review = async (profile: Profile, model?: string): Promise<void> => {
+    skipSetup.current = false
+    setSettingUp(true)
+    await autoSetup(setStep, () => skipSetup.current).catch(() => undefined)
+    setSettingUp(false)
     const models = await api.profiles.models(profile.id).catch(() => [] as ModelOption[])
     if (!models.length) return finish(profile, model)
     setStep(undefined)
@@ -243,7 +247,8 @@ export function Welcome() {
       {step ? (
         <div className="row" style={{ marginTop: 30, gap: 10 }} role="status">
           <Loader2 size={16} style={spin} /> <span>{step}</span>
-          {(way === 'claude' || way === 'codex' || way === 'gemini') && (
+          {settingUp && <button className="btn small" onClick={() => { skipSetup.current = true }}>{tr("Sari peste")}</button>}
+          {!settingUp && (way === 'claude' || way === 'codex' || way === 'gemini') && (
             <button className="btn small" onClick={() => { cancelled.current = true; setStep(undefined); setWay(undefined) }}>{tr("Renunță")}</button>
           )}
         </div>

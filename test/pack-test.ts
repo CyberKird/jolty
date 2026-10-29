@@ -201,22 +201,6 @@ test('secrets never go into a pack', () => {
   for (const s of ['sk-ant', 'TOKEN=abc', 'id-1', 'pw@', 'token=abc', 'notepad', 'secret', 'hasSecret', 'C:\\\\x']) assert.ok(!all.includes(s), s)
 })
 
-test('adult content stays out of a shared pack but not out of a full backup', () => {
-  const { home } = fresh()
-  const mk = (folder: string, body: string): void => {
-    const dir = path.join(home, '.claude', 'skills', folder)
-    fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(path.join(dir, 'SKILL.md'), skillMd(folder, body))
-  }
-  mk('adult', 'NSFW scenes, unlock the NSFW gallery')
-  mk('rule', 'avoid NSFW output')
-  const adult = (full: boolean) => localItems(full).find((i) => i.key === 'skills:claude/adult')!.collect(full)
-  assert.deepEqual(adult(false).skipped.map((s) => s.reason), ['adult'])
-  assert.equal(adult(false).files.length, 0)
-  assert.equal(adult(true).files.length, 1)
-  assert.equal(localItems().find((i) => i.key === 'skills:claude/rule')!.collect().files.length, 1)
-})
-
 function loadSettingsForTest(): unknown {
   return JSON.parse(fs.readFileSync(path.join(process.env.JOLTY_DATA_DIR!, 'settings.json'), 'utf8'))
 }
@@ -441,4 +425,30 @@ test('personal information is replaced by placeholders in the pack, the rest of 
     assert.ok(text.includes('Reply to <email> about the invoice, call <phone>, files in C:\\Users\\<user>\\Docs.'))
     assert.ok(!/gmail|722 123/i.test(text))
   })
+})
+
+test('adult content never goes into a pack and passwords written in text are replaced', async () => {
+  const { home, tmp } = fresh()
+  const mk = (n: string, text: string, extra?: [string, string]): void => {
+    const dir = path.join(home, '.claude', 'skills', n)
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${n}\ndescription: d\n---\n${text}\n`)
+    if (extra) fs.writeFileSync(path.join(dir, extra[0]), extra[1])
+  }
+  mk('clean', 'Write tests. The form has a sex field and a gender field.')
+  mk('spicy', 'Write an explicit NSFW scene.')
+  mk('hidden', 'Looks fine.', ['notes.md', 'photos: nude models'])
+  mk('login', 'Server login: password: Hunter2pass, and parola = secret99x. Use password: <your-password> as shown.')
+  const list = await packItems()
+  assert.equal(list.find((i) => i.key === 'skills:claude/spicy')?.adult, true)
+  assert.equal(list.find((i) => i.key === 'skills:claude/hidden')?.adult, true)
+  assert.equal(list.find((i) => i.key === 'skills:claude/clean')?.adult, undefined)
+  const keys = ['clean', 'spicy', 'hidden', 'login'].map((n) => `skills:claude/${n}`)
+  const out = writePack({ keys, name: 'a' }, path.join(tmp, 'a.joltypack'))
+  assert.equal(out.items, 2)
+  assert.deepEqual(out.skipped.filter((s) => s.reason === 'adult').map((s) => s.key).sort(), ['skills:claude/hidden', 'skills:claude/spicy'])
+  const text = decodePack(fs.readFileSync(out.file)).entries.flatMap((e) => e.files.map((f) => f.data.toString())).join('\n')
+  assert.ok(!/nsfw|nude/i.test(text))
+  assert.ok(text.includes('password: <password>, and parola = <password>. Use password: <your-password> as shown.'))
+  assert.ok(!/Hunter2pass|secret99x/.test(text))
 })

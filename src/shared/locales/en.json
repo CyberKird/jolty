@@ -1571,5 +1571,16 @@
  "Implicit": "Default",
  "Enter în intrarea rapidă": "Enter in quick entry",
  "Deschide conversația în fereastra Jolty": "Opens the conversation in the Jolty window",
- "O pornește în fundal și anunță printr-o notificare": "Starts it in the background and announces it with a notification"
+ "O pornește în fundal și anunță printr-o notificare": "Starts it in the background and announces it with a notification",
+ "Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.": "On macOS automatic updates arrive once the app is signed: download the new version from GitHub yourself.",
+ "Verific ce mai are nevoie Jolty...": "Checking what Jolty still needs...",
+ "Instalez {name}...": "Installing {name}...",
+ "Adaugă extensia Jolty în pagina de extensii a browserului. Aștept conectarea...": "Add the Jolty extension on the browser's extensions page. Waiting for it to connect...",
+ "Import sesiunile din conturile conectate...": "Importing sessions from the connected accounts...",
+ "Sari peste": "Skip",
+ "Arată Modele locale (Ollama)": "Show Local models (Ollama)",
+ "Pagina Modele locale și rândul Ollama din Verificare sistem apar singure dacă Ollama e instalat. Jolty nu îl instalează niciodată singur.": "The Local models page and the Ollama row in System check show up on their own when Ollama is installed. Jolty never installs it by itself.",
+ "parole scrise în text": "passwords written in text",
+ "{n} elemente cu conținut pentru adulți au rămas în afara pachetului.": "{n} items with adult content were left out of the pack.",
+ "Conținut pentru adulți: nu se exportă.": "Adult content: not exported."
 }

@@ -1571,5 +1571,16 @@
  "Implicit": "افتراضي",
  "Enter în intrarea rapidă": "Enter في الإدخال السريع",
  "Deschide conversația în fereastra Jolty": "يفتح المحادثة في نافذة Jolty",
- "O pornește în fundal și anunță printr-o notificare": "يبدأها في الخلفية ويُعلمك بإشعار"
+ "O pornește în fundal și anunță printr-o notificare": "يبدأها في الخلفية ويُعلمك بإشعار",
+ "Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.": "على macOS تصل التحديثات التلقائية بعد توقيع التطبيق: نزّل الإصدار الجديد من GitHub بنفسك.",
+ "Verific ce mai are nevoie Jolty...": "جارٍ التحقق مما يحتاجه Jolty بعد...",
+ "Instalez {name}...": "جارٍ تثبيت {name}...",
+ "Adaugă extensia Jolty în pagina de extensii a browserului. Aștept conectarea...": "أضف إضافة Jolty في صفحة إضافات المتصفح. بانتظار الاتصال...",
+ "Import sesiunile din conturile conectate...": "جارٍ استيراد الجلسات من الحسابات المتصلة...",
+ "Sari peste": "تخطَّ",
+ "Arată Modele locale (Ollama)": "إظهار النماذج المحلية (Ollama)",
+ "Pagina Modele locale și rândul Ollama din Verificare sistem apar singure dacă Ollama e instalat. Jolty nu îl instalează niciodată singur.": "تظهر صفحة النماذج المحلية وصف Ollama في فحص النظام تلقائيًا إذا كان Ollama مثبتًا. لا يثبّته Jolty من تلقاء نفسه أبدًا.",
+ "parole scrise în text": "كلمات مرور مكتوبة في النص",
+ "{n} elemente cu conținut pentru adulți au rămas în afara pachetului.": "تم استبعاد {n} عناصر ذات محتوى للبالغين من الحزمة.",
+ "Conținut pentru adulți: nu se exportă.": "محتوى للبالغين: لا يتم تصديره."
 }

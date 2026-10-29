@@ -324,6 +324,9 @@ a {
   text-overflow: ellipsis;
 }
 .session-item {
+  /* hundreds of imported chats: only the rows on screen are laid out and painted (rows are a fixed 32px) */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 32px;
   display: flex;
   align-items: center;
   gap: 10px;

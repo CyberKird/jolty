@@ -1571,5 +1571,16 @@
  "Implicit": "डिफ़ॉल्ट",
  "Enter în intrarea rapidă": "त्वरित एंट्री में Enter",
  "Deschide conversația în fereastra Jolty": "बातचीत को Jolty विंडो में खोलता है",
- "O pornește în fundal și anunță printr-o notificare": "इसे बैकग्राउंड में शुरू करता है और सूचना से बताता है"
+ "O pornește în fundal și anunță printr-o notificare": "इसे बैकग्राउंड में शुरू करता है और सूचना से बताता है",
+ "Pe macOS actualizările automate vin după ce aplicația e semnată: descarcă manual versiunea nouă de pe GitHub.": "macOS पर ऑटोमैटिक अपडेट ऐप के साइन होने के बाद आएँगे: नया वर्ज़न GitHub से खुद डाउनलोड करें।",
+ "Verific ce mai are nevoie Jolty...": "जाँच रहा हूँ कि Jolty को और क्या चाहिए...",
+ "Instalez {name}...": "{name} इंस्टॉल हो रहा है...",
+ "Adaugă extensia Jolty în pagina de extensii a browserului. Aștept conectarea...": "ब्राउज़र के एक्सटेंशन पेज पर Jolty एक्सटेंशन जोड़ें। कनेक्शन का इंतज़ार है...",
+ "Import sesiunile din conturile conectate...": "जुड़े हुए खातों के सेशन इम्पोर्ट हो रहे हैं...",
+ "Sari peste": "छोड़ें",
+ "Arată Modele locale (Ollama)": "लोकल मॉडल (Ollama) दिखाएँ",
+ "Pagina Modele locale și rândul Ollama din Verificare sistem apar singure dacă Ollama e instalat. Jolty nu îl instalează niciodată singur.": "Ollama इंस्टॉल होने पर लोकल मॉडल पेज और सिस्टम जाँच में Ollama की पंक्ति अपने आप दिखती है। Jolty इसे कभी अपने आप इंस्टॉल नहीं करता।",
+ "parole scrise în text": "टेक्स्ट में लिखे पासवर्ड",
+ "{n} elemente cu conținut pentru adulți au rămas în afara pachetului.": "वयस्क सामग्री वाले {n} आइटम पैक से बाहर रखे गए।",
+ "Conținut pentru adulți: nu se exportă.": "वयस्क सामग्री: एक्सपोर्ट नहीं होती।"
 }

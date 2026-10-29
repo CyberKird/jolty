@@ -13,6 +13,10 @@ const PHONE = [/(?<![\w.+])\+\d{1,3}[ .-]?\(?\d{1,4}\)?(?:[ .-]?\d{2,4}){2,4}(?!
 const IBAN = /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{1,4}){3,8}\b/g
 const CARD = /\b(?:\d[ -]?){13,19}\b/g
 const HOME = [/[A-Za-z]:[\\/]+Users[\\/]+([^\\/\s"'`:*?<>|]+)/gi, /\/home\/([^/\s"'`:]+)/g, /\/Users\/([^/\s"'`:]+)/g]
+/** A password written in prose or config ("password: x", "parola = x"); placeholders like <your-password> or *** are left alone. */
+const PASSWORD = /\b(parola|parolă|password|passwd|pwd|passwort|contraseña|mot de passe)(\s*[:=]\s*)(?!<|\[|\{|\*|\$|%|\.\.\.|your|example|changeme|xxx|none|null|true|false)["']?(?=[^\s,;"']{4})[^\s,;"']*[^\s,;"'.]["']?/gi
+/** Adult content: words that are only ever about it (not "sex" alone, which is also a form field). English, Romanian, German, Spanish, French. */
+const ADULT = /\b(nsfw|porn\w*|hentai|erotic\w*|erotisch\w*|onlyfans|xxx|fetish\w*|nud(e|es|ity)|naked|explicit(ly)? sexual\w*|sexual(ly)? explicit|sex scenes?|sex toys?|18\+|adult[- ]only|adult content|conținut (pentru|de) adulți|continut (pentru|de) adulti|pornografi\w*|erotică|erotica)\b/i
 const SHARED_HOME = new Set(['public', 'default', 'default user', 'all users', 'user', 'username', 'you', 'name', 'example', 'me', 'shared', '<user>', '%username%', '$user', '~'])
 
 function ibanOk(raw: string): boolean {
@@ -80,6 +84,10 @@ export function redact(text: string, account = os.userInfo().username): { text: 
       kinds.add('phone')
       return '<phone>'
     })
+  out = out.replace(PASSWORD, (_m, word: string, sep: string) => {
+    kinds.add('password')
+    return `${word}${sep}<password>`
+  })
   if (account.length >= 3) {
     const name = new RegExp(`(?<![A-Za-z0-9])${account.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'gi')
     out = out.replace(name, () => {
@@ -88,6 +96,12 @@ export function redact(text: string, account = os.userInfo().username): { text: 
     })
   }
   return { text: out, kinds }
+}
+
+/** The first text file that is about adult content, or the name itself: such an item never goes into a pack. */
+export function adultIn(files: PackFile[], name = ''): string | undefined {
+  if (ADULT.test(name)) return name
+  return files.find((f) => f.data.length <= TEXT_MAX && !f.data.includes(0) && ADULT.test(f.data.toString('utf8')))?.path
 }
 
 export const personalIn = (text: string, account?: string): Set<PersonalKind> => redact(text, account).kinds
