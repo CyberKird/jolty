@@ -112,7 +112,7 @@ function MergePanel({ id, onClose }: { id: string; onClose: () => void }) {
               <span className={`merge-chip ${s.behind ? 'warn' : ''}`}>{tr("{n} în urmă", { n: s.behind })}</span>
               {s.merged && s.tip && <span className="merge-chip add">{tr("deja în {base}", { base })}</span>}
               <span className={`merge-chip ${s.missing || s.dirty.length ? 'warn' : ''}`}>
-                {s.missing ? tr("folderul lipsește") : s.dirty.length ? tr("{n} modificări necomise", { n: s.dirty.length }) : tr("worktree curat")}
+                {s.missing ? tr("folderul lipsește") : s.dirty.length ? tr("modificări necomise: {n}", { n: s.dirty.length }) : tr("worktree curat")}
               </span>
             </div>
             <Notes s={s} running={running} />
@@ -135,7 +135,7 @@ function MergePanel({ id, onClose }: { id: string; onClose: () => void }) {
             </div>
             {pending && (pending.kind === 'merge' || pending.kind === 'rebase') && pending.check.conflicts.length > 0 && (
               <div className="merge-box warn" role="alert">
-                <p>{tr("Conflicte în {n} fișiere. Nu s-a schimbat nimic.", { n: pending.check.conflicts.length })}</p>
+                <p>{tr("Fișiere în conflict: {n}. Nu s-a schimbat nimic.", { n: pending.check.conflicts.length })}</p>
                 <ul className="mono merge-files">{pending.check.conflicts.map((f) => <li key={f}>{f}</li>)}</ul>
                 <div className="row">
                   <button className="btn small primary" disabled={busy} onClick={() => void askModel(pending.kind as MergeAction, (pending as { check: MergeCheck }).check.conflicts)}>
@@ -149,8 +149,8 @@ function MergePanel({ id, onClose }: { id: string; onClose: () => void }) {
               <Confirm
                 text={
                   pending.kind === 'merge'
-                    ? tr("Fac merge la {branch} ({n} commituri) în {base}, în folderul {root}, cu un commit de merge. Nu se trimite nimic pe GitHub.", { branch: s.branch, n, base, root: s.root })
-                    : tr("Mut cele {n} commituri din {branch} peste {base}, în worktree-ul {path}. Istoria branch-ului se rescrie; {base} rămâne neatins.", { branch: s.branch, n, base, path: s.path })
+                    ? tr("Fac merge la {branch} (commituri: {n}) în {base}, în folderul {root}, cu un commit de merge. Nu se trimite nimic pe GitHub.", { branch: s.branch, n, base, root: s.root })
+                    : tr("Mut commiturile din {branch} ({n}) peste {base}, în worktree-ul {path}. Istoria branch-ului se rescrie; {base} rămâne neatins.", { branch: s.branch, n, base, path: s.path })
                 }
                 yes={pending.kind === 'merge' ? tr("Fă merge") : tr("Fă rebase")}
                 busy={busy}
@@ -187,7 +187,7 @@ function MergePanel({ id, onClose }: { id: string; onClose: () => void }) {
               <div className={`merge-box ${lose ? 'warn' : ''}`}>
                 {lose ? (
                   <>
-                    <p>{tr("Se pierd {n} commituri care nu sunt în {base}:", { n, base: base || tr("branch-ul de bază") })}</p>
+                    <p>{tr("Se pierd commiturile care nu sunt în {base} ({n}):", { n, base: base || tr("branch-ul de bază") })}</p>
                     <ul className="mono merge-files">{s.commits.map((c) => <li key={c.sha}>{c.sha.slice(0, 8)} {c.subject}</li>)}</ul>
                     <p className="faint small">{tr("Ultimul commit e {sha}; o vreme îl mai poți recupera cu git branch {branch} {sha}.", { sha: s.tip.slice(0, 12), branch: s.branch })}</p>
                   </>
@@ -261,7 +261,7 @@ function Notes({ s, running }: { s: MergeStatus; running: boolean }) {
     s.rootDirty && tr("Folderul principal are modificări necomise. Fă commit sau stash acolo, apoi încearcă din nou."),
     s.missing && tr("Folderul worktree-ului nu mai există: branch-ul se poate încă unifica sau șterge, rebase-ul nu."),
     s.dirty.length > 0 && tr("Worktree-ul are modificări necomise; nu se șterge până nu le faci commit sau le arunci: {files}", { files: s.dirty.slice(0, 6).map((l) => l.slice(3)).join(', ') }),
-    s.behind > 0 && !s.problem && tr("{base} a primit {n} commituri de când a pornit sesiunea.", { base: s.base ?? '', n: s.behind }),
+    s.behind > 0 && !s.problem && tr("Commituri noi în {base} de când a pornit sesiunea: {n}.", { base: s.base ?? '', n: s.behind }),
     running && tr("Sesiunea încă lucrează: commiturile ei pot să nu fie gata.")
   ].filter((x): x is string => Boolean(x))
   if (!notes.length) return null

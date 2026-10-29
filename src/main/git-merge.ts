@@ -78,7 +78,8 @@ export async function mergeStatus(w: Worktree): Promise<MergeStatus> {
   const baseTip = await git(root, ['rev-parse', 'HEAD']).catch(() => '')
   const status: MergeStatus = { branch, base, problem, root, path: w.path, missing, dirty: [], rootDirty: false, ahead: 0, behind: 0, merged: false, tip, baseTip, commits: [], stat: '', diffs: [], truncated: false, pr: false }
   status.rootDirty = Boolean(await git(root, ['status', '--porcelain', '--untracked-files=no']).catch(() => ''))
-  if (!missing) status.dirty = (await git(w.path, ['status', '--porcelain']).catch(() => '')).split('\n').filter(Boolean)
+  // raw output: trimming would eat the leading space of the first ' M file' line
+  if (!missing) status.dirty = (await run('git', w.path, ['status', '--porcelain']).catch(() => ({ out: '' }))).out.split('\n').map((l) => l.trimEnd()).filter(Boolean)
   if (!exists) return status
   const [behind, ahead] = (await git(root, ['rev-list', '--left-right', '--count', `${from}...${branch}`])).split(/\s+/).map(Number)
   Object.assign(status, { ahead, behind })

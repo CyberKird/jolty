@@ -106,7 +106,7 @@ test('dirty worktree: shown, never removed, rebase refused', async () => {
   commit(w.path, 'add b')
   write(w.path, 'a.txt', 'changed but not committed\n')
   const s = await m.mergeStatus(w)
-  assert.equal(s.dirty.length, 1)
+  assert.deepEqual(s.dirty, [' M a.txt'])
   await assert.rejects(m.removeBranch(w, s.tip, true), /necomise/)
   assert.ok(fs.existsSync(path.join(w.path, 'a.txt')))
   await assert.rejects(m.mergeCheck(w, 'rebase'), /necomise/)
