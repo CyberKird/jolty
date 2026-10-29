@@ -201,6 +201,22 @@ test('secrets never go into a pack', () => {
   for (const s of ['sk-ant', 'TOKEN=abc', 'id-1', 'pw@', 'token=abc', 'notepad', 'secret', 'hasSecret', 'C:\\\\x']) assert.ok(!all.includes(s), s)
 })
 
+test('adult content stays out of a shared pack but not out of a full backup', () => {
+  const { home } = fresh()
+  const mk = (folder: string, body: string): void => {
+    const dir = path.join(home, '.claude', 'skills', folder)
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), skillMd(folder, body))
+  }
+  mk('adult', 'NSFW scenes, unlock the NSFW gallery')
+  mk('rule', 'avoid NSFW output')
+  const adult = (full: boolean) => localItems(full).find((i) => i.key === 'skills:claude/adult')!.collect(full)
+  assert.deepEqual(adult(false).skipped.map((s) => s.reason), ['adult'])
+  assert.equal(adult(false).files.length, 0)
+  assert.equal(adult(true).files.length, 1)
+  assert.equal(localItems().find((i) => i.key === 'skills:claude/rule')!.collect().files.length, 1)
+})
+
 function loadSettingsForTest(): unknown {
   return JSON.parse(fs.readFileSync(path.join(process.env.JOLTY_DATA_DIR!, 'settings.json'), 'utf8'))
 }

@@ -92,10 +92,16 @@ export const looksSecret = (data: Buffer): boolean => {
   return SECRET_TEXT.some((r) => r.test(s))
 }
 
+/** Adult content stays out of a shared pack; a full backup of your own keeps it. */
+const ADULT_TEXT = /\b(nsfw|hentai|erotic(a|ism)?)\b/gi
+
+// shortcut: a word count, not a classifier; two hits so a rule like "avoid NSFW" does not drop a skill, lower it if adult files slip through
+export const looksAdult = (data: Buffer): boolean => (data.toString('utf8').match(ADULT_TEXT)?.length ?? 0) >= 2
+
 export interface Skipped {
   key: string
   file: string
-  reason: 'secret-file' | 'looks-like-secret' | 'too-large' | 'personal'
+  reason: 'secret-file' | 'looks-like-secret' | 'adult' | 'too-large' | 'personal'
 }
 
 export interface LocalItem extends PackItem {
@@ -140,6 +146,10 @@ function readFiles(key: string, dir: string, rels: string[], own = false): { fil
     const data = fs.readFileSync(full)
     if (!own && looksSecret(data)) {
       skipped.push({ key, file: rel, reason: 'looks-like-secret' })
+      continue
+    }
+    if (!own && looksAdult(data)) {
+      skipped.push({ key, file: rel, reason: 'adult' })
       continue
     }
     files.push({ path: rel, data, modifiedAt: st.mtimeMs })
@@ -269,6 +279,7 @@ export function localItems(full = false): LocalItem[] {
       const item = jsonItem('schedules', e.name, e.name, e, t.createdAt)
       // a prompt can hold a pasted key: the task is listed but not packed (a full backup keeps it)
       if (!full && looksSecret(Buffer.from(e.prompt))) item.collect = () => ({ files: [], skipped: [{ key: item.key, file: 'item.json', reason: 'looks-like-secret' }] })
+      if (!full && looksAdult(Buffer.from(e.prompt))) item.collect = () => ({ files: [], skipped: [{ key: item.key, file: 'item.json', reason: 'adult' }] })
       out.push(item)
     }
   }

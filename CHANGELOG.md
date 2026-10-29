@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.1
+
+### Improvements
+
+- Exporting a pack now applies smarter rules about what is safe to include.
+
 ## 0.14.0
 
 ### New
