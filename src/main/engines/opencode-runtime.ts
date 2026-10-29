@@ -8,6 +8,7 @@ import { COMPUTER_ACT_TOOLS, COMPUTER_READ_TOOLS, COMPUTER_SERVER, computerPromp
 import { JOLTY_READ_TOOLS, JOLTY_SERVER, JOLTY_TOOLS_PROMPT } from '../jolty-tools'
 import { dataDir, loadSettings } from '../store'
 import { JsonRpcProcess } from './jsonrpc'
+import { installOpencode } from './opencode-install'
 import { COPY_RULE, LANGUAGE_RULE } from './prompt'
 import { tr } from '@shared/i18n'
 
@@ -50,6 +51,23 @@ export function opencodeMajor(version: string | undefined): number {
 
 export function opencodeVersion(exe: string): Promise<string | undefined> {
   return new Promise((resolve) => execFile(exe, ['--version'], { windowsHide: true, timeout: 10000 }, (error, stdout) => resolve(error ? undefined : String(stdout).trim())))
+}
+
+let upgrade: Promise<void> | undefined
+
+/**
+ * OpenCode 1 (the npm package, or the copy the Desktop installer leaves in PATH) lost its free models, so before an
+ * OpenCode chat starts an older copy is replaced by version 2 in ~/.opencode/bin, which opencodeExecutable() prefers.
+ * Once per run; a failed download leaves the old copy in use and is tried again at the next start.
+ */
+export function ensureOpencode2(): Promise<void> {
+  upgrade ??= (async () => {
+    const exe = opencodeExecutable()
+    if (process.platform !== 'win32' || !exe || loadSettings().opencodePath) return
+    if (opencodeMajor(await opencodeVersion(exe)) >= 2) return
+    await installOpencode()
+  })().catch(() => undefined)
+  return upgrade
 }
 
 /** opencode asks for approvals through its own permission config, so the Jolty mode is passed in as config. */
@@ -121,7 +139,8 @@ export function opencodeVariants(): Promise<Map<string, string[]>> {
  * One question to one OpenCode model, no tools: for the composer's "Improve message". OpenCode has no ACP call for a
  * single answer without a chat, so `opencode run` does it and the session it leaves behind is deleted again.
  */
-export function opencodeOnce(prompt: string, model: string): Promise<string> {
+export async function opencodeOnce(prompt: string, model: string): Promise<string> {
+  await ensureOpencode2()
   const exe = opencodeExecutable()
   if (!exe) return Promise.reject(new Error(tr("OpenCode nu este instalat. Instalează-l din Verificare sistem sau alege opencode.exe în Setări.")))
   const env: Record<string, string> = {}

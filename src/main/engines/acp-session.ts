@@ -60,6 +60,7 @@ export class AcpSession implements EngineSession {
     if (this.meta.computer && !this.agent.browser) throw new Error(tr("Controlul PC-ului nu este disponibil pentru {agent}.", { agent: this.agent.name }))
     const browser = Boolean(this.meta.browser)
     const computer = Boolean(this.meta.computer)
+    await this.agent.prepare?.()
     const rpc = this.launch(this.meta.permissionMode, browser, computer)
     this.rpc = rpc
     rpc.on('request', (r: RpcRequest) => this.onRequest(r))

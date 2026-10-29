@@ -2,7 +2,7 @@ import type { ModelOption, PermissionMode } from '@shared/types'
 import { tr } from '@shared/i18n'
 import type { JsonRpcProcess } from './jsonrpc'
 import { launchHermes } from './hermes-runtime'
-import { launchOpencode, opencodeVariants } from './opencode-runtime'
+import { ensureOpencode2, launchOpencode, opencodeVariants } from './opencode-runtime'
 import { list, object, str, type AcpObject } from './acp-events'
 
 /** What differs between the external agents Jolty drives over ACP (Hermes, OpenCode). */
@@ -10,6 +10,8 @@ export interface AcpAgent {
   engine: 'hermes' | 'opencode'
   name: string
   launch(mode: PermissionMode, browser: boolean, computer: boolean): JsonRpcProcess
+  /** runs before every launch: for what has to be in place first, such as a current version */
+  prepare?(): Promise<void>
   /** whether the Jolty browser and computer use can be attached to a conversation */
   browser: boolean
   /** whether Jolty's own tools (search, schedules, parallel sessions) are attached to a conversation */
@@ -67,6 +69,7 @@ export const OPENCODE: AcpAgent = {
   engine: 'opencode',
   name: 'OpenCode',
   launch: (mode, browser, computer) => launchOpencode(mode, browser, computer),
+  prepare: ensureOpencode2,
   browser: true,
   joltyTools: true,
   modeId: (mode) => mode === 'plan' ? 'plan' : 'build',
