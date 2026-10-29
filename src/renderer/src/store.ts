@@ -314,6 +314,9 @@ export const useStore = create<State>((set, get) => ({
         }
         return
       }
+      case 'focus':
+        void get().openSession(e.open)
+        return
       case 'power':
         set({ power: { armed: e.armed, plan: e.plan, due: e.due, seconds: e.seconds, reason: e.reason } })
         return

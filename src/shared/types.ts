@@ -294,6 +294,8 @@ export type ChatEvent =
   | { type: 'browserLive'; frame?: string; url?: string; title?: string; note?: string }
   /** the scheduled tasks changed (added, edited, run): the page reads them again */
   | { type: 'schedules' }
+  /** the tray or the quick entry asks the main window to open a chat (none: a new conversation) */
+  | { type: 'focus'; open?: string }
 
 export interface PlanStep {
   text: string
@@ -398,6 +400,16 @@ export interface AppSettings {
   protectSecretFiles?: boolean
   /** every few messages the model saves what it learned to memory and skills (main/learning.ts); on unless false */
   learningLoop?: boolean
+  /** closing the window hides Jolty to the tray and chats, tasks and sessions keep running; unset: on in the installed app, off in dev and test runs */
+  keepInBackground?: boolean
+  /** the "Jolty still runs in the tray" notice was shown once */
+  backgroundNoticeShown?: boolean
+  /** Jolty starts hidden in the tray when Windows starts; off unless true */
+  startWithWindows?: boolean
+  /** global shortcut of the quick entry window (Electron accelerator); '' turns it off, unset is Ctrl+Alt+Space */
+  quickKey?: string
+  /** what Enter in the quick entry does: open the new chat in the main window (default) or start it in the background with a notification */
+  quickOpens?: 'window' | 'background'
 }
 
 export type SiteTrust = 'ask' | 'site' | 'free'
@@ -749,4 +761,26 @@ export interface JoltyApi {
     pr(sessionId: string, title: string, body: string): Promise<string>
     remove(sessionId: string, tip: string, lose: boolean): Promise<void>
   }
+  /** the tray, the background mode and the quick entry window (main/background.ts, main/quick.ts) */
+  background: {
+    state(): Promise<BackgroundState>
+    /** saves and registers a new quick entry shortcut ('' turns it off); rejects with the reason when it cannot be used */
+    setQuickKey(key: string): Promise<BackgroundState>
+    /** the quick entry window only: starts a new chat with this text */
+    quickSubmit(input: { text: string; profileId: string; cwd: string }): Promise<void>
+    quickClose(): Promise<void>
+    /** the quick entry window was shown again: clear and focus the box */
+    onQuickShown(cb: () => void): () => void
+  }
+}
+
+export interface BackgroundState {
+  keepInBackground: boolean
+  startWithWindows: boolean
+  /** only the installed app can start with Windows (a dev build would register node_modules' electron.exe) */
+  canStartWithWindows: boolean
+  quickKey: string
+  /** the shortcut could not be registered (another program has it) */
+  quickKeyBusy: boolean
+  quickOpens: 'window' | 'background'
 }

@@ -27,6 +27,8 @@ import * as backup from './backup'
 import * as useTime from './use-time'
 import * as obsidian from './obsidian'
 import * as gitMerge from './git-merge'
+import * as background from './background'
+import * as quick from './quick'
 import { getLang, setLang, tr } from '@shared/i18n'
 import { openableUrl } from '@shared/links'
 
@@ -71,6 +73,7 @@ const browserLive = new BrowserLive(send)
 const preview = new Preview()
 
 function send(e: ChatEvent): void {
+  background.track(e)
   if (!win || win.isDestroyed()) return
   win.webContents.send('jolty:event', e)
   // while the user is elsewhere: a Windows notification that brings Jolty back (each kind has its own switch in Settings)
@@ -84,17 +87,13 @@ function send(e: ChatEvent): void {
   if (!head || (e.type !== 'status' && e.type !== 'permission')) return
   const title = jolty.sessions().find((s) => s.id === e.sessionId)?.title || tr("Conversație")
   const n = new Notification({ title: head, body: title, silent: st.notifySound === false })
-  n.on('click', () => {
-    win?.show()
-    win?.focus()
-  })
+  n.on('click', background.reveal)
   n.show()
 }
 
+const icon = app.isPackaged ? path.join(process.resourcesPath, 'icon.ico') : path.join(__dirname, '../../build/icon.ico')
+
 function createWindow(): void {
-  const icon = app.isPackaged
-    ? path.join(process.resourcesPath, 'icon.ico')
-    : path.join(__dirname, '../../build/icon.ico')
   win = new BrowserWindow({
     width: 1320,
     height: 860,
@@ -130,7 +129,11 @@ function createWindow(): void {
   })
   // shown once the first frame is painted: no white flash, no half-drawn layout
   // automated screenshot runs (JOLTY_TEST=1) open without taking focus from whatever the user is doing
-  win.once('ready-to-show', () => (process.env.JOLTY_TEST ? win?.showInactive() : win?.show()))
+  // started with Windows: it waits in the tray until opened
+  win.once('ready-to-show', () => (background.startHidden() ? undefined : process.env.JOLTY_TEST ? win?.showInactive() : win?.show()))
+  background.attach(win)
+  // the hidden quick entry window would otherwise keep the app alive once the main window closed for good
+  win.on('closed', () => process.platform !== 'darwin' && !background.keepRunning() && app.quit())
   if (process.env.ELECTRON_RENDERER_URL) void win.loadURL(process.env.ELECTRON_RENDERER_URL)
   else void win.loadFile(path.join(__dirname, '../renderer/index.html'))
 }
@@ -318,6 +321,7 @@ function registerIpc(): void {
     if (patch && typeof patch === 'object' && 'language' in patch) setLang(saved.language)
     if (patch && typeof patch === 'object' && 'autoUpdate' in patch) updater.setAuto(saved.autoUpdate !== false)
     if (patch && typeof patch === 'object' && Object.keys(patch).some((k) => k.startsWith('browser'))) await jolty.reconnectBrowser()
+    if (patch && typeof patch === 'object' && ('keepInBackground' in patch || 'startWithWindows' in patch)) background.apply(patch as never)
     return saved
   })
   handle('app:pickFolder', async () => {
@@ -397,6 +401,8 @@ if (!app.requestSingleInstanceLock()) {
     if (win.isMinimized()) win.restore()
     win.focus()
   })
+  // a second launch brings the running Jolty back, also from the tray
+  app.on('second-instance', () => background.reveal())
   app.whenReady().then(() => {
     jolty = new Jolty(send)
     void nativeBrowser.start()
@@ -412,6 +418,23 @@ if (!app.requestSingleInstanceLock()) {
       },
       store.loadSettings().autoUpdate !== false
     )
+    updater.init((status) => send({ type: 'update', status }), background.reveal)
+    background.init({ window: () => win, focus: (sessionId) => send({ type: 'focus', open: sessionId }), quickEntry: quick.open, quickKeyBusy: quick.keyBusy }, icon)
+    quick.init({
+      start: async ({ profileId, cwd, text }) => {
+        const last = store.loadSettings().lastModels?.[profileId]
+        // the new chat's defaults (renderer ModelPicker DEFAULT_MODE), on the model this profile used last
+        const meta = await jolty.startSession({ profileId, cwd, model: last?.model, effort: last?.effort || undefined, permissionMode: 'autoEdit' })
+        store.saveSettings({ lastProfileId: profileId, lastCwd: cwd })
+        send({ type: 'meta', sessionId: meta.id, meta })
+        void jolty.sendMessage(meta.id, text).catch((err) => send({ type: 'status', sessionId: meta.id, status: 'error', error: err instanceof Error ? err.message : String(err) }))
+        return meta
+      },
+      reveal: background.reveal,
+      focus: (sessionId) => send({ type: 'focus', open: sessionId }),
+      isMain: (e) => Boolean(win && !win.isDestroyed() && e.sender === win.webContents),
+      state: background.state
+    })
     // model lists and the scores table refreshed in the background, so a newly released model is announced without opening the picker
     modelWatch.start({
       scan: !process.env.JOLTY_TEST,
@@ -441,6 +464,8 @@ if (!app.requestSingleInstanceLock()) {
 
 let quitting = false
 app.on('before-quit', (e) => {
+  // Quit in the tray, the updater's restart and the power menu all end here: the window may close for real now
+  background.letClose()
   if (quitting || !jolty) return
   e.preventDefault()
   quitting = true
@@ -450,6 +475,9 @@ app.on('before-quit', (e) => {
     ? obsidian.backup(vault, store.loadSettings().obsidianBackupDir || obsidian.defaultBackupDir()).catch(() => undefined).then(() => obsidian.stop())
     : undefined
   void Promise.all([nativeComputer.stop().catch(() => undefined), jolty.shutdown(), obsidianDone]).then(() => nativeBrowser.stop()).finally(() => app.quit())
+  quick.stop()
+  background.destroy()
+  void Promise.all([nativeComputer.stop().catch(() => undefined), jolty.shutdown()]).then(() => nativeBrowser.stop()).finally(() => app.quit())
 })
 
 app.on('window-all-closed', () => {
