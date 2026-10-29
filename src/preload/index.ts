@@ -174,6 +174,7 @@ const api: JoltyApi = {
     run: (id, action, seen) => call('merge:run', id, action, seen),
     pr: (id, title, body) => call('merge:pr', id, title, body),
     remove: (id, tip, lose) => call('merge:remove', id, tip, lose)
+  },
   background: {
     state: () => call('background:state'),
     setQuickKey: (key) => call('background:setQuickKey', key),
