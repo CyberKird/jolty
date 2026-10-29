@@ -16,6 +16,11 @@ const dicts = import.meta.glob<Record<string, string>>('../../shared/locales/*.j
 const lang = getLang()
 const load = dicts[`../../shared/locales/${lang}.json`]
 if (load) addLocales({ [lang]: await load() })
-const { App } = await import('./App')
-
-createRoot(document.getElementById('root')!).render(<App />)
+// the same page is the quick entry box (main/quick.ts loads it with #quick)
+if (location.hash === '#quick') {
+  const { QuickEntry } = await import('./components/QuickEntry')
+  createRoot(document.getElementById('root')!).render(<QuickEntry />)
+} else {
+  const { App } = await import('./App')
+  createRoot(document.getElementById('root')!).render(<App />)
+}

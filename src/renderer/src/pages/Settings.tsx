@@ -4,6 +4,7 @@ import type { AppSettings } from '@shared/types'
 import { isAcp } from '@shared/types'
 import { AccountSettings } from './AccountSettings'
 import { BrowserSettings } from './BrowserSettings'
+import { BackgroundSettings } from './BackgroundSettings'
 import { ComputerSettings } from './ComputerSettings'
 import { ChildSessionsSettings } from './ChildSessionsSettings'
 import { api, timeAgo, useStore } from '../store'
@@ -89,6 +90,7 @@ export function SettingsPage() {
                   ))}
                 </select>
               </div>
+              <BackgroundSettings />
               <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
                 <input
                   type="checkbox"
