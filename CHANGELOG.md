@@ -1,11 +1,5 @@
 # Changelog
 
-## 0.15.1
-
-### Fixed
-
-- A chat stays marked as running while a command it started keeps going in the background, instead of showing as idle as soon as the answer is done.
-
 ## 0.15.0
 
 ### New
@@ -15,6 +9,7 @@
 
 ### Fixed
 
+- A chat stays marked as running while a command it started keeps going in the background, instead of showing as idle as soon as the answer is done.
 - Import sessions missed older conversations: Claude history was cut to the newest 300 (many of them Jolty helper chats) and Codex only read its first page. Both are read in full now.
 - Less lag with a long conversation list: the sidebar only draws the rows on screen, grouping is faster and the usage meter no longer redraws on every change.
 - A message typed before choosing the project folder is no longer lost: it comes back, attachments included, after the folder prompt or if the chat fails to start.
