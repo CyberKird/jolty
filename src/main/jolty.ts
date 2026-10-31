@@ -55,7 +55,7 @@ import { bindJoltyTools } from './jolty-tools'
 import { accepts, fileKindsOf, readAskFiles, type AskInput, type AskProfile } from './ask-model'
 import { addWorktree, removeWorktree } from './workers'
 import * as trash from './trash'
-import { learningNudge } from './learning'
+import { learnedFiles, learnedSince, learningNudge } from './learning'
 import { reviewChat, setHelper } from './gemini-learning'
 import { forget } from './recall'
 import { Scheduler } from './scheduler'
@@ -451,7 +451,9 @@ export class Jolty {
       else this.busy.delete(e.sessionId)
       this.power.onStatus(e.status, e.error)
       if (e.status !== 'running') for (const w of [...this.idleWaiters]) w(e.sessionId)
+      if (e.status === 'running') this.learnTake(e.sessionId)
       if (e.status === 'idle') this.learnFromGemini(e.sessionId)
+      if (e.status !== 'running') this.learnReport(e.sessionId)
     }
     if (e.type === 'context') this.ctxUsed.set(e.sessionId, e.used)
     if (e.type === 'item') {
@@ -1453,6 +1455,22 @@ ${text.slice(0, 1500)}`
         asked.catch(() => undefined)
       }
     }
+  }
+
+  /** What the learning loop wrote is read off the disk after each turn, so the notice cannot claim a save that did not happen. */
+  private learnBefore = new Map<string, Map<string, number>>()
+  private learnTake(sessionId: string): void {
+    const meta = this.live.get(sessionId)?.meta
+    if (!meta || meta.temporary || (meta.engine !== 'claude' && meta.engine !== 'codex') || store.loadSettings().learningLoop === false || this.learnBefore.has(sessionId)) return
+    this.learnBefore.set(sessionId, learnedFiles(meta.engine))
+  }
+  private learnReport(sessionId: string): void {
+    const before = this.learnBefore.get(sessionId)
+    const meta = this.live.get(sessionId)?.meta
+    this.learnBefore.delete(sessionId)
+    if (!before || !meta) return
+    const saved = learnedSince(before, learnedFiles(meta.engine))
+    if (saved.length) this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: tr("Am salvat în memorie: {names}.", { names: saved.join(', ') }), level: 'info' } })
   }
 
   /** Gemini has no file tools, so Jolty runs its learning loop (gemini-learning.ts) in the background after a turn; a temporary chat leaves nothing behind. */

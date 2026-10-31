@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { learnNowRule, learningNudge } from '../src/main/learning'
+import { learnNowRule, learnedSince, learningNudge } from '../src/main/learning'
 
 test('the standing rule exists for Claude, is silent for Hermes, and says to save at once', () => {
   const rule = learnNowRule('claude')
@@ -17,4 +17,11 @@ test('the periodic check still fires on every tenth message only, and skips what
   assert.equal(learningNudge('claude', 9), undefined)
   const nudge = learningNudge('claude', 10)
   assert.ok(nudge && /already saved/.test(nudge))
+})
+
+test('what was saved is read from the disk: only new or newer files count', () => {
+  const before = new Map([['a.md', 100], ['skill x', 100]])
+  const after = new Map([['a.md', 100], ['skill x', 250], ['b.md', 300]])
+  assert.deepEqual(learnedSince(before, after), ['skill x', 'b.md'])
+  assert.deepEqual(learnedSince(after, after), [])
 })

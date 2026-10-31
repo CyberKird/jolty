@@ -75,3 +75,32 @@ export function learningNudge(engine: EngineKind, n: number): string | undefined
   if (!parts.length) return undefined
   return [HEAD, ...parts, SOURCE, QUIET].join('\n')
 }
+
+/**
+ * What the loop writes to disk (memory notes, each skill's SKILL.md) with modification times. The app takes it before and after a
+ * turn and says what really changed, so "saved" in a notice comes from the disk, not from the model's own words.
+ */
+export function learnedFiles(engine: EngineKind): Map<string, number> {
+  const out = new Map<string, number>()
+  const add = (file: string, label: string): void => {
+    try {
+      out.set(label, fs.statSync(file).mtimeMs)
+    } catch {
+      // a skill folder without SKILL.md
+    }
+  }
+  const memory = sharedMemoryDir()
+  const skills = path.join(os.homedir(), engine === 'claude' ? '.claude' : '.codex', 'skills')
+  try {
+    if (memory) for (const f of fs.readdirSync(memory)) if (f.endsWith('.md') && f !== 'MEMORY.md') add(path.join(memory, f), f)
+    for (const d of fs.readdirSync(skills)) add(path.join(skills, d, 'SKILL.md'), `skill ${d}`)
+  } catch {
+    // no memory or skills folder yet: nothing to compare
+  }
+  return out
+}
+
+/** Names that are new or newer in `after` than in `before`. */
+export function learnedSince(before: Map<string, number>, after: Map<string, number>): string[] {
+  return [...after].filter(([name, time]) => time > (before.get(name) ?? 0)).map(([name]) => name)
+}
