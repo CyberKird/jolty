@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.1
+
+### Fixed
+
+- The 0.15.0 update could leave Jolty not starting, with "Cannot find module 'fs-extra'". The installer now includes every library the app needs at runtime.
+
 ## 0.15.0
 
 ### New
