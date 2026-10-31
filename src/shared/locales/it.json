@@ -1596,5 +1596,6 @@
  "Efectele de transparență sunt oprite în Windows. Pornește-le în Setări > Personalizare > Culori, apoi mută cursorul.": "In Windows gli effetti di trasparenza sono disattivati. Attivali in Impostazioni > Personalizzazione > Colori, poi sposta il cursore.",
  "Disponibil doar pe Windows 11 22H2 sau mai nou.": "Solo su Windows 11 22H2 o successivo.",
  "Deschide setările de culoare Windows": "Apri le impostazioni colore di Windows",
- "Oprește și pune mesajul înapoi în căsuță": "Ferma e rimetti il messaggio nella casella"
+ "Oprește și pune mesajul înapoi în căsuță": "Ferma e rimetti il messaggio nella casella",
+ "Arată încă {n}": "Mostra altre {n}"
 }

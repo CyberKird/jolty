@@ -133,11 +133,14 @@ function upsert(list: ChatItem[], item: ChatItem): ChatItem[] {
   return next
 }
 
-/** Page and conversation switches cross-fade the main column (View Transitions); instant with Reduce motion. */
+/** Page and conversation switches cross-fade the main column (View Transitions); instant with Reduce motion and in the glass themes. */
 function swapPage(update: () => void): void {
   const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } }
   const root = document.documentElement
-  if (!doc.startViewTransition || root.classList.contains('reduce-motion')) return update()
+  // the glass themes are translucent: a cross-fade snapshots the whole window twice, and measured at 1440p a page switch then
+  // stalled the frame for 120 to 190 ms (volt: 70 to 90). They swap at once and the page's own entrance does the easing.
+  const glass = (root.dataset.theme ?? 'volt') !== 'volt'
+  if (!doc.startViewTransition || glass || root.classList.contains('reduce-motion')) return update()
   root.classList.add('vt-page')
   void doc
     .startViewTransition(() => flushSync(update))

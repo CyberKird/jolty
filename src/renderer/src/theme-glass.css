@@ -81,6 +81,20 @@ html:is([data-theme='glass'], [data-theme='frost']) :where(div, button, input, s
 html:is([data-theme='glass'], [data-theme='frost']) :is(#root, .app, .sidebar, .main, .live, .page, .page-inner, .chat-header, .composer-wrap, .resizer, .resizer-x, .resizer-y, .live-scrim) {
   border-radius: 0;
 }
+/* the mascot's particles keep their own shapes: a round corner turned the bolts into pills and left almost nothing of them */
+html:is([data-theme='glass'], [data-theme='frost']) .mascot-spark {
+  border-radius: 0;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .mascot-dust {
+  border-radius: 50%;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .mascot-streak {
+  border-radius: 2px;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .mascot-bubble {
+  border-radius: 10px;
+}
+
 /* a box with a border on one side only stays straight (a rounded corner would bend the line into an arc), and so does text that
    starts at the corner of its box: a round corner would cut the first letter */
 html:is([data-theme='glass'], [data-theme='frost']) :is(.md blockquote, .msg-quote, .quote-bar, .titlebar-by, .msg-assistant, .msg-row, .reasoning, .reasoning summary, .md, .state-line, .state-wave) {
@@ -120,6 +134,14 @@ html:is([data-theme='glass'], [data-theme='frost']) :is(.power-bar, .live-tab-ba
   background: var(--glass-sheen), var(--glass-pop);
   box-shadow: var(--glass-rim-hi);
   border-color: transparent;
+}
+
+/* the quote above the box sits in the composer's top edge: its marker follows the round corner (an inset shadow curves with it,
+   a border would stay a straight line poking out of the corner) */
+html:is([data-theme='glass'], [data-theme='frost']) .quote-bar {
+  border-inline-start: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: inset 3px 0 0 var(--volt);
 }
 
 /* the thought is a pane of its own, with no line down its side */

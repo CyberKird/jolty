@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.16.3
+
+### Fixed
+
+- Launch with a long conversation list was very slow (10 to 20 seconds on a list of 1,700 chats). The mascot read every button of the list, forcing the browser to lay out rows it had skipped. The list is now one obstacle to him, shows the newest 30 conversations of each project first ("Show N more" for the rest), the mascot starts after the lists are in, and the skills badge waits a few seconds. On a copy of a real list the window is usable in about 1.5 seconds.
+- Switching pages in Glass and Frost stalled the frame for 120 to 190 ms. They now swap at once and the page eases in by itself (under 60 ms).
+- The mascot's bolts and dust were cut down to specks by the round corners of Glass and Frost. They keep their shapes, and the burst leaves from the tip of his bolt, not from his face.
+- The quote above the message box follows the round corner in Glass and Frost instead of a straight line poking out.
+
 ## 0.16.2
 
 ### Fixed

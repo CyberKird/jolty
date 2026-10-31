@@ -45,7 +45,13 @@ function read(): void {
   const add = (el: Element): void => {
     if (!el.closest('.mascot')) addRect(el.getBoundingClientRect())
   }
-  document.querySelectorAll(INTERACTIVE).forEach(add)
+  // the conversation list is one obstacle: the rows are skipped by content-visibility, and reading the rect of each button in a
+  // list of hundreds makes the browser lay every skipped row out (seconds at launch)
+  document.querySelectorAll(INTERACTIVE).forEach((el) => {
+    if (!el.closest('.session-list')) add(el)
+  })
+  const list = document.querySelector('.session-list')
+  if (list) add(list)
   document.querySelectorAll(PANELS).forEach(add)
   // the scrollbars
   document.querySelectorAll(SCROLLERS).forEach((el) => {

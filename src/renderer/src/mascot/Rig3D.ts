@@ -235,8 +235,14 @@ export class Rig3D implements Puppet {
     if (!j) return at
     const bone = j.root.getObjectByName(part === 'bolt' ? 'bolt' : part === 'handL' ? 'foreL' : 'foreR')
     if (!bone) return at
-    // a hand is the tail of the forearm bone
-    const p = (bone.children[0] && part !== 'bolt' ? bone.children[0] : bone).getWorldPosition(new THREE.Vector3())
+    // a hand is the tail of the forearm bone; the bolt's bone starts down in the head, so the burst leaves from the tip of the bolt itself
+    // (its skinned mesh, measured in the current pose), not from the middle of his face
+    const boltMesh = part === 'bolt' ? j.root.getObjectByName('Bolt') : undefined
+    let p: THREE.Vector3
+    if (boltMesh) {
+      const box = new THREE.Box3().setFromObject(boltMesh, true)
+      p = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2)
+    } else p = (bone.children[0] && part !== 'bolt' ? bone.children[0] : bone).getWorldPosition(new THREE.Vector3())
     const o = new THREE.Vector3(0, 0, 0)
     for (const v of [p, o]) v.project(this.camera)
     return { x: ((p.x - o.x) * (VIEW.right - VIEW.left) * this.pxu) / 2, y: (-(p.y - o.y) * (VIEW.top - VIEW.bottom) * this.pxu) / 2 }

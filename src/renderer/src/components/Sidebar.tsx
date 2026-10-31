@@ -13,6 +13,7 @@ import { OrganizeMenu } from './OrganizeMenu'
 import { reopenClosed } from '../organize'
 import { splitSessions } from '@shared/organize'
 import { tr } from '@shared/i18n'
+import type { SessionMeta } from '@shared/types'
 import { needsAttention } from '@shared/skills'
 import { useShallow } from 'zustand/shallow'
 
@@ -335,17 +336,44 @@ function useOrder(storeKey: string, natural: string[]): [string[], (from: string
   return [ordered, move]
 }
 
+/** how many conversations of one project the list draws at first; the rest is one click away (a list of hundreds made launch crawl) */
+const GROUP_CAP = 30
+
+function GroupRows({ list, activeId, searching, onRemove }: { list: SessionMeta[]; activeId?: string; searching: boolean; onRemove: (id: string) => void }) {
+  const [all, setAll] = useState(false)
+  const capped = !all && !searching && list.length > GROUP_CAP + 5
+  // the open conversation is always drawn, even past the cap
+  const shown = capped ? [...list.slice(0, GROUP_CAP), ...list.slice(GROUP_CAP).filter((s) => s.id === activeId)] : list
+  const hidden = list.length - shown.length
+  return (
+    <>
+      {shown.map((s) => (
+        <SessionRow key={s.id} s={s} onRemove={onRemove} />
+      ))}
+      {capped && hidden > 0 && (
+        <button type="button" className="session-more" onClick={() => setAll(true)}>
+          {tr("Arată încă {n}", { n: hidden })}
+        </button>
+      )}
+    </>
+  )
+}
+
 export function Sidebar() {
   const { page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast } = useStore(useShallow(({ page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast }) => ({ page, setPage, sessions, profiles, activeId, openSession, status, loadSessions, toast })))
   const compactions = useStore((s) => s.compactions)
   const [q, setQ] = useState('')
   const skillsAttention = useStore((s) => s.skillsAttention)
   // the badge is there before the Skills page is ever opened; that page keeps it current afterwards
+  // not at launch: reading every skill folder keeps the main process busy for a second or more, and the badge can wait
   useEffect(() => {
-    void api.skills
-      .list()
-      .then((l) => useStore.getState().setSkillsAttention(l.filter((s) => needsAttention(s, useStore.getState().hiddenSkills)).length))
-      .catch(() => undefined)
+    const t = window.setTimeout(() => {
+      void api.skills
+        .list()
+        .then((l) => useStore.getState().setSkillsAttention(l.filter((s) => needsAttention(s, useStore.getState().hiddenSkills)).length))
+        .catch(() => undefined)
+    }, 4000)
+    return () => clearTimeout(t)
   }, [])
   // temporary chats are listed too (marked); they live in memory only and are wiped when deleted or when Jolty closes
   const saved = sessions
@@ -451,9 +479,7 @@ export function Sidebar() {
             <div className="session-group-title" title={`${cwd}\n${MOVE_HINT}`} tabIndex={0} onContextMenu={(e) => showMenu(e, pathItems(cwd))} {...groupDrag(cwd)}>
               {basename(cwd)}
             </div>
-            {list.map((s) => (
-              <SessionRow key={s.id} s={s} onRemove={(id) => void removeSession(id)} />
-            ))}
+            <GroupRows list={list} activeId={activeId} searching={Boolean(q)} onRemove={(id) => void removeSession(id)} />
           </div>
         ))}
         <ArchivedSection list={archived} onRemove={(id) => void removeSession(id)} />

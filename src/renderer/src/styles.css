@@ -4022,6 +4022,23 @@ a {
 .account-chip:hover {
   background: var(--volt-dim);
 }
+.session-more {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 2px 8px 6px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--grey-2);
+  font: 500 11.5px var(--label);
+  letter-spacing: 0.06em;
+  text-align: start;
+  cursor: pointer;
+}
+.session-more:hover {
+  color: var(--white);
+  background: var(--s2);
+}
 .account-avatar {
   flex: none;
   display: grid;

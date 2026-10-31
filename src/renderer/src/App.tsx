@@ -87,11 +87,18 @@ export function App() {
   const newUser = useStore((s) => s.profilesLoaded && s.profiles.length === 0)
   const { page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent } = useStore(useShallow(({ page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent }) => ({ page, sessions, activeId, toasts, sidebarOpen, liveOpen, setLiveOpen, loadProfiles, loadSessions, loadUsage, onEvent })))
 
+  // the mascot (three.js, a model, shaders) is the heaviest thing at launch: it waits until the lists are in and the window has had a moment
+  const loaded = useStore((s) => s.profilesLoaded)
   useEffect(() => {
+    if (!loaded) return
     const ric = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 300))
-    const id = ric(() => setIdle(true), { timeout: 1500 })
-    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : clearTimeout(id))
-  }, [])
+    let id = 0
+    const t = window.setTimeout(() => (id = ric(() => setIdle(true), { timeout: 3000 })), 1200)
+    return () => {
+      clearTimeout(t)
+      if (id) window.cancelIdleCallback ? window.cancelIdleCallback(id) : clearTimeout(id)
+    }
+  }, [loaded])
 
   // Below 1180 px (with the sidebar shown) the live panel is a drawer over the chat. Making the window
   // that narrow closes it, so it never lands on top of the conversation; widening it again brings it back.

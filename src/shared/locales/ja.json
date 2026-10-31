@@ -1596,5 +1596,6 @@
  "Efectele de transparență sunt oprite în Windows. Pornește-le în Setări > Personalizare > Culori, apoi mută cursorul.": "Windows の透明効果がオフです。設定 > 個人用設定 > 色 でオンにしてから、スライダーを動かしてください。",
  "Disponibil doar pe Windows 11 22H2 sau mai nou.": "Windows 11 22H2 以降でのみ利用できます。",
  "Deschide setările de culoare Windows": "Windows のカラー設定を開く",
- "Oprește și pune mesajul înapoi în căsuță": "停止してメッセージを入力欄に戻す"
+ "Oprește și pune mesajul înapoi în căsuță": "停止してメッセージを入力欄に戻す",
+ "Arată încă {n}": "さらに {n} 件を表示"
 }
