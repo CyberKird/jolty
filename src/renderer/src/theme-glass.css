@@ -1,6 +1,7 @@
-/* Glass: clear panes over a living aurora (html:is([data-theme='glass'], [data-theme='frost']), see theme.ts and themes.css).
-   A pane is four things: a faint fill with a diagonal sheen, a blur that lifts the colour behind it, a lit rim (bright on the
-   top edge, dim below) and, on small and floating things, a refraction at the edge. The light follows the pointer. */
+/* Glass and Frost (html:is([data-theme='glass'], [data-theme='frost']), see theme.ts and themes.css).
+   A pane is a faint fill with a diagonal sheen and a lit rim (bright on the top edge, dim below). Only what floats over content
+   (menus, pickers, toasts) also blurs and bends what is behind it: a backdrop filter is redrawn whenever the pixels behind it
+   change, so on anything that scrolls or sits in a long list it made the whole window lag. The sky behind is still. */
 html:is([data-theme='glass'], [data-theme='frost']) {
   --black: #090913;
   --s1: rgba(255, 255, 255, 0.05);
@@ -20,8 +21,6 @@ html:is([data-theme='glass'], [data-theme='frost']) {
   --display: 'Barlow', 'Segoe UI', sans-serif;
   /* the material */
   --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 34%, rgba(255, 255, 255, 0.01) 62%, rgba(255, 255, 255, 0.1) 100%);
-  --glass-light: radial-gradient(300px circle at var(--lx, 70%) var(--ly, 0%), rgba(255, 255, 255, 0.16), transparent 62%);
-  --glass-blur: blur(14px) saturate(1.9) brightness(1.06);
   --glass-lens: url(#jolty-lens) blur(5px) saturate(1.9) brightness(1.08);
   --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), inset 0 0 24px rgba(255, 255, 255, 0.06);
   --glass-drop: 0 14px 36px -14px rgba(0, 0, 0, 0.6);
@@ -30,7 +29,7 @@ html:is([data-theme='glass'], [data-theme='frost']) {
   --glass-rim-hi: inset 0 0 0 1px rgba(255, 255, 255, 0.24), inset 0 2px 1px -1px rgba(255, 255, 255, 0.85), inset 0 -2px 1px -1px rgba(255, 255, 255, 0.32), inset 4px 4px 7px -4px rgba(255, 255, 255, 0.55), inset -4px -4px 7px -4px rgba(255, 255, 255, 0.3), inset 0 0 18px rgba(255, 255, 255, 0.09), 0 10px 22px -8px rgba(0, 0, 0, 0.5), 0 2px 5px rgba(0, 0, 0, 0.22);
 }
 
-/* the aurora: soft colour orbs on a slow drift, so the panes always have something to bend */
+/* the aurora: soft colour orbs, painted once (no animation, nothing to redraw) */
 html:is([data-theme='glass'], [data-theme='frost']) body {
   background: var(--black);
 }
@@ -47,12 +46,6 @@ html:is([data-theme='glass'], [data-theme='frost']) body::before {
     radial-gradient(34% 40% at 22% 94%, rgba(244, 114, 182, 0.42), transparent 70%),
     radial-gradient(30% 34% at 52% 40%, rgba(99, 102, 241, 0.3), transparent 70%),
     radial-gradient(26% 30% at 40% 68%, rgba(217, 70, 239, 0.2), transparent 70%);
-  animation: glass-drift 46s ease-in-out infinite alternate;
-  will-change: transform;
-}
-@keyframes glass-drift {
-  from { transform: translate3d(-2%, -1%, 0) rotate(0deg) scale(1); }
-  to { transform: translate3d(3%, 2%, 0) rotate(8deg) scale(1.08); }
 }
 html:is([data-theme='glass'], [data-theme='frost']) #root {
   position: relative;
@@ -73,7 +66,6 @@ html:is([data-theme='glass'], [data-theme='frost']) .main {
 }
 html:is([data-theme='glass'], [data-theme='frost']) :is(.sidebar, .live) {
   background: var(--glass-sheen), rgba(255, 255, 255, 0.02);
-  backdrop-filter: var(--glass-blur);
 }
 html:is([data-theme='glass'], [data-theme='frost']) .sidebar {
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.12);
@@ -99,34 +91,30 @@ html:is([data-theme='glass'], [data-theme='frost']) :is(.session-item, .live-ite
 /* the glass itself */
 html:is([data-theme='glass'], [data-theme='frost']) :is(.card, .composer, .tool, .permission, .plan, .tasks-bar, .theme-opt, .composer-notice, .attachment, .md pre, .md table) {
   background: var(--glass-sheen), rgba(255, 255, 255, 0.025);
-  backdrop-filter: var(--glass-blur);
   box-shadow: var(--glass-rim), var(--glass-drop);
   border-color: transparent;
 }
 html:is([data-theme='glass'], [data-theme='frost']) .md :is(pre, table) {
   overflow: hidden;
 }
-/* the light on the pane: fixed to the window, so it slides across every pane as the pointer moves */
-html:is([data-theme='glass'], [data-theme='frost']) :is(.composer, .card, .tool) {
-  background-image: var(--glass-sheen), var(--glass-light);
-  background-attachment: scroll, fixed;
-}
 
-/* small and floating things bend the light at the rim */
+/* small things: a lit rim, no backdrop filter */
 html:is([data-theme='glass'], [data-theme='frost']) :is(.btn, .msg-user, .meta-chip, .select, .input, .textarea) {
   background: var(--glass-sheen), rgba(255, 255, 255, 0.03);
-  backdrop-filter: var(--glass-lens);
   box-shadow: var(--glass-rim-hi);
   border-color: transparent;
 }
-html:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar, .live-tab-bar, .page-tab-bar) {
+/* what floats over content bends the light at its rim and blurs what is behind it; it is short-lived, so the cost is brief */
+html:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast) {
   background: var(--glass-sheen), var(--glass-pop);
   backdrop-filter: var(--glass-lens);
   box-shadow: var(--glass-rim-hi), 0 22px 60px -14px rgba(0, 0, 0, 0.7);
   border-color: transparent;
 }
-html:is([data-theme='glass'], [data-theme='frost']) .composer {
-  backdrop-filter: var(--glass-lens);
+html:is([data-theme='glass'], [data-theme='frost']) :is(.power-bar, .live-tab-bar, .page-tab-bar) {
+  background: var(--glass-sheen), var(--glass-pop);
+  box-shadow: var(--glass-rim-hi);
+  border-color: transparent;
 }
 
 /* the accent */
@@ -205,10 +193,6 @@ html.low-power:is([data-theme='glass'], [data-theme='frost']) * {
 html.low-power:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar) {
   background: #14131f;
 }
-html.low-power:is([data-theme='glass'], [data-theme='frost']) body::before,
-html.reduce-motion:is([data-theme='glass'], [data-theme='frost']) body::before {
-  animation: none;
-}
 
 /* ------------------------------------------------------------------ Frost: the same glass, in daylight
    Pale milky panes over a soft sky, dark ink, a coral accent and pastel tints; the rim picks up a little cyan on one side and pink
@@ -230,8 +214,6 @@ html[data-theme='frost'] {
   --volt-2: #d94c3a;
   --volt-rgb: 240, 96, 77;
   --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.22) 38%, rgba(255, 255, 255, 0.08) 62%, rgba(255, 255, 255, 0.5) 100%);
-  --glass-light: radial-gradient(320px circle at var(--lx, 70%) var(--ly, 0%), rgba(255, 255, 255, 0.75), transparent 62%);
-  --glass-blur: blur(18px) saturate(1.6) brightness(1.04);
   --glass-lens: url(#jolty-lens) blur(6px) saturate(1.6) brightness(1.05);
   --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.8), inset 0 2px 1px -1px #fff, inset 0 -2px 3px -2px rgba(30, 36, 70, 0.2), inset 3px 0 5px -3px rgba(80, 220, 210, 0.5), inset -3px 0 5px -3px rgba(255, 140, 190, 0.5), inset 0 0 22px rgba(255, 255, 255, 0.35);
   --glass-rim-hi: var(--glass-rim), 0 12px 26px -10px rgba(40, 50, 100, 0.38), 0 2px 6px rgba(40, 50, 100, 0.14);
@@ -250,6 +232,21 @@ html[data-theme='frost'][data-clear] body {
   background: rgba(230, 233, 241, var(--tint, 1));
 }
 html[data-theme='frost'] ::selection {
+  color: var(--white);
+}
+/* code and diffs were tuned for a dark page: darker inks on the pale one */
+html[data-theme='frost'] {
+  --add-ink: #12703a;
+  --del-ink: #b3261e;
+}
+html[data-theme='frost'] :is(.hljs-string, .hljs-attr-value, .hljs-regexp) { color: #2f7d32; }
+html[data-theme='frost'] :is(.hljs-number, .hljs-literal) { color: #b4570f; }
+html[data-theme='frost'] :is(.hljs-comment, .hljs-quote) { color: #7b8095; }
+html[data-theme='frost'] :is(.hljs-title, .hljs-title.function_, .hljs-title.class_) { color: #1c1e2c; }
+html[data-theme='frost'] :is(.hljs-attr, .hljs-property, .hljs-variable, .hljs-params) { color: #4b4f66; }
+html[data-theme='frost'] .hljs-type { color: #4f6f12; }
+html[data-theme='frost'] :is(.hljs-meta, .hljs-punctuation) { color: #6d7189; }
+html[data-theme='frost'] .md strong {
   color: var(--white);
 }
 html[data-theme='frost'] ::-webkit-scrollbar-thumb {

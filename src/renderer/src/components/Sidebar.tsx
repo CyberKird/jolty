@@ -281,7 +281,11 @@ function AccountChip() {
         setPage('settings')
       }}
     >
-      <span className={`account-avatar ${first ? '' : 'off'}`}>{first ? (name[0] || 'J').toUpperCase() : '+'}</span>
+      {first?.picture ? (
+        <img className="account-avatar" src={first.picture} alt="" referrerPolicy="no-referrer" />
+      ) : (
+        <span className={`account-avatar ${first ? '' : 'off'}`}>{first ? (name[0] || 'J').toUpperCase() : '+'}</span>
+      )}
       <span className="account-text">
         <span className="ellipsis">{first ? name : tr("Conectează un cont pentru backup")}</span>
         {first && <span className="faint small ellipsis">{connected.length > 1 ? tr("{provider} și încă {n}", { provider: connected[0].info.name, n: connected.length - 1 }) : connected[0].info.name}</span>}

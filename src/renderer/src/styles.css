@@ -4029,6 +4029,7 @@ a {
   width: 26px;
   height: 26px;
   border-radius: 50%;
+  object-fit: cover;
   background: var(--volt);
   color: #000;
   font: 700 12px var(--label);

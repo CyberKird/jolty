@@ -7,7 +7,8 @@ const KEY = 'jolty:theme'
 /**
  * Glass bends what is behind it at the rim, like a thick pane. Chromium takes an SVG filter inside `backdrop-filter`, so the
  * bend is two displacement passes (across, then down) steered by gradient maps: the pixels at an edge are read from further in.
- * The maps stretch with the element, so the rim is a share of its size. Only floating and small things use it (themes.css).
+ * The maps stretch with the element, so the rim is a share of its size. Only menus, pickers and toasts use it (theme-glass.css): a
+ * backdrop filter is redrawn whenever what is behind it changes, which is too much for anything that scrolls.
  */
 const map = (axis: 'x' | 'y', band: number): string => {
   const [x2, y2] = axis === 'x' ? [1, 0] : [0, 1]
@@ -35,32 +36,6 @@ function lensFilter(): void {
   document.body.prepend(holder)
 }
 
-/** The light on glass follows the pointer: two variables on <html>, read by the sheen layers in themes.css. */
-let light: ((e: PointerEvent) => void) | undefined
-function pointerLight(on: boolean): void {
-  const root = document.documentElement
-  if (!on) {
-    if (light) removeEventListener('pointermove', light)
-    light = undefined
-    root.style.removeProperty('--lx')
-    root.style.removeProperty('--ly')
-    return
-  }
-  if (light) return
-  let frame = 0
-  let last: PointerEvent
-  light = (e) => {
-    last = e
-    if (frame) return
-    frame = requestAnimationFrame(() => {
-      frame = 0
-      root.style.setProperty('--lx', `${last.clientX}px`)
-      root.style.setProperty('--ly', `${last.clientY}px`)
-    })
-  }
-  addEventListener('pointermove', light, { passive: true })
-}
-
 /** Puts the theme on <html> (themes.css reads it) and remembers it for the next start. */
 export function applyTheme(theme: AppSettings['theme'], clear = 0): void {
   const id: ThemeId = theme && THEMES.includes(theme) ? theme : 'volt'
@@ -68,7 +43,6 @@ export function applyTheme(theme: AppSettings['theme'], clear = 0): void {
   root.dataset.theme = id
   setClear(id === 'volt' ? 0 : clear)
   if (id !== 'volt') lensFilter()
-  pointerLight(id !== 'volt')
   try { localStorage.setItem(KEY, id) } catch { /* private mode: the saved settings still decide */ }
 }
 

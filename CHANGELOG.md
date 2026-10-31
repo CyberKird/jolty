@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.1
+
+### Fixed
+
+- Glass and Frost made the whole window lag. The sky behind no longer moves, the pointer light is gone, and only menus, pickers and toasts blur and bend what is behind them; panels, buttons, message bubbles and code blocks no longer do, so scrolling a long chat is as light as in Volt.
+
+### Improvements
+
+- The account at the bottom of the sidebar shows your Google profile picture when a backup account is connected, as Settings already did.
+- Frost: bold text, code and diffs use darker inks so they read on the pale page.
+
 ## 0.16.0
 
 ### New
