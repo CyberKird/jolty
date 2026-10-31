@@ -264,7 +264,8 @@ function Composer(p: ComposerProps) {
     try { draftStore.removeItem(draftKey) } catch { /* nothing to remove */ }
     const a = atts
     setAtts([])
-    if (p.running && p.onQueue) {
+    // Claude Code takes a message in the middle of a turn and reads it at once (steer); the other engines refuse it, so it waits
+    if (p.running && p.onQueue && engine !== 'claude') {
       p.onQueue(t, a, parallel || undefined)
       return
     }
@@ -354,7 +355,7 @@ function Composer(p: ComposerProps) {
           value={text}
           readOnly={improving}
           style={improving ? { opacity: 0.55 } : undefined}
-          placeholder={p.running ? tr("Scrie următorul mesaj: pleacă imediat ce termină.") : tr("Descrie ce vrei să facă. / pentru skill-uri, @ pentru fișiere.")}
+          placeholder={p.running ? (engine === 'claude' ? tr("Scrie un mesaj: intră direct în răspunsul curent.") : tr("Scrie următorul mesaj: pleacă imediat ce termină.")) : tr("Descrie ce vrei să facă. / pentru skill-uri, @ pentru fișiere.")}
           onChange={(e) => {
             setText(e.target.value)
             setCaret(e.target.selectionStart)

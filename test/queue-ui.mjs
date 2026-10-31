@@ -1,5 +1,5 @@
-// A message written while the model works waits in the conversation as its own bubble with a status line and three
-// actions (send now, edit, remove); it goes out by itself when the turn ends. Opens one window.
+// A message sent while Claude Code works goes into the running turn at once (steer), like any other message. The waiting
+// bubble (send now, edit, remove) is for the engines that refuse a message mid-turn. Opens one window.
 // Needs: python test/mocks/mock_anthropic.py <port>, MOCK_ANTHROPIC=http://127.0.0.1:<port>.
 import { _electron as electron } from 'playwright-core'
 import fs from 'fs'
@@ -35,34 +35,21 @@ try {
   await type(win, 'First, a long answer RUN_STREAM=400')
   await win.waitForSelector('.work-clock')
 
+  // Claude Code reads a message sent in the middle of a turn at once: no waiting bubble, it is a message like any other
   await type(win, 'second message')
-  await win.waitForSelector('.pending-msg')
-  check((await win.locator('.pending-msg .message-text').innerText()) === 'second message', 'the waiting message shows as a bubble in the conversation')
-  check((await win.locator('.pending-msg .pending-label').textContent()) === 'Pending', 'it carries the Pending status')
-  check((await win.locator('.queue').count()) === 0, 'the box no longer lists it')
-  await shot(win, 'queue-1-waiting.png')
+  await win.waitForFunction(() => [...document.querySelectorAll('.msg-user')].some((m) => m.textContent.includes('second message')))
+  check((await win.locator('.pending-msg').count()) === 0, 'sent while it works, the message does not wait in a bubble')
+  check((await win.inputValue('.composer textarea')) === '', 'the box is empty again')
+  await shot(win, 'steer-1-sent.png')
 
-  // edit: back into the box
-  await win.locator('.pending-msg').hover()
-  await win.locator('.pending-msg button[aria-label="Edit message"]').click()
-  check((await win.locator('.pending-msg').count()) === 0, 'edit takes it out of the conversation')
-  check((await win.inputValue('.composer textarea')) === 'second message', 'edit puts the text back in the box')
-
-  // remove
-  await win.keyboard.press('Enter')
-  await win.waitForSelector('.pending-msg')
-  await win.locator('.pending-msg').hover()
-  await win.locator('.pending-msg .pending-act').last().click()
-  check((await win.locator('.pending-msg').count()) === 0, 'remove drops it')
-
-  // it goes out by itself when the turn ends
-  await type(win, 'third message')
-  await win.waitForSelector('.pending-msg')
-  await win.waitForFunction(() => !document.querySelector('.work-clock') && !document.querySelector('.pending-msg'), undefined, { timeout: 90000 })
-  await win.waitForFunction(() => [...document.querySelectorAll('.msg-user')].some((m) => m.textContent.includes('third message')))
-  check(true, 'at the end of the turn the waiting message was sent')
-  await new Promise((r) => setTimeout(r, 4000))
-  await shot(win, 'queue-2-sent.png')
+  // the turn goes on and ends with both messages in the conversation
+  await win.waitForFunction(() => !document.querySelector('.work-clock'), undefined, { timeout: 90000 })
+  await new Promise((r) => setTimeout(r, 2500))
+  // the list is windowed, so the saved transcript is the place to count messages
+  const id = JSON.parse(fs.readFileSync(path.join(data, 'sessions.json'), 'utf8'))[0].id
+  const users = JSON.parse(fs.readFileSync(path.join(data, 'transcripts', `${id}.json`), 'utf8')).filter((i) => i.kind === 'user').map((i) => i.text)
+  check(users.length === 2 && users[1].includes('second message'), `both messages are in the conversation, in order (${JSON.stringify(users)})`)
+  await shot(win, 'steer-2-done.png')
 } catch (e) {
   console.log('FAIL', e.message)
   fails.push(e.message)

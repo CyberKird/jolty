@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.2
+
+### Improvements
+
+- With Claude Code, a message you send while the answer is still running goes straight into it, like a steer: the model reads it right away and adjusts, with a quiet "Pending" line under it until it answers.
+- With Codex, Gemini and Hermes, which cannot take a message in the middle of an answer, it waits in the conversation in a dashed bubble instead of in a list above the box. Send it right away, take it back to edit (its text and files return to the box) or remove it. It goes out by itself when the answer ends.
+
 ## 0.15.1
 
 ### Fixed
