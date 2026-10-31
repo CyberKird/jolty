@@ -8,11 +8,13 @@ import { pageOf, savedTurns, search, turnsOf } from './recall'
 import type { Scheduler } from './scheduler'
 import { projectOf, readLedger, writeLedger } from './workers'
 import { formatAskable, parseAskInput, type AskInput, type AskProfile } from './ask-model'
+import { formatFinds, hubSearch, localMatches, type HubSkill } from './skill-finder'
+import { list as listSkills } from './skills'
 
 export const JOLTY_SERVER = 'jolty'
 
 /** Tools that only read, or only touch Jolty's own notes: they run without asking, except in Manual mode. */
-export const JOLTY_READ_TOOLS = ['search_conversations', 'read_conversation', 'list_scheduled_tasks', 'list_sessions', 'wait_for_sessions', 'ledger_read', 'ledger_write', 'list_models']
+export const JOLTY_READ_TOOLS = ['search_conversations', 'read_conversation', 'list_scheduled_tasks', 'list_sessions', 'wait_for_sessions', 'ledger_read', 'ledger_write', 'list_models', 'find_skills']
 
 export const JOLTY_TOOLS_PROMPT =
   'Jolty tools (MCP server "jolty"): search_conversations and read_conversation find and read the user\'s earlier conversations in Jolty on this PC; use them when the user refers to earlier work, a past decision or "what we talked about". schedule_task runs a prompt later or on a repeat, each run in a new conversation, while Jolty is open; list_scheduled_tasks and cancel_scheduled_task manage them. Schedule only when the user asks for it. Several jobs at once: start_session gives each job its own session (own git worktree and branch when the project is a repository) with a short brief that stands on its own; wait_for_sessions returns when they end, list_sessions shows their state and last answer, send_to_session talks to one. Merging their branches is your job. ledger_read and ledger_write keep one shared notes file for the project: read it first when you start, and write decisions, state and open work there instead of re-exploring the codebase. list_models shows the other profiles and models you can ask, with their intelligence and speed; ask_model sends one question (and files) to the profile and model you or the user chose and returns its answer, with no tools: use it for a second opinion or when the user names a model, and never pick a model for them. Start sessions only when the user asked for parallel work or the task clearly splits into independent jobs.'
@@ -183,6 +185,17 @@ const TOOLS = [
     }
   },
   {
+    name: 'find_skills',
+    description:
+      'Looks for a skill that fits a task: first among the skills installed on this PC, then in the skills.sh directory (only the search words leave this PC, so use generic topic words, never private details). Read-only: installing a skill from the directory is the user\'s decision, ask first.',
+    inputSchema: {
+      type: 'object',
+      properties: { query: { type: 'string', description: 'what the skill should do, in a few words' }, limit: { type: 'number', description: 'results per source, 1 to 10 (default 5)' } },
+      required: ['query']
+    },
+    annotations: { readOnlyHint: true }
+  },
+  {
     name: 'cancel_scheduled_task',
     description: 'Deletes a scheduled task. Conversations of runs that already happened stay.',
     inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] }
@@ -313,6 +326,20 @@ async function run(h: ToolHost, sid: string, name: string, a: Record<string, unk
     if (!text) return fail('text is empty')
     writeLedger(projectOf(meta), text, a.mode === 'replace' ? 'replace' : 'append', meta.title)
     return ok('Written to the ledger.')
+  }
+  if (name === 'find_skills') {
+    const query = String(a.query || '').trim()
+    if (!query) return fail('query is empty')
+    const limit = Math.max(1, Math.min(10, Math.round(Number(a.limit) || 5)))
+    const local = localMatches(await listSkills(), query, limit)
+    let hub: HubSkill[] = []
+    let hubError: string | undefined
+    try {
+      hub = await hubSearch(query, limit)
+    } catch (e) {
+      hubError = e instanceof Error ? e.message : String(e)
+    }
+    return ok(formatFinds(query, local, hub, hubError))
   }
   if (name === 'list_models') return ok(formatAskable(await h.askable()))
   if (name === 'ask_model') {

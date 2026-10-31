@@ -42,8 +42,17 @@ export function learnNowRule(engine: EngineKind): string | undefined {
   if (isAcp(engine)) return undefined
   const where = engine === 'claude' ? 'with your memory system' : sharedMemoryDir() && `in the folder ${sharedMemoryDir()} (one fact per .md file with name, description and metadata.type in YAML frontmatter, plus a pointer line in its MEMORY.md)`
   if (!where) return undefined
-  return `Learning: when the user asks you to learn from something (a link, video or document), corrects you, or states a preference or a decision, save what is durable ${where} right then, without waiting to be asked or for a periodic check, updating an existing memory instead of adding a duplicate. When it concerns their projects, say in one line where it applies. ${SOURCE} Say what you saved in one short line.`
+  return `Learning: when the user asks you to learn from something (a link, video or document), corrects you, or states a preference or a decision, save what is durable ${where} right then, without waiting to be asked or for a periodic check, updating an existing memory instead of adding a duplicate. When it concerns their projects, say in one line where it applies. ${SOURCE} Say what you saved in one short line.${vaultHint()} ${SKILLS_RULE}`
 }
+
+/** The memory folder doubles as an Obsidian vault when it has a .obsidian folder: then notes should link to each other. */
+function vaultHint(): string {
+  const dir = sharedMemoryDir()
+  return dir && fs.existsSync(path.join(dir, '.obsidian')) ? ' The memory folder is also the user\'s Obsidian vault: plain .md files, and link related memories with [[name]] (the name from the other file\'s frontmatter).' : ''
+}
+
+const SKILLS_RULE =
+  'Skills: before a task, check the skills you have and use the one that fits without being asked. When none covers it, look for one first with the find_skills tool of the jolty server, tell the user which you found and why, and install nothing without their yes. Read a skill\'s SKILL.md for odd commands or network calls before recommending it.'
 
 function memoryPart(engine: EngineKind): string | undefined {
   if (engine === 'claude') {

@@ -8,6 +8,11 @@ test('the standing rule exists for Claude, is silent for Hermes, and says to sav
   assert.equal(learnNowRule('hermes'), undefined)
 })
 
+test('the standing rule tells the model to pick skills itself and to ask before installing one', () => {
+  const rule = learnNowRule('claude')
+  assert.ok(rule && /use the one that fits/.test(rule) && /install nothing without their yes/.test(rule))
+})
+
 test('the periodic check still fires on every tenth message only, and skips what was already saved', () => {
   assert.equal(learningNudge('claude', 9), undefined)
   const nudge = learningNudge('claude', 10)
