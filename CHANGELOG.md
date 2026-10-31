@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.4
+
+### Fixed
+
+- The mascot's sparks drew over his face in Glass, in the lavender of the theme. They now take the yellow of his bolt, and the crackle of a running command bursts only over the top half, out of his bolt, never down across his face.
+
+### Improvements
+
+- The "Saved to memory" line after a reply now comes from the disk: Jolty compares the memory notes and skills before and after the turn, so it names what was really written and says nothing when the model only claimed to have saved.
+
 ## 0.16.3
 
 ### Fixed
