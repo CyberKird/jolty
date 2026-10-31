@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.16.2
+
+### Fixed
+
+- The thought block in Glass and Frost is a pane of its own: no curved line down its side, and the first letter of its title and of messages is no longer cut by a round corner.
+- The arrow under a message the model has not answered yet did nothing useful. It is now "Stop and put the message back in the box".
+- The see-through window did nothing on PCs where Windows has Transparency effects turned off. Jolty now checks that switch: the slider is disabled with a note, and a button opens the Windows colour settings.
+
+### Improvements
+
+- Economy mode switches on by itself for more weak PCs: no graphics hardware or software drawing, or a chip built into the processor on a 4K screen. Glass and Frost then draw flat, with a solid page and no shadows.
+- The models now save what you teach or correct right away, not only at every tenth message. They pick a fitting skill on their own, can look one up with a new find_skills tool (nothing is installed without your yes) and link notes with [[name]] when the memory folder is an Obsidian vault.
+
 ## 0.16.1
 
 ### Fixed

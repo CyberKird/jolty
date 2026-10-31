@@ -745,6 +745,10 @@ export interface JoltyApi {
     notificationsBlocked(): Promise<boolean>
     /** opens Windows' own notification settings */
     openNotificationSettings(): Promise<void>
+    /** whether the see-through window can work here: 'os' is older than Windows 11 22H2, 'effects-off' is Windows' own switch */
+    glassSupport(): Promise<'ok' | 'os' | 'effects-off'>
+    /** opens Windows' colour settings, where Transparency effects live */
+    openColorSettings(): Promise<void>
     openPath(path: string): Promise<void>
     revealPath(path: string): Promise<void>
     /** right-click menu actions: the menu itself is drawn by the renderer in Jolty's theme */

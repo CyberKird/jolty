@@ -1592,5 +1592,9 @@
  "Sticlă transparentă care refractă lumina, cu reflexii pe muchii și o aurora vie în spate.": "Verre transparent qui réfracte la lumière, avec des bords éclairés et une aurore vivante derrière.",
  "Fereastră transparentă": "Fenêtre transparente",
  "Lasă să se vadă desktopul și aplicațiile din spatele Jolty, încețoșate. Necesită Windows 11 22H2 sau mai nou.": "Laisse voir le bureau et les applications derrière Jolty, floutés. Nécessite Windows 11 22H2 ou plus récent.",
- "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "Verre lumineux aux teintes pastel et aux bords irisés, comme une épaisse dalle de cristal."
+ "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "Verre lumineux aux teintes pastel et aux bords irisés, comme une épaisse dalle de cristal.",
+ "Efectele de transparență sunt oprite în Windows. Pornește-le în Setări > Personalizare > Culori, apoi mută cursorul.": "Windows a désactivé les effets de transparence. Active-les dans Paramètres > Personnalisation > Couleurs, puis déplace le curseur.",
+ "Disponibil doar pe Windows 11 22H2 sau mai nou.": "Uniquement sous Windows 11 22H2 ou plus récent.",
+ "Deschide setările de culoare Windows": "Ouvrir les paramètres de couleur de Windows",
+ "Oprește și pune mesajul înapoi în căsuță": "Arrêter et remettre le message dans la zone"
 }

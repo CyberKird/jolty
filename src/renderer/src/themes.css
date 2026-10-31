@@ -16,6 +16,13 @@
   padding-top: 14px;
   border-top: 1px solid var(--line);
 }
+.theme-clear-hint {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 .theme-clear input[type='range'] {
   width: 100%;
   accent-color: var(--volt);

@@ -1592,5 +1592,9 @@
  "Sticlă transparentă care refractă lumina, cu reflexii pe muchii și o aurora vie în spate.": "प्रकाश को मोड़ने वाला पारदर्शी काँच, चमकते किनारों और पीछे जीवंत ऑरोरा के साथ।",
  "Fereastră transparentă": "पारदर्शी विंडो",
  "Lasă să se vadă desktopul și aplicațiile din spatele Jolty, încețoșate. Necesită Windows 11 22H2 sau mai nou.": "Jolty के पीछे का डेस्कटॉप और ऐप धुंधले रूप में दिखते हैं। Windows 11 22H2 या नया चाहिए।",
- "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "पेस्टल रंगों और इंद्रधनुषी किनारों वाला उजला काँच, मोटी क्रिस्टल पट्टी जैसा।"
+ "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "पेस्टल रंगों और इंद्रधनुषी किनारों वाला उजला काँच, मोटी क्रिस्टल पट्टी जैसा।",
+ "Efectele de transparență sunt oprite în Windows. Pornește-le în Setări > Personalizare > Culori, apoi mută cursorul.": "Windows में पारदर्शिता प्रभाव बंद हैं। उन्हें सेटिंग > वैयक्तिकरण > रंग में चालू करें, फिर स्लाइडर हिलाएँ।",
+ "Disponibil doar pe Windows 11 22H2 sau mai nou.": "केवल Windows 11 22H2 या नए में उपलब्ध।",
+ "Deschide setările de culoare Windows": "Windows रंग सेटिंग खोलें",
+ "Oprește și pune mesajul înapoi în căsuță": "रोकें और संदेश वापस बॉक्स में रखें"
 }

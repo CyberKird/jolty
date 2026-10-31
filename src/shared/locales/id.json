@@ -1592,5 +1592,9 @@
  "Sticlă transparentă care refractă lumina, cu reflexii pe muchii și o aurora vie în spate.": "Kaca bening yang membiaskan cahaya, dengan tepi bercahaya dan aurora hidup di belakangnya.",
  "Fereastră transparentă": "Jendela transparan",
  "Lasă să se vadă desktopul și aplicațiile din spatele Jolty, încețoșate. Necesită Windows 11 22H2 sau mai nou.": "Memperlihatkan desktop dan aplikasi di belakang Jolty secara buram. Perlu Windows 11 22H2 atau lebih baru.",
- "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "Kaca terang dengan warna pastel dan tepi berkilau pelangi, seperti lempengan kristal tebal."
+ "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "Kaca terang dengan warna pastel dan tepi berkilau pelangi, seperti lempengan kristal tebal.",
+ "Efectele de transparență sunt oprite în Windows. Pornește-le în Setări > Personalizare > Culori, apoi mută cursorul.": "Efek transparansi Windows sedang mati. Nyalakan di Pengaturan > Personalisasi > Warna, lalu geser penggeser.",
+ "Disponibil doar pe Windows 11 22H2 sau mai nou.": "Hanya di Windows 11 22H2 atau lebih baru.",
+ "Deschide setările de culoare Windows": "Buka pengaturan warna Windows",
+ "Oprește și pune mesajul înapoi în căsuță": "Hentikan dan kembalikan pesan ke kotak"
 }

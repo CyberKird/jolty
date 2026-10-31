@@ -149,7 +149,7 @@ export class CodexSession implements EngineSession, ThreadListener {
       model: this.meta.model || null,
       approvalPolicy: mode.approvalPolicy,
       sandbox: mode.sandbox,
-      developerInstructions: [LANGUAGE_RULE, WRITING_RULES, PLAN_RULES, COPY_RULE, JOLTY_TOOLS_PROMPT, this.meta.temporary || loadSettings().learningLoop === false ? '' : learnNowRule('codex'), this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' '),
+      developerInstructions: [LANGUAGE_RULE, WRITING_RULES, PLAN_RULES, COPY_RULE, JOLTY_TOOLS_PROMPT, this.learnRule(), this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' '),
       // one dotted key per server: the user's own MCP servers from config.toml stay next to them
       config: Object.fromEntries(
         Object.entries({
@@ -168,6 +168,15 @@ export class CodexSession implements EngineSession, ThreadListener {
     this.meta.model = resp.model
     this.host.emit({ type: 'meta', sessionId: this.meta.id, meta: this.meta })
     return rpc
+  }
+
+  /** The learning rule for this chat's prompt; none for a temporary chat, when the loop is off, or when the settings cannot be read. */
+  private learnRule(): string {
+    try {
+      return this.meta.temporary || loadSettings().learningLoop === false ? '' : learnNowRule('codex') || ''
+    } catch {
+      return ''
+    }
   }
 
   async send(text: string, images: Attachment[] = []): Promise<void> {

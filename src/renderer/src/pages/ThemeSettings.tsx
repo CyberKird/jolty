@@ -1,5 +1,5 @@
 import { Palette } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { tr } from '@shared/i18n'
 import { api } from '../store'
@@ -15,6 +15,14 @@ const TEXT: Record<ThemeId, { name: string; about: string }> = {
 export function ThemeSettings({ current, clear }: { current: AppSettings['theme']; clear: AppSettings['glassClear'] }) {
   const [theme, setTheme] = useState<ThemeId>(current || 'volt')
   const [see, setSee] = useState(clear || 0)
+  const [support, setSupport] = useState<'ok' | 'os' | 'effects-off'>('ok')
+  // Windows' own switch can change while this page is open: ask again when the window comes back
+  useEffect(() => {
+    const ask = (): void => void api.app.glassSupport().then(setSupport).catch(() => undefined)
+    ask()
+    window.addEventListener('focus', ask)
+    return () => window.removeEventListener('focus', ask)
+  }, [])
   const pick = (id: ThemeId): void => {
     setTheme(id)
     applyTheme(id, see)
@@ -22,8 +30,13 @@ export function ThemeSettings({ current, clear }: { current: AppSettings['theme'
   }
   const slide = (n: number): void => {
     setSee(n)
-    setClear(n)
+    if (support === 'ok') setClear(n)
   }
+  // with Windows' transparency off the page keeps its solid tint, so a saved value never leaves the window grey
+  useEffect(() => {
+    if (support === 'ok') setClear(see)
+    else setClear(0)
+  }, [support, see])
   return (
     <div className="card" style={{ marginBottom: 14 }}>
       <div className="row" style={{ marginBottom: 10 }}>
@@ -55,12 +68,25 @@ export function ThemeSettings({ current, clear }: { current: AppSettings['theme'
             max={100}
             step={5}
             value={see}
+            disabled={support !== 'ok'}
             aria-label={tr("Fereastră transparentă")}
             onChange={(e) => slide(Number(e.target.value))}
             onPointerUp={() => void api.app.saveSettings({ glassClear: see })}
             onKeyUp={() => void api.app.saveSettings({ glassClear: see })}
           />
           <span className="muted small">{see ? `${see}%` : tr("Oprită")}</span>
+          {support !== 'ok' && (
+            <span className="theme-clear-hint">
+              <span className="muted small">
+                {support === 'os' ? tr("Disponibil doar pe Windows 11 22H2 sau mai nou.") : tr("Efectele de transparență sunt oprite în Windows. Pornește-le în Setări > Personalizare > Culori, apoi mută cursorul.")}
+              </span>
+              {support === 'effects-off' && (
+                <button type="button" className="btn small" onClick={() => void api.app.openColorSettings()}>
+                  {tr("Deschide setările de culoare Windows")}
+                </button>
+              )}
+            </span>
+          )}
         </label>
       )}
     </div>

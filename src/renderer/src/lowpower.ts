@@ -3,10 +3,33 @@ export type LowPowerMode = 'auto' | 'on' | 'off'
 
 let mode: LowPowerMode = 'auto'
 
-/** 4 cores or fewer, or 4 GB of memory or less (deviceMemory is Chromium's rounded figure) */
+/** The graphics chip as Chromium reports it: none at all, software drawing, a chip built into the processor, or a real card. */
+function gpuKind(): 'none' | 'software' | 'integrated' | 'discrete' {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl') as WebGLRenderingContext | null
+    if (!gl) return 'none'
+    const info = gl.getExtension('WEBGL_debug_renderer_info')
+    const name = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER))
+    gl.getExtension('WEBGL_lose_context')?.loseContext()
+    if (/swiftshader|llvmpipe|software|basic render|warp|softpipe/i.test(name)) return 'software'
+    // Radeon cards are "RX ..." or "Pro ..."; the chip inside a Ryzen is plain "Radeon(TM) Graphics" or "Vega"
+    if (/intel|uhd|iris|hd graphics|vega|radeon\(tm\) graphics|adreno|mali|powervr/i.test(name) && !/arc|rx\s?(\d|vega)|vega\s?(56|64)|radeon vii|pro\s?w/i.test(name)) return 'integrated'
+    return 'discrete'
+  } catch {
+    return 'none'
+  }
+}
+
+/**
+ * What this PC can draw smoothly: 4 cores or fewer, 4 GB of memory or less (deviceMemory is Chromium's rounded figure), no hardware
+ * graphics at all, or a chip built into the processor driving a screen of 4 megapixels or more (a 4K panel).
+ */
 function weakPc(): boolean {
   const memory = (navigator as { deviceMemory?: number }).deviceMemory
-  return navigator.hardwareConcurrency <= 4 || (memory !== undefined && memory <= 4)
+  if (navigator.hardwareConcurrency <= 4 || (memory !== undefined && memory <= 4)) return true
+  const gpu = gpuKind()
+  if (gpu === 'none' || gpu === 'software') return true
+  return gpu === 'integrated' && screen.width * screen.height * devicePixelRatio * devicePixelRatio >= 4e6
 }
 
 export function lowPower(): boolean {

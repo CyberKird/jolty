@@ -81,6 +81,11 @@ html:is([data-theme='glass'], [data-theme='frost']) :where(div, button, input, s
 html:is([data-theme='glass'], [data-theme='frost']) :is(#root, .app, .sidebar, .main, .live, .page, .page-inner, .chat-header, .composer-wrap, .resizer, .resizer-x, .resizer-y, .live-scrim) {
   border-radius: 0;
 }
+/* a box with a border on one side only stays straight (a rounded corner would bend the line into an arc), and so does text that
+   starts at the corner of its box: a round corner would cut the first letter */
+html:is([data-theme='glass'], [data-theme='frost']) :is(.md blockquote, .msg-quote, .quote-bar, .titlebar-by, .msg-assistant, .msg-row, .reasoning, .reasoning summary, .md, .state-line, .state-wave) {
+  border-radius: 0;
+}
 html:is([data-theme='glass'], [data-theme='frost']) :is(input[type='checkbox'], input[type='radio']) {
   border-radius: 4px;
 }
@@ -115,6 +120,18 @@ html:is([data-theme='glass'], [data-theme='frost']) :is(.power-bar, .live-tab-ba
   background: var(--glass-sheen), var(--glass-pop);
   box-shadow: var(--glass-rim-hi);
   border-color: transparent;
+}
+
+/* the thought is a pane of its own, with no line down its side */
+html:is([data-theme='glass'], [data-theme='frost']) .reasoning .body {
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.03);
+  box-shadow: var(--glass-rim);
+}
+html:is([data-theme='glass'], [data-theme='frost']) .reasoning-live .body {
+  box-shadow: var(--glass-rim), 0 0 0 1px var(--volt-line);
 }
 
 /* the accent */
@@ -184,6 +201,25 @@ html:is([data-theme='glass'], [data-theme='frost']) .brand-name {
 }
 html:is([data-theme='glass'], [data-theme='frost']) .btn {
   letter-spacing: 0.06em;
+}
+
+/* a weak PC (lowpower.ts: few cores, little memory, no real GPU, or a chip inside the processor on a 4K screen) gets flat glass:
+   a solid page, no sky, a thin rim and no shadows, so nothing big is blended or blurred */
+html.low-power:is([data-theme='glass'], [data-theme='frost']) {
+  --glass-sheen: linear-gradient(transparent, transparent);
+  --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  --glass-rim-hi: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  --glass-drop: 0 0 0 transparent;
+}
+html.low-power[data-theme='frost'] {
+  --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+  --glass-rim-hi: inset 0 0 0 1px #fff;
+}
+html.low-power:is([data-theme='glass'], [data-theme='frost']) body::before {
+  display: none;
+}
+html.low-power:is([data-theme='glass'], [data-theme='frost']) :is(.btn, .msg-user, .card, .composer, .tool, .permission, .plan) {
+  box-shadow: var(--glass-rim);
 }
 
 /* a weak GPU, or a calm UI, gets the tint and a still sky, not the blur and the bend */

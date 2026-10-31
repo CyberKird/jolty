@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, Loader2, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Power, Sparkles, Square, Undo2, X } from 'lucide-react'
+import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, Loader2, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Power, Sparkles, Square, Undo2, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
@@ -557,13 +557,13 @@ function PendingStatus({ mode, model }: { mode: string; model: string }) {
  * What the just-sent message waits in: a live status line under the bubble, with the mode and model
  * that will answer. The spinner and the sweep keep moving, so it never looks like a dead label.
  */
-function PendingTurn({ text, mode, model, onBottom, onStop }: { text: string; mode: string; model: string; onBottom: () => void; onStop: () => void }) {
+function PendingTurn({ text, mode, model, onBack, onStop }: { text: string; mode: string; model: string; onBack: () => void; onStop: () => void }) {
   return (
     <div className="pending-turn" role="status" aria-live="polite">
       <PendingStatus mode={mode} model={model} />
       <span className="pending-acts" role="toolbar" aria-label={tr("Acțiuni pentru mesaj")}>
-        <button type="button" className="pending-act" title={tr("Sari la ultimul mesaj")} aria-label={tr("Sari la ultimul mesaj")} onClick={onBottom}>
-          <ArrowDown size={13} />
+        <button type="button" className="pending-act" title={tr("Oprește și pune mesajul înapoi în căsuță")} aria-label={tr("Oprește și pune mesajul înapoi în căsuță")} onClick={onBack}>
+          <Undo2 size={13} />
         </button>
         <button type="button" className="pending-act" title={tr("Oprește (Esc)")} aria-label={tr("Oprește (Esc)")} onClick={onStop}>
           <Square size={11} />
@@ -936,15 +936,16 @@ export function ChatView({ session }: { session: SessionMeta }) {
   const modeLabel = modesFor(session.engine).find((m) => m.id === session.permissionMode)?.label || session.permissionMode
   const lastItem = items[items.length - 1]
   const pendingText = lastItem?.kind === 'user' ? lastItem.text : ''
-  const toBottom = (): void => {
-    const el = scrollRef.current
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-  }
   const stopRun = (): void => {
     if (queue.length) { setRestoredQueue(true); setStoppedQueue(true) }
     // the chat shows "stopped" now; the engine winds down in its own time and the main process drops what it still says
     useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'idle' })
     void api.sessions.interrupt(session.id).catch((err) => toast(errMsg(err), true))
+  }
+  // the message the model has not answered yet goes back into the box to be changed; the run stops so it does not act on the old one
+  const takeBack = (): void => {
+    stopRun()
+    setRestore({ text: pendingText, atts: [], nonce: Date.now() })
   }
 
   return (
@@ -999,7 +1000,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
               text={pendingText}
               mode={modeLabel}
               model={session.model || tr("model implicit")}
-              onBottom={toBottom}
+              onBack={takeBack}
               onStop={stopRun}
             />
           )}

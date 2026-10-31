@@ -12,7 +12,7 @@ import { Sidebar } from './components/Sidebar'
 import { api, liveRows, useStore } from './store'
 import { batchDeltas } from './event-batch'
 import { lowPower, setLowPowerMode } from './lowpower'
-import { applyTheme } from './theme'
+import { applyTheme, setClear } from './theme'
 import { getLang, isRtl, tr } from '@shared/i18n'
 import { useShallow } from 'zustand/shallow'
 
@@ -122,6 +122,8 @@ export function App() {
       document.documentElement.classList.toggle('reduce-motion', Boolean(s.reduceMotion))
       setLowPowerMode(s.lowPower)
       applyTheme(s.theme, s.glassClear)
+      // without Windows' transparency effects the window stays solid, so the page must not thin out either
+      void api.app.glassSupport().then((support) => support !== 'ok' && setClear(0))
     })
     document.documentElement.lang = getLang()
     document.documentElement.dir = isRtl() ? 'rtl' : 'ltr'

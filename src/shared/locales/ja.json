@@ -1592,5 +1592,9 @@
  "Sticlă transparentă care refractă lumina, cu reflexii pe muchii și o aurora vie în spate.": "光を屈折させる透明なガラス。縁は光り、背後には生きたオーロラが広がります。",
  "Fereastră transparentă": "透ける窓",
  "Lasă să se vadă desktopul și aplicațiile din spatele Jolty, încețoșate. Necesită Windows 11 22H2 sau mai nou.": "Jolty の背後のデスクトップやアプリをぼかして透かして表示します。Windows 11 22H2 以降が必要です。",
- "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "パステルカラーと虹色に光る縁を持つ、厚いクリスタルの板のような明るいガラス。"
+ "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "パステルカラーと虹色に光る縁を持つ、厚いクリスタルの板のような明るいガラス。",
+ "Efectele de transparență sunt oprite în Windows. Pornește-le în Setări > Personalizare > Culori, apoi mută cursorul.": "Windows の透明効果がオフです。設定 > 個人用設定 > 色 でオンにしてから、スライダーを動かしてください。",
+ "Disponibil doar pe Windows 11 22H2 sau mai nou.": "Windows 11 22H2 以降でのみ利用できます。",
+ "Deschide setările de culoare Windows": "Windows のカラー設定を開く",
+ "Oprește și pune mesajul înapoi în căsuță": "停止してメッセージを入力欄に戻す"
 }
