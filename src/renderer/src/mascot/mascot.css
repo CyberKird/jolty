@@ -95,7 +95,8 @@
   height: 14px;
   z-index: 61;
   pointer-events: none;
-  background: var(--volt);
+  /* his own bolt colour, not the theme's: Glass is lavender and the sparks looked like a stain on a yellow bolt */
+  background: #d4ff00;
   clip-path: polygon(25% 0, 85% 0, 60% 40%, 100% 38%, 25% 100%, 40% 55%, 0 57%);
   /* hidden unless animating; `both` holds the start frame through the delay (with `forwards` the spark sat
      visible at 0,0, the window's top-left corner, until its delay ran out or for good in a paused window) */
@@ -133,8 +134,8 @@
   pointer-events: none;
   transform-origin: 0 50%;
   border-radius: 2px;
-  background: linear-gradient(90deg, transparent, var(--volt));
-  box-shadow: 0 0 10px rgba(var(--volt-rgb), 0.6);
+  background: linear-gradient(90deg, transparent, #d4ff00);
+  box-shadow: 0 0 10px rgba(212, 255, 0, 0.6);
   opacity: 0;
   animation: m-streak 300ms ease-out both;
 }

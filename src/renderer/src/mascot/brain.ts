@@ -652,10 +652,10 @@ export class Brain {
     }, 850)
   }
 
-  /** a burst from the bolt on his head: up and fanned, or (radial) outward in every direction from that point */
+  /** a burst from the bolt on his head: up and fanned, or (radial) outward over the upper half from that point */
   private spark(radial = false): void {
     const a = this.body.anchor('bolt')
-    sparks(this.x + a.x, this.y + a.y, radial ? rand(0, 6.28) : -Math.PI / 2, radial)
+    sparks(this.x + a.x, this.y + a.y, -Math.PI / 2, radial)
   }
 
   private zap(): void {

@@ -11,14 +11,14 @@ function spawn(className: string, style: Record<string, string>): void {
   setTimeout(() => el.remove(), 1500)
 }
 
-/** a burst of bolts from a point: fanned around a direction (up by default), or all the way around (radial) */
+/** a burst of bolts from a point: fanned around a direction (up by default), or (radial) across the whole upper half, never down over his face */
 const few = (n: number): number => (document.documentElement.classList.contains('low-power') ? Math.ceil(n / 2.2) : n)
 
 export function sparks(x: number, y: number, dir = -Math.PI / 2, radial = false): void {
   if (document.documentElement.classList.contains('reduce-motion')) return
   const n = few(9)
   for (let i = 0; i < n; i++) {
-    const a = radial ? dir + (i / n) * Math.PI * 2 : dir + (i - (n - 1) / 2) * 0.36 * (9 / n)
+    const a = radial ? -Math.PI + Math.PI * (0.06 + (0.88 * i) / (n - 1)) + rand(-0.1, 0.1) : dir + (i - (n - 1) / 2) * 0.36 * (9 / n)
     const d = rand(radial ? 26 : 34, radial ? 46 : 58)
     spawn('mascot-spark', {
       '--x0': `${x - 3}px`,
