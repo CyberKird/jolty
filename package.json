@@ -61,6 +61,7 @@
     "test:sidebar-order": "electron-vite build && node test/sidebar-order-ui.mjs",
     "test:improve": "esbuild test/improve-prompt-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/improve-prompt-test.cjs --log-level=warning && node --test out-test/improve-prompt-test.cjs",
     "test:compaction": "esbuild test/compaction-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/compaction-test.cjs --log-level=warning && node --test out-test/compaction-test.cjs",
+    "test:queue-ui": "electron-vite build && node test/queue-ui.mjs",
     "test:find-ui": "electron-vite build && node test/find-shortcuts-ui.mjs",
     "test:find": "esbuild test/find-test.ts --bundle --platform=node --format=cjs --alias:@shared=./src/shared --outfile=out-test/find-test.cjs --log-level=warning && node --test out-test/find-test.cjs",
     "test:organize": "esbuild test/organize-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --outfile=out-test/organize-test.mjs --log-level=warning && node --test out-test/organize-test.mjs",

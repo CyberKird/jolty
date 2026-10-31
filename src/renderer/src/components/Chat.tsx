@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, Loader2, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Power, Sparkles, Square, X } from 'lucide-react'
+import { ArrowDown, ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, Loader2, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Power, Sparkles, Square, Undo2, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
@@ -8,6 +8,7 @@ import { hasJoltyBrowser, hasJoltyComputer, hasJoltyTools, isAcp } from '@shared
 import { sameProvider } from '@shared/provider'
 import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
+import { CopyButton } from './CopyField'
 import { useWindowedItems } from './useWindowedItems'
 import { FindBar } from './FindBar'
 import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODES, useAllModels, type ModelGroup } from './ModelPicker'
@@ -27,6 +28,8 @@ import { useShallow } from 'zustand/shallow'
 import { SideChat, SideChatButton } from './SideChat'
 
 const EMPTY: ChatItem[] = []
+
+type QueuedMessage = { id: string; text: string; atts: Attachment[]; parallel?: boolean }
 
 // ---------------------------------------------------------------------------
 // Images: pasted, dropped or picked, downscaled so they stay light
@@ -120,6 +123,10 @@ interface ComposerProps {
   running: boolean
   /** false: nothing was sent (no project folder yet, the chat did not start), so the message goes back into the box */
   onSend: (text: string, attachments: Attachment[], parallel?: boolean) => Promise<void | boolean> | void | boolean
+  /** while the model works: the message waits in the conversation, like the pending turn it becomes */
+  onQueue?: (text: string, attachments: Attachment[], parallel?: boolean) => void
+  /** a queued message taken back for editing: the box gets its text and files again */
+  restore?: { text: string; atts: Attachment[]; nonce: number }
   onStop?: () => void
   profiles: Profile[]
   /** models already loaded by the parent; loaded here when not given */
@@ -173,54 +180,10 @@ function Composer(p: ComposerProps) {
   const sendProfile = p.profiles.find((x) => x.id === p.profileId)
   const secret = sendProfile && !sendProfile.local ? secretHint(text) : undefined
   const costNote = usageRisk(text, atts.filter((a) => a.mime.startsWith('image/')).length, atts.filter((a) => a.mime.startsWith('video/')).length)
-  // messages written while the model works wait here and go out, in order, when the turn ends
-  // a temporary chat must not leave its queued messages on disk
-  const queueStore = p.temporary ? sessionStorage : localStorage
-  const [queue, setQueue] = useState<{ id: string; text: string; atts: Attachment[]; parallel?: boolean }[]>(() => {
-    if (!p.sessionId) return []
-    try {
-      const saved = JSON.parse(queueStore.getItem(`jolty:queue:${p.sessionId}`) || '[]')
-      return Array.isArray(saved) ? saved.filter((item) =>
-        item && typeof item.id === 'string' && typeof item.text === 'string' && Array.isArray(item.atts)
-      ) : []
-    } catch { return [] }
-  })
-  const [restoredQueue, setRestoredQueue] = useState(() => {
-    if (!queue.length || !p.sessionId) return queue.length > 0
-    const immediateKey = `jolty:queue:immediate:${p.sessionId}`
-    const immediate = sessionStorage.getItem(immediateKey) === '1'
-    if (immediate) sessionStorage.removeItem(immediateKey)
-    return !immediate
-  })
-  // Stop is not a cue to go on with the next message: what waited stays in the list until the user sends or removes it
-  const [stoppedQueue, setStoppedQueue] = useState(false)
+  // the box no longer keeps the waiting list: the conversation shows it, so what waits reads like a message
   const stop = (): void => {
-    if (queue.length) { setRestoredQueue(true); setStoppedQueue(true) }
     p.onStop?.()
   }
-  const queuedSent = useRef(false)
-  const wasRunning = useRef(p.running || (queue.length > 0 && !restoredQueue))
-
-  useEffect(() => {
-    if (!p.sessionId) return
-    try {
-      const key = `jolty:queue:${p.sessionId}`
-      if (queue.length) queueStore.setItem(key, JSON.stringify(queue))
-      else queueStore.removeItem(key)
-    } catch { toast(tr("Nu am putut salva coada locală."), true) }
-  }, [p.sessionId, queue, queueStore, toast])
-
-  useEffect(() => {
-    if (!queue.length && restoredQueue) { setRestoredQueue(false); setStoppedQueue(false); return }
-    if (p.running) { wasRunning.current = true; queuedSent.current = false; return }
-    if (!wasRunning.current) return
-    if (!queue.length || restoredQueue || queuedSent.current) return
-    queuedSent.current = true
-    const [next, ...rest] = queue
-    setQueue(rest)
-    void p.onSend(next.text, next.atts, next.parallel)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p.running, queue, restoredQueue])
 
   useEffect(() => {
     try {
@@ -237,6 +200,14 @@ function Composer(p: ComposerProps) {
       taRef.current?.focus()
     }
   }, [p.seed])
+
+  useEffect(() => {
+    if (!p.restore) return
+    setText(p.restore.text)
+    setAtts(p.restore.atts)
+    setNotice(null)
+    requestAnimationFrame(() => taRef.current?.focus())
+  }, [p.restore])
 
   useEffect(() => {
     const ta = taRef.current
@@ -293,8 +264,8 @@ function Composer(p: ComposerProps) {
     try { draftStore.removeItem(draftKey) } catch { /* nothing to remove */ }
     const a = atts
     setAtts([])
-    if (p.running) {
-      setQueue((q) => [...q, { id: crypto.randomUUID(), text: t, atts: a, parallel: parallel || undefined }])
+    if (p.running && p.onQueue) {
+      p.onQueue(t, a, parallel || undefined)
       return
     }
     if ((await p.onSend(t, a, parallel || undefined)) === false) {
@@ -337,32 +308,6 @@ function Composer(p: ComposerProps) {
 
   return (
     <div className="composer-wrap">
-      {queue.length > 0 && (
-        <div className="queue" aria-live="polite">
-          <div className="queue-title">{restoredQueue ? (stoppedQueue ? tr("Oprite, trimite manual") : tr("Restaurate, trimite manual")) : tr("În așteptare")} <span>{queue.length}</span></div>
-          {queue.map((q, i) => (
-            <div className="queued" key={q.id}>
-              <span className="queued-order">{i + 1}</span>
-              <span className="queued-text" title={q.text || q.atts.map((a) => a.name).join(', ')}>{q.text || q.atts.map((a) => a.name).join(', ')}</span>
-              {q.atts.length > 0 && <span className="queued-files"><Paperclip size={11} /> {q.atts.length}</span>}
-              <button
-                className="queued-send"
-                onClick={() => {
-                  setQueue((x) => x.filter((item) => item.id !== q.id))
-                  void p.onSend(q.text, q.atts, q.parallel)
-                }}
-                aria-label={tr("Trimite acum")}
-                title={tr("Trimite acum, fără să aștepți ca răspunsul curent să se termine")}
-              >
-                <ArrowUp size={12} />
-              </button>
-              <button onClick={() => setQueue((x) => x.filter((item) => item.id !== q.id))} aria-label={tr("Scoate mesajul din așteptare")} title={tr("Scoate din așteptare")}>
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
       {notice && (
         <div className={`composer-notice ${notice.error ? 'error' : ''}`} role={notice.error ? 'alert' : 'status'}>
           <span>{notice.text}</span>
@@ -598,6 +543,77 @@ function Composer(p: ComposerProps) {
 // ---------------------------------------------------------------------------
 // Header pieces
 // ---------------------------------------------------------------------------
+function PendingStatus({ mode, model }: { mode: string; model: string }) {
+  return (
+    <span className="pending-pill" title={`${mode} · ${model}`}>
+      <span className="pending-spinner" aria-hidden />
+      <span className="pending-label">{tr("Pending")}</span>
+    </span>
+  )
+}
+
+/**
+ * What the just-sent message waits in: a live status line under the bubble, with the mode and model
+ * that will answer. The spinner and the sweep keep moving, so it never looks like a dead label.
+ */
+function PendingTurn({ text, mode, model, onBottom, onStop }: { text: string; mode: string; model: string; onBottom: () => void; onStop: () => void }) {
+  return (
+    <div className="pending-turn" role="status" aria-live="polite">
+      <PendingStatus mode={mode} model={model} />
+      <span className="pending-acts" role="toolbar" aria-label={tr("Acțiuni pentru mesaj")}>
+        <button type="button" className="pending-act" title={tr("Sari la ultimul mesaj")} aria-label={tr("Sari la ultimul mesaj")} onClick={onBottom}>
+          <ArrowDown size={13} />
+        </button>
+        <button type="button" className="pending-act" title={tr("Oprește (Esc)")} aria-label={tr("Oprește (Esc)")} onClick={onStop}>
+          <Square size={11} />
+        </button>
+        <CopyButton label={tr("Copiază mesajul")} said={tr("Mesaj copiat")} get={() => text} className="pending-act" />
+      </span>
+    </div>
+  )
+}
+
+/** A message written while the model works: it keeps its place in the conversation, with the three things one wants to do to it. */
+function QueuedTurn({ item, mode, model, onSteer, onEdit, onRemove }: { item: QueuedMessage; mode: string; model: string; onSteer: () => void; onEdit: () => void; onRemove: () => void }) {
+  const images = item.atts.filter((a) => a.mime.startsWith('image/') && a.data)
+  const files = item.atts.filter((a) => !a.mime.startsWith('image/') || !a.data)
+  return (
+    <div className="pending-msg" data-item={item.id}>
+      <div className="msg-user">
+        {item.text && <div className="message-text">{item.text}</div>}
+        {(images.length > 0 || files.length > 0) && (
+          <div className="message-attachments">
+            {images.length > 0 && (
+              <div className="images">
+                {images.map((a) => <img key={a.id} src={`data:${a.mime};base64,${a.data}`} alt={a.name} title={a.name} />)}
+              </div>
+            )}
+            {files.length > 0 && (
+              <div className="message-files">
+                {files.map((a) => <span key={a.id} title={a.mime}><Paperclip size={11} />{a.name}</span>)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="pending-turn" role="status" aria-live="polite">
+        <PendingStatus mode={mode} model={model} />
+        <span className="pending-acts" role="toolbar" aria-label={tr("Acțiuni pentru mesaj")}>
+          <button type="button" className="pending-steer" title={tr("Trimite acum, fără să aștepți ca răspunsul curent să se termine")} onClick={onSteer}>
+            <ArrowUp size={12} /> {tr("Trimite acum")}
+          </button>
+          <button type="button" className="pending-act" title={tr("Editează mesajul")} aria-label={tr("Editează mesajul")} onClick={onEdit}>
+            <Undo2 size={13} />
+          </button>
+          <button type="button" className="pending-act" title={tr("Scoate din așteptare")} aria-label={tr("Scoate mesajul din așteptare")} onClick={onRemove}>
+            <X size={13} />
+          </button>
+        </span>
+      </div>
+    </div>
+  )
+}
+
 /**
  * A user message with "undo from here": the button appears only after a dry run (on hover) finds
  * files Claude Code can actually restore; a second click confirms.
@@ -851,6 +867,84 @@ export function ChatView({ session }: { session: SessionMeta }) {
   }, [items])
   const how = tr("{v0} · efort {v1}", { v0: session.model || tr("model implicit"), v1: session.effort || tr("implicit") })
   const who = `${profile?.name || ENGINE_LABEL[session.engine]} · ${how}`
+  const send = useCallback(
+    async (text: string, atts: Attachment[], parallel?: boolean): Promise<void> => {
+      useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'running' })
+      try {
+        await api.sessions.send(session.id, text, atts, parallel)
+      } catch (err) {
+        useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'error', error: errMsg(err) })
+        toast(errMsg(err), true)
+      }
+    },
+    [session.id, toast]
+  )
+  // what is written while the model works waits in the conversation itself, in order, and goes out when the turn ends
+  const queueStore = session.temporary ? sessionStorage : localStorage
+  const [queue, setQueue] = useState<QueuedMessage[]>(() => {
+    try {
+      const saved = JSON.parse(queueStore.getItem(`jolty:queue:${session.id}`) || '[]')
+      return Array.isArray(saved)
+        ? saved.filter((item) => item && typeof item.id === 'string' && typeof item.text === 'string' && Array.isArray(item.atts))
+        : []
+    } catch { return [] }
+  })
+  const [restoredQueue, setRestoredQueue] = useState(() => {
+    if (!queue.length) return false
+    const immediateKey = `jolty:queue:immediate:${session.id}`
+    const immediate = sessionStorage.getItem(immediateKey) === '1'
+    if (immediate) sessionStorage.removeItem(immediateKey)
+    return !immediate
+  })
+  // Stop is not a cue to go on with the next message: what waited stays in the conversation until the user sends or removes it
+  const [stoppedQueue, setStoppedQueue] = useState(false)
+  const queuedSent = useRef(false)
+  const wasRunning = useRef(running || (queue.length > 0 && !restoredQueue))
+  const [restore, setRestore] = useState<{ text: string; atts: Attachment[]; nonce: number }>()
+  useEffect(() => {
+    try {
+      const key = `jolty:queue:${session.id}`
+      if (queue.length) queueStore.setItem(key, JSON.stringify(queue))
+      else queueStore.removeItem(key)
+    } catch { toast(tr("Nu am putut salva coada locală."), true) }
+  }, [queue, queueStore, session.id, toast])
+  useEffect(() => {
+    if (!queue.length && restoredQueue) { setRestoredQueue(false); setStoppedQueue(false); return }
+    if (running) { wasRunning.current = true; queuedSent.current = false; return }
+    if (!wasRunning.current) return
+    if (!queue.length || restoredQueue || queuedSent.current) return
+    queuedSent.current = true
+    const [next, ...rest] = queue
+    setQueue(rest)
+    void send(next.text, next.atts, next.parallel)
+  }, [queue, restoredQueue, running, send])
+  const queueNow = (text: string, atts: Attachment[], parallel?: boolean): void => {
+    setQueue((q) => [...q, { id: crypto.randomUUID(), text, atts, parallel }])
+  }
+  const steer = (item: QueuedMessage): void => {
+    setQueue((q) => q.filter((x) => x.id !== item.id))
+    void send(item.text, item.atts, item.parallel)
+  }
+  const unqueue = (item: QueuedMessage): void => {
+    setQueue((q) => q.filter((x) => x.id !== item.id))
+    setRestore({ text: item.text, atts: item.atts, nonce: Date.now() })
+  }
+  const removeQueued = (item: QueuedMessage): void => {
+    setQueue((q) => q.filter((x) => x.id !== item.id))
+  }
+  const modeLabel = modesFor(session.engine).find((m) => m.id === session.permissionMode)?.label || session.permissionMode
+  const lastItem = items[items.length - 1]
+  const pendingText = lastItem?.kind === 'user' ? lastItem.text : ''
+  const toBottom = (): void => {
+    const el = scrollRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }
+  const stopRun = (): void => {
+    if (queue.length) { setRestoredQueue(true); setStoppedQueue(true) }
+    // the chat shows "stopped" now; the engine winds down in its own time and the main process drops what it still says
+    useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'idle' })
+    void api.sessions.interrupt(session.id).catch((err) => toast(errMsg(err), true))
+  }
 
   return (
     <>
@@ -899,11 +993,26 @@ export function ChatView({ session }: { session: SessionMeta }) {
               </Fragment>
             )
           })}
-          {running && items[items.length - 1]?.kind === 'user' && (
-            <div className="turn-head">
-              <span className="dot running" /> {tr("Jolty pornește ·")} {how}
-            </div>
+          {running && lastItem?.kind === 'user' && (
+            <PendingTurn
+              text={pendingText}
+              mode={modeLabel}
+              model={session.model || tr("model implicit")}
+              onBottom={toBottom}
+              onStop={stopRun}
+            />
           )}
+          {queue.map((q) => (
+            <QueuedTurn
+              key={q.id}
+              item={q}
+              mode={modeLabel}
+              model={session.model || tr("model implicit")}
+              onSteer={() => steer(q)}
+              onEdit={() => unqueue(q)}
+              onRemove={() => removeQueued(q)}
+            />
+          ))}
           {perms?.map((r) => (
             <PermissionCard key={r.id} req={r} onDecide={(d) => void api.sessions.respond(session.id, r.id, d)} />
           ))}
@@ -956,20 +1065,10 @@ export function ChatView({ session }: { session: SessionMeta }) {
         onComputer={(on) => void api.sessions.setComputer(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         temporary={session.temporary}
         onBrowser={(on) => void api.sessions.setBrowser(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
-        onStop={() => {
-          // the chat shows "stopped" now; the engine winds down in its own time and the main process drops what it still says
-          useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'idle' })
-          void api.sessions.interrupt(session.id).catch((err) => toast(errMsg(err), true))
-        }}
-        onSend={async (text, atts, parallel) => {
-          useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'running' })
-          try {
-            await api.sessions.send(session.id, text, atts, parallel)
-          } catch (err) {
-            useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'error', error: errMsg(err) })
-            toast(errMsg(err), true)
-          }
-        }}
+        onStop={stopRun}
+        onSend={send}
+        onQueue={queueNow}
+        restore={restore}
       />
       <SideChat session={session} />
     </>

@@ -1582,5 +1582,8 @@
  "Pagina Modele locale și rândul Ollama din Verificare sistem apar singure dacă Ollama e instalat. Jolty nu îl instalează niciodată singur.": "Ollama がインストールされていれば、ローカルモデルのページとシステムチェックの Ollama の行は自動で表示されます。Jolty が自動でインストールすることはありません。",
  "parole scrise în text": "テキストに書かれたパスワード",
  "{n} elemente cu conținut pentru adulți au rămas în afara pachetului.": "成人向けコンテンツを含む {n} 件はパックに含まれませんでした。",
- "Conținut pentru adulți: nu se exportă.": "成人向けコンテンツ: エクスポートされません。"
+ "Conținut pentru adulți: nu se exportă.": "成人向けコンテンツ: エクスポートされません。",
+ "Pending": "待機中",
+ "Sari la ultimul mesaj": "最新のメッセージへ移動",
+ "Editează mesajul": "メッセージを編集"
 }

@@ -1582,5 +1582,8 @@
  "Pagina Modele locale și rândul Ollama din Verificare sistem apar singure dacă Ollama e instalat. Jolty nu îl instalează niciodată singur.": "La pagina Modelli locali e la riga Ollama in Verifica del sistema compaiono da sole se Ollama è installato. Jolty non lo installa mai da solo.",
  "parole scrise în text": "password scritte nel testo",
  "{n} elemente cu conținut pentru adulți au rămas în afara pachetului.": "{n} elementi con contenuti per adulti sono stati lasciati fuori dal pacchetto.",
- "Conținut pentru adulți: nu se exportă.": "Contenuto per adulti: non viene esportato."
+ "Conținut pentru adulți: nu se exportă.": "Contenuto per adulti: non viene esportato.",
+ "Pending": "In attesa",
+ "Sari la ultimul mesaj": "Vai all'ultimo messaggio",
+ "Editează mesajul": "Modifica messaggio"
 }

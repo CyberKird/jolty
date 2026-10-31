@@ -1582,5 +1582,8 @@
  "Pagina Modele locale și rândul Ollama din Verificare sistem apar singure dacă Ollama e instalat. Jolty nu îl instalează niciodată singur.": "Ollama इंस्टॉल होने पर लोकल मॉडल पेज और सिस्टम जाँच में Ollama की पंक्ति अपने आप दिखती है। Jolty इसे कभी अपने आप इंस्टॉल नहीं करता।",
  "parole scrise în text": "टेक्स्ट में लिखे पासवर्ड",
  "{n} elemente cu conținut pentru adulți au rămas în afara pachetului.": "वयस्क सामग्री वाले {n} आइटम पैक से बाहर रखे गए।",
- "Conținut pentru adulți: nu se exportă.": "वयस्क सामग्री: एक्सपोर्ट नहीं होती।"
+ "Conținut pentru adulți: nu se exportă.": "वयस्क सामग्री: एक्सपोर्ट नहीं होती।",
+ "Pending": "प्रतीक्षारत",
+ "Sari la ultimul mesaj": "नवीनतम संदेश पर जाएँ",
+ "Editează mesajul": "संदेश संपादित करें"
 }
