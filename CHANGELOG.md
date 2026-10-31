@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.1
+
+### Fixed
+
+- A chat stays marked as running while a command it started keeps going in the background, instead of showing as idle as soon as the answer is done.
+
 ## 0.15.0
 
 ### New

@@ -312,6 +312,9 @@ class ClaudeSession implements EngineSession {
   private lastCost = 0
   /** a turn is under way: a message sent now lands mid-turn */
   private turn = false
+  // task id -> running in the background; the result of a turn arrives while a background command still runs
+  private tasks = new Map<string, boolean>()
+  private idleTimer?: NodeJS.Timeout
   /** Stop was pressed since the last message: a send still starting the process must not push its text */
   private stopRequested = false
   private limitWindows = new Map<string, LimitWindow>()
@@ -386,7 +389,23 @@ class ClaudeSession implements EngineSession {
     } finally {
       if (this.q === q) this.q = undefined
       this.turn = false
+      this.tasks.clear()
+      clearTimeout(this.idleTimer)
     }
+  }
+
+  private backgroundRunning(): boolean {
+    return [...this.tasks.values()].some(Boolean)
+  }
+
+  private taskEnded(id: string): void {
+    this.tasks.delete(id)
+    if (this.turn || this.backgroundRunning()) return
+    // the end of a background command normally starts a turn that reports it; if none starts, stop showing live
+    clearTimeout(this.idleTimer)
+    this.idleTimer = setTimeout(() => {
+      if (!this.turn && !this.backgroundRunning()) this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
+    }, 15000)
   }
 
   private notice(text: string, level: 'info' | 'warn' | 'error'): void {
@@ -402,6 +421,13 @@ class ClaudeSession implements EngineSession {
           // keep the id the picker offered (an alias like "sonnet"); the resolved name matches no picker row and shows as the first model
           this.meta.model = this.meta.model || m.model
           this.host.emit({ type: 'meta', sessionId: sid, meta: this.meta })
+        } else if (m.subtype === 'task_started') {
+          if (!m.ambient && !m.skip_transcript) this.tasks.set(m.task_id, Boolean(m.is_backgrounded))
+        } else if (m.subtype === 'task_updated') {
+          if (m.patch.is_backgrounded !== undefined && this.tasks.has(m.task_id)) this.tasks.set(m.task_id, m.patch.is_backgrounded)
+          if (m.patch.status && ['completed', 'failed', 'killed'].includes(m.patch.status)) this.taskEnded(m.task_id)
+        } else if (m.subtype === 'task_notification') {
+          this.taskEnded(m.task_id)
         } else if (m.subtype === 'api_retry') {
           this.notice(tr("Serverul nu răspunde, reîncerc..."), 'warn')
         } else if (m.subtype === 'status') {
@@ -422,6 +448,7 @@ class ClaudeSession implements EngineSession {
         if (m.parent_tool_use_id) return
         const ev = m.event as { type: string; index?: number; message?: { id: string }; content_block?: Block; delta?: Record<string, unknown> }
         if (ev.type === 'message_start' && ev.message) {
+          clearTimeout(this.idleTimer)
           this.currentMsgId = ev.message.id
           this.blockN = 0
           this.streamed.clear()
@@ -533,7 +560,8 @@ class ClaudeSession implements EngineSession {
         })
         if (m.subtype !== 'success' && !this.stopRequested) this.notice(`Claude s-a oprit: ${m.subtype}`, 'warn')
         this.turn = false
-        this.host.emit({ type: 'status', sessionId: sid, status: 'idle' })
+        // a command left running in the background keeps the chat live until it ends
+        if (!this.backgroundRunning()) this.host.emit({ type: 'status', sessionId: sid, status: 'idle' })
         return
       }
       case 'rate_limit_event': {
