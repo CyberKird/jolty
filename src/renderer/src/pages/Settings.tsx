@@ -5,6 +5,7 @@ import { isAcp } from '@shared/types'
 import { AccountSettings } from './AccountSettings'
 import { BrowserSettings } from './BrowserSettings'
 import { BackgroundSettings } from './BackgroundSettings'
+import { ThemeSettings } from './ThemeSettings'
 import { ComputerSettings } from './ComputerSettings'
 import { ChildSessionsSettings } from './ChildSessionsSettings'
 import { api, timeAgo, useStore } from '../store'
@@ -90,6 +91,7 @@ export function SettingsPage() {
                   ))}
                 </select>
               </div>
+              <ThemeSettings current={s.theme} clear={s.glassClear} />
               <BackgroundSettings />
               <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
                 <input

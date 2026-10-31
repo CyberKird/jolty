@@ -22,8 +22,9 @@
   --grey-2: #8a8a8a;
   --volt: #d4ff00;
   --volt-2: #a8cc00;
-  --volt-dim: rgba(212, 255, 0, 0.06);
-  --volt-line: rgba(212, 255, 0, 0.28);
+  --volt-rgb: 212, 255, 0;
+  --volt-dim: rgba(var(--volt-rgb), 0.06);
+  --volt-line: rgba(var(--volt-rgb), 0.28);
   --claude: #d97757;
   --codex: #10a37f;
   --good: #0ca30c;
@@ -566,7 +567,7 @@ a {
 }
 .btn.primary:hover {
   color: var(--black);
-  box-shadow: 0 0 24px rgba(212, 255, 0, 0.35);
+  box-shadow: 0 0 24px rgba(var(--volt-rgb), 0.35);
 }
 .btn.ghost {
   border-color: transparent;
@@ -1811,7 +1812,7 @@ a {
   from {
     color: var(--volt);
     transform: translateY(-4px);
-    text-shadow: 0 0 14px rgba(212, 255, 0, 0.5);
+    text-shadow: 0 0 14px rgba(var(--volt-rgb), 0.5);
   }
 }
 .counter .k {
@@ -2000,7 +2001,7 @@ a {
 .cell.hot {
   background: var(--volt);
   border-color: var(--volt);
-  box-shadow: 0 0 10px rgba(212, 255, 0, 0.55);
+  box-shadow: 0 0 10px rgba(var(--volt-rgb), 0.55);
   animation: blink-soft 1s steps(2) infinite;
 }
 .filemap-legend {
@@ -2769,7 +2770,7 @@ a {
   bottom: 0;
   height: 2px;
   background: var(--volt);
-  box-shadow: 0 0 10px rgba(212, 255, 0, 0.45);
+  box-shadow: 0 0 10px rgba(var(--volt-rgb), 0.45);
   transition: transform 0.34s var(--ease), width 0.34s var(--ease);
   pointer-events: none;
 }
@@ -3011,6 +3012,8 @@ a {
 .titlebar-wordmark {
   height: 20px;
   width: auto;
+  /* a thin dark edge keeps the volt lettering readable on any theme, light ones included */
+  filter: drop-shadow(0 0 0.5px rgba(8, 8, 16, 0.95)) drop-shadow(0 0 0.5px rgba(8, 8, 16, 0.95)) drop-shadow(0 0 1.5px rgba(8, 8, 16, 0.55));
 }
 
 /* ---------------------------------------------------------------------------
@@ -3730,7 +3733,7 @@ a {
   gap: 6px;
   border-color: var(--volt-line);
   color: var(--volt);
-  box-shadow: 0 0 0 calc(var(--lvl, 0) * 5px) rgba(212, 255, 0, 0.22);
+  box-shadow: 0 0 0 calc(var(--lvl, 0) * 5px) rgba(var(--volt-rgb), 0.22);
   transition: box-shadow 0.08s linear;
 }
 .btn.voice.busy,
@@ -3791,7 +3794,7 @@ a {
   top: 0;
   height: 2px;
   background: var(--volt);
-  box-shadow: 0 0 10px rgba(212, 255, 0, 0.45);
+  box-shadow: 0 0 10px rgba(var(--volt-rgb), 0.45);
   transition: transform 0.34s var(--ease), width 0.34s var(--ease);
   pointer-events: none;
 }

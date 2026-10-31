@@ -62,7 +62,7 @@
 
 /* the hits: every one, and the one being read */
 ::highlight(find-all) {
-  background: rgba(212, 255, 0, 0.22);
+  background: rgba(var(--volt-rgb), 0.22);
   color: inherit;
 }
 ::highlight(find-current) {

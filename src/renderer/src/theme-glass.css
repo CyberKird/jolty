@@ -1,0 +1,275 @@
+/* Glass: clear panes over a living aurora (html:is([data-theme='glass'], [data-theme='frost']), see theme.ts and themes.css).
+   A pane is four things: a faint fill with a diagonal sheen, a blur that lifts the colour behind it, a lit rim (bright on the
+   top edge, dim below) and, on small and floating things, a refraction at the edge. The light follows the pointer. */
+html:is([data-theme='glass'], [data-theme='frost']) {
+  --black: #090913;
+  --s1: rgba(255, 255, 255, 0.05);
+  --s2: rgba(255, 255, 255, 0.075);
+  --s3: rgba(255, 255, 255, 0.1);
+  --s4: rgba(255, 255, 255, 0.14);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-2: rgba(255, 255, 255, 0.2);
+  --line-3: rgba(255, 255, 255, 0.34);
+  --white: #f4f3fc;
+  --grey: #bdbcd3;
+  --grey-2: #9c9bb4;
+  --volt: #c4b5ff;
+  --volt-2: #a592f5;
+  --volt-rgb: 196, 181, 255;
+  --radius: 22px;
+  --display: 'Barlow', 'Segoe UI', sans-serif;
+  /* the material */
+  --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 34%, rgba(255, 255, 255, 0.01) 62%, rgba(255, 255, 255, 0.1) 100%);
+  --glass-light: radial-gradient(300px circle at var(--lx, 70%) var(--ly, 0%), rgba(255, 255, 255, 0.16), transparent 62%);
+  --glass-blur: blur(14px) saturate(1.9) brightness(1.06);
+  --glass-lens: url(#jolty-lens) blur(5px) saturate(1.9) brightness(1.08);
+  --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), inset 0 0 24px rgba(255, 255, 255, 0.06);
+  --glass-drop: 0 14px 36px -14px rgba(0, 0, 0, 0.6);
+  --glass-pop: rgba(26, 24, 44, 0.55);
+  /* the rim of a small pane, as on a thick slab of glass: a bright ring, a hard top highlight, glints on two corners, a soft glow inside */
+  --glass-rim-hi: inset 0 0 0 1px rgba(255, 255, 255, 0.24), inset 0 2px 1px -1px rgba(255, 255, 255, 0.85), inset 0 -2px 1px -1px rgba(255, 255, 255, 0.32), inset 4px 4px 7px -4px rgba(255, 255, 255, 0.55), inset -4px -4px 7px -4px rgba(255, 255, 255, 0.3), inset 0 0 18px rgba(255, 255, 255, 0.09), 0 10px 22px -8px rgba(0, 0, 0, 0.5), 0 2px 5px rgba(0, 0, 0, 0.22);
+}
+
+/* the aurora: soft colour orbs on a slow drift, so the panes always have something to bend */
+html:is([data-theme='glass'], [data-theme='frost']) body {
+  background: var(--black);
+}
+html:is([data-theme='glass'], [data-theme='frost']) body::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 44% at 12% 16%, rgba(124, 92, 255, 0.62), transparent 70%),
+    radial-gradient(34% 42% at 90% 12%, rgba(56, 189, 248, 0.45), transparent 70%),
+    radial-gradient(40% 46% at 84% 92%, rgba(45, 212, 191, 0.46), transparent 70%),
+    radial-gradient(34% 40% at 22% 94%, rgba(244, 114, 182, 0.42), transparent 70%),
+    radial-gradient(30% 34% at 52% 40%, rgba(99, 102, 241, 0.3), transparent 70%),
+    radial-gradient(26% 30% at 40% 68%, rgba(217, 70, 239, 0.2), transparent 70%);
+  animation: glass-drift 46s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes glass-drift {
+  from { transform: translate3d(-2%, -1%, 0) rotate(0deg) scale(1); }
+  to { transform: translate3d(3%, 2%, 0) rotate(8deg) scale(1.08); }
+}
+html:is([data-theme='glass'], [data-theme='frost']) #root {
+  position: relative;
+  z-index: 1;
+}
+html:is([data-theme='glass'], [data-theme='frost']) ::selection {
+  background: rgba(var(--volt-rgb), 0.5);
+  color: #fff;
+}
+html:is([data-theme='glass'], [data-theme='frost']) ::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* the panes show the aurora through their own fill */
+html:is([data-theme='glass'], [data-theme='frost']) .main {
+  background: transparent;
+}
+html:is([data-theme='glass'], [data-theme='frost']) :is(.sidebar, .live) {
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.02);
+  backdrop-filter: var(--glass-blur);
+}
+html:is([data-theme='glass'], [data-theme='frost']) .sidebar {
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.12);
+}
+html:is([data-theme='glass'], [data-theme='frost']) :is(.chat-header, .composer-wrap) {
+  background: transparent;
+}
+
+/* every box takes the pane's corners; the structural ones stay square */
+html:is([data-theme='glass'], [data-theme='frost']) :where(div, button, input, select, textarea, pre, table, details, summary, label, article, section, a) {
+  border-radius: var(--radius);
+}
+html:is([data-theme='glass'], [data-theme='frost']) :is(#root, .app, .sidebar, .main, .live, .page, .page-inner, .chat-header, .composer-wrap, .resizer, .resizer-x, .resizer-y, .live-scrim) {
+  border-radius: 0;
+}
+html:is([data-theme='glass'], [data-theme='frost']) :is(input[type='checkbox'], input[type='radio']) {
+  border-radius: 4px;
+}
+html:is([data-theme='glass'], [data-theme='frost']) :is(.session-item, .live-item, .reply-btn, .pending-act, .pending-steer, .quote-bar, .tool-head, .meta-chip) {
+  border-radius: 10px;
+}
+
+/* the glass itself */
+html:is([data-theme='glass'], [data-theme='frost']) :is(.card, .composer, .tool, .permission, .plan, .tasks-bar, .theme-opt, .composer-notice, .attachment, .md pre, .md table) {
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.025);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-rim), var(--glass-drop);
+  border-color: transparent;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .md :is(pre, table) {
+  overflow: hidden;
+}
+/* the light on the pane: fixed to the window, so it slides across every pane as the pointer moves */
+html:is([data-theme='glass'], [data-theme='frost']) :is(.composer, .card, .tool) {
+  background-image: var(--glass-sheen), var(--glass-light);
+  background-attachment: scroll, fixed;
+}
+
+/* small and floating things bend the light at the rim */
+html:is([data-theme='glass'], [data-theme='frost']) :is(.btn, .msg-user, .meta-chip, .select, .input, .textarea) {
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.03);
+  backdrop-filter: var(--glass-lens);
+  box-shadow: var(--glass-rim-hi);
+  border-color: transparent;
+}
+html:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar, .live-tab-bar, .page-tab-bar) {
+  background: var(--glass-sheen), var(--glass-pop);
+  backdrop-filter: var(--glass-lens);
+  box-shadow: var(--glass-rim-hi), 0 22px 60px -14px rgba(0, 0, 0, 0.7);
+  border-color: transparent;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .composer {
+  backdrop-filter: var(--glass-lens);
+}
+
+/* the accent */
+html:is([data-theme='glass'], [data-theme='frost']) .msg-user {
+  background: linear-gradient(135deg, rgba(var(--volt-rgb), 0.3), rgba(56, 189, 248, 0.1) 60%, rgba(255, 255, 255, 0.06));
+}
+html:is([data-theme='glass'], [data-theme='frost']) .btn.primary {
+  background: linear-gradient(135deg, rgba(210, 198, 255, 0.92), rgba(125, 211, 252, 0.9));
+  color: #0b0a16;
+  box-shadow: var(--glass-rim-hi), 0 10px 30px -10px rgba(var(--volt-rgb), 0.8);
+}
+html:is([data-theme='glass'], [data-theme='frost']) .btn.primary:hover {
+  filter: brightness(1.08);
+}
+html:is([data-theme='glass'], [data-theme='frost']) .btn.on {
+  background: var(--white);
+  color: #0b0a16;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .btn.ghost {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .composer:focus-within {
+  box-shadow: var(--glass-rim), var(--glass-drop), 0 0 0 3px rgba(var(--volt-rgb), 0.18);
+}
+html:is([data-theme='glass'], [data-theme='frost']) :is(.session-item.active, .live-item.active) {
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.06);
+  box-shadow: var(--glass-rim);
+}
+html:is([data-theme='glass'], [data-theme='frost']) .theme-opt.on {
+  box-shadow: var(--glass-rim), 0 0 0 1px var(--volt);
+}
+
+/* pills and circles, as on the reference kits */
+html:is([data-theme='glass'], [data-theme='frost']) :is(.btn, .meta-chip, .select, .input) {
+  border-radius: 999px;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .btn.icon {
+  border-radius: 50%;
+}
+html:is([data-theme='glass'], [data-theme='frost']) :is(.session-item, .live-item, .tool-head) {
+  border-radius: 16px;
+}
+
+/* the window itself lets the desktop through (Settings > Theme > Glass; the system draws the acrylic, main/index.ts) */
+html:is([data-theme='glass'], [data-theme='frost'])[data-clear],
+html:is([data-theme='glass'], [data-theme='frost'])[data-clear] body {
+  background: transparent;
+}
+html:is([data-theme='glass'], [data-theme='frost'])[data-clear] body {
+  background: rgba(9, 9, 19, var(--tint, 1));
+}
+html:is([data-theme='glass'], [data-theme='frost'])[data-clear] body::before {
+  opacity: 0.85;
+}
+
+/* softer type: the headline keeps its weight, not the stencil caps */
+html:is([data-theme='glass'], [data-theme='frost']) .page-title {
+  font-size: 52px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .brand-name {
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .btn {
+  letter-spacing: 0.06em;
+}
+
+/* a weak GPU, or a calm UI, gets the tint and a still sky, not the blur and the bend */
+html.low-power:is([data-theme='glass'], [data-theme='frost']) * {
+  backdrop-filter: none !important;
+}
+html.low-power:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar) {
+  background: #14131f;
+}
+html.low-power:is([data-theme='glass'], [data-theme='frost']) body::before,
+html.reduce-motion:is([data-theme='glass'], [data-theme='frost']) body::before {
+  animation: none;
+}
+
+/* ------------------------------------------------------------------ Frost: the same glass, in daylight
+   Pale milky panes over a soft sky, dark ink, a coral accent and pastel tints; the rim picks up a little cyan on one side and pink
+   on the other, like the edge of a thick slab. */
+html[data-theme='frost'] {
+  color-scheme: light;
+  --black: #e6e9f1;
+  --s1: rgba(255, 255, 255, 0.34);
+  --s2: rgba(255, 255, 255, 0.48);
+  --s3: rgba(255, 255, 255, 0.6);
+  --s4: rgba(255, 255, 255, 0.72);
+  --line: rgba(30, 36, 70, 0.1);
+  --line-2: rgba(30, 36, 70, 0.18);
+  --line-3: rgba(30, 36, 70, 0.3);
+  --white: #1c1e2c;
+  --grey: #4b4f66;
+  --grey-2: #666a82;
+  --volt: #f0604d;
+  --volt-2: #d94c3a;
+  --volt-rgb: 240, 96, 77;
+  --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.22) 38%, rgba(255, 255, 255, 0.08) 62%, rgba(255, 255, 255, 0.5) 100%);
+  --glass-light: radial-gradient(320px circle at var(--lx, 70%) var(--ly, 0%), rgba(255, 255, 255, 0.75), transparent 62%);
+  --glass-blur: blur(18px) saturate(1.6) brightness(1.04);
+  --glass-lens: url(#jolty-lens) blur(6px) saturate(1.6) brightness(1.05);
+  --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.8), inset 0 2px 1px -1px #fff, inset 0 -2px 3px -2px rgba(30, 36, 70, 0.2), inset 3px 0 5px -3px rgba(80, 220, 210, 0.5), inset -3px 0 5px -3px rgba(255, 140, 190, 0.5), inset 0 0 22px rgba(255, 255, 255, 0.35);
+  --glass-rim-hi: var(--glass-rim), 0 12px 26px -10px rgba(40, 50, 100, 0.38), 0 2px 6px rgba(40, 50, 100, 0.14);
+  --glass-drop: 0 18px 40px -16px rgba(40, 50, 100, 0.38);
+  --glass-pop: rgba(240, 242, 250, 0.62);
+}
+html[data-theme='frost'] body::before {
+  background:
+    linear-gradient(115deg, transparent 36%, rgba(255, 255, 255, 0.8) 50%, transparent 64%),
+    radial-gradient(36% 42% at 14% 20%, rgba(94, 234, 212, 0.5), transparent 70%),
+    radial-gradient(34% 40% at 88% 16%, rgba(167, 139, 250, 0.46), transparent 70%),
+    radial-gradient(40% 46% at 80% 92%, rgba(251, 146, 181, 0.5), transparent 70%),
+    radial-gradient(34% 40% at 20% 92%, rgba(125, 211, 252, 0.46), transparent 70%);
+}
+html[data-theme='frost'][data-clear] body {
+  background: rgba(230, 233, 241, var(--tint, 1));
+}
+html[data-theme='frost'] ::selection {
+  color: var(--white);
+}
+html[data-theme='frost'] ::-webkit-scrollbar-thumb {
+  background: rgba(30, 36, 70, 0.25);
+}
+html[data-theme='frost'] .msg-user {
+  background: linear-gradient(135deg, rgba(var(--volt-rgb), 0.26), rgba(167, 139, 250, 0.16) 60%, rgba(255, 255, 255, 0.45));
+}
+html[data-theme='frost'] .btn.primary {
+  background: linear-gradient(135deg, #ff9a86, #ff6f91);
+  color: #fff;
+  box-shadow: var(--glass-rim-hi), 0 10px 26px -10px rgba(240, 96, 77, 0.7);
+}
+html[data-theme='frost'] .btn.on {
+  background: var(--white);
+  color: #fff;
+}
+html[data-theme='frost'] :is(.sidebar, .live) {
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.12);
+}
+html.low-power[data-theme='frost'] :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar) {
+  background: #eef0f6;
+}

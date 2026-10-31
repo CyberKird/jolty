@@ -358,6 +358,10 @@ export interface AppSettings {
   autoUpdate?: boolean
   /** the strip above the composer that suggests another model or effort for the task you type; on unless false */
   modelAdvice?: boolean
+  /** colour theme of the interface (renderer/theme.ts); volt when unset */
+  theme?: 'volt' | 'glass' | 'frost'
+  /** Glass theme: how much of the desktop shows through the window, 0 (solid) to 100; needs Windows 11 22H2 */
+  glassClear?: number
   /** calmer UI: no entrance animations or panel slides (independent of the Windows setting) */
   reduceMotion?: boolean
   /** flat look and a lighter mascot for weak PCs; 'auto' (the default) turns on for 4 cores or fewer, or 4 GB of memory or less */

@@ -24,7 +24,7 @@
   overflow: hidden;
   border-bottom: 1px solid var(--line);
   background:
-    radial-gradient(ellipse 46% 70% at 80% 78%, rgba(212, 255, 0, 0.17), transparent 70%),
+    radial-gradient(ellipse 46% 70% at 80% 78%, rgba(var(--volt-rgb), 0.17), transparent 70%),
     linear-gradient(180deg, var(--s3), var(--s1));
 }
 /* the floor he stands on */
@@ -42,7 +42,7 @@
   right: 8%;
   top: -70px;
   height: 440px;
-  fill: rgba(212, 255, 0, 0.045);
+  fill: rgba(var(--volt-rgb), 0.045);
   transform: rotate(14deg);
 }
 .wn-art {

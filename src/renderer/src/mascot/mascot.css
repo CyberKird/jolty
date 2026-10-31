@@ -134,7 +134,7 @@
   transform-origin: 0 50%;
   border-radius: 2px;
   background: linear-gradient(90deg, transparent, var(--volt));
-  box-shadow: 0 0 10px rgba(212, 255, 0, 0.6);
+  box-shadow: 0 0 10px rgba(var(--volt-rgb), 0.6);
   opacity: 0;
   animation: m-streak 300ms ease-out both;
 }

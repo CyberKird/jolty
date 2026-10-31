@@ -93,6 +93,20 @@ function send(e: ChatEvent): void {
 
 const icon = app.isPackaged ? path.join(process.resourcesPath, 'icon.ico') : path.join(__dirname, '../../build/icon.ico')
 
+/** Glass theme with see-through on: the system draws a blurred acrylic behind a transparent page (Windows 11 22H2 and newer). */
+function applyWindowGlass(): void {
+  if (!win || win.isDestroyed() || process.platform !== 'win32') return
+  const s = store.loadSettings()
+  const build = Number(os.release().split('.')[2])
+  const frost = s.theme === 'frost'
+  const clear = (s.theme === 'glass' || frost) && build >= 22621 && (s.glassClear || 0) > 0
+  win.setBackgroundMaterial(clear ? 'acrylic' : 'none')
+  win.setBackgroundColor(clear ? '#00000000' : frost ? '#e6e9f1' : '#020204')
+  // a glass theme draws its own bar: the caption buttons sit on it without a block of their own
+  const glass = s.theme === 'glass' || frost
+  win.setTitleBarOverlay({ color: glass ? '#00000000' : '#060709', symbolColor: frost ? '#1c1e2c' : glass ? '#e6e4f5' : '#a3a3a3', height: 36 })
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1320,
@@ -130,6 +144,7 @@ function createWindow(): void {
   // shown once the first frame is painted: no white flash, no half-drawn layout
   // automated screenshot runs (JOLTY_TEST=1) open without taking focus from whatever the user is doing
   // started with Windows: it waits in the tray until opened
+  applyWindowGlass()
   win.once('ready-to-show', () => (background.startHidden() ? undefined : process.env.JOLTY_TEST ? win?.showInactive() : win?.show()))
   background.attach(win)
   // the hidden quick entry window would otherwise keep the app alive once the main window closed for good
@@ -322,6 +337,7 @@ function registerIpc(): void {
     if (patch && typeof patch === 'object' && 'autoUpdate' in patch) updater.setAuto(saved.autoUpdate !== false)
     if (patch && typeof patch === 'object' && Object.keys(patch).some((k) => k.startsWith('browser'))) await jolty.reconnectBrowser()
     if (patch && typeof patch === 'object' && ('keepInBackground' in patch || 'startWithWindows' in patch)) background.apply(patch as never)
+    if (patch && typeof patch === 'object' && ('theme' in patch || 'glassClear' in patch)) applyWindowGlass()
     return saved
   })
   handle('app:pickFolder', async () => {

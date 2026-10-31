@@ -12,6 +12,7 @@ import { Sidebar } from './components/Sidebar'
 import { api, liveRows, useStore } from './store'
 import { batchDeltas } from './event-batch'
 import { lowPower, setLowPowerMode } from './lowpower'
+import { applyTheme } from './theme'
 import { getLang, isRtl, tr } from '@shared/i18n'
 import { useShallow } from 'zustand/shallow'
 
@@ -120,6 +121,7 @@ export function App() {
     void api.app.settings().then((s) => {
       document.documentElement.classList.toggle('reduce-motion', Boolean(s.reduceMotion))
       setLowPowerMode(s.lowPower)
+      applyTheme(s.theme, s.glassClear)
     })
     document.documentElement.lang = getLang()
     document.documentElement.dir = isRtl() ? 'rtl' : 'ltr'

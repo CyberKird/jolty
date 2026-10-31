@@ -1567,7 +1567,7 @@
  "Scurtătura intrării rapide": "اختصار الإدخال السريع",
  "Deschide oriunde ai fi o casetă mică: scrii sau dictezi, Enter pornește o conversație nouă, Esc o închide.": "يفتح مربعًا صغيرًا أينما كنت: اكتب أو أملِ، وEnter يبدأ محادثة جديدة، وEsc يغلقه.",
  "Apasă combinația…": "اضغط التركيبة…",
- "Oprită": "إيقاف",
+ "Oprită": "متوقف",
  "Implicit": "افتراضي",
  "Enter în intrarea rapidă": "Enter في الإدخال السريع",
  "Deschide conversația în fereastra Jolty": "يفتح المحادثة في نافذة Jolty",
@@ -1586,5 +1586,11 @@
  "Pending": "قيد الانتظار",
  "Sari la ultimul mesaj": "الانتقال إلى أحدث رسالة",
  "Editează mesajul": "تعديل الرسالة",
- "Scrie un mesaj: intră direct în răspunsul curent.": "اكتب رسالة: تصل مباشرة إلى الإجابة الجارية."
+ "Scrie un mesaj: intră direct în răspunsul curent.": "اكتب رسالة: تصل مباشرة إلى الإجابة الجارية.",
+ "Temă": "المظهر",
+ "Negru, muchii ascuțite și verde volt. Aspectul de bază.": "أسود وحواف حادة وأخضر فولت. المظهر الأساسي.",
+ "Sticlă transparentă care refractă lumina, cu reflexii pe muchii și o aurora vie în spate.": "زجاج شفاف يكسر الضوء، بحواف مضيئة وشفق حيّ في الخلفية.",
+ "Fereastră transparentă": "نافذة شفافة",
+ "Lasă să se vadă desktopul și aplicațiile din spatele Jolty, încețoșate. Necesită Windows 11 22H2 sau mai nou.": "يُظهر سطح المكتب والتطبيقات خلف Jolty بشكل ضبابي. يتطلب Windows 11 22H2 أو أحدث.",
+ "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "زجاج مضيء بألوان باستيل وحواف قزحية، كلوح بلوري سميك."
 }

@@ -1586,5 +1586,11 @@
  "Pending": "Pending",
  "Sari la ultimul mesaj": "Jump to the latest message",
  "Editează mesajul": "Edit message",
- "Scrie un mesaj: intră direct în răspunsul curent.": "Write a message: it goes straight into the current answer."
+ "Scrie un mesaj: intră direct în răspunsul curent.": "Write a message: it goes straight into the current answer.",
+ "Temă": "Theme",
+ "Negru, muchii ascuțite și verde volt. Aspectul de bază.": "Black, sharp edges and volt green. The base look.",
+ "Sticlă transparentă care refractă lumina, cu reflexii pe muchii și o aurora vie în spate.": "Clear glass that bends the light, with lit edges and a living aurora behind it.",
+ "Fereastră transparentă": "See-through window",
+ "Lasă să se vadă desktopul și aplicațiile din spatele Jolty, încețoșate. Necesită Windows 11 22H2 sau mai nou.": "Lets the desktop and the apps behind Jolty show through, blurred. Needs Windows 11 22H2 or newer.",
+ "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "Bright glass in pastel tints with iridescent edges, like a thick slab of crystal."
 }

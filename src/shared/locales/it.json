@@ -1567,7 +1567,7 @@
  "Scurtătura intrării rapide": "Scorciatoia per l'inserimento rapido",
  "Deschide oriunde ai fi o casetă mică: scrii sau dictezi, Enter pornește o conversație nouă, Esc o închide.": "Apre un piccolo riquadro ovunque tu sia: scrivi o detta, Invio avvia una nuova conversazione ed Esc lo chiude.",
  "Apasă combinația…": "Premi la combinazione…",
- "Oprită": "Disattivato",
+ "Oprită": "Spento",
  "Implicit": "Predefinito",
  "Enter în intrarea rapidă": "Invio nell'inserimento rapido",
  "Deschide conversația în fereastra Jolty": "Apre la conversazione nella finestra di Jolty",
@@ -1586,5 +1586,11 @@
  "Pending": "In attesa",
  "Sari la ultimul mesaj": "Vai all'ultimo messaggio",
  "Editează mesajul": "Modifica messaggio",
- "Scrie un mesaj: intră direct în răspunsul curent.": "Scrivi un messaggio: entra subito nella risposta in corso."
+ "Scrie un mesaj: intră direct în răspunsul curent.": "Scrivi un messaggio: entra subito nella risposta in corso.",
+ "Temă": "Tema",
+ "Negru, muchii ascuțite și verde volt. Aspectul de bază.": "Nero, spigoli netti e verde volt. L'aspetto di base.",
+ "Sticlă transparentă care refractă lumina, cu reflexii pe muchii și o aurora vie în spate.": "Vetro trasparente che rifrange la luce, con bordi luminosi e un'aurora viva dietro.",
+ "Fereastră transparentă": "Finestra trasparente",
+ "Lasă să se vadă desktopul și aplicațiile din spatele Jolty, încețoșate. Necesită Windows 11 22H2 sau mai nou.": "Lascia intravedere il desktop e le app dietro Jolty, sfocati. Richiede Windows 11 22H2 o successivo.",
+ "Sticlă luminoasă, în tonuri pastel și cu muchii irizate, ca o placă groasă de cristal.": "Vetro luminoso in tinte pastello con bordi iridescenti, come una spessa lastra di cristallo."
 }

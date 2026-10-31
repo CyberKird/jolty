@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.0
+
+### New
+
+- Themes: Settings > General has a Theme picker, applied at once and kept across restarts. Volt is the look Jolty always had.
+- Glass is a new dark theme: clear panes that bend the light at their edges, lit rims, a sheen that follows the pointer and a slowly moving aurora behind everything. Buttons are pills, panels have large rounded corners.
+- Frost is a new light theme in the same glass: milky panes over a soft sky, pastel tints, iridescent edges and a coral accent.
+- See-through window (Glass and Frost): a slider lets the desktop and the apps behind Jolty show through, blurred. Windows 11 22H2 or newer.
+- Economy mode and Reduce motion turn the blur, the bend and the movement off. The Joltarise lettering got a thin dark edge so it reads on every theme.
+
 ## 0.15.2
 
 ### Improvements

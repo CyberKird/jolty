@@ -1,0 +1,82 @@
+/* Themes: `data-theme` on <html> (App.tsx, from the saved settings). Volt is the base look in styles.css and has no block here.
+   A theme changes the tokens first; the few rules below it are the shapes a token cannot reach (radius, blur, the background). */
+
+/* ------------------------------------------------------------------ the picker in Settings (themes drawn in their own colours) */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+.theme-clear {
+  display: grid;
+  grid-template-columns: 1fr minmax(140px, 220px) 48px;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.theme-clear input[type='range'] {
+  width: 100%;
+  accent-color: var(--volt);
+}
+.theme-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--white);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.theme-opt:hover {
+  border-color: var(--line-3);
+}
+.theme-opt.on {
+  border-color: var(--volt);
+  background: var(--volt-dim);
+}
+.theme-swatch {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 74px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.theme-swatch i {
+  position: absolute;
+  display: block;
+}
+.theme-swatch.volt {
+  background: #020204;
+}
+.theme-swatch.volt i:nth-child(1) { inset: 0 auto 0 0; width: 26%; background: #060709; border-right: 1px solid rgba(255, 255, 255, 0.1); }
+.theme-swatch.volt i:nth-child(2) { top: 14px; right: 12px; width: 44%; height: 14px; background: #0a0b0e; border: 1px solid rgba(255, 255, 255, 0.14); }
+.theme-swatch.volt i:nth-child(3) { bottom: 12px; left: 36%; width: 34px; height: 12px; background: #d4ff00; }
+.theme-swatch.frost {
+  border-radius: 10px;
+  background:
+    linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.8) 50%, transparent 62%),
+    radial-gradient(70% 90% at 0% 0%, rgba(94, 234, 212, 0.6), transparent 70%),
+    radial-gradient(70% 90% at 100% 100%, rgba(251, 146, 181, 0.6), transparent 70%),
+    #e6e9f1;
+}
+.theme-swatch.frost i:nth-child(1) { inset: 0 auto 0 0; width: 26%; background: rgba(255, 255, 255, 0.5); border-right: 1px solid rgba(255, 255, 255, 0.8); }
+.theme-swatch.frost i:nth-child(2) { top: 14px; right: 12px; width: 44%; height: 16px; border-radius: 8px; background: rgba(255, 255, 255, 0.65); border: 1px solid #fff; box-shadow: 0 4px 8px -3px rgba(40, 50, 100, 0.3); }
+.theme-swatch.frost i:nth-child(3) { bottom: 12px; left: 36%; width: 38px; height: 14px; border-radius: 7px; background: linear-gradient(135deg, #ff9a86, #ff6f91); }
+.theme-swatch.glass {
+  border-radius: 10px;
+  background:
+    radial-gradient(70% 90% at 0% 0%, rgba(124, 92, 255, 0.55), transparent 70%),
+    radial-gradient(70% 90% at 100% 100%, rgba(45, 212, 191, 0.4), transparent 70%),
+    #08080f;
+}
+.theme-swatch.glass i:nth-child(1) { inset: 0 auto 0 0; width: 26%; background: rgba(255, 255, 255, 0.06); border-right: 1px solid rgba(255, 255, 255, 0.1); }
+.theme-swatch.glass i:nth-child(2) { top: 14px; right: 12px; width: 44%; height: 16px; border-radius: 8px; background: linear-gradient(135deg, rgba(185, 166, 255, 0.4), rgba(45, 212, 191, 0.2)); border: 1px solid rgba(185, 166, 255, 0.4); }
+.theme-swatch.glass i:nth-child(3) { bottom: 12px; left: 36%; width: 38px; height: 14px; border-radius: 7px; background: linear-gradient(135deg, #c9bbff, #8fd3f4); }
