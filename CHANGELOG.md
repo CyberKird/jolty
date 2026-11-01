@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.17.4
+
+### Fixed
+
+- In Glass and Frost only what Jolty strikes, walks on or lands on rings like glass. The laptop keys while he types, a wave, a cheer, being picked up and the teleport keep their own sounds again.
+- A message sent while a lead chat waits for the sessions it started (`wait_for_sessions`) is read at once instead of after up to 100 seconds. The wait ends, the sessions keep working.
+
+### Improvements
+
+- The line under a message sent while the model works now says it was sent and is read at the next step, instead of "Pending".
+
 ## 0.17.3
 
 ### Fixed

@@ -194,7 +194,7 @@ export class Jolty {
       busy: (id) => this.busy.has(id),
       lastAnswer: (id) => this.lastAnswer(id),
       problem: (id) => this.lastProblem(id),
-      waitIdle: (ids, ms) => this.waitIdle(ids, ms),
+      waitIdle: (ids, ms, lead) => this.waitIdle(ids, ms, lead),
       sendTo: (lead, id, text) => this.sendToChild(lead, id, text),
       askable: () => this.askable(),
       ask: (input) => this.askModel(input)
@@ -750,6 +750,7 @@ export class Jolty {
       text = withBrief(side, text)
       this.sideBriefs.delete(sessionId)
     }
+    for (const wake of [...(this.steerWaiters.get(sessionId) ?? [])]) wake()
     const prepared = prepareAttachments(attachments)
     if (s.meta.title === tr('Conversație nouă') || s.meta.title === 'Conversație nouă') {
       s.meta.title = text.replace(/\s+/g, ' ').trim().slice(0, 60) || attachments[0]?.name || s.meta.title
@@ -866,8 +867,11 @@ export class Jolty {
     return { before, after: this.ctxUsed.get(sessionId) ?? before }
   }
 
-  /** Resolves when none of the conversations has a turn under way, or after `ms`. */
-  private waitIdle(ids: string[], ms: number): Promise<void> {
+  /** a lead waiting on its sessions (wait_for_sessions) gives up the wait when the user writes to it, so the message is read now, not after up to 100 s */
+  private steerWaiters = new Map<string, Set<() => void>>()
+
+  /** Resolves when none of the conversations has a turn under way, after `ms`, or when the user writes to `lead`. */
+  private waitIdle(ids: string[], ms: number, lead?: string): Promise<void> {
     return new Promise((resolve) => {
       const check = (): void => {
         if (!ids.some((id) => this.busy.has(id))) finish()
@@ -876,9 +880,11 @@ export class Jolty {
       const finish = (): void => {
         clearTimeout(timer)
         this.idleWaiters.delete(check)
+        if (lead) this.steerWaiters.get(lead)?.delete(finish)
         resolve()
       }
       this.idleWaiters.add(check)
+      if (lead) this.steerWaiters.set(lead, (this.steerWaiters.get(lead) ?? new Set()).add(finish))
       check()
     })
   }

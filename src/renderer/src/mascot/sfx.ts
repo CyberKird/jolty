@@ -58,7 +58,7 @@ function clink(a: AudioContext, out: AudioNode, base: number, len: number, vol: 
   for (const [r, v, l] of modes) tone(a, { from: base * r * bend, to: base * r, len: len * l, vol: vol * v, at }, out)
 }
 
-/** what each sound is in glass, where it is about touching things; the voice-like ones (oof, giggle...) stay as they are */
+/** what each sound is in glass: only what he strikes, walks on or lands on. The laptop keys, a wave, a cheer, being picked up, the teleport and the like touch no pane, so they keep their own sound */
 const GLASS: Partial<Record<Sound, (a: AudioContext, out: AudioNode, s: number) => void>> = {
   step: (a, out) => clink(a, out, 3300 + Math.random() * 500, 0.07, 0.022),
   hop: (a, out) => clink(a, out, 2100, 0.16, 0.035, 0, 0.94),
@@ -67,21 +67,7 @@ const GLASS: Partial<Record<Sound, (a: AudioContext, out: AudioNode, s: number) 
     clink(a, out, 900 - s * 120, 0.3 + s * 0.3, 0.07 + s * 0.05)
     noise(a, 0.08, 0.05 * s, 'lowpass', 300, out)
   },
-  knock: (a, out) => clink(a, out, 1100, 0.32, 0.07),
-  grab: (a, out) => clink(a, out, 2700, 0.12, 0.03, 0, 1.06),
-  ding: (a, out) => clink(a, out, 1760, 0.9, 0.04),
-  hello: (a, out) => clink(a, out, 2350, 0.3, 0.032, 0, 1.04),
-  cheer: (a, out) => {
-    clink(a, out, 1568, 0.45, 0.035)
-    clink(a, out, 2349, 0.55, 0.035, 0.09)
-  },
-  arrive: (a, out) => clink(a, out, 2900, 0.35, 0.05, 0, 0.9),
-  click: (a, out) => clink(a, out, 4300, 0.04, 0.02),
-  key: (a, out) => clink(a, out, 3900 + Math.random() * 900, 0.035, 0.016),
-  zap: (a, out) => {
-    noise(a, 0.16, 0.018, 'bandpass', 900, out, 0, 7000)
-    clink(a, out, 3100, 0.5, 0.04, 0.1)
-  }
+  knock: (a, out) => clink(a, out, 1100, 0.32, 0.07)
 }
 
 export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape' | 'zap' | 'arrive' | 'knock' | 'step' | 'effort' | 'rustle' | 'key' | 'blip' | 'snore' | 'giggle' | 'beat' | 'pant'

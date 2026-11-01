@@ -34,8 +34,8 @@ export interface ToolHost {
   lastAnswer(sessionId: string): string
   /** the warning or error a session ended on (a model that ran out of context, a stop, a failure), empty when it ended normally */
   problem(sessionId: string): string
-  /** resolves when none of `ids` has a turn under way, or after `ms` */
-  waitIdle(ids: string[], ms: number): Promise<void>
+  /** resolves when none of `ids` has a turn under way, after `ms`, or when the user writes to `lead` */
+  waitIdle(ids: string[], ms: number, lead?: string): Promise<void>
   sendTo(leadId: string, id: string, text: string): Promise<void>
   /** every profile that can answer a question right now (signed in, not at its limit), with its models */
   askable(): Promise<AskProfile[]>
@@ -137,7 +137,7 @@ const TOOLS = [
   {
     name: 'wait_for_sessions',
     description:
-      'Waits until the sessions you started have ended their turn (all of them, or the ids given), for at most 100 seconds per call, then lists them like list_sessions. When some still run, call it again. Waiting costs nothing.',
+      'Waits until the sessions you started have ended their turn (all of them, or the ids given), for at most 100 seconds per call (it returns sooner when the user writes to this chat), then lists them like list_sessions. When some still run, call it again. Waiting costs nothing.',
     inputSchema: { type: 'object', properties: { ids: { type: 'array', items: { type: 'string' }, description: 'session ids, all of yours when left out' } } },
     annotations: { readOnlyHint: true }
   },
@@ -298,7 +298,7 @@ async function run(h: ToolHost, sid: string, name: string, a: Record<string, unk
     const ids = Array.isArray(a.ids) ? a.ids.map(String) : []
     if (ids.length) kids = kids.filter((k) => ids.includes(k.id))
     if (!kids.length) return ok('You have not started any session.')
-    if (name === 'wait_for_sessions') await h.waitIdle(kids.map((k) => k.id), 100000)
+    if (name === 'wait_for_sessions') await h.waitIdle(kids.map((k) => k.id), 100000, sid)
     return ok(
       kids
         .map((k) => {

@@ -567,7 +567,7 @@ function PendingStatus({ mode, model }: { mode: string; model: string }) {
   return (
     <span className="pending-pill" title={`${mode} · ${model}`}>
       <span className="pending-spinner" aria-hidden />
-      <span className="pending-label">{tr("Pending")}</span>
+      <span className="pending-label">{tr("Trimis, îl citește la pasul următor")}</span>
     </span>
   )
 }
