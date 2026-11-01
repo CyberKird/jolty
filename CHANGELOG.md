@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.19.1
+
+### Fixed
+
+- Gemini: a long message arrived cut off, so the answer was about something else. Every line now reaches the box, and the answer is read to the end.
+- Gemini: a chat stayed under Live after the answer was finished. A finished answer now ends the turn.
+- The Glass theme showed the grey Windows scrollbar with arrow buttons in the live thought. Every theme now draws its own scrollbar, so new themes follow the same colours.
+
 ## 0.19.0
 
 ### New
