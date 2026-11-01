@@ -13,6 +13,11 @@ test('copy chips: values yes, ordinary words no', () => {
     './scripts/run.sh': 'path',
     'npm run build': 'command',
     '$ git status': 'command',
+    'vercel deploy --prod': 'command',
+    'my-tool run --fast x': 'command',
+    'laundry-cheatsheet.vercel.app': 'url',
+    'laundry-cheatsheet-nicusoraron-2411s-projects.vercel.app': 'url',
+    'example.com/docs': 'url',
     'v1.2.3': 'version',
     '820cac3': 'hash',
     'localhost:3000': 'port',
@@ -23,7 +28,7 @@ test('copy chips: values yes, ordinary words no', () => {
     '"compilerOptions"': 'key'
   }
   for (const [text, kind] of Object.entries(yes)) assert.equal(valueKind(text), kind, text)
-  for (const word of ['config', 'React.memo', 'and/or', 'true', '42', '2024/10/25', 'useState', 'deadbeef', 'GET', 'e.g.', 'a b c', '']) assert.equal(valueKind(word), undefined, word)
+  for (const word of ['config', 'React.memo', 'and/or', 'true', '42', '2024/10/25', 'useState', 'deadbeef', 'GET', 'e.g.', 'a b c', 'obj.method', 'Array.from', 'a - b', '']) assert.equal(valueKind(word), undefined, word)
 })
 
 test('shell blocks copy only the commands', () => {

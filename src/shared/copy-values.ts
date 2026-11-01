@@ -11,7 +11,7 @@ const PATH = [
   new RegExp(`^${SEG}(?:[\\\\/]${SEG}){2,}[\\\\/]?${LINE}$`),
   new RegExp(`^${SEG}(?:[\\\\/]${SEG})*\\.(?:${EXT})${LINE}$`, 'i')
 ]
-const COMMANDS = new Set('npm npx pnpm yarn bun node deno python python3 py pip pip3 uv cargo rustc go dotnet git gh docker kubectl winget choco scoop curl wget ssh scp cd ls dir cat mkdir rm cp mv echo code claude codex opencode electron-vite tsc eslint prettier vite make cmake adb ffmpeg powershell pwsh taskkill sudo apt brew'.split(' '))
+const COMMANDS = new Set('vercel netlify firebase wrangler supabase pnpx bunx poetry flutter dart java javac mvn gradle terraform aws gcloud az heroku fly railway prisma next nuxt astro jest vitest playwright pytest npm npx pnpm yarn bun node deno python python3 py pip pip3 uv cargo rustc go dotnet git gh docker kubectl winget choco scoop curl wget ssh scp cd ls dir cat mkdir rm cp mv echo code claude codex opencode electron-vite tsc eslint prettier vite make cmake adb ffmpeg powershell pwsh taskkill sudo apt brew'.split(' '))
 
 /** An inline code span worth a copy chip: a path, command, URL, version, hash, port, variable, flag or quoted key. Ordinary words are not. */
 export function valueKind(raw: string): ValueKind | undefined {
@@ -20,6 +20,10 @@ export function valueKind(raw: string): ValueKind | undefined {
   if (/^https?:\/\/\S+$/i.test(s)) return 'url'
   if (/^\$ \S/.test(s) || (COMMANDS.has(s.split(/\s+/)[0]) && /^\S+\s+\S/.test(s))) return 'command'
   if (PATH.some((re) => re.test(s)) && !/^[\d/\.:-]+$/.test(s)) return 'path'
+  // a bare address (the host of a deploy, a docs page): only known endings, so `React.memo` or `obj.method` stay words
+  if (/^(?:[a-z0-9-]+\.)+(?:app|com|dev|io|net|org|ro|de|eu|uk|xyz|page)(?::\d+)?(?:\/\S*)?$/i.test(s)) return 'url'
+  // any program followed by a flag is a command, whatever the program is called
+  if (/^[\w./-]+(?:\s+\S+)*\s+-{1,2}[a-z]/i.test(s)) return 'command'
   if (/^v?\d+\.\d+(?:\.\d+){0,2}(?:[-+][\w.]+)?$/.test(s)) return 'version'
   if (/^(?=[0-9a-f-]*\d)(?=[0-9a-f-]*[a-f])(?:[0-9a-f]{7,64}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(s)) return 'hash'
   if (/^(?:localhost|\d{1,3}(?:\.\d{1,3}){3}):\d{2,5}(?:\/\S*)?$|^:\d{3,5}$/.test(s)) return 'port'

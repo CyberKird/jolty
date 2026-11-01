@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.6
+
+### Improvements
+
+- Inline code in a reply is easier to copy. A click on any boxed span now selects all of it, and more of them are copy chips (a click copies): commands with a flag whatever the program is called (`vercel deploy --prod`) and bare addresses such as `my-app.vercel.app`.
+
 ## 0.16.5
 
 ### Improvements

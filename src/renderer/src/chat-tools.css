@@ -223,3 +223,8 @@
   pointer-events: none;
 }
 .fold-btn { background: var(--black); }
+
+/* any other inline code: one click selects the whole span, so it can be copied without aiming at its edges */
+.md :not(pre) > code:not(.cv) {
+  user-select: all;
+}
