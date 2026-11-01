@@ -4,6 +4,7 @@ import type { BackgroundState } from '@shared/types'
 import { DEFAULT_QUICK_KEY, hotkeyFromEvent } from '@shared/background'
 import { tr } from '@shared/i18n'
 import { api, errMsg } from '../store'
+import { Select } from '../components/Select'
 
 /** Tray and background mode, start with Windows, and the quick entry shortcut (main/background.ts, main/quick.ts). */
 export function BackgroundSettings() {
@@ -92,10 +93,10 @@ export function BackgroundSettings() {
       </div>
       <div className="field" style={{ marginBottom: 0 }}>
         <label>{tr("Enter în intrarea rapidă")}</label>
-        <select className="select" value={st.quickOpens} onChange={(e) => void save({ quickOpens: e.target.value as BackgroundState['quickOpens'] })}>
+        <Select className="select" value={st.quickOpens} onChange={(e) => void save({ quickOpens: e.target.value as BackgroundState['quickOpens'] })}>
           <option value="window">{tr("Deschide conversația în fereastra Jolty")}</option>
           <option value="background">{tr("O pornește în fundal și anunță printr-o notificare")}</option>
-        </select>
+        </Select>
       </div>
     </div>
   )

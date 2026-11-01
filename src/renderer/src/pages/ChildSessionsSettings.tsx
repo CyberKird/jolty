@@ -4,6 +4,7 @@ import { isAcp } from '@shared/types'
 import { MODES, useAllModels } from '../components/ModelPicker'
 import { api, useStore } from '../store'
 import { tr } from '@shared/i18n'
+import { Select } from '../components/Select'
 
 /** How the sessions a chat starts for the parts of a job begin: their permissions and the browser. */
 export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: AppSettings) => void }) {
@@ -21,7 +22,7 @@ export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: A
   const modelSelect = (kind: 'simple' | 'hard', label: string) => (
     <div className="field" style={{ marginTop: 10 }}>
       <label>{label}</label>
-      <select className="select" value={s.childModels?.[kind] ? `${s.childModels[kind]!.profileId}|${s.childModels[kind]!.model}` : ''} onChange={(e) => void setModel(kind, e.target.value)}>
+      <Select className="select" value={s.childModels?.[kind] ? `${s.childModels[kind]!.profileId}|${s.childModels[kind]!.model}` : ''} onChange={(e) => void setModel(kind, e.target.value)}>
         <option value="">{tr("Același model ca chatul")}</option>
         {groups.map((g) => (
           <optgroup key={g.profile.id} label={g.profile.name}>
@@ -32,7 +33,7 @@ export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: A
             ))}
           </optgroup>
         ))}
-      </select>
+      </Select>
     </div>
   )
   return (
@@ -44,7 +45,7 @@ export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: A
       <p className="muted small" style={{ marginTop: 0 }}>
         {tr("Când un chat pornește alte sesiuni pentru părți dintr-o sarcină, ele lucrează fără să le aprobe cineva pas cu pas. Alege cu ce permisiuni pornesc.")}
       </p>
-      <select
+      <Select
         className="select"
         value={s.childMode ?? 'full'}
         onChange={async (e) => setS(await api.app.saveSettings({ childMode: e.target.value as PermissionMode }))}
@@ -54,7 +55,7 @@ export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: A
             {m.label} - {m.desc}
           </option>
         ))}
-      </select>
+      </Select>
       <p className="muted small" style={{ marginBottom: 0 }}>
         {tr("Modelul sesiunilor pornite, după cât de grea e sarcina (chatul alege când pornește sesiunea). Lăsat pe „Același model”, sesiunea folosește modelul chatului.")}
       </p>
@@ -72,13 +73,13 @@ export function ChildSessionsSettings({ s, setS }: { s: AppSettings; setS: (s: A
       {s.childOpus === true && (
         <div className="field" style={{ marginTop: 8 }}>
           <label>{tr("Gândire pentru Opus")}</label>
-          <select className="select" value={s.childOpusEffort || 'high'} onChange={async (e) => setS(await api.app.saveSettings({ childOpusEffort: e.target.value }))}>
+          <Select className="select" value={s.childOpusEffort || 'high'} onChange={async (e) => setS(await api.app.saveSettings({ childOpusEffort: e.target.value }))}>
             {efforts.map((x) => (
               <option key={x} value={x}>
                 {x}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
       <label className="row" style={{ marginTop: 10, cursor: 'pointer' }}>

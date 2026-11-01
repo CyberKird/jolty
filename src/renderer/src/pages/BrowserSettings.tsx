@@ -4,6 +4,7 @@ import type { AppSettings, BrowserApp, BrowserInfo, BrowserMode, NativeBrowserSt
 import { api, errMsg, useStore } from '../store'
 import { tr } from '@shared/i18n'
 import { useShallow } from 'zustand/shallow'
+import { Select } from '../components/Select'
 
 const MODES: { id: BrowserMode; label: string }[] = [
   { id: 'jolty', label: tr("Extensia Jolty (recomandat)") },
@@ -64,7 +65,7 @@ export function BrowserSettings({ s, setS }: { s: AppSettings; setS: (v: AppSett
       </p>
       <div className="field">
         <label>{tr("Cum se conectează")}</label>
-        <select
+        <Select
           className="select"
           value={mode}
           onChange={async (e) => {
@@ -77,11 +78,11 @@ export function BrowserSettings({ s, setS }: { s: AppSettings; setS: (v: AppSett
               {m.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="field">
         <label>{tr("Browser")}</label>
-        <select
+        <Select
           className="select"
           value={s.browserApp || ''}
           onChange={async (e) => {
@@ -99,7 +100,7 @@ export function BrowserSettings({ s, setS }: { s: AppSettings; setS: (v: AppSett
               {b.name}
             </option>
           ))}
-        </select>
+        </Select>
         <div className="hint">{tr("Merge cu Chrome, Vivaldi, Edge, Brave și Firefox.")}</div>
       </div>
 

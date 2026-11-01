@@ -5,6 +5,7 @@ import { api, errMsg, timeAgo, useStore } from '../store'
 import { fmtSize, PART_LABEL } from './PackExport'
 import { tr } from '@shared/i18n'
 import { useShallow } from 'zustand/shallow'
+import { Select } from '../components/Select'
 
 const STATE = (): Record<ImportState, { label: string; cls: string }> => ({
   new: { label: tr("Nou"), cls: 'good' },
@@ -185,11 +186,11 @@ export function PackImport({ onImported, initial, onClose }: { onImported: () =>
               </td>
               <td>
                 <label className="pill-select">
-                  <select value={decisions[i.key] ?? 'skip'} onChange={(e) => set(i.key, e.target.value as ImportDecision)} aria-label={i.label}>
+                  <Select value={decisions[i.key] ?? 'skip'} onChange={(e) => set(i.key, e.target.value as ImportDecision)} aria-label={i.label}>
                     <option value="skip">{tr("Las ce am")}</option>
                     <option value="overwrite">{i.state === 'new' ? tr("Adaugă") : tr("Înlocuiește (cu backup)")}</option>
                     {i.state !== 'new' && <option value="copy">{tr("Adaugă lângă al meu")}</option>}
-                  </select>
+                  </Select>
                 </label>
               </td>
             </tr>

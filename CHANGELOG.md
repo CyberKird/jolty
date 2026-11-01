@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.17.0
+
+### New
+
+- In Glass and Frost the mascot's touches ring like glass: his steps tick, a landing or a knock against a pane rings low and long, a pointed finger chimes. The sounds are made on the spot from partials that die away at different speeds, like a struck plate. Volt keeps the old sounds, and the voice-like ones (an "oof", a giggle) are unchanged.
+
+### Improvements
+
+- Drop-down lists are drawn by Jolty, in the same glass pane as the menus, instead of the system's: in Glass the system list was white on white and in every theme it highlighted in blue. They open under (or over) the field, take the arrow keys, Enter and Escape, and group their options.
+- In Glass and Frost a menu grows out of the corner of the button that opened it, with a small overshoot, like a drop that swells, and goes back into it when it closes. The open button is lit with the same rim, so the two read as one piece. Low-power mode keeps a plain fade.
+
 ## 0.16.9
 
 ### Improvements

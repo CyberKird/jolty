@@ -5,6 +5,7 @@ import { timeAgo, useStore } from '../store'
 import { HOME, problemText, SkillActions, sourceLabel, STATUS, StatusChip } from './SkillActions'
 import { tr } from '@shared/i18n'
 import { useShallow } from 'zustand/shallow'
+import { Select } from '../components/Select'
 
 type SortKey = 'name' | 'home' | 'source' | 'status' | 'checked'
 const STATUS_ORDER: SkillStatus[] = ['broken', 'outdated', 'modified', 'unknown', 'ok']
@@ -74,25 +75,25 @@ export function SkillsTable({ list, onChanged }: { list: SkillInfo[]; onChanged:
           <input placeholder={tr("Caută după nume sau descriere")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={tr("Caută skilluri")} />
         </div>
         <label className="pill-select" title={tr("Status")}>
-          <select value={status} onChange={(e) => setStatus(e.target.value as SkillStatus | '')} aria-label={tr("Status")}>
+          <Select value={status} onChange={(e) => setStatus(e.target.value as SkillStatus | '')} aria-label={tr("Status")}>
             <option value="">{tr("Orice status")}</option>
             {STATUS_ORDER.map((k) => (
               <option key={k} value={k}>
                 {STATUS[k].label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         {homes.length > 1 && (
           <label className="pill-select" title={tr("Unde stă")}>
-            <select value={home} onChange={(e) => setHome(e.target.value as SkillHome | '')} aria-label={tr("Unde stă")}>
+            <Select value={home} onChange={(e) => setHome(e.target.value as SkillHome | '')} aria-label={tr("Unde stă")}>
               <option value="">{tr("Toate folderele")}</option>
               {homes.map((h) => (
                 <option key={h} value={h}>
                   {HOME[h]}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
         <span className="faint small skills-count">{tr("{n} din {total}", { n: rows.length, total: list.length })}</span>

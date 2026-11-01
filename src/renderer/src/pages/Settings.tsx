@@ -19,6 +19,7 @@ import { getLang, LANGUAGES, tr } from '@shared/i18n'
 import { GEMINI_BROWSER } from '@shared/gemini'
 import { KOFI_URL } from '@shared/links'
 import { useShallow } from 'zustand/shallow'
+import { Select } from '../components/Select'
 
 const TABS = ['general', 'account', 'models', 'tools', 'privacy', 'about'] as const
 type Tab = (typeof TABS)[number]
@@ -75,7 +76,7 @@ export function SettingsPage() {
                 <p className="muted small" style={{ marginTop: 0 }}>
                   {tr("Limba interfeței. Modelele îți răspund în limba în care le scrii, oricare ar fi aceasta.")}
                 </p>
-                <select
+                <Select
                   className="select"
                   value={getLang()}
                   onChange={async (e) => {
@@ -89,7 +90,7 @@ export function SettingsPage() {
                       {l.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <ThemeSettings current={s.theme} clear={s.glassClear} />
               <BackgroundSettings />
@@ -118,7 +119,7 @@ export function SettingsPage() {
                 <p className="muted small" style={{ marginTop: 0 }}>
                   {tr("Aspect plat, fără animații decorative și o mascotă mai ușoară, pentru PC-uri slabe. Automat îl pornește pe PC-uri cu cel mult 4 nuclee sau 4 GB de memorie.")}
                 </p>
-                <select
+                <Select
                   className="select"
                   aria-label={tr("Mod economic")}
                   value={s.lowPower ?? 'auto'}
@@ -131,7 +132,7 @@ export function SettingsPage() {
                   <option value="auto">{tr("Automat (după PC)")}</option>
                   <option value="on">{tr("Mereu pornit")}</option>
                   <option value="off">{tr("Mereu oprit")}</option>
-                </select>
+                </Select>
               </div>
               <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
                 <input
@@ -172,7 +173,7 @@ export function SettingsPage() {
                     {tr("Cât de mare e mascota. Se schimbă pe loc.")}
                   </span>
                 </span>
-                <select
+                <Select
                   className="select"
                   style={{ marginLeft: 'auto', width: 'auto' }}
                   value={s.mascotSize ?? 'big'}
@@ -184,7 +185,7 @@ export function SettingsPage() {
                   <option value="small">{tr("Mică")}</option>
                   <option value="normal">{tr("Normală")}</option>
                   <option value="big">{tr("Mare")}</option>
-                </select>
+                </Select>
               </label>
               {notifyBlocked && (
                 <div className="card row" style={{ marginBottom: 14, gap: 14, flexWrap: 'wrap' }}>
@@ -232,7 +233,7 @@ export function SettingsPage() {
                 <p className="muted small" style={{ marginTop: 0 }}>
                  {tr("Când trimiți o imagine unui model fără vision (de exemplu DeepSeek sau un model local mic), profilul de aici o descrie în detaliu (text exact, interfață, cod, erori), iar modelul tău primește descrierea.")}
                 </p>
-                <select className="select" value={s.visionProfileId || ''} onChange={(e) => setS({ ...s, visionProfileId: e.target.value || undefined })}>
+                <Select className="select" value={s.visionProfileId || ''} onChange={(e) => setS({ ...s, visionProfileId: e.target.value || undefined })}>
                   <option value="">{tr("Automat (primul profil Claude)")}</option>
                   {visionCandidates.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -240,7 +241,7 @@ export function SettingsPage() {
                     </option>
                   ))}
                   <option value={GEMINI_BROWSER}>{tr("Gemini (prin browserul Jolty)")}</option>
-                </select>
+                </Select>
                 <p className="muted small" style={{ marginBottom: 0 }}>
                   {tr("Gemini folosește contul tău Google din browserul Jolty, e mai lent (cam un minut) și, dacă nu merge, imaginea e descrisă de profilul automat.")}
                 </p>

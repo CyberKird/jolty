@@ -5,6 +5,7 @@ import { ProfileDot } from '../components/Chat'
 import { api, basename, ENGINE_LABEL, errMsg, timeAgo, useStore } from '../store'
 import { tr } from '@shared/i18n'
 import { useShallow } from 'zustand/shallow'
+import { Select } from '../components/Select'
 
 function CodexImporter({ profileId }: { profileId: string }) {
   const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
@@ -153,7 +154,7 @@ export function ImportPage() {
         <div className="row" style={{ marginBottom: 16 }}>
           <div className="pill-select">
             <ProfileDot profile={profile} />
-            <select value={profileId} onChange={(e) => setProfileId(e.target.value)}>
+            <Select value={profileId ?? ''} onChange={(e) => setProfileId(e.target.value)}>
               {profiles
                 .filter((p) => p.auth === 'subscription' || p.engine === 'codex' || p.isDefaultDir)
                 .map((p) => (
@@ -161,7 +162,7 @@ export function ImportPage() {
                     {p.name}
                   </option>
                 ))}
-            </select>
+            </Select>
           </div>
           <button className="btn small" onClick={() => void load()}>
             <RefreshCw size={14} /> {tr("Reîncarcă")}

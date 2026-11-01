@@ -3283,6 +3283,7 @@ a {
 .verification-strip button { flex: none; border: 1px solid var(--line-2); background: transparent; color: var(--white); cursor: pointer; padding: 5px 7px; }
 .verification-strip button:disabled { opacity: 0.5; cursor: default; }
 .update-strip { color: var(--volt); border-color: var(--volt-line); }
+.composer-wrap > :is(.tasks, .verification-strip) { width: 100%; box-sizing: border-box; }
 @media (max-width: 1080px) {
   .tasks, .verification-strip { width: calc(100% - 40px); }
 }
@@ -4124,4 +4125,100 @@ a {
   vertical-align: -1px;
   margin-inline-end: 4px;
   color: var(--grey);
+}
+
+/* the drop-down (components/Select.tsx): the trigger wears the look of the field it replaces, the list is a menu of the interface */
+.sel {
+  position: relative;
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+}
+.pill-select .sel,
+.field .sel,
+.sel:has(> .select) {
+  display: block;
+  width: 100%;
+}
+.sel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: start;
+  cursor: pointer;
+}
+.sel-btn.select {
+  height: 40px;
+  padding: 0 12px;
+}
+.sel-btn.sel-plain {
+  border: 0;
+  background: transparent;
+  outline: none;
+  max-width: 210px;
+  color: var(--white);
+}
+.sel-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.sel-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sel-arrow {
+  flex: none;
+  color: var(--grey-2);
+  transition: transform var(--t-base, 180ms) var(--e-out, ease-out);
+}
+.sel-btn[aria-expanded='true'] .sel-arrow {
+  transform: rotate(180deg);
+}
+.sel-btn:focus-visible {
+  outline: 1px solid var(--volt);
+  outline-offset: 1px;
+}
+.sel-pop {
+  z-index: 300;
+  padding: 0;
+}
+.sel-pop .picker-list {
+  max-height: inherit;
+}
+.sel-pop .picker-opt {
+  width: 100%;
+}
+.sel-opt-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sel-group {
+  padding: 8px 10px 4px;
+  font-family: var(--label);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-2);
+}
+/* the pill selects drew their own arrow on the wrapper; the component draws it now */
+.pill-select:has(.sel)::after {
+  display: none;
+}
+.pill-select .sel-btn {
+  padding-inline-end: 4px;
+}
+/* option lists that stay native (the quick entry) get solid colours: a translucent fill left white text on a white list */
+select option {
+  background: #14131f;
+  color: #f4f3fc;
+}
+html[data-theme='frost'] select option {
+  background: #f0f2fa;
+  color: #1c1e2c;
 }

@@ -2,6 +2,7 @@ import { Monitor, X } from 'lucide-react'
 import type { AppSettings } from '@shared/types'
 import { api } from '../store'
 import { tr } from '@shared/i18n'
+import { Select } from '../components/Select'
 
 type Human = NonNullable<AppSettings['computerHuman']>
 
@@ -24,13 +25,13 @@ export function ComputerSettings({ s, setS }: { s: AppSettings; setS: (v: AppSet
       </p>
       <div className="field" style={{ marginBottom: 12 }}>
         <label>{tr("Cât de uman")}</label>
-        <select className="select" value={s.computerHuman ?? 'max'} onChange={async (e) => setS(await api.app.saveSettings({ computerHuman: e.target.value as Human }))}>
+        <Select className="select" value={s.computerHuman ?? 'max'} onChange={async (e) => setS(await api.app.saveSettings({ computerHuman: e.target.value as Human }))}>
           {LEVELS.map((l) => (
             <option key={l.id} value={l.id}>
               {l.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <label className="row" style={{ marginBottom: 12, cursor: 'pointer', gap: 8 }}>
         <input type="checkbox" checked={s.computerPaste === true} onChange={async (e) => setS(await api.app.saveSettings({ computerPaste: e.target.checked }))} />

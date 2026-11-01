@@ -1,5 +1,6 @@
 import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, Loader2, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Power, Sparkles, Square, Undo2, X } from 'lucide-react'
 import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
 import { usageRisk } from '@shared/usage-risk'
@@ -150,6 +151,8 @@ interface ComposerProps {
   cwd?: string
   onCwd?: () => void
   seed?: string
+  /** strips that sit on the box: inside its wrap, so a floating (glass) box carries them and its height counts them */
+  above?: ReactNode
 }
 
 function Composer(p: ComposerProps) {
@@ -324,6 +327,7 @@ function Composer(p: ComposerProps) {
 
   return (
     <div className="composer-wrap" ref={wrapRef}>
+      {p.above}
       {notice && (
         <div className={`composer-notice ${notice.error ? 'error' : ''}`} role={notice.error ? 'alert' : 'status'}>
           <span>{notice.text}</span>
@@ -1037,12 +1041,16 @@ export function ChatView({ session }: { session: SessionMeta }) {
       </div>
       <SelectionPopup root={scrollRef} />
       <ChatTools />
-      <UpdateStrip />
-      <LimitStrip session={session} />
-      <CompactStrip sessionId={session.id} />
-      <TaskStrip sessionId={session.id} />
-      <VerificationStrip session={session} />
       <Composer
+        above={
+          <>
+            <UpdateStrip />
+            <LimitStrip session={session} />
+            <CompactStrip sessionId={session.id} />
+            <TaskStrip sessionId={session.id} />
+            <VerificationStrip session={session} />
+          </>
+        }
         sessionId={session.id}
         running={running}
         profiles={profiles}

@@ -7,6 +7,7 @@ import { modesFor } from '../components/ModelPicker'
 import { api, basename, errMsg, useStore } from '../store'
 import { dateLocale, tr } from '@shared/i18n'
 import { useShallow } from 'zustand/shallow'
+import { Select } from '../components/Select'
 
 const when = (t: number): string => new Date(t).toLocaleString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -208,13 +209,13 @@ function TaskForm({ task, profiles, settings, onSave, onCancel }: { task?: Sched
       </div>
       <div className="field">
         <label>{tr("Cont")}</label>
-        <select className="select" value={profileId} onChange={(e) => setProfileId(e.target.value)}>
+        <Select className="select" value={profileId} onChange={(e) => setProfileId(e.target.value)}>
           {profiles.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="field">
         <label>{tr("Folderul proiectului")}</label>
@@ -262,13 +263,13 @@ function TaskForm({ task, profiles, settings, onSave, onCancel }: { task?: Sched
       )}
       <div className="field">
         <label>{tr("Permisiuni")}</label>
-        <select className="select" value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}>
+        <Select className="select" value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}>
           {modes.map((m) => (
             <option key={m.id} value={m.id} title={m.title}>
               {m.label}: {m.desc}
             </option>
           ))}
-        </select>
+        </Select>
         <span className="hint">{tr("Nimeni nu aprobă la rulare: ce cere acord așteaptă până deschizi conversația.")}</span>
       </div>
       <div className="row">

@@ -47,6 +47,43 @@ function noise(a: AudioContext, len: number, vol: number, filter: BiquadFilterTy
   src.start(t)
 }
 
+/**
+ * Glass: what he touches in the Glass and Frost themes rings instead of thudding. A struck pane is a bright tick (the hit) and a few
+ * sine partials that are not whole multiples of each other (a plate's modes: 1, 2.32, 4.25, 6.63) and die away at different speeds,
+ * the high ones first. `size` is the pane: a small one rings high and short, a large one low and long.
+ */
+function clink(a: AudioContext, out: AudioNode, base: number, len: number, vol: number, at = 0, bend = 1): void {
+  noise(a, 0.012, vol * 0.9, 'highpass', 5200, out, at)
+  const modes: [number, number, number][] = [[1, 1, 1], [2.32, 0.55, 0.62], [4.25, 0.32, 0.38], [6.63, 0.16, 0.22]]
+  for (const [r, v, l] of modes) tone(a, { from: base * r * bend, to: base * r, len: len * l, vol: vol * v, at }, out)
+}
+
+/** what each sound is in glass, where it is about touching things; the voice-like ones (oof, giggle...) stay as they are */
+const GLASS: Partial<Record<Sound, (a: AudioContext, out: AudioNode, s: number) => void>> = {
+  step: (a, out) => clink(a, out, 3300 + Math.random() * 500, 0.07, 0.022),
+  hop: (a, out) => clink(a, out, 2100, 0.16, 0.035, 0, 0.94),
+  land: (a, out, s) => clink(a, out, 1500 - s * 300, 0.18 + s * 0.2, 0.045 + s * 0.03),
+  thud: (a, out, s) => {
+    clink(a, out, 900 - s * 120, 0.3 + s * 0.3, 0.07 + s * 0.05)
+    noise(a, 0.08, 0.05 * s, 'lowpass', 300, out)
+  },
+  knock: (a, out) => clink(a, out, 1100, 0.32, 0.07),
+  grab: (a, out) => clink(a, out, 2700, 0.12, 0.03, 0, 1.06),
+  ding: (a, out) => clink(a, out, 1760, 0.9, 0.04),
+  hello: (a, out) => clink(a, out, 2350, 0.3, 0.032, 0, 1.04),
+  cheer: (a, out) => {
+    clink(a, out, 1568, 0.45, 0.035)
+    clink(a, out, 2349, 0.55, 0.035, 0.09)
+  },
+  arrive: (a, out) => clink(a, out, 2900, 0.35, 0.05, 0, 0.9),
+  click: (a, out) => clink(a, out, 4300, 0.04, 0.02),
+  key: (a, out) => clink(a, out, 3900 + Math.random() * 900, 0.035, 0.016),
+  zap: (a, out) => {
+    noise(a, 0.16, 0.018, 'bandpass', 900, out, 0, 7000)
+    clink(a, out, 3100, 0.5, 0.04, 0.1)
+  }
+}
+
 export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer' | 'hello' | 'ding' | 'worry' | 'crackle' | 'click' | 'scrape' | 'zap' | 'arrive' | 'knock' | 'step' | 'effort' | 'rustle' | 'key' | 'blip' | 'snore' | 'giggle' | 'beat' | 'pant'
 
 /** strength 0..1 scales the impact sounds */
@@ -59,6 +96,8 @@ export function play(sound: Sound, strength = 0.5): void {
   out.gain.value = 0.55
   out.connect(a.destination)
   const s = Math.max(0.15, Math.min(1, strength))
+  const pane = document.documentElement.dataset.theme !== 'volt' ? GLASS[sound] : undefined
+  if (pane) return pane(a, out, s)
   switch (sound) {
     case 'hop':
       return tone(a, { from: 520, to: 820, len: 0.08, vol: 0.05 }, out)
