@@ -89,23 +89,37 @@ export const PAGE_LIB = String.raw`(() => {
 })()`
 
 /**
- * Puts text into the message box (Quill) as typed text, one editing command for the whole message so the line breaks
- * become paragraphs and Enter is never pressed (it would send). Typing line by line loses everything after the first
- * break, because the editor redraws itself in between; a synthetic paste event is not taken by the page any more.
- * It answers ok only when the text is really in the box.
+ * Puts text into the message box (Quill) as typed text: one editing command per line with a paragraph break between
+ * them, so Enter is never pressed (it would send). The editor redraws itself after every edit and drops what it is
+ * given while it does: one insertText with line breaks keeps only the first line, and so does a tight loop of commands.
+ * Giving the event loop a turn after each line keeps all of it (checked on a 12,000 character message). The box also
+ * shows the text in full for a moment before such a redraw, so the text is only trusted after it has settled and its
+ * last characters are there. It answers ok only when the whole text is really in the box.
  */
 export const typeScript = (text: string): string => `(async () => {
   const ed = document.querySelector('rich-textarea .ql-editor')
   if (!ed) return { ok: false, why: 'no message box' }
-  ed.focus()
-  getSelection().selectAllChildren(ed)
-  document.execCommand('delete')
-  const t = ${JSON.stringify(text.replace(/\r\n?/g, '\n'))}
-  document.execCommand('insertText', false, t)
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   const flat = (s) => s.replace(/\\s+/g, '')
-  for (let i = 0; i < 20 && flat(ed.innerText).length < flat(t).length; i++) await new Promise((r) => setTimeout(r, 50))
-  const got = flat(ed.innerText).length
-  return { ok: got >= flat(t).length, why: 'the message box took ' + got + ' of ' + flat(t).length + ' characters', length: got }
+  const t = ${JSON.stringify(text.replace(/\r\n?/g, '\n'))}
+  const want = flat(t)
+  const lines = t.split('\\n')
+  let got = ''
+  for (let attempt = 0; attempt < 3; attempt++) {
+    ed.focus()
+    getSelection().selectAllChildren(ed)
+    document.execCommand('delete')
+    await sleep(0)
+    for (let i = 0; i < lines.length; i++) {
+      if (i) document.execCommand('insertParagraph')
+      if (lines[i]) document.execCommand('insertText', false, lines[i])
+      await sleep(0)
+    }
+    await sleep(500)
+    got = flat(ed.innerText)
+    if (got.length >= want.length && got.endsWith(want.slice(-40))) return { ok: true, length: got.length }
+  }
+  return { ok: false, why: 'the message box took ' + got.length + ' of ' + want.length + ' characters', length: got.length }
 })()`
 
 /** The send button, once the box has text. */

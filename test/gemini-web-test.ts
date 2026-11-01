@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import type { ChatEvent, Profile, SessionMeta, TurnUsage } from '../src/shared/types'
 import { effortIds, GeminiWebSession, parseMenu, type GeminiBrowser, type GeminiPage, type GeminiTools } from '../src/main/engines/gemini-web'
 import { splitReply, type ToolSet } from '../src/main/engines/gemini-tools'
-import { ACCOUNT_SCRIPT, ATTACHED_SCRIPT, MENU_SCRIPT, PAGE_LIB, SEND_SCRIPT, STOP_SCRIPT, pickScript } from '../src/main/engines/gemini-page'
+import { ACCOUNT_SCRIPT, ATTACHED_SCRIPT, MENU_SCRIPT, PAGE_LIB, SEND_SCRIPT, STOP_SCRIPT, pickScript, typeScript } from '../src/main/engines/gemini-page'
 
 const MENU = {
   ok: true,
@@ -99,6 +99,25 @@ test('an answer is shown as it grows, ends as one item, and the chat address is 
   assert.equal(session.meta.engineSessionId, 'https://gemini.google.com/app/77f449cd2727dd08')
   assert.equal(usage.length, 1)
   assert.equal(usage[0].engine, 'gemini')
+})
+
+test('a page that leaves aria-busy on after the answer is done does not keep the chat running', async () => {
+  const stuck = { responses: 2, busy: true, stop: false, markdown: 'All done', composer: true, url: 'https://gemini.google.com/app' }
+  const { session, events } = run({ states: [st(1, '', false), stuck] })
+  const t0 = Date.now()
+  await session.send('Say it')
+  assert.ok(Date.now() - t0 < 8000, 'the turn ended by itself')
+  assert.deepEqual(events.filter((e) => e.type === 'status').map((e) => (e as { status: string }).status), ['running', 'idle'])
+  const item = events.find((e) => e.type === 'item')
+  assert.ok(item && item.type === 'item' && item.item.kind === 'assistant' && item.item.text === 'All done')
+})
+
+test('the whole message is typed with the editor given a turn after each line, and confirmed at the end', () => {
+  const script = typeScript('one\ntwo')
+  assert.match(script, /await sleep\(0\)/)
+  assert.match(script, /insertParagraph/)
+  assert.match(script, /endsWith\(want\.slice\(-40\)\)/)
+  assert.ok(!/insertText', false, t\)/.test(script), 'no single insertText of the whole message: the editor keeps only its first line')
 })
 
 test('the message is typed with its line breaks, and the chosen model and thinking level are put on the page first', async () => {

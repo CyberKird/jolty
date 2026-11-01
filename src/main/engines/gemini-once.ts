@@ -112,7 +112,8 @@ async function answer(page: GeminiPage, before: number, timing: OnceTiming): Pro
         seen = st.markdown
         changed = Date.now()
       }
-      if (seen && !st.busy && !st.stop && Date.now() - changed >= timing.settle) return seen
+      // aria-busy can stay "true" after the answer is done: the stop button is the sign that Gemini still writes, busy only waits longer
+      if (seen && !st.stop && Date.now() - changed >= (st.busy ? timing.settle * 4 : timing.settle)) return seen
     } else if (Date.now() - started > timing.start) {
       throw new Error(`Gemini did not start answering in ${Math.round(timing.start / 1000)} seconds`)
     }

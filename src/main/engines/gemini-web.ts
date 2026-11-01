@@ -336,6 +336,7 @@ export class GeminiWebSession implements EngineSession {
     let shown = ''
     let raw = ''
     let changed = Date.now()
+    let seen = ''
     let last: PageState | undefined
     for (;;) {
       if (this.cancelled || this.closed) return raw
@@ -343,6 +344,11 @@ export class GeminiWebSession implements EngineSession {
       last = st
       if (st.responses > before) {
         raw = st.markdown
+        // the quiet time runs from the last change of the whole reply, also while a tool block (not shown) grows
+        if (raw !== seen) {
+          seen = raw
+          changed = Date.now()
+        }
         const visible = owner ? splitReply(raw, (n) => Boolean(owner(n))).text : raw
         if (visible !== shown) {
           if (visible.startsWith(shown) && visible.length > shown.length) this.host.emit({ type: 'delta', sessionId: this.meta.id, itemId: id, kind: 'assistant', delta: visible.slice(shown.length) })
@@ -350,7 +356,10 @@ export class GeminiWebSession implements EngineSession {
           shown = visible
           changed = Date.now()
         }
-        if (!st.busy && !st.stop && Date.now() - changed > 900) break
+        // The stop button is the sign that Gemini is still writing. The page's aria-busy can stay "true" after the answer is
+        // done (seen on gemini.google.com, Nov 2026), which kept the chat running for ever: it only makes the wait longer.
+        const quiet = Date.now() - changed
+        if (!st.stop && quiet > (st.busy ? 3500 : 900) && (raw.trim() || quiet > 8000)) break
       } else if (Date.now() - started > 90000) {
         throw new Error(tr("Gemini nu a răspuns în 90 de secunde. Verifică fereastra browserului Jolty."))
       }
