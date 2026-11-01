@@ -94,7 +94,7 @@ class H(BaseHTTPRequestHandler):
             # RUN_STREAM=n: n chunks of markdown text, 25 ms apart, like a model typing a long answer
             sse(self, "content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}})
             for k in range(int(want_stream.group(1))):
-                piece = f"\n\n## Part {k}\n\nSome words with `inline code` and **bold** text. " if k % 12 == 0 else "word " * 6
+                piece = f"\n\n## Part {k}\n\nSome words with `inline code`, `<project>` and **bold** text. " if k % 12 == 0 else "word " * 6
                 sse(self, "content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": piece}})
                 time.sleep(0.025)
             sse(self, "content_block_stop", {"type": "content_block_stop", "index": 0})

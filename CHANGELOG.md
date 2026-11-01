@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.5
+
+### Fixed
+
+- Inline code such as `<project>` is shown as written. It used to come out as an empty box because the angle brackets were read as a tag.
+
 ## 0.17.4
 
 ### Fixed

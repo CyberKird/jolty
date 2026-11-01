@@ -50,7 +50,6 @@ export function highlightLive(code: string, lang?: string): string {
 }
 
 const attr = (s: string): string => escapeHtml(s).replace(/"/g, '&quot;')
-const unEntity = (s: string): string => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
 
 /** A control inside rendered Markdown. Its words are CSS content (never in a selection or in innerText); one delegated handler runs it. */
 const control = (act: string, label: string, text = '', done = ''): string =>
@@ -80,8 +79,10 @@ function newMarked(fold: boolean): Marked {
       },
       // a span that looks like a value to copy becomes a chip; an ordinary word stays plain code
       codespan({ text }) {
-        const kind = valueKind(unEntity(text))
-        return kind ? `<code class="cv" data-k="${kind}" data-t="${attr(tr("Clic pentru a copia"))}" role="button" tabindex="0">${text}</code>` : `<code>${text}</code>`
+        // marked hands over the raw characters: a <placeholder> must be escaped or the sanitizer drops it as a tag and the span comes out empty
+        const kind = valueKind(text)
+        const shown = escapeHtml(text)
+        return kind ? `<code class="cv" data-k="${kind}" data-t="${attr(tr("Clic pentru a copia"))}" role="button" tabindex="0">${shown}</code>` : `<code>${shown}</code>`
       }
     }
   })

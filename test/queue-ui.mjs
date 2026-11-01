@@ -49,6 +49,8 @@ try {
   const id = JSON.parse(fs.readFileSync(path.join(data, 'sessions.json'), 'utf8'))[0].id
   const users = JSON.parse(fs.readFileSync(path.join(data, 'transcripts', `${id}.json`), 'utf8')).filter((i) => i.kind === 'user').map((i) => i.text)
   check(users.length === 2 && users[1].includes('second message'), `both messages are in the conversation, in order (${JSON.stringify(users)})`)
+  // a <placeholder> in inline code stays visible (it once came out as an empty box)
+  check((await win.locator('.md code', { hasText: '<project>' }).count()) > 0, 'inline code keeps its <placeholder>')
   await shot(win, 'steer-2-done.png')
 } catch (e) {
   console.log('FAIL', e.message)
