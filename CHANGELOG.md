@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.7
+
+### Improvements
+
+- A new conversation opens on what you chose last: the model and thinking level of the profile, the permission mode, and the Browser and Computer switches. They are saved the moment you change them (in a new chat or in an open one), so ending the task, closing Jolty or starting it again the next day does not bring the defaults back. The kill key for computer use also turns the switch off for new chats.
+
+### Fixed
+
+- The mascot shrank in a crowded window even when his size was set to Normal in Settings. He now keeps the size you chose and steps to the edge of the window when there is no room.
+
 ## 0.16.6
 
 ### Improvements

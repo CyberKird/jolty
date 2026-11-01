@@ -5,6 +5,7 @@ import os from 'os'
 import path from 'path'
 import { Notification, powerSaveBlocker, shell } from 'electron'
 import type {
+  AppSettings,
   AccountStatus,
   Attachment,
   ChatEvent,
@@ -1114,6 +1115,11 @@ export class Jolty {
     this.remember(meta.profileId, { effort })
   }
 
+  /** The mode and the Browser / Computer switches the user set last, for the next new chat (a new chat opens on them, whatever happened since). */
+  private rememberComposer(patch: NonNullable<AppSettings['lastComposer']>): void {
+    store.saveSettings({ lastComposer: { ...store.loadSettings().lastComposer, ...patch } })
+  }
+
   /** What a profile used last, for the next new chat. */
   private remember(profileId: string, patch: { model?: string; effort?: string }): void {
     const all = store.loadSettings().lastModels || {}
@@ -1130,6 +1136,7 @@ export class Jolty {
     const meta = s?.meta || this.meta(sessionId)
     meta.permissionMode = mode
     this.saveMeta(meta)
+    this.rememberComposer({ mode })
   }
 
   async setBrowser(sessionId: string, on: boolean): Promise<void> {
@@ -1153,6 +1160,7 @@ export class Jolty {
     const meta = s?.meta || this.meta(sessionId)
     meta.browser = on || undefined
     this.saveMeta(meta)
+    this.rememberComposer({ browser: on })
     if (!on) void nativeBrowser.release(sessionId)
   }
 
@@ -1170,6 +1178,8 @@ export class Jolty {
     const meta = s?.meta || this.meta(sessionId)
     meta.computer = on || undefined
     this.saveMeta(meta)
+    // the kill key also lands here with off, so new chats do not start with the PC under control again
+    this.rememberComposer({ computer: on })
     if (!on) {
       this.denyComputerAsks(sessionId)
       nativeComputer.release(sessionId)

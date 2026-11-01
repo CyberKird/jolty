@@ -18,7 +18,7 @@ export interface Spot {
   el: Element | null
   x: number
   y: number
-  /** 1: his size; less when the only room left is small (he shrinks) */
+  /** always 1 now: he keeps his size (the field stays for the callers that pass it along) */
   scale: number
 }
 
@@ -118,13 +118,14 @@ function search(want: Spot, scale: number): Spot | null {
   return sorted.find((s) => !blocked(s.x, s.y, s.scale)) ?? null
 }
 
-/** the wanted spot if he is clear there, else the nearest clear one, smaller if need be, else half out of an edge */
+/** the wanted spot if he is clear there, else the nearest clear one, else half out of an edge. He keeps the size the user chose (Settings):
+ * a crowded window used to shrink him to 0.62, which looked like the setting being ignored. */
 export function freeSpot(want: Spot): Spot {
   if (!blocked(want.x, want.y, want.scale)) return want
-  const found = search(want, 1) ?? search(want, 0.62)
+  const found = search(want, 1)
   if (found) return found
   const side = want.x < innerWidth / 2 ? -1 : 1
-  return { el: null, x: side < 0 ? 4 : innerWidth - 4, y: innerHeight - 7, scale: 0.62 }
+  return { el: null, x: side < 0 ? 4 : innerWidth - 4, y: innerHeight - 7, scale: 1 }
 }
 
 /** invalidates what was read: the page changed under him */

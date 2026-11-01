@@ -1118,6 +1118,10 @@ export function NewChat() {
   const [seed, setSeed] = useState<string>()
   const groups = useAllModels(profiles)
   const [lastModels, setLastModels] = useState<AppSettings['lastModels']>()
+  const [lastComposer, setLastComposer] = useState<AppSettings['lastComposer']>()
+  const [settingsRead, setSettingsRead] = useState(false)
+  // the mode and the switches were put back once, from what was set last
+  const composerRestored = useRef(false)
   // the profile whose last model and level were already put in the picker (or that the user picked by hand)
   const restored = useRef<string | undefined>(undefined)
   const launching = useRef(false)
@@ -1127,6 +1131,8 @@ export function NewChat() {
     void api.app.settings().then((s) => {
       setCwd(s.lastCwd)
       setLastModels(s.lastModels)
+      setLastComposer(s.lastComposer)
+      setSettingsRead(true)
       setProfileId((cur) => cur || s.lastProfileId || profiles[0]?.id)
     })
   }, [profiles])
@@ -1142,6 +1148,26 @@ export function NewChat() {
     setModel(m.id)
     setEffort(last.effort && m.efforts?.includes(last.effort) ? last.effort : undefined)
   }, [groups, profileId, lastModels])
+
+  // a new chat opens on the mode, Browser and Computer the user left last, as far as this profile's engine has them
+  useEffect(() => {
+    const engine = profiles.find((x) => x.id === profileId)?.engine
+    if (!settingsRead || !profileId || !engine || composerRestored.current) return
+    composerRestored.current = true
+    const last = lastComposer
+    if (!last) return
+    if (last.mode && modesFor(engine).some((m) => m.id === last.mode)) setMode(last.mode)
+    if (last.browser && hasJoltyBrowser(engine)) setBrowser(true)
+    if (last.computer && hasJoltyComputer(engine)) setComputer(true)
+  }, [settingsRead, profileId, profiles, lastComposer])
+
+  /** What the user picks is kept at once, not when a chat starts: ending the task or closing Jolty must not lose it. */
+  const keep = (patch: NonNullable<AppSettings['lastComposer']>): void => {
+    void api.app.settings().then((s) => api.app.saveSettings({ lastComposer: { ...s.lastComposer, ...patch } }))
+  }
+  const keepModel = (id: string, m: string, e?: string): void => {
+    void api.app.settings().then((s) => api.app.saveSettings({ lastProfileId: id, lastModels: { ...s.lastModels, [id]: { model: m, effort: e } } }))
+  }
 
   const pickCwd = async (): Promise<void> => {
     const dir = await api.app.pickFolder()
@@ -1195,21 +1221,31 @@ export function NewChat() {
             if (!hasJoltyComputer(picked)) setComputer(false)
             setTemporary(false)
           }
-          if (id !== profileId) {
-            setProfileId(id)
-            void api.app.saveSettings({ lastProfileId: id })
-          }
+          if (id !== profileId) setProfileId(id)
+          keepModel(id, m, e)
           setModel(m)
           setEffort(e)
         }}
         effort={effort}
-        onEffort={setEffort}
+        onEffort={(e) => {
+          setEffort(e)
+          if (profileId) keepModel(profileId, model, e)
+        }}
         mode={mode}
-        onMode={setMode}
+        onMode={(m) => {
+          setMode(m)
+          keep({ mode: m })
+        }}
         browser={browser}
-        onBrowser={setBrowser}
+        onBrowser={(on) => {
+          setBrowser(on)
+          keep({ browser: on })
+        }}
         computer={computer}
-        onComputer={setComputer}
+        onComputer={(on) => {
+          setComputer(on)
+          keep({ computer: on })
+        }}
         temporary={temporary}
         onTemporary={setTemporary}
         cwd={cwd}
