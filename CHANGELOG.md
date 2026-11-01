@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.8
+
+### Improvements
+
+- The browser window Jolty opens for a chat now opens maximised, but still behind what you are doing, instead of small.
+- Jolty closes the browser tabs it opened when it no longer needs them: when the chat is closed, when you turn Browser off, and 90 seconds after an answer ends unless the chat uses the browser again. Tabs of yours that Jolty took over on request stay open. The window closes with its last tab. Turn it off with `browserAutoClose: false` in the settings file.
+
 ## 0.16.7
 
 ### Improvements

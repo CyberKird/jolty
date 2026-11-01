@@ -13,6 +13,8 @@ export interface ServiceOptions {
   notConnected: () => string
   /** opens the browser when it is closed and waits for the extension to connect */
   ensureBrowser?: () => Promise<void>
+  /** close the tabs Jolty opened when the chat is done with them (on unless the setting says no) */
+  autoClose?: () => boolean
   log?: (m: string) => void
 }
 
@@ -29,6 +31,8 @@ interface Session {
   /** tabs a page opened (links, popups) since the last tool result */
   fresh: Tab[]
   lock: Promise<unknown>
+  /** the tabs close when this fires; any new use of the chat's browser cancels it */
+  closeTimer?: NodeJS.Timeout
 }
 
 export const MAX_TABS = 12
@@ -77,6 +81,7 @@ export class BrowserService {
   private session(sid: string): Session {
     let s = this.sessions.get(sid)
     if (!s) this.sessions.set(sid, (s = { sid, tabs: [], fresh: [], lock: Promise.resolve() }))
+    clearTimeout(s.closeTimer)
     return s
   }
 
@@ -102,6 +107,7 @@ export class BrowserService {
     if (!owner || owner.tabs.length >= MAX_TABS) return
     try {
       const tab = await this.attach(info.id, info.windowId)
+      tab.mine = opener.mine
       owner.tabs.push(tab)
       owner.fresh.push(tab)
     } catch (e) {
@@ -137,6 +143,7 @@ export class BrowserService {
     }
     this.windowId = info.windowId
     const tab = await this.attach(info.id, info.windowId)
+    tab.mine = true
     s.tabs.push(tab)
     s.current = tab
     void this.pickLive()
@@ -182,17 +189,33 @@ export class BrowserService {
     return this.session(sid).current
   }
 
-  /** The chat is over (or turned the browser off): let go of its tabs, leaving them open for the user. */
+  /**
+   * The chat is over (or turned the browser off): the tabs Jolty opened for it are closed, and with the last one the window it kept;
+   * a tab of the user's that was taken over on request is only let go of and stays open.
+   */
   async release(sid: string): Promise<void> {
     const s = this.sessions.get(sid)
     if (!s) return
+    clearTimeout(s.closeTimer)
     this.sessions.delete(sid)
+    const close = this.opts.autoClose?.() !== false
     for (const t of s.tabs) {
       this.byId.delete(t.id)
       t.dead = true
-      await this.hub.request('debugger.detach', { tabId: t.id }).catch(() => undefined)
+      if (close && t.mine) await this.hub.request('tabs.close', { tabId: t.id }).catch(() => undefined)
+      else await this.hub.request('debugger.detach', { tabId: t.id }).catch(() => undefined)
     }
+    // no chat keeps a tab in the shared window any more: the next one opens a fresh window
+    if (![...this.sessions.values()].some((o) => o.tabs.length)) this.windowId = 0
     void this.pickLive()
+  }
+
+  /** A turn ended: the tabs stay a while (the page may be what you wanted to see), then they close unless the chat uses the browser again. */
+  closeLater(sid: string, ms: number): void {
+    const s = this.sessions.get(sid)
+    if (!s || !s.tabs.some((t) => t.mine)) return
+    clearTimeout(s.closeTimer)
+    s.closeTimer = setTimeout(() => void this.release(sid), ms)
   }
 
   // ------------------------------------------------------------------ what the model reads

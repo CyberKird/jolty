@@ -50,6 +50,8 @@ export class Tab {
   dragData?: Params
   state: LoadState = 'complete'
   dead = false
+  /** opened by Jolty for the model (not a tab of the user's taken over on request): the one kind that is closed when the work is done */
+  mine = false
   lastUsed = Date.now()
   mainFrame = ''
   private inflight = new Map<string, number>()

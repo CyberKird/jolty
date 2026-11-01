@@ -168,8 +168,10 @@ const handlers = {
     const want = url || 'about:blank'
     let t
     if (newWindow || !windowId) {
-      const w = await chrome.windows.create({ url: want, focused: false, type: 'normal', width: 1280, height: 860 })
+      const w = await chrome.windows.create({ url: want, focused: false, type: 'normal' })
       t = w.tabs[0]
+      // the whole screen, but still behind what the user is doing: maximised after it exists (some browsers refuse the state at creation)
+      await chrome.windows.update(w.id, { state: 'maximized' }).catch(() => undefined)
     } else t = await chrome.tabs.create({ url: want, windowId, active: true })
     return tabInfo(await settleTab(t, want))
   },

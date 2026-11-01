@@ -355,6 +355,8 @@ export interface AppSettings {
   /** the model and thinking level each profile used last: a new chat opens on them, not on the default */
   lastModels?: Record<string, { model: string; effort?: string }>
   /** the permission mode, Browser and Computer switches as the user left them: a new chat opens on them (set in the bar of a new chat or of an open one) */
+  /** the browser tabs Jolty opened for a chat close when the chat is done with them; on unless false */
+  browserAutoClose?: boolean
   lastComposer?: { mode?: PermissionMode; browser?: boolean; computer?: boolean }
   /** new versions download in the background and install when Jolty closes; off: Jolty only says one is there and you press Update; on unless false */
   autoUpdate?: boolean

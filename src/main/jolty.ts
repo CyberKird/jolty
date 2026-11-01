@@ -454,6 +454,7 @@ export class Jolty {
       if (e.status !== 'running') for (const w of [...this.idleWaiters]) w(e.sessionId)
       if (e.status === 'running') this.learnTake(e.sessionId)
       if (e.status === 'idle') this.learnFromGemini(e.sessionId)
+      if (e.status !== 'running') nativeBrowser.closeLater(e.sessionId)
       if (e.status !== 'running') this.learnReport(e.sessionId)
     }
     if (e.type === 'context') this.ctxUsed.set(e.sessionId, e.used)

@@ -46,7 +46,7 @@ export async function startHarness(opts: { overlay?: boolean } = {}): Promise<Ha
   const hub = new BrowserHub({
     token: () => TOKEN,
     paired: { get: () => paired, set: (o) => (paired = o) },
-    bundledVersion: () => '1.0.1',
+    bundledVersion: () => '1.0.2',
     mcp: (sid, m) => svc.handle(sid, m),
     log: debug('[hub]')
   })

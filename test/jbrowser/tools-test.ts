@@ -259,7 +259,7 @@ test('console, network, wait_for, find, evaluate, back, scroll', async () => {
   const down = ok(await h.call('browser_scroll', { direction: 'down' }))
   assert.match(down, /Scroll: [1-9]\d*px/)
   const bottom = ok(await h.call('browser_scroll', { direction: 'bottom' }))
-  assert.match(bottom, /Scroll: 1\d{3}px/)
+  assert.match(bottom, /Scroll: [1-9]\d{3}px/)
 })
 
 test('two chats work side by side, each with its own tab', async () => {
@@ -275,6 +275,30 @@ test('two chats work side by side, each with its own tab', async () => {
   assert.match(none.text, /No tab is open/)
   await h.svc.release('chatA')
   await h.svc.release('chatB')
+})
+
+const openTabs = async (): Promise<number[]> => (await h.hub.request<{ id: number }[]>('tabs.list')).map((t) => t.id)
+
+test('the tabs Jolty opened close when the chat is done with them', async () => {
+  ok(await h.call('browser_navigate', { url: h.site + '/form' }, 'chatD'))
+  const tab = h.svc.tabsOf('chatD')[0]
+  assert.equal(tab.mine, true)
+  assert.ok((await openTabs()).includes(tab.id))
+  await h.svc.release('chatD')
+  assert.ok(!(await openTabs()).includes(tab.id), 'the tab is closed')
+})
+
+test('after a turn the tabs close once the grace period is over, unless the chat uses the browser again', async () => {
+  ok(await h.call('browser_navigate', { url: h.site + '/form' }, 'chatE'))
+  const tab = h.svc.tabsOf('chatE')[0]
+  h.svc.closeLater('chatE', 400)
+  // used again within the grace period: the timer is cancelled
+  ok(await h.call('browser_snapshot', {}, 'chatE'))
+  await new Promise((r) => setTimeout(r, 700))
+  assert.ok((await openTabs()).includes(tab.id), 'still open')
+  h.svc.closeLater('chatE', 300)
+  await new Promise((r) => setTimeout(r, 900))
+  assert.ok(!(await openTabs()).includes(tab.id), 'closed after the grace period')
 })
 
 test('the model cannot see the user tabs, only take the current one on request', async () => {

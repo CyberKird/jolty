@@ -70,6 +70,7 @@ class NativeBrowser {
     overlay: () => loadSettings().browserOverlay !== false,
     notConnected: () => this.notConnected(),
     ensureBrowser: () => this.ensureBrowser(),
+    autoClose: () => loadSettings().browserAutoClose !== false,
     log: (m) => process.env.JOLTY_DEBUG && console.error('[jbrowser]', m)
   })
   private started?: Promise<void>
@@ -184,6 +185,11 @@ class NativeBrowser {
 
   release(sid: string): Promise<void> {
     return this.service.release(sid)
+  }
+
+  /** The chat finished a turn: its tabs close after a short while unless it uses them again. */
+  closeLater(sid: string): void {
+    this.service.closeLater(sid, 90_000)
   }
 
   private notConnected(): string {
