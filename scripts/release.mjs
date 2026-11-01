@@ -38,6 +38,21 @@ const gh = (...args) => {
 }
 const releasesOfTag = () => JSON.parse(gh('api', `repos/${repo}/releases?per_page=100`)).filter((r) => r.tag_name === tag)
 
+// a second run (for example one left over after a crashed session) would rebuild the installer and upload a different hash
+const lock = path.join('dist', '.release.lock')
+fs.mkdirSync('dist', { recursive: true })
+if (fs.existsSync(lock)) {
+  const pid = Number(fs.readFileSync(lock, 'utf8'))
+  let alive = false
+  try {
+    process.kill(pid, 0)
+    alive = true
+  } catch {}
+  if (alive) fail(`another release run is still going (pid ${pid}): wait for it or stop it first`)
+}
+fs.writeFileSync(lock, String(process.pid))
+process.on('exit', () => fs.rmSync(lock, { force: true }))
+
 const head = run('git', ['rev-parse', 'HEAD'])
 if (!run('git', ['branch', '-r', '--contains', head]).includes('origin/main')) fail(`the commit ${head.slice(0, 7)} is not pushed to origin/main yet: push it first`)
 if (run('git', ['status', '--porcelain'])) console.warn('release: warning, the working tree has uncommitted changes; the installer is built from them')
@@ -73,6 +88,12 @@ for (const n of [exe, `${exe}.blockmap`, 'latest.yml']) if (!names.includes(n)) 
 const sha512 = crypto.createHash('sha512').update(fs.readFileSync(path.join('dist', exe))).digest('base64')
 const latest = await (await fetch(existing[0].assets.find((a) => a.name === 'latest.yml').url, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/octet-stream' } })).text()
 if (!latest.includes(`version: ${version}`) || !latest.includes(sha512)) fail('latest.yml does not match the installer that was built')
+// the file on GitHub must be the one built here: latest.yml can match dist/ while the uploaded installer comes from another build
+for (const n of [exe, `${exe}.blockmap`]) {
+  const local = crypto.createHash('sha256').update(fs.readFileSync(path.join('dist', n))).digest('hex')
+  const remote = existing[0].assets.find((a) => a.name === n).digest
+  if (remote !== `sha256:${local}`) fail(`${n} on GitHub is not the file built here (${remote ?? 'no digest'} instead of sha256:${local}): run again to upload it`)
+}
 
 gh('release', 'edit', tag, '--draft=false', '--latest', '--notes', notes)
 const live = await (await fetch(`https://github.com/${repo}/releases/latest/download/latest.yml`)).text()
