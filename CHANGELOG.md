@@ -1,15 +1,10 @@
 # Changelog
 
-## 0.17.5
-
-### Fixed
-
-- Inline code such as `<project>` is shown as written. It used to come out as an empty box because the angle brackets were read as a tag.
-
 ## 0.17.4
 
 ### Fixed
 
+- Inline code such as `<project>` is shown as written. It used to come out as an empty box because the angle brackets were read as a tag.
 - In Glass and Frost only what Jolty strikes, walks on or lands on rings like glass. The laptop keys while he types, a wave, a cheer, being picked up and the teleport keep their own sounds again.
 - A message sent while a lead chat waits for the sessions it started (`wait_for_sessions`) is read at once instead of after up to 100 seconds. The wait ends, the sessions keep working.
 
