@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.9
+
+### Improvements
+
+- Checkboxes, radio buttons, the slider and the arrow of drop-down lists now follow the theme (accent colour, corners, lit rim in Glass and Frost) instead of the blue and grey of the system, on every Settings page and everywhere else.
+
+### Fixed
+
+- Glass and Frost stuttered on a 144 Hz screen when the Live panel or the sidebar opened or closed, and the first switch to Settings paused for half a second. The big soft shadow of the two panels was redrawn on every frame of the resize. The shadow is smaller and each panel has a layer of its own: opening the Live panel no longer drops a frame in the same test (22 slow frames before, none now).
+- In Frost an empty checkbox disappeared into the pale page. It keeps a visible edge.
+
 ## 0.16.8
 
 ### Improvements
