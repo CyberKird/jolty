@@ -30,6 +30,7 @@ import { activeBrowser, BROWSER_EXTENSION_URL, BROWSER_TOKEN_KEY, browserMode, b
 import { nativeBrowser } from './jbrowser/native'
 import { nativeComputer } from './computer/native'
 import { afterStop } from './stop-gate'
+import { drop, rewind as rewindFolder, snapshot } from './checkpoints'
 import { PowerGuard, systemShutdown } from './power'
 import { ClaudeDriver } from './engines/claude'
 import { CodexDriver } from './engines/codex'
@@ -783,6 +784,8 @@ export class Jolty {
         return
       }
     }
+    // Claude Code keeps its own file copies per message; for the other engines the folder is saved here, so the message can be undone
+    if (!s.meta.temporary && s.meta.engine !== 'claude' && s.meta.engine !== 'gemini') await snapshot(store.dataDir(), sessionId, s.meta.cwd, userId)
     await s.send(prompt || 'Look at the attached image.', images, userId)
     this.saveMeta(s.meta)
   }
@@ -822,7 +825,7 @@ export class Jolty {
       const offset = ids.length - mine.length
       target = ids[n + Math.max(0, offset)] || itemId
     }
-    const r = await s.rewind(target, dryRun)
+    const r = s.meta.engine === 'claude' || s.meta.engine === 'gemini' ? await s.rewind(target, dryRun) : await rewindFolder(store.dataDir(), sessionId, s.meta.cwd, itemId, !dryRun)
     if (dryRun) return r
     const what = r.files.length ? `${r.files.length} ${r.files.length === 1 ? tr("fișier") : tr("fișiere")} (+${r.insertions} -${r.deletions})` : tr("nimic de schimbat")
     this.onEngineEvent({ type: 'item', sessionId, item: { kind: 'notice', id: randomUUID(), text: tr("Fișierele au revenit la starea de dinainte de acel mesaj: {what}.", { what }), level: 'info' } })
@@ -1643,7 +1646,12 @@ ${text.slice(0, 1500)}`
     this.saveTimers.delete(sessionId)
     const gone = store.loadSessions().find((s) => s.id === sessionId)
     // kept in the trash until Jolty closes (trash.ts) so it can be reopened; its worktree goes when it falls out of the trash
-    if (gone) for (const old of trash.stash(gone, this.transcript(sessionId))) if (old.worktree) void removeWorktree(old.worktree)
+    if (gone) {
+      for (const old of trash.stash(gone, this.transcript(sessionId))) {
+        if (old.worktree) void removeWorktree(old.worktree)
+        drop(store.dataDir(), old.id)
+      }
+    }
     this.transcripts.delete(sessionId)
     forget(sessionId)
     store.removeTranscript(sessionId)

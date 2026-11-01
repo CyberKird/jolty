@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.18.0
+
+### New
+
+- Undo for Codex, OpenCode and Hermes chats. Before each message Jolty saves the project folder in a private copy kept in its own data folder (nothing is added to your project), and the undo button under your message puts the files back to how they were, including files the model created or deleted. Claude chats keep using Claude Code's own copies. Big media files, archives and folders such as node_modules are not copied.
+
+### Fixed
+
+- In a narrow chat box next to the Live panel, the model, effort and Browser buttons were drawn on top of each other. They now move to a second row.
+
 ## 0.17.4
 
 ### Fixed

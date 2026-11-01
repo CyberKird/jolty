@@ -3318,6 +3318,13 @@ a {
   .composer-bar .chrome-toggle {
     padding: 0 8px;
   }
+  /* the live panel can leave the box narrow in a wide window: the controls go to a second row instead of squeezing over each other */
+  .composer-bar {
+    flex-wrap: wrap;
+  }
+  .composer-bar .send-btn:last-child {
+    margin-inline-start: auto;
+  }
   .picker-btn .ellipsis {
     min-width: 4ch;
   }
