@@ -4,7 +4,12 @@ export type LowPowerMode = 'auto' | 'on' | 'off'
 let mode: LowPowerMode = 'auto'
 
 /** The graphics chip as Chromium reports it: none at all, software drawing, a chip built into the processor, or a real card. */
+let kind: ReturnType<typeof gpuKind> | undefined
 function gpuKind(): 'none' | 'software' | 'integrated' | 'discrete' {
+  if (kind) return kind
+  return (kind = probeGpu())
+}
+function probeGpu(): 'none' | 'software' | 'integrated' | 'discrete' {
   try {
     const gl = document.createElement('canvas').getContext('webgl') as WebGLRenderingContext | null
     if (!gl) return 'none'
@@ -32,6 +37,11 @@ function weakPc(): boolean {
   return gpu === 'integrated' && screen.width * screen.height * devicePixelRatio * devicePixelRatio >= 4e6
 }
 
+/** A chip built into the processor (at any screen size) keeps the glass look but not the bending of the chat under the header and the box. */
+export function liteGlass(): boolean {
+  return mode === 'auto' && gpuKind() === 'integrated'
+}
+
 export function lowPower(): boolean {
   return mode === 'on' || (mode === 'auto' && weakPc())
 }
@@ -41,6 +51,7 @@ export function setLowPowerMode(next: LowPowerMode | undefined): void {
   mode = next === 'on' || next === 'off' ? next : 'auto'
   const on = lowPower()
   const root = document.documentElement
+  root.classList.toggle('lite-glass', liteGlass())
   if (root.classList.contains('low-power') === on) return
   root.classList.toggle('low-power', on)
   window.dispatchEvent(new CustomEvent('jolty:lowpower', { detail: on }))

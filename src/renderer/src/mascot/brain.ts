@@ -655,7 +655,8 @@ export class Brain {
   /** a burst from the bolt on his head: up and fanned, or (radial) outward over the upper half from that point */
   private spark(radial = false): void {
     const a = this.body.anchor('bolt')
-    sparks(this.x + a.x, this.y + a.y, -Math.PI / 2, radial)
+    // he may be shrunk to fit (free.ts): the scale turns around his feet, so the bolt and the reach of the burst follow it
+    sparks(this.x + a.x * this.scale, this.y + a.y * this.scale, -Math.PI / 2, radial, this.scale)
   }
 
   private zap(): void {

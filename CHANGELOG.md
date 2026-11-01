@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.16.5
+
+### Improvements
+
+- Glass and Frost are thicker. The sidebar and the Live panel are now rounded slabs that float over the background, with a gap between them, a real shadow underneath and a clear interior. The starter cards, the counters and the search box get the same lit rim.
+- In a chat, the header and the message box float over the conversation: the messages scroll under them and are blurred and bent at their edge, like a pane of glass over moving content. On a PC with a chip built into the processor they keep the glass look but skip the blur and the bending, and in low-power mode they are solid.
+- Menus and pickers are denser, so the page behind them no longer reads through the text.
+
+### Fixed
+
+- The quote above the message box poked out of the round corner when the box was short. It now follows the corner.
+- When the mascot shrinks to fit a small gap, his sparks now leave from his bolt at the smaller size instead of from where it would be at full size.
+
 ## 0.16.4
 
 ### Fixed

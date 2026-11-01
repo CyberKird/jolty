@@ -21,12 +21,19 @@ html:is([data-theme='glass'], [data-theme='frost']) {
   --display: 'Barlow', 'Segoe UI', sans-serif;
   /* the material */
   --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 34%, rgba(255, 255, 255, 0.01) 62%, rgba(255, 255, 255, 0.1) 100%);
-  --glass-lens: url(#jolty-lens) blur(5px) saturate(1.9) brightness(1.08);
+  --glass-lens: url(#jolty-lens) blur(9px) saturate(1.9) brightness(1.08);
   --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), inset 0 0 24px rgba(255, 255, 255, 0.06);
   --glass-drop: 0 14px 36px -14px rgba(0, 0, 0, 0.6);
-  --glass-pop: rgba(26, 24, 44, 0.55);
+  --glass-pop: rgba(26, 24, 44, 0.78);
   /* the rim of a small pane, as on a thick slab of glass: a bright ring, a hard top highlight, glints on two corners, a soft glow inside */
   --glass-rim-hi: inset 0 0 0 1px rgba(255, 255, 255, 0.24), inset 0 2px 1px -1px rgba(255, 255, 255, 0.85), inset 0 -2px 1px -1px rgba(255, 255, 255, 0.32), inset 4px 4px 7px -4px rgba(255, 255, 255, 0.55), inset -4px -4px 7px -4px rgba(255, 255, 255, 0.3), inset 0 0 18px rgba(255, 255, 255, 0.09), 0 10px 22px -8px rgba(0, 0, 0, 0.5), 0 2px 5px rgba(0, 0, 0, 0.22);
+  /* a big slab (sidebar, live panel): smoked clear glass, a thick lit edge with a cyan glint on one
+     side and a pink one on the other, and a real shadow under it so it floats */
+  --slab-fill: rgba(255, 255, 255, 0.035);
+  --glass-lens-bar: url(#jolty-lens) blur(3px) saturate(1.5) brightness(1.1);
+  --glass-bar-fill: rgba(14, 12, 34, 0.28);
+  --glass-bar-solid: rgba(20, 18, 40, 0.9);
+  --glass-slab: inset 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 2px 1px -1px rgba(255, 255, 255, 0.85), inset 0 -2px 1px -1px rgba(255, 255, 255, 0.3), inset 7px 7px 12px -8px rgba(255, 255, 255, 0.5), inset -7px -7px 12px -8px rgba(170, 190, 255, 0.34), inset 3px 0 4px -3px rgba(80, 220, 255, 0.6), inset -3px 0 4px -3px rgba(255, 120, 200, 0.5), inset 0 0 44px rgba(255, 255, 255, 0.05), 0 34px 60px -26px rgba(0, 0, 0, 0.8), 0 8px 16px -4px rgba(0, 0, 0, 0.36);
 }
 
 /* the aurora: soft colour orbs, painted once (no animation, nothing to redraw) */
@@ -138,9 +145,9 @@ html:is([data-theme='glass'], [data-theme='frost']) :is(.power-bar, .live-tab-ba
 
 /* the quote above the box sits in the composer's top edge: its marker follows the round corner (an inset shadow curves with it,
    a border would stay a straight line poking out of the corner) */
-html:is([data-theme='glass'], [data-theme='frost']) .quote-bar {
+html:is([data-theme='glass'], [data-theme='frost']) .composer .quote-bar {
   border-inline-start: 0;
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
   box-shadow: inset 3px 0 0 var(--volt);
 }
 
@@ -225,6 +232,85 @@ html:is([data-theme='glass'], [data-theme='frost']) .btn {
   letter-spacing: 0.06em;
 }
 
+/* thick glass: the three columns are slabs that float over the sky with a gap between them, and the small things that were flat
+   boxes (starter cards, counters, search) get the lit rim too */
+html:is([data-theme='glass'], [data-theme='frost']) .titlebar {
+  background: transparent;
+  border-bottom: 0;
+}
+/* #root: the square-corner rule above names it, so it outranks a plain class */
+html:is([data-theme='glass'], [data-theme='frost']) #root .app > :is(.sidebar, .live) {
+  margin-block: 4px 10px;
+  border: 0;
+  border-radius: 28px;
+  background: var(--glass-sheen), var(--slab-fill);
+  box-shadow: var(--glass-slab);
+}
+/* the sidebar has a fixed width and sits at the end of its column (transitions.css), so the gap is taken off the width */
+html:is([data-theme='glass'], [data-theme='frost']) #root .app > .sidebar {
+  width: calc(min(var(--side-w, 248px), 30vw) - 16px);
+  margin-inline: 10px 6px;
+}
+html:is([data-theme='glass'], [data-theme='frost']) #root .app > .live {
+  margin-inline-end: 10px;
+}
+html:is([data-theme='glass'], [data-theme='frost']) #root :is(.app > .live.closed, .app.no-sidebar > .sidebar) {
+  margin: 0;
+  box-shadow: none;
+}
+/* the one place glass has real content to bend: the chat scrolls under the header and the box, so what passes beneath them is
+   refracted at their edge. They float over the messages (the messages keep room for them, --composer-h comes from the box). */
+html:is([data-theme='glass'], [data-theme='frost']) .main:has(> .messages) {
+  position: relative;
+}
+html:is([data-theme='glass'], [data-theme='frost']) #root .main > .chat-header {
+  position: absolute;
+  top: 8px;
+  inset-inline: 14px;
+  z-index: 6;
+  height: 52px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 26px;
+  background: var(--glass-sheen), var(--glass-bar-fill);
+  backdrop-filter: var(--glass-lens-bar);
+  box-shadow: var(--glass-rim-hi);
+}
+html:is([data-theme='glass'], [data-theme='frost']) .main > .messages {
+  padding-top: 84px;
+  padding-bottom: calc(var(--composer-h, 120px) + 8px);
+}
+html:is([data-theme='glass'], [data-theme='frost']) .main:has(> .messages) > .composer-wrap {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .main:has(> .messages) > .composer-wrap > * {
+  pointer-events: auto;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .main:has(> .messages) > .composer-wrap .composer {
+  background: var(--glass-sheen), var(--glass-bar-fill);
+  backdrop-filter: var(--glass-lens-bar);
+}
+
+html:is([data-theme='glass'], [data-theme='frost']) :is(.start, .stat, .search input) {
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.03);
+  box-shadow: var(--glass-rim);
+  border-color: transparent;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .start:hover {
+  box-shadow: var(--glass-rim-hi);
+}
+
+/* a chip built into the processor (lowpower.ts, liteGlass): the glass look stays, but the header and the box do not blur and bend the chat
+   under them, which is the costly part; a denser fill keeps the lines behind them from showing through sharp */
+html.lite-glass:is([data-theme='glass'], [data-theme='frost']) :is(.main > .chat-header, .main:has(> .messages) > .composer-wrap .composer) {
+  backdrop-filter: none;
+  background: var(--glass-sheen), var(--glass-bar-solid);
+}
+
 /* a weak PC (lowpower.ts: few cores, little memory, no real GPU, or a chip inside the processor on a 4K screen) gets flat glass:
    a solid page, no sky, a thin rim and no shadows, so nothing big is blended or blurred */
 html.low-power:is([data-theme='glass'], [data-theme='frost']) {
@@ -240,6 +326,9 @@ html.low-power[data-theme='frost'] {
 html.low-power:is([data-theme='glass'], [data-theme='frost']) body::before {
   display: none;
 }
+html.low-power:is([data-theme='glass'], [data-theme='frost']) {
+  --glass-slab: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
 html.low-power:is([data-theme='glass'], [data-theme='frost']) :is(.btn, .msg-user, .card, .composer, .tool, .permission, .plan) {
   box-shadow: var(--glass-rim);
 }
@@ -248,7 +337,7 @@ html.low-power:is([data-theme='glass'], [data-theme='frost']) :is(.btn, .msg-use
 html.low-power:is([data-theme='glass'], [data-theme='frost']) * {
   backdrop-filter: none !important;
 }
-html.low-power:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar) {
+html.low-power:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar, .main > .chat-header, .main:has(> .messages) > .composer-wrap .composer) {
   background: #14131f;
 }
 
@@ -276,7 +365,12 @@ html[data-theme='frost'] {
   --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.8), inset 0 2px 1px -1px #fff, inset 0 -2px 3px -2px rgba(30, 36, 70, 0.2), inset 3px 0 5px -3px rgba(80, 220, 210, 0.5), inset -3px 0 5px -3px rgba(255, 140, 190, 0.5), inset 0 0 22px rgba(255, 255, 255, 0.35);
   --glass-rim-hi: var(--glass-rim), 0 12px 26px -10px rgba(40, 50, 100, 0.38), 0 2px 6px rgba(40, 50, 100, 0.14);
   --glass-drop: 0 18px 40px -16px rgba(40, 50, 100, 0.38);
-  --glass-pop: rgba(240, 242, 250, 0.62);
+  --glass-pop: rgba(240, 242, 250, 0.8);
+  --slab-fill: rgba(255, 255, 255, 0.16);
+  --glass-lens-bar: url(#jolty-lens) blur(3px) saturate(1.3);
+  --glass-bar-fill: rgba(255, 255, 255, 0.3);
+  --glass-bar-solid: rgba(240, 242, 250, 0.92);
+  --glass-slab: var(--glass-rim), 0 34px 60px -28px rgba(40, 50, 100, 0.5), 0 8px 16px -6px rgba(40, 50, 100, 0.2);
 }
 html[data-theme='frost'] body::before {
   background:
@@ -322,9 +416,6 @@ html[data-theme='frost'] .btn.on {
   background: var(--white);
   color: #fff;
 }
-html[data-theme='frost'] :is(.sidebar, .live) {
-  background: var(--glass-sheen), rgba(255, 255, 255, 0.12);
-}
-html.low-power[data-theme='frost'] :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar) {
+html.low-power[data-theme='frost'] :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar, .main > .chat-header, .main:has(> .messages) > .composer-wrap .composer) {
   background: #eef0f6;
 }

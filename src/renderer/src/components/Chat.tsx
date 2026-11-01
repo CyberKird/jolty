@@ -171,6 +171,21 @@ function Composer(p: ComposerProps) {
   const [powerOpen, setPowerOpen] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  // the glass themes let the chat scroll under the box (theme-glass.css): the messages keep this much room at the bottom
+  useEffect(() => {
+    const el = wrapRef.current
+    const main = el?.parentElement
+    if (!el || !main) return
+    const set = (): void => main.style.setProperty('--composer-h', `${el.offsetHeight}px`)
+    set()
+    const ro = new ResizeObserver(set)
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+      main.style.removeProperty('--composer-h')
+    }
+  }, [])
   const loaded = useAllModels(p.groups ? NO_PROFILES : p.profiles)
   const groups = p.groups || loaded
   const toast = useStore((s) => s.toast)
@@ -308,7 +323,7 @@ function Composer(p: ComposerProps) {
   }
 
   return (
-    <div className="composer-wrap">
+    <div className="composer-wrap" ref={wrapRef}>
       {notice && (
         <div className={`composer-notice ${notice.error ? 'error' : ''}`} role={notice.error ? 'alert' : 'status'}>
           <span>{notice.text}</span>
