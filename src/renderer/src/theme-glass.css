@@ -295,7 +295,7 @@ html:is([data-theme='glass'], [data-theme='frost']) #root .main > .chat-header {
 }
 html:is([data-theme='glass'], [data-theme='frost']) .main > .messages {
   padding-top: 84px;
-  padding-bottom: calc(var(--composer-h, 120px) + 8px);
+  padding-bottom: calc(var(--composer-h, 120px) + 28px);
 }
 html:is([data-theme='glass'], [data-theme='frost']) .main:has(> .messages) > .composer-wrap {
   position: absolute;

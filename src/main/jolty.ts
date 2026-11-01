@@ -95,6 +95,9 @@ const claudeHome = (p: Profile): string => store.profileDir(p) || path.join(os.h
 // Jolty's own one-shot calls (conversation titles, prompt rewrites, picture descriptions) leave sessions in the engine's folder; importAll must not list them as chats.
 const HELPER_PROMPT = /^(\[external unsupported block: image\]\s*)?(Name this conversation so the user can find it|Rewrite the message below|Another AI model that cannot see images|You are a prompt engineer)/
 
+// The model-catalog probe opens an empty OpenCode session in the home folder each time it runs; it keeps the engine's default title.
+const PROBE_TITLE = /^New session - \d{4}-\d\d-\d\dT[\d:.]+Z$/
+
 /** Copies a Claude Code conversation (transcript, subagents, file checkpoints) into another profile's folder so it resumes there. */
 function copyClaudeSession(from: Profile, to: Profile, id: string): void {
   const src = claudeHome(from)
@@ -587,7 +590,9 @@ export class Jolty {
    * skipping the ones already here. Histories load lazily when a conversation is opened.
    */
   async importAll(): Promise<{ imported: number; failed: string[] }> {
-    const metas = store.loadSessions()
+    const isProbe = (s: { title: string; cwd?: string }): boolean => PROBE_TITLE.test(s.title) && s.cwd === os.homedir()
+    // drop probe sessions imported by earlier versions, unless something was said in them
+    const metas = store.loadSessions().filter((s) => !(s.engine === 'opencode' && isProbe(s) && !this.live.has(s.id) && !store.loadTranscript(s.id).length))
     const known = new Set([...metas, ...this.temps.values()].map((s) => s.engineSessionId).filter(Boolean))
     const dirs = new Set<string>()
     const failed: string[] = []
@@ -608,7 +613,7 @@ export class Jolty {
       for (const s of list) {
         if (known.has(s.engineSessionId)) continue
         known.add(s.engineSessionId)
-        if (HELPER_PROMPT.test(s.title.trim())) continue
+        if (HELPER_PROMPT.test(s.title.trim()) || (s.engine === 'opencode' && isProbe(s))) continue
         metas.push({
           id: randomUUID(),
           profileId: p.id,

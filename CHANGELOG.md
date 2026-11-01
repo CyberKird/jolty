@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.2
+
+### Fixed
+
+- Conversations named "New session - <date>" no longer pile up in the sidebar under a second project. They were empty OpenCode sessions that Jolty opens in your home folder to read the model list, and the import listed each one as a chat. The import now skips them and clears the ones already listed, unless you wrote something in them.
+
+### Improvements
+
+- In Glass and Frost the last message keeps more room above the box (28 px instead of 8), so the chat no longer sits right against it.
+
 ## 0.17.1
 
 ### Improvements
