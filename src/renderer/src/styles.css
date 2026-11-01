@@ -1044,12 +1044,25 @@ a {
   background: rgba(0, 0, 0, 0.88);
   cursor: zoom-out;
 }
+.lightbox-zoom {
+  display: flex;
+  will-change: transform;
+}
 .lightbox img {
-  max-width: 100%;
-  max-height: 100%;
+  max-width: calc(100vw - 64px);
+  max-height: calc(100vh - 64px);
   object-fit: contain;
-  cursor: default;
-  border: 1px solid var(--line-2);
+  cursor: zoom-in;
+  /* no square frame: a screenshot with rounded corners would show a rectangle around them */
+  border-radius: 14px;
+  user-select: none;
+  touch-action: none;
+}
+.lightbox img[data-zoomed] {
+  cursor: grab;
+}
+.lightbox img[data-zoomed]:active {
+  cursor: grabbing;
 }
 /* reply: a button on the message, the quote above the composer and inside the sent bubble */
 .msg-user,
@@ -1784,11 +1797,17 @@ a {
   color: var(--grey);
   font-size: 13.5px;
   word-break: break-word;
+  /* a long command or message stays a few lines here; the whole of it is in the Terminal tab and the tooltip */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 .state-detail.code {
   font-family: var(--code);
   font-size: 12px;
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 .counters {
   display: grid;
@@ -2107,7 +2126,8 @@ a {
   padding: 12px;
   color: var(--grey);
   white-space: pre-wrap;
-  word-break: break-all;
+  /* a word moves down whole; only a token wider than the panel (a long path) is broken */
+  overflow-wrap: anywhere;
 }
 .terminal .cmd {
   color: var(--white);
@@ -2786,6 +2806,8 @@ a {
   min-height: 0;
   overflow-y: auto;
   padding: 16px 20px 22px;
+  /* scrolled text fades out inside the padding instead of being cut with a straight edge under the tabs and at the rounded bottom */
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 22px), transparent 100%);
 }
 .live-pane .terminal,
 .live-pane .code-live pre {

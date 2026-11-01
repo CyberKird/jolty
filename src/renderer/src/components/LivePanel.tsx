@@ -708,7 +708,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
         <div className={`state-name ${phase.on && phase.key !== 'approval' ? 'on' : ''}`} style={phase.key === 'approval' ? { color: 'var(--warning)' } : undefined}>
           {phase.name}
         </div>
-        {phase.detail && <div className={`state-detail ${phase.code ? 'code' : ''}`}>{phase.detail}</div>}
+        {phase.detail && <div className={`state-detail ${phase.code ? 'code' : ''}`} title={phase.detail}>{phase.detail}</div>}
         {(running || reads > 0 || edits > 0 || runs > 0) && (
         <div className="counters">
           {/* a number that changes ticks once (the key remounts it) */}

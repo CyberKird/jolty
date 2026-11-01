@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.19.0
+
+### New
+
+- The big image preview zooms and pans: scroll to zoom toward the pointer, drag to move a zoomed image, double click to jump to 3x and back, + and - from the keyboard, 0 to reset.
+- Right-click works on the big image too (copy, save, open). The menu used to open underneath it.
+
+### Fixed
+
+- The big image preview no longer draws a square frame around the image, so a screenshot with rounded corners no longer shows a rectangle around its corners.
+- The Terminal tab of the Live panel broke words in the middle ("subprocess" became "subproc" and "ess"). A word now moves to the next line whole; only a path wider than the panel is split.
+- In the Live panel, text that scrolled past the top and bottom was cut with a straight edge under the tabs and over the rounded corner. It now fades out softly.
+- A long command under "Running" filled the whole Live panel. It now shows three lines, with the full text in the tooltip and in the Terminal tab.
+
 ## 0.18.0
 
 ### New

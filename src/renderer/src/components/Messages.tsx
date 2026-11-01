@@ -11,6 +11,69 @@ import { tr } from '@shared/i18n'
 import { Collapse } from './Collapse'
 import { exitMs, usePresence } from '../usePresence'
 
+const MAX_ZOOM = 16
+
+/** The big preview: the wheel zooms toward the pointer, a drag moves a zoomed image, a double click toggles 3x, + - 0 from the keyboard. */
+function ZoomImage({ src, name }: { src: string; name: string }) {
+  const [view, setView] = useState({ s: 1, x: 0, y: 0 })
+  const box = useRef<HTMLDivElement>(null)
+  const grab = useRef<{ px: number; py: number; x: number; y: number } | undefined>(undefined)
+  // cx, cy: the point to keep still, from the middle of the window
+  const zoom = (next: (s: number) => number, cx = 0, cy = 0): void =>
+    setView((v) => {
+      const s = Math.min(MAX_ZOOM, Math.max(1, next(v.s)))
+      if (s === 1) return { s: 1, x: 0, y: 0 }
+      const k = s / v.s
+      const reach = (window.innerWidth * s) / 2
+      return { s, x: Math.max(-reach, Math.min(reach, cx - (cx - v.x) * k)), y: Math.max(-reach, Math.min(reach, cy - (cy - v.y) * k)) }
+    })
+  const from = (e: { clientX: number; clientY: number }): [number, number] => [e.clientX - window.innerWidth / 2, e.clientY - window.innerHeight / 2]
+  useEffect(() => {
+    // a native listener: React's wheel handler cannot stop the page from scrolling
+    const back = box.current?.closest('.lightbox')
+    const onWheel = (e: Event): void => {
+      e.preventDefault()
+      const w = e as WheelEvent
+      zoom((s) => s * Math.exp(-w.deltaY * 0.001), ...from(w))
+    }
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === '+' || e.key === '=') zoom((s) => s * 1.5)
+      else if (e.key === '-') zoom((s) => s / 1.5)
+      else if (e.key === '0') zoom(() => 1)
+    }
+    back?.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('keydown', onKey)
+    return () => {
+      back?.removeEventListener('wheel', onWheel)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [])
+  return (
+    <div ref={box} className="lightbox-zoom" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.s})` }}>
+      <img
+        src={src}
+        alt={name}
+        draggable={false}
+        data-zoomed={view.s > 1 || undefined}
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => zoom((s) => (s > 1 ? 1 : 3), ...from(e))}
+        onContextMenu={(e) => imageMenu(e, src, name)}
+        onPointerDown={(e) => {
+          if (e.button !== 0 || view.s === 1) return
+          e.currentTarget.setPointerCapture(e.pointerId)
+          grab.current = { px: e.clientX, py: e.clientY, x: view.x, y: view.y }
+        }}
+        onPointerMove={(e) => {
+          const g = grab.current
+          if (g) setView((v) => ({ ...v, x: g.x + e.clientX - g.px, y: g.y + e.clientY - g.py }))
+        }}
+        onPointerUp={() => (grab.current = undefined)}
+        onPointerCancel={() => (grab.current = undefined)}
+      />
+    </div>
+  )
+}
+
 /** A chat image: click opens a large preview, right-click offers copy, save and open. */
 function ChatImage({ src, name }: { src: string; name: string }) {
   const [big, setBig] = useState(false)
@@ -29,7 +92,7 @@ function ChatImage({ src, name }: { src: string; name: string }) {
       {shown &&
         createPortal(
           <div className="lightbox" data-state={state} role="dialog" aria-label={tr("Previzualizare imagine")} onClick={() => setBig(false)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation() }}>
-            <img src={src} alt={name} onClick={(e) => e.stopPropagation()} onContextMenu={(e) => imageMenu(e, src, name)} />
+            <ZoomImage src={src} name={name} />
           </div>,
           document.body
         )}

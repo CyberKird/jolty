@@ -2,6 +2,7 @@
 // entries; whatever nobody claimed falls to the document-level listener, which reads links, paths, code and selections.
 import { ClipboardPaste, Copy, Download, ExternalLink, FileCode, FolderOpen, Image as ImageIcon, Link, Redo2, Scissors, Table2, TextSelect, Undo2, type LucideIcon } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { create } from 'zustand'
 import { quotePath, resolvePath, shellCommand, tableText } from '@shared/copy-values'
 import type { EditAction } from '@shared/types'
@@ -202,7 +203,8 @@ export function ContextMenu() {
 
   if (!shown) return null
   const shownAt = last.current.at!
-  return (
+  // in the body, like the image preview: inside #root the menu would sit under anything that opens above it
+  return createPortal(
     <div
       className="ctx"
       data-state={state}
@@ -234,6 +236,7 @@ export function ContextMenu() {
           </button>
         )
       )}
-    </div>
+    </div>,
+    document.body
   )
 }
