@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.3
+
+### Fixed
+
+- The empty "New session - <date>" conversations under the second project now disappear when Jolty starts. In 0.17.2 they were only cleared when you pressed refresh or imported, so they stayed in the list.
+
 ## 0.17.2
 
 ### Fixed

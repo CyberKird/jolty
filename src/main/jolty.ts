@@ -97,6 +97,7 @@ const HELPER_PROMPT = /^(\[external unsupported block: image\]\s*)?(Name this co
 
 // The model-catalog probe opens an empty OpenCode session in the home folder each time it runs; it keeps the engine's default title.
 const PROBE_TITLE = /^New session - \d{4}-\d\d-\d\dT[\d:.]+Z$/
+const isProbe = (s: { title: string; cwd?: string }): boolean => PROBE_TITLE.test(s.title) && s.cwd === os.homedir()
 
 /** Copies a Claude Code conversation (transcript, subagents, file checkpoints) into another profile's folder so it resumes there. */
 function copyClaudeSession(from: Profile, to: Profile, id: string): void {
@@ -198,6 +199,10 @@ export class Jolty {
       askable: () => this.askable(),
       ask: (input) => this.askModel(input)
     })
+    // the list is cleaned at start, not only when the user refreshes it
+    const all = store.loadSessions()
+    const clean = this.withoutProbes(all)
+    if (clean.length !== all.length) store.saveSessions(clean)
     // the PC is never handed over by a switch left on from before: computer use starts off in every chat
     const left = store.loadSessions().filter((m) => m.computer)
     if (left.length) store.saveSessions(store.loadSessions().map((m) => (m.computer ? { ...m, computer: undefined } : m)))
@@ -585,14 +590,17 @@ export class Jolty {
     }
   }
 
+  /** Probe sessions imported by earlier versions, unless something was said in them. */
+  private withoutProbes(metas: SessionMeta[]): SessionMeta[] {
+    return metas.filter((s) => !(s.engine === 'opencode' && isProbe(s) && !this.live.has(s.id) && !store.loadTranscript(s.id).length))
+  }
+
   /**
    * Brings every Claude Code and Codex conversation on this PC into Jolty, once per login folder,
    * skipping the ones already here. Histories load lazily when a conversation is opened.
    */
   async importAll(): Promise<{ imported: number; failed: string[] }> {
-    const isProbe = (s: { title: string; cwd?: string }): boolean => PROBE_TITLE.test(s.title) && s.cwd === os.homedir()
-    // drop probe sessions imported by earlier versions, unless something was said in them
-    const metas = store.loadSessions().filter((s) => !(s.engine === 'opencode' && isProbe(s) && !this.live.has(s.id) && !store.loadTranscript(s.id).length))
+    const metas = this.withoutProbes(store.loadSessions())
     const known = new Set([...metas, ...this.temps.values()].map((s) => s.engineSessionId).filter(Boolean))
     const dirs = new Set<string>()
     const failed: string[] = []
