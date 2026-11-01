@@ -1,5 +1,8 @@
 /* Themes: `data-theme` on <html> (App.tsx, from the saved settings). Volt is the base look in styles.css and has no block here.
-   A theme changes the tokens first; the few rules below it are the shapes a token cannot reach (radius, blur, the background). */
+   A theme changes the tokens first; the few rules below it are the shapes a token cannot reach (radius, blur, the background).
+   A new theme must also set the scrollbar tokens (--scroll-w, --scroll-radius, --scroll-track, --scroll-thumb, --scroll-thumb-hover);
+   test/scrollbar-theme-test.mjs fails without them. Never put scrollbar-width or scrollbar-color on an element: it brings back the
+   native Windows scrollbar, arrows included, which no theme can colour. */
 
 /* ------------------------------------------------------------------ the picker in Settings (themes drawn in their own colours) */
 .theme-grid {
