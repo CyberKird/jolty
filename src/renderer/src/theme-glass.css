@@ -19,6 +19,12 @@ html:is([data-theme='glass'], [data-theme='frost']) {
   --volt-rgb: 196, 181, 255;
   --radius: 22px;
   --display: 'Barlow', 'Segoe UI', sans-serif;
+  /* the scrollbar: a slim rounded pill of glass */
+  --scroll-w: 6px;
+  --scroll-radius: 999px;
+  --scroll-track: rgba(255, 255, 255, 0.03);
+  --scroll-thumb: rgba(255, 255, 255, 0.22);
+  --scroll-thumb-hover: rgba(var(--volt-rgb), 0.6);
   /* the material */
   --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 34%, rgba(255, 255, 255, 0.01) 62%, rgba(255, 255, 255, 0.1) 100%);
   --glass-lens: url(#jolty-lens) blur(9px) saturate(1.9) brightness(1.08);
@@ -62,10 +68,6 @@ html:is([data-theme='glass'], [data-theme='frost']) #root {
 html:is([data-theme='glass'], [data-theme='frost']) ::selection {
   background: rgba(var(--volt-rgb), 0.5);
   color: #fff;
-}
-html:is([data-theme='glass'], [data-theme='frost']) ::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.22);
 }
 
 /* the panes show the aurora through their own fill */
@@ -423,6 +425,9 @@ html[data-theme='frost'] {
   --glass-rim-hi: var(--glass-rim), 0 12px 26px -10px rgba(40, 50, 100, 0.38), 0 2px 6px rgba(40, 50, 100, 0.14);
   --glass-drop: 0 18px 40px -16px rgba(40, 50, 100, 0.38);
   --glass-pop: rgba(240, 242, 250, 0.8);
+  --scroll-track: rgba(30, 36, 70, 0.05);
+  --scroll-thumb: rgba(30, 36, 70, 0.25);
+  --scroll-thumb-hover: rgba(var(--volt-rgb), 0.6);
   --slab-fill: rgba(255, 255, 255, 0.16);
   --on-accent: #fff;
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23555a73' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
@@ -460,9 +465,6 @@ html[data-theme='frost'] .hljs-type { color: #4f6f12; }
 html[data-theme='frost'] :is(.hljs-meta, .hljs-punctuation) { color: #6d7189; }
 html[data-theme='frost'] .md strong {
   color: var(--white);
-}
-html[data-theme='frost'] ::-webkit-scrollbar-thumb {
-  background: rgba(30, 36, 70, 0.25);
 }
 html[data-theme='frost'] .msg-user {
   background: linear-gradient(135deg, rgba(var(--volt-rgb), 0.26), rgba(167, 139, 250, 0.16) 60%, rgba(255, 255, 255, 0.45));

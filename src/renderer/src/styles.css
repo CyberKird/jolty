@@ -10,6 +10,11 @@
 :root {
   color-scheme: dark;
   --black: #020204;
+  --scroll-w: 4px;
+  --scroll-radius: 0;
+  --scroll-track: transparent;
+  --scroll-thumb: rgba(255, 255, 255, 0.14);
+  --scroll-thumb-hover: var(--volt-2);
   --s1: #060709;
   --s2: #0a0b0e;
   --s3: #101217;
@@ -65,18 +70,28 @@ body {
   background: var(--volt);
   color: var(--black);
 }
+/* The scrollbar is a theme token (--scroll-*, set per theme in theme-glass.css). It is drawn with ::-webkit-scrollbar only:
+   scrollbar-width or scrollbar-color on any element switches that element back to the native Windows scrollbar, with
+   arrow buttons and a grey track that belong to no theme. */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: var(--scroll-w);
+  height: var(--scroll-w);
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scroll-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--scroll-thumb);
+  border-radius: var(--scroll-radius);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--volt-2);
+  background: var(--scroll-thumb-hover);
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 :focus-visible {
   outline: 2px solid var(--volt);
@@ -1221,7 +1236,6 @@ a {
   color: var(--grey);
   line-height: 1.55;
   border-inline-start-color: var(--volt-line);
-  scrollbar-width: thin;
 }
 
 /* tool calls read like a log: verb, target, state */
