@@ -4222,3 +4222,19 @@ html[data-theme='frost'] select option {
   background: #f0f2fa;
   color: #1c1e2c;
 }
+
+/* a start card that continues a conversation: its title (cut to one line) and how long ago it was */
+.start-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.start-when {
+  flex: none;
+  font-family: var(--label);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-2);
+}

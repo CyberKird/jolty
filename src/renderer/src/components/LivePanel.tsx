@@ -709,6 +709,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
           {phase.name}
         </div>
         {phase.detail && <div className={`state-detail ${phase.code ? 'code' : ''}`}>{phase.detail}</div>}
+        {(running || reads > 0 || edits > 0 || runs > 0) && (
         <div className="counters">
           {/* a number that changes ticks once (the key remounts it) */}
           <div className="counter">
@@ -728,6 +729,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
             <div className="k">{tr("timp")}</div>
           </div>
         </div>
+        )}
       </div>
       <LiveTabs tabs={TABS} tab={tab} onPick={setPicked} />
       <div className="live-pane" role="tabpanel" key={tab}>

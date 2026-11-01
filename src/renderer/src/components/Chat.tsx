@@ -7,7 +7,7 @@ import { usageRisk } from '@shared/usage-risk'
 import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import { hasJoltyBrowser, hasJoltyComputer, hasJoltyTools, isAcp } from '@shared/types'
 import { sameProvider } from '@shared/provider'
-import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, useStore } from '../store'
+import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, timeAgo, useStore } from '../store'
 import { MessageItem, PermissionCard } from './Messages'
 import { CopyButton } from './CopyField'
 import { useWindowedItems } from './useWindowedItems'
@@ -1115,6 +1115,7 @@ const STARTS = [
 export function NewChat() {
   const profiles = useStore((s) => s.profiles)
   const { loadSessions, toast } = useStore(useShallow(({ loadSessions, toast }) => ({ loadSessions, toast })))
+  const sessions = useStore((s) => s.sessions)
   const [profileId, setProfileId] = useState<string>()
   const [model, setModel] = useState('')
   const [effort, setEffort] = useState<string>()
@@ -1185,6 +1186,10 @@ export function NewChat() {
     }
   }
   const profile = profiles.find((p) => p.id === profileId)
+  // where the work left off in this folder: the newest conversations here, instead of a menu of things to ask
+  const recents = cwd
+    ? sessions.filter((x) => x.cwd === cwd && !x.archived && !x.temporary && !x.scheduled).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4)
+    : []
 
   return (
     <>
@@ -1204,12 +1209,19 @@ export function NewChat() {
           )}
         </div>
         <div className="starts">
-          {STARTS.map((s) => (
-            <button key={s} className="start" onClick={() => setSeed(s + ' ')}>
-              {s}
-              <ArrowRight size={14} />
-            </button>
-          ))}
+          {recents.length
+            ? recents.map((r) => (
+                <button key={r.id} className="start" onClick={() => void useStore.getState().openSession(r.id)} title={r.title}>
+                  <span className="start-title">{r.title}</span>
+                  <span className="start-when">{timeAgo(r.updatedAt)}</span>
+                </button>
+              ))
+            : STARTS.slice(0, 4).map((s) => (
+                <button key={s} className="start" onClick={() => setSeed(s + ' ')}>
+                  {s}
+                  <ArrowRight size={14} />
+                </button>
+              ))}
         </div>
       </div>
       <UpdateStrip />

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.1
+
+### Improvements
+
+- The start page of a new conversation continues your work: it lists the newest conversations in this folder (a click opens one) instead of a fixed menu of things to ask. In a folder with none it still offers four starters.
+- The Live panel no longer shows a row of zeros ("0 read, 0 changed, 0 commands, 0:00") while nothing is happening. The counters appear when the model starts working.
+
 ## 0.17.0
 
 ### New
