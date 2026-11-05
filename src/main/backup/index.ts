@@ -107,6 +107,30 @@ export async function connect(id: string, open: Opener = (u) => shell.openExtern
   return statusOf(p)
 }
 
+const pictureTried = new Set<string>()
+
+/** An account connected before pictures were kept gets its picture now, once per run; true when one was added. */
+export async function fillPictures(): Promise<boolean> {
+  const all = loadBackupAccounts()
+  let changed = false
+  for (const p of PROVIDERS) {
+    const m = all[p.id]
+    if (!m || m.picture || !p.identity || pictureTried.has(p.id)) continue
+    pictureTried.add(p.id)
+    try {
+      const who = await p.identity(config(p))
+      if (who.sub === m.sub && who.picture) {
+        all[p.id] = { ...m, picture: who.picture }
+        changed = true
+      }
+    } catch {
+      // offline or signed out: the letter stays
+    }
+  }
+  if (changed) saveBackupAccounts(all)
+  return changed
+}
+
 /** Forgets the account on this PC: tokens, password and notes. The backup stays where it is; the password opens it again. */
 export async function disconnect(id: string): Promise<BackupStatus> {
   const p = pick(id)

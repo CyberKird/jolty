@@ -9,6 +9,7 @@ import { activeBrowser, browsers } from '../browser'
 import { dataDir, getSecret, loadSettings, setSecret } from '../store'
 import { tr } from '@shared/i18n'
 import { handleJoltyTools } from '../jolty-tools'
+import { McpShare, userStdioServers } from '../mcp-share'
 import { nativeComputer } from '../computer/native'
 import { BrowserHub } from './hub'
 import { BrowserService } from './service'
@@ -64,6 +65,7 @@ class NativeBrowser {
     xpi: signedXpi,
     paired: { get: () => getSecret(FIREFOX_KEY), set: (o) => setSecret(FIREFOX_KEY, o) },
     computer: (sid, m) => nativeComputer.handle(sid, m),
+    shared: (name, m) => this.share.handle(name, m),
     log: (m) => process.env.JOLTY_DEBUG && console.error('[jbrowser]', m)
   })
   readonly service = new BrowserService(this.hub, {
@@ -72,6 +74,11 @@ class NativeBrowser {
     ensureBrowser: () => this.ensureBrowser(),
     autoClose: () => loadSettings().browserAutoClose !== false,
     log: (m) => process.env.JOLTY_DEBUG && console.error('[jbrowser]', m)
+  })
+  readonly share = new McpShare({
+    servers: () => userStdioServers(),
+    cacheFile: () => path.join(dataDir(), 'mcp-share-cache.json'),
+    log: (m) => process.env.JOLTY_DEBUG && console.error('[mcp-share]', m)
   })
   private started?: Promise<void>
   private launched = 0
@@ -89,6 +96,7 @@ class NativeBrowser {
   }
 
   async stop(): Promise<void> {
+    await this.share.stop()
     await this.hub.stop()
     this.started = undefined
   }
@@ -181,6 +189,13 @@ class NativeBrowser {
   computerMcp(sid: string): { url: string; headers: Record<string, string> } | undefined {
     if (!this.hub.port) return undefined
     return { url: `http://127.0.0.1:${this.hub.port}/computer/${sid}`, headers: { Authorization: `Bearer ${token()}` } }
+  }
+
+  /** The user's own stdio MCP servers as one shared address each (same names, so tools keep theirs); none while the local server is down or sharing is off. */
+  sharedMcp(): Record<string, { url: string; headers: Record<string, string> }> {
+    if (!this.hub.port || loadSettings().shareMcp === false) return {}
+    const headers = { Authorization: `Bearer ${token()}` }
+    return Object.fromEntries(Object.keys(userStdioServers()).map((n) => [n, { url: `http://127.0.0.1:${this.hub.port}/shared/${n}`, headers }]))
   }
 
   release(sid: string): Promise<void> {

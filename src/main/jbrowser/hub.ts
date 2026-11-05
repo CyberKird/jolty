@@ -41,6 +41,8 @@ export interface HubOptions {
   tools?: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
   /** and for computer use (screen, mouse, keyboard), at /computer/<chat id> */
   computer?: (sid: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
+  /** the user's own MCP servers, run once for every chat, at /shared/<server name> */
+  shared?: (name: string, message: Record<string, unknown>) => Promise<Record<string, unknown> | undefined>
   /** where the signed Firefox extension is, served at /jolty.xpi: Firefox only asks "Add Jolty?" for an http address, a file:// one shows a blank page */
   xpi?: () => string
   /** the Firefox extension that was paired (its moz-extension:// origin); a signed add-on has no token file, it asks for the token at /jolty-pair */
@@ -182,8 +184,8 @@ export class BrowserHub extends EventEmitter {
       this.pair(req, res)
       return
     }
-    const m = /^\/(mcp|jolty|computer)\/([A-Za-z0-9_.-]{1,80})$/.exec(url.pathname)
-    const handler = m?.[1] === 'jolty' ? this.opts.tools : m?.[1] === 'computer' ? this.opts.computer : this.opts.mcp
+    const m = /^\/(mcp|jolty|computer|shared)\/([A-Za-z0-9_.-]{1,80})$/.exec(url.pathname)
+    const handler = m?.[1] === 'jolty' ? this.opts.tools : m?.[1] === 'computer' ? this.opts.computer : m?.[1] === 'shared' ? this.opts.shared : this.opts.mcp
     if (!m || !handler) {
       res.writeHead(404).end()
       return

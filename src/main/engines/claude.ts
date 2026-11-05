@@ -30,7 +30,7 @@ import type {
 } from '@shared/types'
 import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
 import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, pageHost } from '../browser'
-import { claudeBrowserServer, claudeComputerServer, claudeJoltyServer } from '../browser-mcp'
+import { claudeBrowserServer, claudeComputerServer, claudeJoltyServer, claudeSharedServers } from '../browser-mcp'
 import { COMPUTER_SERVER, computerPrompt } from '../computer/names'
 import { JOLTY_READ_TOOLS, JOLTY_SERVER, JOLTY_TOOLS_PROMPT } from '../jolty-tools'
 import { modelInfo } from '../local'
@@ -41,7 +41,7 @@ import { TaskBoard } from '@shared/tasks'
 import { getSecret, loadSettings, profileDir } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
 import { learnNowRule } from '../learning'
-import { COPY_RULE, LANGUAGE_RULE, PLAN_RULES, WRITING_RULES } from './prompt'
+import { COPY_RULE, LANGUAGE_RULE, PLAN_RULES, STEER_RULE, WRITING_RULES } from './prompt'
 import { SECRET_FILE_RULES, touchesSecretFile } from './secret-files'
 import { ProfileProcesses } from './profile-processes'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
@@ -54,6 +54,9 @@ const loadSdk = (): Promise<SdkModule> => (sdkModule ??= import('@anthropic-ai/c
 
 /** Even with every question switched off, these never run: they cannot be undone by a checkpoint. */
 const NEVER_RUN = ['Bash(format:*)', 'Bash(diskpart:*)', 'Bash(reg delete:*)', 'Bash(git push --force:*)', 'Bash(git push -f:*)', 'Bash(rm -rf /:*)', 'Bash(rm -rf ~:*)', 'Bash(rm -rf C:*)', 'Bash(rm -rf $HOME:*)']
+
+/** how long a chat may sit idle before its Claude Code process is stopped to free memory */
+const IDLE_CLOSE_MS = 20 * 60_000
 
 const MODE_MAP: Record<PermissionMode, SdkPermissionMode> = {
   auto: 'auto',
@@ -74,7 +77,7 @@ const LIMIT_LABELS: Record<string, string> = {
   overage: 'Extra'
 }
 
-const APPEND_PROMPT = `You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead. ${LANGUAGE_RULE} ${WRITING_RULES} ${PLAN_RULES} ${COPY_RULE}`
+const APPEND_PROMPT = `You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead. ${LANGUAGE_RULE} ${WRITING_RULES} ${PLAN_RULES} ${STEER_RULE} ${COPY_RULE}`
 
 function percent(u: number | null | undefined): number | undefined {
   if (u == null || !Number.isFinite(u) || u < 0) return undefined
@@ -316,6 +319,10 @@ class ClaudeSession implements EngineSession {
   // task id -> running in the background; the result of a turn arrives while a background command still runs
   private tasks = new Map<string, boolean>()
   private idleTimer?: NodeJS.Timeout
+  /** a chat nobody uses still holds a Claude Code process and its tool servers in memory: after a while with nothing running it is stopped, and the next message starts it again on the same conversation (resume) */
+  private closeTimer?: NodeJS.Timeout
+  /** the model set a timer or a monitor inside this process: stopping the process would drop it, so it stays */
+  private keepAlive = false
   /** Stop was pressed since the last message: a send still starting the process must not push its text */
   private stopRequested = false
   private limitWindows = new Map<string, LimitWindow>()
@@ -375,6 +382,7 @@ class ClaudeSession implements EngineSession {
       options.env = { ...options.env, ANTHROPIC_BASE_URL: await noThinkingUrl(this.profile.baseUrl) }
     }
     this.input = new InputQueue()
+    this.keepAlive = false
     this.q = sdk.query({ prompt: this.input, options })
     void this.pump(this.q)
   }
@@ -395,6 +403,13 @@ class ClaudeSession implements EngineSession {
     }
   }
 
+  private armClose(): void {
+    clearTimeout(this.closeTimer)
+    this.closeTimer = setTimeout(() => {
+      if (this.q && !this.turn && !this.backgroundRunning() && !this.pending.size && !this.keepAlive) void this.close()
+    }, IDLE_CLOSE_MS)
+  }
+
   private backgroundRunning(): boolean {
     return [...this.tasks.values()].some(Boolean)
   }
@@ -406,6 +421,7 @@ class ClaudeSession implements EngineSession {
     clearTimeout(this.idleTimer)
     this.idleTimer = setTimeout(() => {
       if (!this.turn && !this.backgroundRunning()) this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
+      this.armClose()
     }, 15000)
   }
 
@@ -501,6 +517,7 @@ class ClaudeSession implements EngineSession {
             const t = toolItem(b, 'running') as Extract<ChatItem, { kind: 'tool' }>
             this.tools.set(t.id, t)
             this.host.emit({ type: 'item', sessionId: sid, item: t })
+            if (/^(CronCreate|ScheduleWakeup|Monitor)$/.test(t.name)) this.keepAlive = true
             const todos = (b.input as { todos?: unknown[] })?.todos
             if (t.name === 'TodoWrite' && Array.isArray(todos)) {
               this.board.todos(todos)
@@ -563,6 +580,7 @@ class ClaudeSession implements EngineSession {
         this.turn = false
         // a command left running in the background keeps the chat live until it ends
         if (!this.backgroundRunning()) this.host.emit({ type: 'status', sessionId: sid, status: 'idle' })
+        this.armClose()
         return
       }
       case 'rate_limit_event': {
@@ -653,6 +671,7 @@ class ClaudeSession implements EngineSession {
 
   async send(text: string, images: Attachment[] = [], clientId?: string): Promise<void> {
     this.stopRequested = false
+    clearTimeout(this.closeTimer)
     await this.ensureStarted()
     if (this.stopRequested) {
       this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'idle' })
@@ -735,6 +754,7 @@ class ClaudeSession implements EngineSession {
   /** Jolty's own tools always, the browser and the computer when they are on. */
   private mcpServers(): NonNullable<Options['mcpServers']> {
     return {
+      ...claudeSharedServers(),
       ...claudeJoltyServer(this.meta.id),
       ...(this.meta.browser ? { [BROWSER_SERVER]: claudeBrowserServer(this.meta.id) } : {}),
       ...(this.meta.computer ? claudeComputerServer(this.meta.id) : {})
@@ -751,6 +771,7 @@ class ClaudeSession implements EngineSession {
       p.resolve({ behavior: 'deny', message: tr("Sesiunea a fost închisă.") })
       this.pending.delete(id)
     }
+    clearTimeout(this.closeTimer)
     this.input.close()
     this.q?.close()
     this.q = undefined

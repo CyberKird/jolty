@@ -1598,5 +1598,10 @@
  "Deschide setările de culoare Windows": "Open Windows color settings",
  "Oprește și pune mesajul înapoi în căsuță": "Stop and put the message back in the box",
  "Arată încă {n}": "Show {n} more",
- "Trimis, îl citește la pasul următor": "Sent, read at the next step"
+ "Trimis, îl citește la pasul următor": "Sent, read at the next step",
+ "Spune-ne ce s-a întâmplat și ce te așteptai. Raportul ajunge direct la noi, fără să deschizi emailul.": "Tell us what happened and what you expected. The report reaches us directly, no email app needed.",
+ "Trimite raportul": "Send the report",
+ "Se trimite…": "Sending…",
+ "Raportul a fost trimis. Mulțumim!": "Report sent. Thank you!",
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Could not send the report. Check your internet connection or send it by email."
 }

@@ -45,6 +45,8 @@ export interface Provider {
   connect(cfg: Config, open: Opener): Promise<Who>
   /** best effort at the provider's side (revoking a token); the caller removes what is kept here */
   disconnect?(cfg: Config): Promise<void>
+  /** whose storage it is, from the tokens already kept (no sign-in); lets an account connected earlier get its picture */
+  identity?(cfg: Config): Promise<Who>
   find(cfg: Config): Promise<RemoteBackup | null>
   put(cfg: Config, data: Buffer): Promise<void>
   get(cfg: Config): Promise<Buffer>

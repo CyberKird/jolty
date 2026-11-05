@@ -47,8 +47,17 @@ function read(): void {
   }
   // the conversation list is one obstacle: the rows are skipped by content-visibility, and reading the rect of each button in a
   // list of hundreds makes the browser lay every skipped row out (seconds at launch)
+  // the same in a long conversation: only the message blocks on screen have their buttons read (a block's own box is cheap, its
+  // contents are skipped by content-visibility until it is near the screen)
+  const onScreen = new Set<Element>()
+  document.querySelectorAll('.messages-inner > *').forEach((b) => {
+    const r = b.getBoundingClientRect()
+    if (r.bottom >= 0 && r.top <= innerHeight) onScreen.add(b)
+  })
   document.querySelectorAll(INTERACTIVE).forEach((el) => {
-    if (!el.closest('.session-list')) add(el)
+    if (el.closest('.session-list')) return
+    const block = el.closest('.messages-inner > *')
+    if (!block || onScreen.has(block)) add(el)
   })
   const list = document.querySelector('.session-list')
   if (list) add(list)

@@ -1,14 +1,14 @@
 import { randomUUID } from 'crypto'
 import { noQuestions, type Attachment, type FileDiff, type PermissionDecision, type PermissionMode, type Profile, type SessionMeta } from '@shared/types'
 import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER } from '../browser'
-import { codexBrowserServer, codexComputerServer, codexJoltyServer } from '../browser-mcp'
+import { codexBrowserServer, codexComputerServer, codexJoltyServer, codexSharedServers } from '../browser-mcp'
 import { computerPrompt } from '../computer/names'
 import { JOLTY_TOOLS_PROMPT } from '../jolty-tools'
 import { learnNowRule } from '../learning'
 import { loadSettings } from '../store'
 import { codexItem, planItemSteps, saveImages } from './codex-items'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
-import { COPY_RULE, LANGUAGE_RULE, PLAN_RULES, WRITING_RULES } from './prompt'
+import { COPY_RULE, LANGUAGE_RULE, PLAN_RULES, STEER_RULE, WRITING_RULES } from './prompt'
 import type { EngineHost, EngineSession } from './types'
 import { tr } from '@shared/i18n'
 
@@ -149,10 +149,11 @@ export class CodexSession implements EngineSession, ThreadListener {
       model: this.meta.model || null,
       approvalPolicy: mode.approvalPolicy,
       sandbox: mode.sandbox,
-      developerInstructions: [LANGUAGE_RULE, WRITING_RULES, PLAN_RULES, COPY_RULE, JOLTY_TOOLS_PROMPT, this.learnRule(), this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' '),
+      developerInstructions: [LANGUAGE_RULE, WRITING_RULES, PLAN_RULES, STEER_RULE, COPY_RULE, JOLTY_TOOLS_PROMPT, this.learnRule(), this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' '),
       // one dotted key per server: the user's own MCP servers from config.toml stay next to them
       config: Object.fromEntries(
         Object.entries({
+          ...codexSharedServers(),
           ...codexJoltyServer(this.meta.id, this.meta.permissionMode === 'ask'),
           ...(this.meta.browser ? { [BROWSER_SERVER]: this.browserConfig() } : {}),
           ...(this.meta.computer ? codexComputerServer(this.meta.id, this.meta.permissionMode === 'ask') : {})

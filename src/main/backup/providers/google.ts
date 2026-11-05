@@ -62,6 +62,10 @@ export const google: Provider = {
 
   async connect(cfg, open) {
     await oauthConnect(spec(cfg), open)
+    return this.identity!(cfg)
+  },
+
+  async identity(cfg) {
     const me = (await (await oauthFetch(spec(cfg), base().userinfo)).json()) as { sub?: string; email?: string; name?: string; picture?: string }
     if (!me.sub || !me.email) throw new BackupError(tr("Nu am aflat ce cont e."))
     return { sub: me.sub, label: me.email, name: me.name, ...(await pictureOf(me.picture)) }

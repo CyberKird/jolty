@@ -1598,5 +1598,10 @@
  "Deschide setările de culoare Windows": "Ouvrir les paramètres de couleur de Windows",
  "Oprește și pune mesajul înapoi în căsuță": "Arrêter et remettre le message dans la zone",
  "Arată încă {n}": "Afficher {n} de plus",
- "Trimis, îl citește la pasul următor": "Envoyé, lu à l'étape suivante"
+ "Trimis, îl citește la pasul următor": "Envoyé, lu à l'étape suivante",
+ "Spune-ne ce s-a întâmplat și ce te așteptai. Raportul ajunge direct la noi, fără să deschizi emailul.": "Dis-nous ce qui s'est passé et ce que tu attendais. Le rapport nous parvient directement, sans ouvrir ton application mail.",
+ "Trimite raportul": "Envoyer le rapport",
+ "Se trimite…": "Envoi…",
+ "Raportul a fost trimis. Mulțumim!": "Rapport envoyé. Merci !",
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Impossible d'envoyer le rapport. Vérifie ta connexion internet ou envoie-le par e-mail."
 }

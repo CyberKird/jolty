@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.20.0
+
+### New
+
+- Your own MCP servers (the ones in `~/.claude.json`) now run once for all chats instead of once per chat. They start on first use and stop after ten idle minutes. Claude, Codex and OpenCode chats get the same ones under the same tool names. Six open chats used to keep about 4 GB of duplicated servers.
+- Bug reports go straight from the app: write, press Send, done. No email app opens. If sending fails, the old Open email button is still there.
+- In the Glass and Frost themes a conversation comes in with the same soft rise as the Settings pages.
+
+### Improvements
+
+- A chat left idle for 20 minutes lets go of its Claude Code process and gets it back, on the same conversation, with the next message. A chat with a turn running, a background command, a pending approval or a timer the model set is left alone.
+- A message sent while the model is working is handled after the current step, in the order that serves the work best.
+- The mascot no longer reads every button of a long chat, which took about a quarter of the main thread when switching conversations.
+
+### Fixed
+
+- The account at the bottom left shows your Google picture instead of a letter, also for accounts connected before pictures were kept.
+
 ## 0.19.1
 
 ### Fixed

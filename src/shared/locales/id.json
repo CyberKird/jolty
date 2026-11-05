@@ -1598,5 +1598,10 @@
  "Deschide setările de culoare Windows": "Buka pengaturan warna Windows",
  "Oprește și pune mesajul înapoi în căsuță": "Hentikan dan kembalikan pesan ke kotak",
  "Arată încă {n}": "Tampilkan {n} lagi",
- "Trimis, îl citește la pasul următor": "Terkirim, dibaca pada langkah berikutnya"
+ "Trimis, îl citește la pasul următor": "Terkirim, dibaca pada langkah berikutnya",
+ "Spune-ne ce s-a întâmplat și ce te așteptai. Raportul ajunge direct la noi, fără să deschizi emailul.": "Ceritakan apa yang terjadi dan apa yang kamu harapkan. Laporan langsung sampai ke kami, tanpa perlu membuka aplikasi email.",
+ "Trimite raportul": "Kirim laporan",
+ "Se trimite…": "Mengirim…",
+ "Raportul a fost trimis. Mulțumim!": "Laporan terkirim. Terima kasih!",
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Laporan tidak dapat dikirim. Periksa koneksi internetmu atau kirim lewat email."
 }

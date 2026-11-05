@@ -24,6 +24,7 @@ import * as pack from './share-pack'
 import * as system from './system'
 import * as connect from './connect'
 import * as backup from './backup'
+import { sendBugReport } from './bug-report'
 import * as useTime from './use-time'
 import * as obsidian from './obsidian'
 import * as gitMerge from './git-merge'
@@ -307,6 +308,7 @@ function registerIpc(): void {
   handle('pack:discard', (previewId: string) => pack.discard(String(previewId)))
   handle('pack:undo', (importId: string) => pack.undo(String(importId)))
   handle('backup:list', () => backup.list())
+  handle('backup:pictures', () => backup.fillPictures())
   handle('backup:setConfig', (id: string, values) => backup.setConfig(id, values as never))
   handle('backup:connect', (id: string) => backup.connect(id))
   handle('backup:disconnect', (id: string) => backup.disconnect(id))
@@ -363,6 +365,7 @@ function registerIpc(): void {
     return r.canceled ? undefined : r.filePaths[0]
   })
   handle('app:openExternal', (url: string) => openWeb(url))
+  handle('app:sendBugReport', (message: unknown, facts: unknown) => sendBugReport(message, facts))
   // Windows keeps its toast switches in the registry: one for every app, one per app id. Off in either, and nothing shows outside the window.
   handle('app:notificationsBlocked', async () => {
     if (process.platform !== 'win32') return false

@@ -74,6 +74,7 @@ const api: JoltyApi = {
   },
   backup: {
     list: () => call('backup:list'),
+    pictures: () => call('backup:pictures'),
     setConfig: (id, values) => call('backup:setConfig', id, values),
     connect: (id) => call('backup:connect', id),
     disconnect: (id) => call('backup:disconnect', id),
@@ -157,6 +158,7 @@ const api: JoltyApi = {
     saveSettings: (patch) => call('app:saveSettings', patch),
     pickFolder: () => call('app:pickFolder'),
     openExternal: (url) => call('app:openExternal', url),
+    sendBugReport: (message, facts) => call('app:sendBugReport', message, facts),
     notificationsBlocked: () => call('app:notificationsBlocked'),
     openNotificationSettings: () => call('app:openNotificationSettings'),
     glassSupport: () => call('app:glassSupport'),

@@ -396,6 +396,8 @@ export interface AppSettings {
   browserApp?: BrowserApp
   /** glow, cursor and tab marker while a model drives the browser; on unless false */
   browserOverlay?: boolean
+  /** the user's own MCP servers run once for all chats and engines instead of once per chat; on unless false */
+  shareMcp?: boolean
   /** auto: the extension opens a tab of its own; pick: the user chooses one of their open tabs; own: a separate Jolty window with its own profile (no extension) */
   browserMode?: BrowserMode
   /** page actions of a model in the browser: ask every time, once per site (default), or never */
@@ -642,6 +644,8 @@ export interface JoltyApi {
     connect(id: ProviderId): Promise<BackupStatus>
     /** forgets the account on this PC; the backup stays in the storage */
     disconnect(id: ProviderId): Promise<BackupStatus>
+    /** looks up the picture of an account connected before pictures were kept; true when one was added */
+    pictures(): Promise<boolean>
     setPassword(id: ProviderId, password: string): Promise<BackupStatus>
     run(id: ProviderId): Promise<BackupResult>
     /** null when this account has no backup yet */
@@ -745,6 +749,8 @@ export interface JoltyApi {
     saveSettings(patch: Partial<AppSettings>): Promise<AppSettings>
     pickFolder(): Promise<string | undefined>
     openExternal(url: string): Promise<void>
+    /** mails a bug report to Jolty through its site; rejects when it could not be delivered */
+    sendBugReport(message: string, facts: string): Promise<void>
     /** Windows has toast notifications off for everyone or for Jolty, so none can show outside the window */
     notificationsBlocked(): Promise<boolean>
     /** opens Windows' own notification settings */

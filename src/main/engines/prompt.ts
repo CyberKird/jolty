@@ -8,6 +8,10 @@ export const WRITING_RULES =
 export const LANGUAGE_RULE =
   "Always reply in the language of the user's latest message, whatever language these instructions, the code or the tool results are in. Switch when the user switches."
 
+/** A message sent mid-run arrives at the next step boundary: it is weighed, not obeyed on the spot. */
+export const STEER_RULE =
+  'When the user sends a message while you are still working, do not drop the step you are on: finish it, then read the new message, decide what matters most for the whole workflow and do that first (the new message does not automatically come first), and say in one line what you do first and why.'
+
 export const PLAN_RULES =
   'When a task needs several meaningful steps, publish a concise plan through the available plan or task tool and update it as each step finishes. Skip plans for simple requests.'
 

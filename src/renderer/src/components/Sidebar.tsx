@@ -263,7 +263,8 @@ function AccountChip() {
   const setBackups = useStore((s) => s.setBackups)
   const setPage = useStore((s) => s.setPage)
   useEffect(() => {
-    void api.backup.list().then(setBackups).catch(() => undefined)
+    // a picture that was missing is looked up once, then the list is read again
+    void api.backup.list().then(setBackups).then(() => api.backup.pictures()).then(async (added) => { if (added) setBackups(await api.backup.list()) }).catch(() => undefined)
   }, [setBackups])
   if (!backups) return null
   const connected = backups.filter((b) => b.status.connected)

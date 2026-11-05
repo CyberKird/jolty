@@ -1598,5 +1598,10 @@
  "Deschide setările de culoare Windows": "فتح إعدادات الألوان في Windows",
  "Oprește și pune mesajul înapoi în căsuță": "إيقاف وإعادة الرسالة إلى المربع",
  "Arată încă {n}": "عرض {n} أخرى",
- "Trimis, îl citește la pasul următor": "أُرسلت، وتُقرأ في الخطوة التالية"
+ "Trimis, îl citește la pasul următor": "أُرسلت، وتُقرأ في الخطوة التالية",
+ "Spune-ne ce s-a întâmplat și ce te așteptai. Raportul ajunge direct la noi, fără să deschizi emailul.": "أخبرنا بما حدث وما كنت تتوقعه. يصلنا التقرير مباشرة دون الحاجة إلى فتح تطبيق البريد.",
+ "Trimite raportul": "إرسال التقرير",
+ "Se trimite…": "جارٍ الإرسال…",
+ "Raportul a fost trimis. Mulțumim!": "تم إرسال التقرير. شكرًا لك!",
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "تعذّر إرسال التقرير. تحقق من اتصالك بالإنترنت أو أرسله عبر البريد الإلكتروني."
 }

@@ -31,6 +31,21 @@ export function codexBrowserServer(sid: string): Record<string, unknown> {
   return { ...browserServer() }
 }
 
+/** The user's own MCP servers, started once by Jolty: under their own name, so Claude Code's copy of the same name is replaced and tools keep their names. */
+export function claudeSharedServers(): Record<string, { type: 'http'; url: string; headers: Record<string, string> }> {
+  return Object.fromEntries(Object.entries(nativeBrowser.sharedMcp()).map(([n, c]) => [n, { type: 'http' as const, ...c }]))
+}
+
+/** The same for Codex; a dot in a name would split its dotted config key, so those stay with Codex's own config. */
+export function codexSharedServers(): Record<string, Record<string, unknown>> {
+  return Object.fromEntries(Object.entries(nativeBrowser.sharedMcp()).filter(([n]) => !n.includes('.')).map(([n, c]) => [n, { url: c.url, http_headers: c.headers, tool_timeout_sec: 600 }]))
+}
+
+/** The same for ACP agents (OpenCode). */
+export function acpSharedServers(): Record<string, unknown>[] {
+  return Object.entries(nativeBrowser.sharedMcp()).map(([name, c]) => ({ type: 'http', name, url: c.url, headers: Object.entries(c.headers).map(([k, value]) => ({ name: k, value })) }))
+}
+
 /** Jolty's tools for Claude Code: empty while the local server is not up, so a chat never waits on it. */
 export function claudeJoltyServer(sid: string): Record<string, { type: 'http'; url: string; headers: Record<string, string> }> {
   const c = nativeBrowser.toolsMcp(sid)

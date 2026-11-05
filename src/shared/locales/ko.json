@@ -1598,5 +1598,10 @@
  "Deschide setările de culoare Windows": "Windows 색 설정 열기",
  "Oprește și pune mesajul înapoi în căsuță": "중지하고 메시지를 입력창으로 되돌리기",
  "Arată încă {n}": "{n}개 더 보기",
- "Trimis, îl citește la pasul următor": "전송됨, 다음 단계에서 읽습니다"
+ "Trimis, îl citește la pasul următor": "전송됨, 다음 단계에서 읽습니다",
+ "Spune-ne ce s-a întâmplat și ce te așteptai. Raportul ajunge direct la noi, fără să deschizi emailul.": "무슨 일이 있었고 무엇을 기대했는지 알려 주세요. 보고서는 메일 앱을 열 필요 없이 바로 저희에게 전달됩니다.",
+ "Trimite raportul": "보고서 보내기",
+ "Se trimite…": "보내는 중…",
+ "Raportul a fost trimis. Mulțumim!": "보고서를 보냈습니다. 감사합니다!",
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "보고서를 보내지 못했습니다. 인터넷 연결을 확인하거나 이메일로 보내 주세요."
 }

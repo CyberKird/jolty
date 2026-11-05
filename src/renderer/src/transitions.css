@@ -272,6 +272,11 @@ html.low-power :is(.picker-pop, .ctx, .mentions)[data-state='closed'] {
 .page {
   animation: rise var(--t-slow) var(--e-out);
 }
+/* the glass themes skip the cross-fade (see swapPage): a conversation then comes in with the same rise as a settings page,
+   on the header and the message column only (the window behind them stays still, so it costs almost nothing) */
+html[data-theme]:not([data-theme='volt']) :is(.chat-header, .messages) {
+  animation: rise var(--t-slow) var(--e-out);
+}
 .vt-page .main {
   view-transition-name: main;
 }
