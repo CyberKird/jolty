@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.1
+
+### Improvements
+
+- The model suggestion bar above the message box is now off by default. Turn it on in Settings, Models, "Sugerează modelul potrivit".
+
 ## 0.20.0
 
 ### New

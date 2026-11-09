@@ -360,7 +360,7 @@ export interface AppSettings {
   lastComposer?: { mode?: PermissionMode; browser?: boolean; computer?: boolean }
   /** new versions download in the background and install when Jolty closes; off: Jolty only says one is there and you press Update; on unless false */
   autoUpdate?: boolean
-  /** the strip above the composer that suggests another model or effort for the task you type; on unless false */
+  /** the strip above the composer that suggests another model or effort for the task you type; off unless true */
   modelAdvice?: boolean
   /** colour theme of the interface (renderer/theme.ts); volt when unset */
   theme?: 'volt' | 'glass' | 'frost'

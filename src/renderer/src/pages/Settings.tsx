@@ -217,7 +217,7 @@ export function SettingsPage() {
           {tab === 'models' && (
             <>
               <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
-                <input type="checkbox" checked={s.modelAdvice !== false} onChange={async (e) => setS(await api.app.saveSettings({ modelAdvice: e.target.checked }))} />
+                <input type="checkbox" checked={s.modelAdvice === true} onChange={async (e) => setS(await api.app.saveSettings({ modelAdvice: e.target.checked }))} />
                 <span>
                   <b>{tr("Sugerează modelul potrivit")}</b>
                   <span className="muted small" style={{ display: 'block' }}>

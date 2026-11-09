@@ -25,7 +25,7 @@ fs.writeFileSync(
   ])
 )
 fs.writeFileSync(path.join(data, 'secrets.json'), JSON.stringify({ mock: { enc: false, value: 'sk-mock' } }))
-fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ lastCwd: project, lastProfileId: 'mock' }))
+fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ lastCwd: project, lastProfileId: 'mock', modelAdvice: true }))
 const now = Date.now()
 const hour = 3600e3
 fs.writeFileSync(
