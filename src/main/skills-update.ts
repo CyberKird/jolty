@@ -84,7 +84,7 @@ export async function updateEntry(e: Entry, all: Entry[]): Promise<void> {
       } finally {
         fs.rmSync(stage, { recursive: true, force: true })
       }
-      // ponytail: a locked old folder stays as a dot folder next to the skill (scan skips it), remove by hand if it ever happens
+      // a locked old folder stays as a dot folder next to the skill (scan skips it), remove by hand if it ever happens
       fs.rmSync(old, { recursive: true, force: true, maxRetries: 3 })
       const tree = src.subdir ? await treeOf(clone.repo, src.subdir) : undefined
       writeSource(e.info.id, { ...src, commit: clone.commit })

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.3
+
+### Improvements
+
+- When a chat looks up an earlier conversation, each result now says what was asked first and how the last answer began, and the end of a long conversation can be read directly. Models also search earlier chats on their own when a project continues without context.
+
 ## 0.20.1
 
 ### Improvements

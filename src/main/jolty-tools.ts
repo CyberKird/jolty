@@ -17,7 +17,7 @@ export const JOLTY_SERVER = 'jolty'
 export const JOLTY_READ_TOOLS = ['search_conversations', 'read_conversation', 'list_scheduled_tasks', 'list_sessions', 'wait_for_sessions', 'ledger_read', 'ledger_write', 'list_models', 'find_skills']
 
 export const JOLTY_TOOLS_PROMPT =
-  'Jolty tools (MCP server "jolty"): search_conversations and read_conversation find and read the user\'s earlier conversations in Jolty on this PC; use them when the user refers to earlier work, a past decision or "what we talked about". schedule_task runs a prompt later or on a repeat, each run in a new conversation, while Jolty is open; list_scheduled_tasks and cancel_scheduled_task manage them. Schedule only when the user asks for it. Several jobs at once: start_session gives each job its own session (own git worktree and branch when the project is a repository) with a short brief that stands on its own; wait_for_sessions returns when they end, list_sessions shows their state and last answer, send_to_session talks to one. Merging their branches is your job. ledger_read and ledger_write keep one shared notes file for the project: read it first when you start, and write decisions, state and open work there instead of re-exploring the codebase. list_models shows the other profiles and models you can ask, with their intelligence and speed; ask_model sends one question (and files) to the profile and model you or the user chose and returns its answer, with no tools: use it for a second opinion or when the user names a model, and never pick a model for them. Start sessions only when the user asked for parallel work or the task clearly splits into independent jobs.'
+  'Jolty tools (MCP server "jolty"): search_conversations and read_conversation find and read the user\'s earlier conversations in Jolty on this PC; use them on your own, without asking, when the user refers to earlier work, a past decision or "what we talked about", or continues a project and you lack its context: search before asking the user to repeat it, and not on every message. schedule_task runs a prompt later or on a repeat, each run in a new conversation, while Jolty is open; list_scheduled_tasks and cancel_scheduled_task manage them. Schedule only when the user asks for it. Several jobs at once: start_session gives each job its own session (own git worktree and branch when the project is a repository) with a short brief that stands on its own; wait_for_sessions returns when they end, list_sessions shows their state and last answer, send_to_session talks to one. Merging their branches is your job. ledger_read and ledger_write keep one shared notes file for the project: read it first when you start, and write decisions, state and open work there instead of re-exploring the codebase. list_models shows the other profiles and models you can ask, with their intelligence and speed; ask_model sends one question (and files) to the profile and model you or the user chose and returns its answer, with no tools: use it for a second opinion or when the user names a model, and never pick a model for them. Start sessions only when the user asked for parallel work or the task clearly splits into independent jobs.'
 
 export interface ToolHost {
   /** saved conversations (never temporary ones) */
@@ -71,7 +71,7 @@ const TOOLS = [
   {
     name: 'search_conversations',
     description:
-      'Searches the user\'s earlier Jolty conversations (titles, project folders and what was said, not tool output). Returns the best matches with their id, date, folder and short excerpts. Then read one with read_conversation.',
+      'Searches the user\'s earlier Jolty conversations (titles, project folders and what was said, not tool output). Returns the best matches with their id, date, folder, what was asked first, how the last answer began, and short excerpts of the match. Often that is enough; otherwise read one with read_conversation.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -84,7 +84,7 @@ const TOOLS = [
   },
   {
     name: 'read_conversation',
-    description: 'Reads one earlier conversation as text (user and assistant messages), in pages of 20,000 characters. The answer says which offset continues it.',
+    description: 'Reads one earlier conversation as text (user and assistant messages), in pages of 20,000 characters. The answer says which offset continues it. A negative offset reads from the end: -6000 is the last 6000 characters, where a long chat usually says what was done and what is left.',
     inputSchema: {
       type: 'object',
       properties: { id: { type: 'string', description: 'conversation id from search_conversations' }, offset: { type: 'number', description: 'character offset, 0 for the start' } },
@@ -233,6 +233,8 @@ async function run(h: ToolHost, sid: string, name: string, a: Record<string, unk
       [
         `${i + 1}. ${x.meta.title} (id: ${x.meta.id})`,
         `   ${day(x.meta.updatedAt)} · ${x.meta.cwd} · ${x.meta.engine}${x.indexed ? '' : ' · history not loaded yet, only the title matched (read_conversation loads it)'}`,
+        ...(x.digest?.ask ? [`   Asked: ${x.digest.ask}`] : []),
+        ...(x.digest?.end ? [`   Ended: ${x.digest.end}`] : []),
         ...x.snippets.map((s) => `   ${s}`)
       ].join('\n')
     )

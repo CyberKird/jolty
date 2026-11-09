@@ -81,7 +81,7 @@ export function VoiceButton({ onText }: { onText: (text: string) => void }) {
     }
     const ctx = new AudioContext({ sampleRate: RATE })
     const src = ctx.createMediaStreamSource(stream)
-    // ponytail: ScriptProcessor is deprecated but needs no worklet file; move to an AudioWorklet if Chromium drops it
+    // ScriptProcessor is deprecated but needs no worklet file; move to an AudioWorklet if Chromium drops it
     const proc = ctx.createScriptProcessor(4096, 1, 1)
     const chunks: Float32Array[] = []
     proc.onaudioprocess = (e) => {

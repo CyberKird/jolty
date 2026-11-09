@@ -40,7 +40,7 @@ export class Preview {
     this.server = server
     this.base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
     try {
-      // ponytail: one recursive watch on the project folder; a huge cwd (a whole home dir) makes it heavy
+      // one recursive watch on the project folder; a huge cwd (a whole home dir) makes it heavy
       this.watcher = fs.watch(root, { recursive: true }, (_, name) => this.changed(name || ''))
       this.watcher.on('error', () => {})
     } catch {

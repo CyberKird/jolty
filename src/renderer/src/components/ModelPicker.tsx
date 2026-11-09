@@ -17,7 +17,7 @@ export interface ModelGroup {
   error?: string
 }
 
-// ponytail: cached for half an hour (badges and scores come with the list); the key changes when an endpoint profile's model list does
+// cached for half an hour (badges and scores come with the list); the key changes when an endpoint profile's model list does
 const CACHE_MS = 30 * 60e3
 const cache = new Map<string, { at: number; pr: Promise<ModelOption[]> }>()
 const key = (p: Profile): string => `${p.id}:${(p.models || []).join(',')}`

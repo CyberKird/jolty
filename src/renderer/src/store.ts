@@ -384,7 +384,7 @@ export const useStore = create<State>((set, get) => ({
 }))
 
 // After a turn, ask the account for its current 5 h / 7 d limits so the sidebar stays live.
-// ponytail: one probe per profile per minute at most; Codex also pushes limits by itself
+// one probe per profile per minute at most; Codex also pushes limits by itself
 const lastProbe = new Map<string, number>()
 
 function balanceNote(err: unknown): string {

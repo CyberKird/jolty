@@ -171,9 +171,14 @@ test('MCP tools over the local server: token required, search, read, schedule, c
     }
     const found = await tool('search_conversations', { query: 'iphone' })
     assert.match(found.text, /Scroll iPhone \(id: a\)/)
+    // each result says what was asked first and how the last answer began
+    assert.match(found.text, /Asked: Cum repar scroll-ul pe iPhone la site-ul Joltarise\?/)
+    assert.match(found.text, /Ended: Imaginile fără înălțime cresc la lazy load; pune width și height\./)
     // the chat asking is never one of its own results
     assert.doesNotMatch(found.text, /id: self/)
     assert.match((await tool('read_conversation', { id: 'a' })).text, /## User\nCum repar scroll/)
+    // a negative offset reads the end of the chat
+    assert.match((await tool('read_conversation', { id: 'a', offset: -60 })).text, /pune width și height\.$/)
     assert.equal((await tool('read_conversation', { id: 'nope' })).isError, true)
     const made = await tool('schedule_task', { name: 'Raport', prompt: 'Fă raportul', schedule: { kind: 'daily', time: '08:30', days: [1] } })
     assert.match(made.text, /Scheduled "Raport"/)

@@ -31,7 +31,7 @@ async function render(size) {
   return img.resize({ width: size, height: size, quality: 'best' })
 }
 
-// ponytail: Windows' small-icon path (taskbar/Alt-Tab HICON) doesn't reliably read
+// Windows' small-icon path (taskbar/Alt-Tab HICON) doesn't reliably read
 // PNG-compressed ICO entries the way the large-icon/Explorer path does, so small
 // sizes need a classic raw BGRA DIB entry; PNG compression is kept for 128/256 only.
 function bmpEntry(size, image) {
