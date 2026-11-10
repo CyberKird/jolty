@@ -42,8 +42,11 @@ export function liteGlass(): boolean {
   return mode === 'auto' && gpuKind() === 'integrated'
 }
 
+/** A phone paired with the PC (html.remote): its core count says little, a recent phone draws this page smoothly, so "auto" means off there. */
+const onPhone = (): boolean => document.documentElement.classList.contains('remote')
+
 export function lowPower(): boolean {
-  return mode === 'on' || (mode === 'auto' && weakPc())
+  return mode === 'on' || (mode === 'auto' && !onPhone() && weakPc())
 }
 
 /** Applies the saved choice; also tells whoever listens (the mascot) that it changed. */

@@ -2,9 +2,18 @@
 
 ## 0.21.1
 
+### Improvements
+
+- On the phone: Computer, Continue in another model or account, the browser settings (what it asks for, how it attaches to a tab), PC power (shut down, restart, sleep, lock) and the side chat, review and better-prompt helpers now work, and the choices you make are remembered like on the PC.
+- A new chat from the phone picks its project from the ones Jolty knows, in a bottom sheet.
+- The phone shows what is running and what waits for your yes as soon as it connects, not only after you open the conversation, and plays the soft Jolty sounds when a turn ends, fails or needs an answer.
+- The pairing screen matches the app: the Jolty by Joltarise bar, the big headline, clear messages.
+- Copying on the phone puts the text on the phone, and links open on the phone.
+- Touch feedback and smoother motion on the phone, and the keyboard no longer pushes the page up under the message box.
+
 ### Fixed
 
-- The Computer button now works from the phone: the model can use the PC while you are on your phone. Each action still asks for your approval, and Ctrl+Alt+Esc on the PC still stops it.
+- The menus above the message box (model, mode, tools, thinking level) fit a phone screen.
 
 ## 0.21.0
 

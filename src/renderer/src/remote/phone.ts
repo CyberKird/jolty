@@ -1,5 +1,6 @@
 import { tr } from '@shared/i18n'
-import { useStore } from '../store'
+import { api, useStore } from '../store'
+import { play, soundsOn, unlockAudio } from '../mascot/sfx'
 
 /** Behaviour only a phone needs: the sidebar is a drawer, closed at the start and after a conversation or page is chosen. */
 export function setupPhone(): void {
@@ -18,14 +19,32 @@ export function setupPhone(): void {
   // the visible height: on iOS the keyboard covers the page instead of shrinking it, so the composer would hide under it
   const vv = window.visualViewport
   if (vv) {
+    // iOS also scrolls the page up to show the focused field: the page follows the visible area (offsetTop) instead of staying put
     const fit = (): void => {
-      document.documentElement.style.setProperty('--vvh', `${vv.height}px`)
-      window.scrollTo(0, 0)
+      const root = document.documentElement.style
+      root.setProperty('--vvh', `${vv.height}px`)
+      root.setProperty('--vvt', `${vv.offsetTop}px`)
     }
     vv.addEventListener('resize', fit)
+    vv.addEventListener('scroll', fit)
     fit()
   }
   installHint()
+  phoneSounds()
+}
+
+/** The mascot is not on a phone, so its sounds are not either: the same soft ones tell when a turn ends, fails or needs a yes. */
+function phoneSounds(): void {
+  void api.app.settings().then((s) => soundsOn(s.mascotSounds !== false))
+  document.addEventListener('pointerdown', unlockAudio, { once: true })
+  const running = new Set<string>()
+  api.sessions.onEvent((e) => {
+    if (e.type === 'status') {
+      const was = running.delete(e.sessionId)
+      if (e.status === 'running') running.add(e.sessionId)
+      else if (was) play(e.status === 'error' ? 'worry' : 'cheer')
+    } else if (e.type === 'permission') play('blip')
+  })
 }
 
 /** In Safari on an iPhone: how to put Jolty on the home screen (a home screen app keeps its own storage, so it is paired again there). */

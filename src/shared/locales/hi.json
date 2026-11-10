@@ -1619,5 +1619,13 @@
  "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "बिना सवाल वाले मोड (प्रोजेक्ट में आज़ाद, बिना अनुमति) फ़ोन से चालू नहीं किए जा सकते: यह फ़ैसला PC पर ही लिया जाता है।",
  "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "ऐप की तरह: शेयर करें पर टैप करें, फिर \"होम स्क्रीन पर जोड़ें\"। ऐप दोबारा कोड माँगता है: PC पर \"फ़ोन जोड़ें\" दबाएँ।",
  "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "आपके अकाउंट में Tailscale Serve चालू नहीं है। इसे एक बार चालू करें, फिर बॉक्स दोबारा टिक करें।",
- "Activează Tailscale Serve": "Tailscale Serve चालू करें"
+ "Activează Tailscale Serve": "Tailscale Serve चालू करें",
+ "Împerechează telefonul": "फ़ोन जोड़ें",
+ "Pe PC, în Jolty, deschide Setări, Telefon și apasă „Împerechează un telefon”. Apoi scrie aici codul afișat.": "PC पर Jolty में सेटिंग, फ़ोन खोलें और \"फ़ोन जोड़ें\" दबाएँ। फिर दिखने वाला कोड यहाँ लिखें।",
+ "Cod de împerechere": "जोड़ने का कोड",
+ "Împerechează": "जोड़ें",
+ "Codul nu e valid sau a expirat": "कोड मान्य नहीं है या समाप्त हो गया है",
+ "Împerecherea a eșuat": "जोड़ना विफल रहा",
+ "Telefonul nu mai e împerecheat. Deschide din nou linkul din Jolty.": "यह फ़ोन अब जुड़ा हुआ नहीं है। Jolty से लिंक दोबारा खोलें।",
+ "Nu pot ajunge la PC. Verifică Tailscale și că Jolty e pornit pe PC.": "PC तक नहीं पहुँच पा रहे। Tailscale जाँचें और देखें कि PC पर Jolty चालू है।"
 }

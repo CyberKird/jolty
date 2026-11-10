@@ -1619,5 +1619,13 @@
  "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "Mode tanpa pertanyaan (Bebas di proyek, Tanpa izin) tidak bisa diaktifkan dari ponsel: tetap pilihan yang dibuat di PC.",
  "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "Sebagai aplikasi: ketuk Bagikan, lalu \"Tambah ke Layar Utama\". Aplikasi meminta kode lagi: ketuk \"Sambungkan ponsel\" di PC.",
  "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "Tailscale Serve belum diaktifkan di akunmu. Aktifkan sekali, lalu centang kotaknya lagi.",
- "Activează Tailscale Serve": "Aktifkan Tailscale Serve"
+ "Activează Tailscale Serve": "Aktifkan Tailscale Serve",
+ "Împerechează telefonul": "Sambungkan ponsel",
+ "Pe PC, în Jolty, deschide Setări, Telefon și apasă „Împerechează un telefon”. Apoi scrie aici codul afișat.": "Di PC, di Jolty, buka Pengaturan, Ponsel, lalu tekan \"Sambungkan ponsel\". Setelah itu ketik kode yang muncul di sini.",
+ "Cod de împerechere": "Kode penyambungan",
+ "Împerechează": "Sambungkan",
+ "Codul nu e valid sau a expirat": "Kode tidak valid atau sudah kedaluwarsa",
+ "Împerecherea a eșuat": "Penyambungan gagal",
+ "Telefonul nu mai e împerecheat. Deschide din nou linkul din Jolty.": "Ponsel ini tidak tersambung lagi. Buka lagi tautan dari Jolty.",
+ "Nu pot ajunge la PC. Verifică Tailscale și că Jolty e pornit pe PC.": "Tidak bisa menjangkau PC. Periksa Tailscale dan pastikan Jolty menyala di PC."
 }

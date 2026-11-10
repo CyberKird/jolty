@@ -1619,5 +1619,13 @@
  "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "확인 없는 모드(프로젝트 안에서 자유롭게, 권한 확인 없음)는 휴대폰에서 켤 수 없습니다. PC에서 직접 정해야 합니다.",
  "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "앱처럼 쓰려면 공유를 누르고 \"홈 화면에 추가\"를 선택하세요. 앱에서는 코드를 다시 요청합니다. PC에서 \"휴대폰 페어링\"을 누르세요.",
  "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "계정에서 Tailscale Serve가 켜져 있지 않습니다. 한 번 켠 뒤 체크박스를 다시 선택하세요.",
- "Activează Tailscale Serve": "Tailscale Serve 켜기"
+ "Activează Tailscale Serve": "Tailscale Serve 켜기",
+ "Împerechează telefonul": "휴대폰 페어링",
+ "Pe PC, în Jolty, deschide Setări, Telefon și apasă „Împerechează un telefon”. Apoi scrie aici codul afișat.": "PC의 Jolty에서 설정, 휴대폰을 열고 \"휴대폰 페어링\"을 누르세요. 표시된 코드를 여기에 입력하면 됩니다.",
+ "Cod de împerechere": "페어링 코드",
+ "Împerechează": "페어링",
+ "Codul nu e valid sau a expirat": "코드가 올바르지 않거나 만료되었습니다",
+ "Împerecherea a eșuat": "페어링에 실패했습니다",
+ "Telefonul nu mai e împerecheat. Deschide din nou linkul din Jolty.": "이 휴대폰은 더 이상 페어링되어 있지 않습니다. Jolty에서 링크를 다시 여세요.",
+ "Nu pot ajunge la PC. Verifică Tailscale și că Jolty e pornit pe PC.": "PC에 연결할 수 없습니다. Tailscale과 PC에서 Jolty가 실행 중인지 확인하세요."
 }

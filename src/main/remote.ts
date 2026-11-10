@@ -88,8 +88,25 @@ export class Remote {
     this.handlers.set(channel, fn)
   }
 
+  /** What is happening now, kept from the events: a phone that connects (or comes back) mid-turn has to learn it, as it never saw the event. */
+  private working = new Set<string>()
+  private asking = new Map<string, unknown>()
+
+  private track(e: { type?: string; sessionId?: string; status?: string; request?: { id?: string }; requestId?: string }): void {
+    if (!e.sessionId) return
+    if (e.type === 'status') {
+      if (e.status === 'running') this.working.add(e.sessionId)
+      else {
+        this.working.delete(e.sessionId)
+        for (const [id, ev] of this.asking) if ((ev as { sessionId?: string }).sessionId === e.sessionId) this.asking.delete(id)
+      }
+    } else if (e.type === 'permission' && e.request?.id) this.asking.set(e.request.id, e)
+    else if (e.type === 'permissionResolved' && e.requestId) this.asking.delete(e.requestId)
+  }
+
   /** Pushes an event (a streamed chunk, a status) to every connected phone. */
   broadcast(channel: string, data: unknown): void {
+    if (channel === 'jolty:event' && data && typeof data === 'object') this.track(data as Parameters<Remote['track']>[0])
     if (!this.clients.size) return
     const msg = JSON.stringify({ t: 'ev', channel, data })
     for (const c of this.clients) if (c.ws.readyState === 1) c.ws.send(msg)
@@ -245,7 +262,11 @@ export class Remote {
         clearTimeout(waiting)
         client = { ws, device }
         this.clients.add(client)
-        return reply({ t: 'ready', lang: getLang() })
+        reply({ t: 'ready', lang: getLang() })
+        // the turns running now and the questions waiting for a yes, as the events that would have told it
+        for (const id of this.working) reply({ t: 'ev', channel: 'jolty:event', data: { type: 'status', sessionId: id, status: 'running' } })
+        for (const ev of this.asking.values()) reply({ t: 'ev', channel: 'jolty:event', data: ev })
+        return
       }
       if (m.t !== 'call' || typeof m.channel !== 'string' || typeof m.id !== 'number') return
       void this.run(m.channel, m.args).then(

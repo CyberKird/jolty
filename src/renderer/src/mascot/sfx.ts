@@ -9,6 +9,12 @@ export function soundsOn(v: boolean): void {
   on = v
 }
 
+/** A phone only lets sound start from a touch: the first touch makes the audio ready, so later sounds play when events arrive. */
+export function unlockAudio(): void {
+  ctx ??= new AudioContext()
+  if (ctx.state === 'suspended') void ctx.resume()
+}
+
 // out of focus = nothing may sound, also what was already scheduled
 window.addEventListener('blur', () => void ctx?.suspend())
 

@@ -99,37 +99,10 @@ async function claim(code: string): Promise<string> {
   return j.token
 }
 
-/** A plain screen before the app exists: asks for the code shown at the PC, or says what went wrong. */
-function pairScreen(message?: string): Promise<string> {
-  document.title = 'Jolty'
-  const root = document.getElementById('root')!
-  root.innerHTML = ''
-  const box = document.createElement('form')
-  box.style.cssText = 'min-height:100dvh;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:28px;max-width:420px;margin:auto;font:16px/1.4 Inter,system-ui,sans-serif;color:#e8e8ea;background:#060709'
-  box.innerHTML = '<div style="font-size:22px;font-weight:600">Jolty</div><div style="color:#9a9aa2">Pair this phone with your PC. In Jolty on the PC open Settings, Phone, and press Pair a phone.</div>'
-  const input = document.createElement('input')
-  Object.assign(input, { placeholder: 'Pairing code', autocomplete: 'off', autocapitalize: 'characters' })
-  input.style.cssText = 'padding:14px;border-radius:12px;border:1px solid #2a2a30;background:#101014;color:inherit;font:inherit;letter-spacing:.12em;text-transform:uppercase'
-  const btn = document.createElement('button')
-  btn.textContent = 'Pair'
-  btn.style.cssText = 'padding:14px;border-radius:12px;border:0;background:#d4ff00;color:#060709;font:inherit;font-weight:600'
-  const note = document.createElement('div')
-  note.style.cssText = 'color:#ff8a80;min-height:1.4em'
-  note.textContent = message || ''
-  box.append(input, btn, note)
-  root.append(box)
-  return new Promise((resolve) => {
-    box.onsubmit = async (e) => {
-      e.preventDefault()
-      btn.disabled = true
-      try {
-        resolve(await claim(input.value))
-      } catch (err) {
-        note.textContent = err instanceof Error ? err.message : String(err)
-        btn.disabled = false
-      }
-    }
-  })
+/** The pairing screen: asks for the code shown at the PC, or says what went wrong. */
+async function pairScreen(message?: string): Promise<string> {
+  const { pairScreen: show } = await import('./pair-screen')
+  return show(message, claim)
 }
 
 /** Sets window.jolty for a browser that is not the desktop window. */
@@ -152,7 +125,14 @@ export async function connectRemote(): Promise<void> {
     const link = new Link(token)
     try {
       await link.start()
-      ;(window as unknown as { jolty: JoltyApi }).jolty = createApi(link.call, link.listen, () => '')
+      const api = createApi(link.call, link.listen, () => '')
+      // the PC's clipboard and browser are not the phone's: copying and links happen on the phone itself
+      api.app.copyText = async (text) => void (await navigator.clipboard?.writeText(text).catch(() => undefined))
+      api.app.openExternal = async (url) => void window.open(url, '_blank', 'noopener')
+      api.app.openLink = async (url) => void window.open(url, '_blank', 'noopener')
+      // no see-through window on a phone
+      api.app.glassSupport = async () => 'os'
+      ;(window as unknown as { jolty: JoltyApi }).jolty = api
       return
     } catch (e) {
       note = e instanceof Error ? e.message : String(e)

@@ -194,7 +194,7 @@
  "Descrie ce vrei să facă. / pentru skill-uri, @ pentru fișiere.": "صِف ما تريد تنفيذه. / للمهارات، @ للملفات.",
  "Mesajul pare să conțină {secret}. Nu l-am blocat, dar se trimite către {profile}. Pentru ceva sensibil, un model local nu trimite nimic în afara PC-ului.": "يبدو أن الرسالة تحتوي على {secret}. لم أحظرها، لكنها تُرسل إلى {profile}. للأمور الحساسة، النموذج المحلي لا يرسل شيئًا خارج جهازك.",
  "Atașează imagini, videouri sau fișiere": "إرفاق صور أو فيديوهات أو ملفات",
- "Alege proiectul": "اختر المشروع",
+ "Alege proiectul": "اختر مشروعًا",
  "Plan activ: clic ca să revii la Build, unde editează fișiere": "وضع الخطة مفعّل: انقر للعودة إلى Build حيث يعدّل الملفات",
  "Comută în Plan: modelul doar cercetează și propune un plan, fără să modifice nimic": "التبديل إلى الخطة: النموذج يبحث ويقترح خطة فقط دون تغيير أي شيء",
  "Hermes folosește uneltele proprii de browser. Conectarea la browserul Jolty nu este disponibilă.": "يستخدم Hermes أدوات المتصفح الخاصة به. الاتصال بمتصفح Jolty غير متاح.",
@@ -1619,5 +1619,13 @@
  "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "لا يمكن تشغيل الأوضاع بلا أسئلة (حرّ داخل المشروع، بلا أذونات) من الهاتف: تبقى قرارًا يُتخذ على الكمبيوتر.",
  "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "كتطبيق: اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية». يطلب التطبيق رمزًا مرة أخرى: اضغط «إقران هاتف» على الكمبيوتر.",
  "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "Tailscale Serve غير مفعّل في حسابك. فعّله مرة واحدة ثم ضع علامة في المربع مجددًا.",
- "Activează Tailscale Serve": "تفعيل Tailscale Serve"
+ "Activează Tailscale Serve": "تفعيل Tailscale Serve",
+ "Împerechează telefonul": "إقران الهاتف",
+ "Pe PC, în Jolty, deschide Setări, Telefon și apasă „Împerechează un telefon”. Apoi scrie aici codul afișat.": "على الكمبيوتر، في Jolty، افتح الإعدادات ثم الهاتف واضغط «إقران هاتف». بعدها اكتب هنا الرمز الظاهر.",
+ "Cod de împerechere": "رمز الإقران",
+ "Împerechează": "إقران",
+ "Codul nu e valid sau a expirat": "الرمز غير صالح أو انتهت صلاحيته",
+ "Împerecherea a eșuat": "فشل الإقران",
+ "Telefonul nu mai e împerecheat. Deschide din nou linkul din Jolty.": "لم يعد هذا الهاتف مقترنًا. افتح الرابط من Jolty مرة أخرى.",
+ "Nu pot ajunge la PC. Verifică Tailscale și că Jolty e pornit pe PC.": "تعذّر الوصول إلى الكمبيوتر. تحقق من Tailscale ومن أن Jolty يعمل على الكمبيوتر."
 }

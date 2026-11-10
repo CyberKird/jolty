@@ -1619,5 +1619,13 @@
  "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "Modi ohne Rückfragen (Frei im Projekt, Keine Berechtigungen) lassen sich vom Handy aus nicht einschalten: Das bleibt eine Entscheidung am PC.",
  "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "Als App: Tippe auf Teilen und dann auf „Zum Home-Bildschirm“. Die App fragt erneut nach einem Code: Tippe am PC auf „Handy koppeln“.",
  "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "Tailscale Serve ist für dein Konto nicht aktiviert. Aktiviere es einmal und setze dann das Häkchen erneut.",
- "Activează Tailscale Serve": "Tailscale Serve aktivieren"
+ "Activează Tailscale Serve": "Tailscale Serve aktivieren",
+ "Împerechează telefonul": "Handy koppeln",
+ "Pe PC, în Jolty, deschide Setări, Telefon și apasă „Împerechează un telefon”. Apoi scrie aici codul afișat.": "Öffne am PC in Jolty die Einstellungen, dann Handy, und tippe auf „Handy koppeln“. Gib hier den angezeigten Code ein.",
+ "Cod de împerechere": "Kopplungscode",
+ "Împerechează": "Koppeln",
+ "Codul nu e valid sau a expirat": "Der Code ist ungültig oder abgelaufen",
+ "Împerecherea a eșuat": "Die Kopplung ist fehlgeschlagen",
+ "Telefonul nu mai e împerecheat. Deschide din nou linkul din Jolty.": "Dieses Handy ist nicht mehr gekoppelt. Öffne den Link aus Jolty noch einmal.",
+ "Nu pot ajunge la PC. Verifică Tailscale și că Jolty e pornit pe PC.": "Der PC ist nicht erreichbar. Prüfe Tailscale und ob Jolty auf dem PC läuft."
 }

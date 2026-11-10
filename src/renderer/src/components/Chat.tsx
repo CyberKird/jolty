@@ -765,7 +765,7 @@ function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Pr
     }
   }
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="hdr-keep" style={{ position: 'relative' }}>
       <button className="btn small" onClick={() => setOpen(!open)} title={tr("Continuă conversația cu alt model sau alt cont")}>
        {tr("Continuă în")}
       </button>
@@ -1165,7 +1165,9 @@ export function NewChat() {
     composerRestored.current = true
     const last = lastComposer
     if (!last) return
-    if (last.mode && modesFor(engine).some((m) => m.id === last.mode)) setMode(last.mode)
+    // the PC's last mode may be one a phone cannot start (without questions): the phone opens on the default
+    const phone = document.documentElement.classList.contains('remote')
+    if (last.mode && modesFor(engine).some((m) => m.id === last.mode) && !(phone && OPEN_MODES.includes(last.mode))) setMode(last.mode)
     if (last.browser && hasJoltyBrowser(engine)) setBrowser(true)
     if (last.computer && hasJoltyComputer(engine)) setComputer(true)
   }, [settingsRead, profileId, profiles, lastComposer])
@@ -1178,7 +1180,15 @@ export function NewChat() {
     void api.app.settings().then((s) => api.app.saveSettings({ lastProfileId: id, lastModels: { ...s.lastModels, [id]: { model: m, effort: e } } }))
   }
 
+  // a phone has no folder dialog on the PC to click: it picks among the projects Jolty already knows
+  const [folders, setFolders] = useState(false)
+  const choose = (dir: string): void => {
+    setCwd(dir)
+    setFolders(false)
+    void api.app.saveSettings({ lastCwd: dir })
+  }
   const pickCwd = async (): Promise<void> => {
+    if (document.documentElement.classList.contains('remote')) return setFolders(true)
     const dir = await api.app.pickFolder()
     if (dir) {
       setCwd(dir)
@@ -1191,8 +1201,27 @@ export function NewChat() {
     ? sessions.filter((x) => x.cwd === cwd && !x.archived && !x.temporary && !x.scheduled).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4)
     : []
 
+  const known = [...new Map(sessions.filter((x) => x.cwd && !x.temporary).sort((a, b) => b.updatedAt - a.updatedAt).map((x) => [x.cwd, x.cwd])).keys()].slice(0, 30)
   return (
     <>
+      {folders && (
+        <div className="sheet-scrim" onClick={() => setFolders(false)}>
+          <div className="sheet" role="dialog" aria-label={tr("Alege proiectul")} onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-title">{tr("Alege proiectul")}</div>
+            <div className="sheet-list">
+              {known.map((dir) => (
+                <button key={dir} className={`sheet-item ${dir === cwd ? 'on' : ''}`} onClick={() => choose(dir)}>
+                  <FolderOpen size={15} />
+                  <span>
+                    <b>{basename(dir)}</b>
+                    <span className="muted small">{dir}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="welcome">
         <h1 className="headline">
          {tr("Ce construim")}
