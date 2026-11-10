@@ -88,6 +88,27 @@ try {
   // a revoked phone is sent back to pairing
   await win.evaluate((id) => window.jolty.remote.revoke(id), st.devices[0].id)
   await phone.waitForSelector('input[placeholder="Pairing code"]', { timeout: 15000 })
+
+  // the PC off: the page opens from the phone's own copy and offers to start the PC. First pair again and set up the agent.
+  const again = (await win.evaluate(() => window.jolty.remote.pair())).code
+  await win.evaluate(() => window.jolty.remote.wakeSet('https://box.tailnet.ts.net:8443'))
+  // only the hash changes, so the page has to be loaded again to read it
+  await phone.goto(`http://127.0.0.1:${PORT}/#pair=${again}`)
+  await phone.reload()
+  await phone.waitForSelector('.titlebar-btn', { timeout: 30000 })
+  assert.ok(await phone.evaluate(() => Boolean(localStorage.getItem('jolty-wake'))), 'the phone keeps the way to wake the PC')
+  await phone.evaluate(() => navigator.serviceWorker.ready.then(() => undefined))
+  // reload once online so the worker holds this page, then switch the PC's server off
+  await phone.reload()
+  await phone.waitForSelector('.titlebar-btn', { timeout: 30000 })
+  await win.evaluate(() => window.jolty.remote.enable(false))
+  await phone.reload()
+  await phone.waitForSelector('.offline', { timeout: 30000 })
+  assert.match(await phone.locator('.pair-headline').innerText(), /not answering/i)
+  assert.equal(await phone.locator('button', { hasText: 'Start the PC' }).count(), 1)
+  await phone.screenshot({ path: path.join(shots, 'phone-offline.png') })
+  await phone.locator('button', { hasText: 'Start the PC' }).click()
+  await phone.waitForFunction(() => /wake agent/i.test(document.querySelector('.pair-error')?.textContent || ''), null, { timeout: 20000 })
   console.log('remote ui ok')
 } finally {
   await app.close().catch(() => undefined)

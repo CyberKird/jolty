@@ -429,3 +429,50 @@ html.remote .sheet-item .small {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* The PC does not answer: the same screen as pairing, with the start button and a pulse while the PC wakes. */
+html.remote .offline-pulse {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: flex-start;
+  width: 96px;
+  height: 96px;
+  margin: 4px 0;
+}
+html.remote .offline-pulse[hidden] {
+  display: none;
+}
+html.remote .offline-pulse svg {
+  fill: var(--volt);
+}
+html.remote .offline-pulse::before,
+html.remote .offline-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--volt);
+  border-radius: 50%;
+  animation: off-ring 2s var(--ease) infinite;
+}
+html.remote .offline-pulse::after {
+  animation-delay: 1s;
+}
+@keyframes off-ring {
+  from {
+    opacity: 0.8;
+    transform: scale(0.45);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+html.remote .offline-status {
+  min-height: 1.5em;
+  margin: 0;
+}
+html.remote .ghost-go {
+  background: transparent;
+  color: var(--white);
+}

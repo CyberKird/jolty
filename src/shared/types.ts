@@ -1,7 +1,7 @@
 // Types shared by the main process, the preload bridge and the renderer.
 import type { ScheduledTask, TaskInput } from './schedule'
 import type { ModelScore } from './scores'
-import type { RemoteStatus } from './remote'
+import type { RemoteStatus, WakeConfig, WakeStatus, WakeTest } from './remote'
 
 export type EngineKind = 'claude' | 'codex' | 'hermes' | 'opencode' | 'gemini'
 
@@ -850,6 +850,12 @@ export interface JoltyApi {
     disconnect(): Promise<void>
     /** every phone loses the screen at once */
     stopScreen(): Promise<void>
+    /** waking the PC from a phone while it is off: the agent's address and secret, and this PC's network cards */
+    wakeStatus(): Promise<WakeStatus>
+    wakeSet(url: string): Promise<WakeStatus>
+    wakeTest(): Promise<WakeTest>
+    /** what a paired phone keeps to wake the PC when it cannot reach it */
+    wakeConfig(): Promise<WakeConfig | null>
     onChange(cb: () => void): () => void
   }
 }

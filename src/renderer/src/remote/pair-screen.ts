@@ -12,7 +12,7 @@ function say(message: string): string {
   return tr("Nu pot ajunge la PC. Verifică Tailscale și că Jolty e pornit pe PC.")
 }
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
+export function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag)
   if (className) e.className = className
   if (text !== undefined) e.textContent = text
@@ -21,12 +21,8 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, t
 
 const BOLT = '<svg class="bolt" width="' + (17 * 205) / 740 + '" height="17" viewBox="0 0 205 740" aria-hidden="true"><polygon points="52,0 170,0 118,300 205,284 56,740 84,408 0,426"/></svg>'
 
-/** Shows the pairing screen in place of the app until a code is accepted; `claim` trades the code for the phone's key. */
-export function pairScreen(first: string | undefined, claim: (code: string) => Promise<string>): Promise<string> {
-  const root = document.getElementById('root')!
-  root.replaceChildren()
-  const page = el('div', 'pair')
-
+/** The bar of the app: bolt, JOLTY, by, the Joltarise lettering. */
+export function brandBar(): HTMLElement {
   const bar = el('header', 'titlebar')
   const brand = el('div', 'titlebar-brand')
   brand.insertAdjacentHTML('beforeend', BOLT)
@@ -38,6 +34,14 @@ export function pairScreen(first: string | undefined, claim: (code: string) => P
   img.draggable = false
   brand.append(name, el('span', 'titlebar-by', 'by'), img)
   bar.append(brand)
+  return bar
+}
+
+/** Shows the pairing screen in place of the app until a code is accepted; `claim` trades the code for the phone's key. */
+export function pairScreen(first: string | undefined, claim: (code: string) => Promise<string>): Promise<string> {
+  const root = document.getElementById('root')!
+  root.replaceChildren()
+  const page = el('div', 'pair')
 
   const form = el('form', 'pair-body')
   const headline = el('h1', 'pair-headline', tr("Împerechează telefonul"))
@@ -60,7 +64,7 @@ export function pairScreen(first: string | undefined, claim: (code: string) => P
     go.disabled = !input.value.trim()
   })
   form.append(headline, note, input, go, error)
-  page.append(bar, form)
+  page.append(brandBar(), form)
   root.append(page)
 
   return new Promise((resolve) => {

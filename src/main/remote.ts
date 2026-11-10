@@ -5,8 +5,9 @@ import path from 'path'
 import type { Duplex } from 'stream'
 import { WebSocketServer, type WebSocket } from 'ws'
 import { getLang } from '@shared/i18n'
-import type { RemoteDevice, RemoteStatus } from '@shared/remote'
+import type { RemoteDevice, RemoteStatus, WakeConfig, WakeStatus, WakeTest } from '@shared/remote'
 import { remoteArgs } from './remote-policy'
+import { lanMacs, validAgentUrl } from './remote-wake'
 import type { RemoteScreen, ScreenClient } from './remote-screen'
 import * as tailscale from './remote-tailscale'
 import { dataDir, loadSettings } from './store'
@@ -14,6 +15,8 @@ import { dataDir, loadSettings } from './store'
 // Lets a paired phone use this PC's Jolty: the same page as the desktop window, over a WebSocket that carries the
 // same channels as the window's IPC. The server only listens on this PC (127.0.0.1); Tailscale Serve puts HTTPS
 // in front of it for the tailnet, so nothing is open to the internet or the local network.
+
+declare const __JOLTY_VERSION__: string | undefined
 
 const DEFAULT_PORT = 47821
 const PAIR_MINUTES = 5
@@ -23,6 +26,8 @@ interface Stored {
   enabled: boolean
   port: number
   devices: Array<RemoteDevice & { hash: string }>
+  /** the wake agent: where, and the secret shared with it */
+  wake?: { url: string; token: string }
 }
 
 type Handler = (...args: unknown[]) => unknown
@@ -91,6 +96,42 @@ export class Remote {
     this.screen = screen
   }
 
+  /** The agent's address and the secret it shares with the phones; the secret is made on first use. */
+  async wakeStatus(): Promise<WakeStatus> {
+    const s = this.load()
+    const wake = s.wake ?? { url: '', token: crypto.randomBytes(24).toString('base64url') }
+    if (!s.wake) this.save({ ...s, wake })
+    return { url: wake.url, token: wake.token, origin: (await this.status()).url ?? '', macs: lanMacs() }
+  }
+
+  async wakeSet(url: string): Promise<WakeStatus> {
+    const clean = url.trim() ? validAgentUrl(url) : ''
+    const s = this.load()
+    const wake = s.wake ?? { url: '', token: crypto.randomBytes(24).toString('base64url') }
+    this.save({ ...s, wake: { ...wake, url: clean } })
+    return this.wakeStatus()
+  }
+
+  /** Asks the agent from this PC: it answers with the MAC it was started with, so a typo shows at once. */
+  async wakeTest(): Promise<WakeTest> {
+    const w = (await this.wakeStatus())
+    if (!w.url) return { ok: false, error: 'No agent address yet' }
+    try {
+      const res = await fetch(`${w.url}/ping`, { headers: { Authorization: `Bearer ${w.token}` }, signal: AbortSignal.timeout(8000) })
+      if (res.status === 401) return { ok: false, error: 'The agent is running with another secret: start it again with the command from here' }
+      if (!res.ok) return { ok: false, error: `The agent answered ${res.status}` }
+      return { ok: true, mac: String(((await res.json()) as { mac?: string }).mac || '') }
+    } catch {
+      return { ok: false, error: 'Cannot reach the agent: is it running, and is `tailscale serve` set up on that device?' }
+    }
+  }
+
+  /** What a paired phone keeps; null while it is not set up. */
+  wakeConfig(): WakeConfig | null {
+    const w = this.load().wake
+    return w?.url ? { url: w.url, token: w.token } : null
+  }
+
   /** The kill key, or Stop at the PC. */
   stopScreen(): void {
     this.screen?.stopAll('stopped')
@@ -128,7 +169,7 @@ export class Remote {
   private load(): Stored {
     try {
       const j = JSON.parse(fs.readFileSync(path.join(dataDir(), 'remote.json'), 'utf8')) as Partial<Stored>
-      return { enabled: j.enabled === true, port: Number(j.port) || DEFAULT_PORT, devices: Array.isArray(j.devices) ? j.devices : [] }
+      return { enabled: j.enabled === true, port: Number(j.port) || DEFAULT_PORT, devices: Array.isArray(j.devices) ? j.devices : [], wake: j.wake && typeof j.wake.token === 'string' ? j.wake : undefined }
     } catch {
       return { enabled: false, port: DEFAULT_PORT, devices: [] }
     }
@@ -389,15 +430,27 @@ export class Remote {
       if (err) return end(404, 'Not found')
       const ext = path.extname(target).toLowerCase()
       if (target.endsWith(`${path.sep}index.html`)) return end(200, this.page(data.toString('utf8'), host), MIME['.html'])
+      // the kept pages are named after the version, so an update replaces them
+      if (rel === '/sw.js') return end(200, data.toString('utf8').replace('__VERSION__', typeof __JOLTY_VERSION__ === 'string' ? __JOLTY_VERSION__ : 'dev'), MIME['.js'], { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' })
       const cache = rel.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache'
       end(200, data, MIME[ext] || 'application/octet-stream', { 'Cache-Control': cache })
     })
   }
 
+  /** The wake agent's address, allowed in the page's security policy so the phone can ask it while the PC is off. */
+  private agentOrigin(): string {
+    try {
+      const u = this.load().wake?.url
+      return u ? ` ${new URL(u).origin}` : ''
+    } catch {
+      return ''
+    }
+  }
+
   /** The desktop page, with the phone's connection allowed in its security policy and the language set before the app loads. */
   private page(html: string, host: string): string {
     return html
-      .replace("connect-src 'self' blob:", `connect-src 'self' blob: wss://${host} ws://${host}`)
+      .replace("connect-src 'self' blob:", `connect-src 'self' blob: wss://${host} ws://${host}${this.agentOrigin()}`)
       .replace('<head>', `<head><script src="/lang.js"></script>${PHONE_HEAD}`)
   }
 }

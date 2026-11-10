@@ -4,6 +4,7 @@ import type { RemoteStatus } from '@shared/remote'
 import { tr } from '@shared/i18n'
 import { api, errMsg } from '../store'
 import { QrCode } from '../components/QrCode'
+import { WakeSetup } from './WakeSetup'
 import './phone-settings.css'
 
 interface Pairing {
@@ -235,6 +236,8 @@ export function PhoneSettings() {
               </span>
             </span>
           </label>
+
+          <WakeSetup />
 
           <div className="ph-list-head">{tr("Dispozitive împerecheate")}</div>
           {st.devices.length === 0 && <p className="muted small" style={{ margin: 0 }}>{tr("Niciun telefon împerecheat încă")}</p>}

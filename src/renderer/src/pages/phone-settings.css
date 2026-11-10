@@ -338,3 +338,80 @@
 .low-power .ph-live {
   animation: none;
 }
+
+/* Start the PC from the phone: one folded block with three steps. */
+.wk {
+  margin: 4px 0 16px;
+  border: 1px solid var(--line-2);
+}
+.wk-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+.wk-head > svg:first-child {
+  flex: none;
+  margin-top: 2px;
+  color: var(--volt);
+}
+.wk-head > span {
+  flex: 1;
+  min-width: 0;
+}
+.wk-head > svg:last-child {
+  flex: none;
+  margin-top: 2px;
+  color: var(--grey);
+  transition: transform 0.35s var(--ease);
+}
+.wk-head > svg.up {
+  transform: rotate(180deg);
+}
+.wk-steps {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding: 4px 14px 16px 34px;
+}
+.wk-steps li {
+  display: grid;
+  gap: 8px;
+}
+.wk-cmd {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.wk-cmd code {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: var(--black);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
+  user-select: all;
+}
+.wk-url {
+  display: flex;
+  gap: 8px;
+}
+.wk-url .input {
+  flex: 1;
+}
+.wk-test.ok {
+  color: var(--volt);
+}
+.wk-test.bad {
+  color: var(--danger, #ff8a80);
+}

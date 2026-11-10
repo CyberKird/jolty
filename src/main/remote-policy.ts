@@ -7,6 +7,8 @@ const GROUPS = ['profiles:', 'sessions:', 'schedules:', 'skills:', 'system:', 'l
 
 const ALLOWED = new Set([
   'background:state',
+  // the phone keeps the way to wake the PC, for when the PC is off and cannot be asked
+  'remote:wakeConfig',
   'app:settings',
   'app:saveSettings',
   'app:version',

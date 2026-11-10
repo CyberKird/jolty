@@ -190,6 +190,10 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       revoke: (id) => call('remote:revoke', id),
       disconnect: () => call('remote:disconnect'),
       stopScreen: () => call('remote:stopScreen'),
+      wakeStatus: () => call('remote:wakeStatus'),
+      wakeSet: (url) => call('remote:wakeSet', url),
+      wakeTest: () => call('remote:wakeTest'),
+      wakeConfig: () => call('remote:wakeConfig'),
       onChange: (cb) => listen('remote:changed', () => cb())
     }
   }

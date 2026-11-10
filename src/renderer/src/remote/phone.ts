@@ -31,6 +31,7 @@ export function setupPhone(): void {
   }
   installHint()
   phoneSounds()
+  keepWake()
   window.addEventListener('jolty:resync', resync)
 }
 
@@ -38,7 +39,16 @@ export function setupPhone(): void {
  * The phone was away (locked, another app, no signal) and missed events. The PC replays what is running and what waits for a yes
  * right after this; here the lists and the open conversation are read again, and the message box is not touched.
  */
+/** The way to wake the PC stays on the phone: when the PC is off nothing can be asked of it. */
+function keepWake(): void {
+  void api.remote.wakeConfig().then(
+    (c) => (c ? localStorage.setItem('jolty-wake', JSON.stringify(c)) : localStorage.removeItem('jolty-wake')),
+    () => undefined
+  )
+}
+
 function resync(): void {
+  keepWake()
   const s = useStore.getState()
   // what was running or asked is told again by the PC: forget the old picture first, so a turn that ended while away does not stay "running"
   useStore.setState({ status: {}, permissions: {} })

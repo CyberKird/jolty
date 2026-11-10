@@ -23,3 +23,27 @@ export interface RemoteStatus {
   /** what went wrong last, in words the user can act on */
   error?: string
 }
+
+/** Where a phone asks for this PC to be woken while it is off: a small agent on a device that stays on in the same network. */
+export interface WakeConfig {
+  url: string
+  token: string
+}
+
+export interface WakeStatus {
+  /** where the agent can be reached (empty until the user sets it) */
+  url: string
+  /** the secret the agent and the phones share */
+  token: string
+  /** the address the agent lets in (this PC's page) */
+  origin: string
+  /** the network cards of this PC, the likely one first */
+  macs: Array<{ name: string; mac: string; ip: string }>
+}
+
+export interface WakeTest {
+  ok: boolean
+  /** the MAC the agent was started with */
+  mac?: string
+  error?: string
+}

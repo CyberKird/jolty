@@ -1,6 +1,7 @@
 import { createApi } from '@shared/api-factory'
 import type { JoltyApi } from '@shared/types'
 import { screenBus } from './screen-bus'
+import { clearOffline, offlineScreen } from './offline-screen'
 
 // The same page runs in a phone's browser: there is no preload there, so the API is built over a WebSocket to the PC's Jolty.
 // A phone is paired once (a code from Settings > Phone) and keeps its own key in this browser.
@@ -21,6 +22,9 @@ class Link {
   private listeners = new Map<string, Set<(data: unknown) => void>>()
   private waiters: Array<() => void> = []
   private delay = 500
+  /** connection attempts that failed before the PC ever answered this time */
+  private failed = 0
+  private offlineShown = false
 
   constructor(private token: string) {}
 
@@ -47,6 +51,11 @@ class Link {
         this.ready = true
         this.everReady = true
         this.delay = 500
+        this.failed = 0
+        if (this.offlineShown) {
+          this.offlineShown = false
+          clearOffline()
+        }
         for (const w of this.waiters.splice(0)) w()
         // while the phone was away, events were missed: the page catches up from the PC (remote/phone.ts), keeping what is typed
         if (back) window.dispatchEvent(new Event('jolty:resync'))
@@ -72,6 +81,13 @@ class Link {
         // revoked while the app was open: back to the pairing screen (nothing typed is worth keeping for a phone that was cut off)
         location.reload()
         return
+      }
+      // the PC does not answer (off, asleep, no Tailscale): the page says so and offers to start it, the tries go on behind it
+      if (!this.everReady && ++this.failed >= 2 && !this.offlineShown) {
+        this.offlineShown = true
+        offlineScreen(() => {
+          this.delay = 500
+        })
       }
       setTimeout(() => this.open(first, fail), this.delay)
       this.delay = Math.min(this.delay * 2, 5000)
@@ -116,6 +132,8 @@ async function pairScreen(message?: string): Promise<string> {
 /** Sets window.jolty for a browser that is not the desktop window. */
 export async function connectRemote(): Promise<void> {
   document.documentElement.classList.add('remote')
+  // the page is kept on the phone, so it opens when the PC is off
+  void navigator.serviceWorker?.register('/sw.js').catch(() => undefined)
   let token = localStorage.getItem(KEY) || ''
   const fromLink = /[#&]pair=([0-9A-Za-z]+)/.exec(location.hash)?.[1]
   let note: string | undefined

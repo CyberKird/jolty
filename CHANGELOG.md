@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.0
+
+### New
+
+- Start the PC from your phone while it is off, free and without any server in the cloud. The phone keeps Jolty's page, so it opens even when the PC does not answer, and shows "The PC is not answering" with a Start the PC button. The button asks a small wake agent (`tools/wake-agent.py`, Python 3, nothing else to install) that runs on any device that stays on in your home network (a Raspberry Pi, a NAS, a spare Linux box) and sends the Wake-on-LAN packet. The phone reaches the agent privately through Tailscale. Settings, Phone, "Start the PC from the phone" writes the commands for you with the right values and tests the agent. Turn on Wake on LAN in the BIOS and turn off Fast Startup in Windows first.
+
 ## 0.23.0
 
 ### New
