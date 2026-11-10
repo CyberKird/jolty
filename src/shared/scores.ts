@@ -12,6 +12,8 @@ export interface ModelScore {
   speed?: 'rapid' | 'mediu' | 'lent'
   /** what was measured, for the tooltip */
   note: string
+  /** set when the measurement is of an older version of this model ("5.1"): the number is shown as an estimate, not as this model's */
+  measured?: string
 }
 
 // [pattern on "id label", index, tokens/s, note]; first match wins, so the longer names come first
@@ -101,13 +103,26 @@ function toScore(profile: Profile, iq: number, measured: number | undefined, not
   return { iq, tps, speed: tps === undefined ? undefined : tps >= 100 ? 'rapid' : tps >= 60 ? 'mediu' : 'lent', note }
 }
 
+/** The first version number in a name or a note: "Claude Fable 5.1 · high" -> "5.1", "claude-fable-5-2" -> "5.2". */
+export function versionIn(text: string): string | undefined {
+  const v = /(\d+(?:[.-]\d+)?)/.exec(text)?.[1]
+  return v?.replace('-', '.')
+}
+
+/** A score measured on another version of the model is an estimate until the new one is measured (scores.json follows the benchmark by itself). */
+function forVersion(m: ModelOption, s: ModelScore): ModelScore {
+  const own = versionIn(m.label) ?? versionIn(m.id)
+  const measured = versionIn(s.note)
+  return own && measured && own !== measured ? { ...s, measured } : s
+}
+
 export function modelScore(profile: Profile, m: ModelOption): ModelScore | undefined {
   if (m.score) return m.score
   const text = `${m.id} ${m.label}`.toLowerCase()
   const flat = squash(text)
   const r = remote.find((e) => e.match.every((t) => flat.includes(squash(t))))
   // the notes in scores.json are the same Romanian texts as the table, so they translate the same way
-  if (r) return toScore(profile, r.iq, r.tps, tr(r.note))
+  if (r) return forVersion(m, toScore(profile, r.iq, r.tps, tr(r.note)))
   const hit = SCORES.find(([re]) => re.test(text))
-  return hit ? toScore(profile, hit[1], hit[2], hit[3]) : undefined
+  return hit ? forVersion(m, toScore(profile, hit[1], hit[2], hit[3])) : undefined
 }

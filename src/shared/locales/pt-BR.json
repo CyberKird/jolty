@@ -1716,5 +1716,6 @@
  "Ascunde comenzile": "Ocultar os controles",
  "Arată comenzile": "Mostrar os controles",
  "Sunet": "Som",
- "Fără sunet": "Sem som"
+ "Fără sunet": "Sem som",
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} ainda não foi medido. Estimativa pela versão {v}: inteligência {iq}{v1}"
 }

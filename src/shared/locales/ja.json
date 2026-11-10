@@ -1716,5 +1716,6 @@
  "Ascunde comenzile": "操作を隠す",
  "Arată comenzile": "操作を表示",
  "Sunet": "サウンド",
- "Fără sunet": "ミュート"
+ "Fără sunet": "ミュート",
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} はまだ測定されていません。バージョン {v} からの推定: 知能 {iq}{v1}"
 }

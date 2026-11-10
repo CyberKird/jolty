@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { modelScore } from '../src/shared/scores'
 import { mergeAccountModels, parseAccountModels } from '../src/shared/claude-models'
 
 const eff = { low: { supported: true }, medium: { supported: true }, high: { supported: true }, xhigh: { supported: true }, max: { supported: true } }
@@ -19,14 +20,14 @@ const sdk = () => [
 ]
 const NOW = Date.parse('2026-11-10T12:00:00Z')
 
-test('a newer model of a line the account has replaces the old row, keeping its description and place', () => {
+test('a newer model of a line the account has replaces the old row, keeping its place and its description under the new name', () => {
   const out = mergeAccountModels(sdk(), account, NOW)
   assert.deepEqual(out.map((m) => m.label), ['Opus 5.5', 'Fable 5.2', 'Haiku 5.5'])
   const fable = out[1]
   assert.equal(fable.id, 'claude-fable-5-2')
   // a chat started on the old alias still finds its row
   assert.equal(fable.alias, 'fable')
-  assert.equal(fable.description, 'Fable 5.1 - hardest tasks')
+  assert.equal(fable.description, 'Fable 5.2 - hardest tasks', 'the text no longer speaks of the old version')
   assert.deepEqual(fable.efforts, ['low', 'medium', 'high', 'xhigh', 'max'])
 })
 
@@ -58,4 +59,34 @@ test('a line Claude Code does not know is added while it is new, never when it i
 test('garbage in the account answer is ignored', () => {
   assert.deepEqual(parseAccountModels(null), [])
   assert.deepEqual(parseAccountModels({ data: [null, { nope: 1 }] }), [])
+})
+
+test('every line is renamed the same way when it gets an update, with no model named in the code', () => {
+  const list = [
+    { id: 'opus', label: 'Opus 5.5', description: 'Opus 5.5 \u00b7 Best for everyday tasks, opus 5.5 reads a lot' },
+    { id: 'sonnet', label: 'Sonnet 5.5', description: 'Sonnet 5.5 \u00b7 Efficient' }
+  ]
+  const acct = [
+    { id: 'claude-opus-5-6', display_name: 'Claude Opus 5.6', created_at: '2026-11-09T00:00:00Z', line: 'opus' },
+    { id: 'claude-sonnet-6', display_name: 'Claude Sonnet 6', created_at: '2026-11-09T00:00:00Z', line: 'sonnet' }
+  ]
+  const out = mergeAccountModels(list, acct, NOW)
+  assert.deepEqual(out.map((m) => m.label), ['Opus 5.6', 'Sonnet 6'])
+  assert.equal(out[0].description, 'Opus 5.6 \u00b7 Best for everyday tasks, Opus 5.6 reads a lot')
+  assert.equal(out[1].description, 'Sonnet 6 \u00b7 Efficient')
+  assert.equal(mergeAccountModels(out, acct, NOW)[0].description, out[0].description, 'running it again changes nothing')
+})
+
+const profile = { id: 'p', name: 'x', engine: 'claude', auth: 'subscription', color: '#000' } as never
+
+test('a score of an older version is shown as an estimate, never as the new model\'s own', () => {
+  const same = modelScore(profile, { id: 'fable', label: 'Fable 5.1' })
+  assert.ok(same && same.measured === undefined, 'the version that was measured')
+  const next = modelScore(profile, { id: 'claude-fable-5-2', label: 'Fable 5.2' })
+  assert.equal(next?.measured, '5.1', 'Fable 5.2 carries the 5.1 measurement as an estimate')
+  assert.equal(next?.iq, same?.iq)
+  const later = modelScore(profile, { id: 'claude-fable-6', label: 'Fable 6' })
+  assert.equal(later?.measured, '5.1')
+  const noNumber = modelScore(profile, { id: 'fable', label: 'Fable' })
+  assert.equal(noNumber?.measured, undefined, 'no version to compare: nothing is claimed')
 })

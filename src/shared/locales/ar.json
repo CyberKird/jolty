@@ -1716,5 +1716,6 @@
  "Ascunde comenzile": "إخفاء عناصر التحكم",
  "Arată comenzile": "إظهار عناصر التحكم",
  "Sunet": "الصوت",
- "Fără sunet": "كتم"
+ "Fără sunet": "كتم",
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "لم يتم قياس {label} بعد. تقدير من الإصدار {v}: الذكاء {iq}{v1}"
 }

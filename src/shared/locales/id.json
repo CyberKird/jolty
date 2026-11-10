@@ -1716,5 +1716,6 @@
  "Ascunde comenzile": "Sembunyikan kontrol",
  "Arată comenzile": "Tampilkan kontrol",
  "Sunet": "Suara",
- "Fără sunet": "Senyap"
+ "Fără sunet": "Senyap",
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} belum diukur. Perkiraan dari versi {v}: kecerdasan {iq}{v1}"
 }

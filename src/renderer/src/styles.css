@@ -3017,6 +3017,10 @@ a {
   border: 1px solid var(--line-2);
   padding: 0 5px;
 }
+.picker-score.est {
+  color: var(--grey);
+  border-style: dashed;
+}
 .picker-score.hi {
   color: var(--volt);
   border-color: var(--volt-line);

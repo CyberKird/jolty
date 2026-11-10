@@ -1716,5 +1716,6 @@
  "Ascunde comenzile": "조작 숨기기",
  "Arată comenzile": "조작 표시",
  "Sunet": "소리",
- "Fără sunet": "음소거"
+ "Fără sunet": "음소거",
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label}은(는) 아직 측정되지 않았습니다. 버전 {v} 기준 추정: 지능 {iq}{v1}"
 }

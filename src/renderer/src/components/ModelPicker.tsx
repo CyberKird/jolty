@@ -157,7 +157,7 @@ export function ModelPicker(p: {
                       ? tr("{name} e inclus în plan, până la {n}% din limita săptămânală. Se numără separat: {used}% folosit, resetare {when}.", bucketVars)
                       : tr("{name} e inclus în plan. Se numără separat: {used}% folosit, resetare {when}.", bucketVars)
                     : ''
-                  const scoreTip = sc ? tr("Inteligență {iq}{v1} (Artificial Analysis): {note}", { iq: sc.iq, v1: sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : '', note: sc.note }) : cap.compare
+                  const scoreTip = sc ? (sc.measured ? tr("{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}", { label: m.label, v: sc.measured, iq: sc.iq, v1: sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : '' }) : tr("Inteligență {iq}{v1} (Artificial Analysis): {note}", { iq: sc.iq, v1: sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : '', note: sc.note })) : cap.compare
                   return (
                     <button
                       key={m.id}
@@ -174,7 +174,7 @@ export function ModelPicker(p: {
                       <span className="picker-opt-text">
                         <span className="picker-opt-name">
                           {m.label}
-                          {sc && <span className={`picker-score ${sc.iq >= 45 ? 'hi' : sc.iq < 25 ? 'lo' : ''}`}>{sc.iq}</span>}
+                          {sc && <span className={`picker-score ${sc.measured ? 'est' : sc.iq >= 45 ? 'hi' : sc.iq < 25 ? 'lo' : ''}`}>{sc.measured ? `~${sc.iq}` : sc.iq}</span>}
                           {sc?.speed && <span className="picker-speed">{sc.speed}</span>}
                           {bucket && <span className="picker-badge included">{tr("INCLUS")}</span>}
                           {m.badge && <span className={`picker-badge ${m.badge}`}>{m.badge === 'new' ? tr("NOU") : tr("ACTUALIZAT")}</span>}

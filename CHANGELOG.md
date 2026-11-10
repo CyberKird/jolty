@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.1
+
+### Fixed
+
+- When a model gets an update (Fable 5.1 becomes 5.2, and the same for every other model, as soon as your account has it), its row in the model list now speaks of the new version: the description no longer says the old name. The intelligence number of a model that has not been measured yet is shown as an estimate (with a ~ and a dashed border, explained in the tooltip) instead of passing as its own; it becomes a real number when the benchmark has the new version.
+
 ## 0.25.0
 
 ### New

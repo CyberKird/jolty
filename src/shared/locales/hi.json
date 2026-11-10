@@ -1716,5 +1716,6 @@
  "Ascunde comenzile": "कंट्रोल छिपाएँ",
  "Arată comenzile": "कंट्रोल दिखाएँ",
  "Sunet": "आवाज़",
- "Fără sunet": "म्यूट"
+ "Fără sunet": "म्यूट",
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} का अभी तक मापन नहीं हुआ है। संस्करण {v} के आधार पर अनुमान: बुद्धिमत्ता {iq}{v1}"
 }

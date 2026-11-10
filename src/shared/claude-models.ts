@@ -45,6 +45,12 @@ function newestPerLine(models: AccountModel[]): Map<string, AccountModel> {
   return out
 }
 
+/** The old model's name inside its description ("Fable 5.1 · Most capable...") becomes the new model's name: the row is the new model, its text must say so. */
+function renamed(description: string | undefined, from: string, to: string): string | undefined {
+  if (!description || from === to) return description
+  return description.replace(new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'gi'), to)
+}
+
 export function mergeAccountModels(list: ModelOption[], account: AccountModel[], now = Date.now()): ModelOption[] {
   const out = [...list]
   for (const [line, m] of newestPerLine(account)) {
@@ -61,7 +67,7 @@ export function mergeAccountModels(list: ModelOption[], account: AccountModel[],
     }
     if (row >= 0) {
       // only a newer model than the row already shows replaces it
-      if (out[row].id !== m.id && newer(labelVersion(label), labelVersion(out[row].label))) out[row] = fresh
+      if (out[row].id !== m.id && newer(labelVersion(label), labelVersion(out[row].label))) out[row] = { ...fresh, description: renamed(fresh.description, out[row].label, label) }
       continue
     }
     const made = m.created_at ? Date.parse(m.created_at) : NaN
