@@ -184,6 +184,7 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       pair: () => call('remote:pair'),
       revoke: (id) => call('remote:revoke', id),
       disconnect: () => call('remote:disconnect'),
+      stopScreen: () => call('remote:stopScreen'),
       onChange: (cb) => listen('remote:changed', () => cb())
     }
   }

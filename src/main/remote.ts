@@ -7,8 +7,9 @@ import { WebSocketServer, type WebSocket } from 'ws'
 import { getLang } from '@shared/i18n'
 import type { RemoteDevice, RemoteStatus } from '@shared/remote'
 import { remoteArgs } from './remote-policy'
+import type { RemoteScreen, ScreenClient } from './remote-screen'
 import * as tailscale from './remote-tailscale'
-import { dataDir } from './store'
+import { dataDir, loadSettings } from './store'
 
 // Lets a paired phone use this PC's Jolty: the same page as the desktop window, over a WebSocket that carries the
 // same channels as the window's IPC. The server only listens on this PC (127.0.0.1); Tailscale Serve puts HTTPS
@@ -83,6 +84,18 @@ export class Remote {
     private root = path.join(__dirname, '../renderer')
   ) {}
 
+  private screen?: RemoteScreen
+
+  /** The PC's screen for the phone (remote-screen.ts); without it a phone's screen requests are refused. */
+  useScreen(screen: RemoteScreen): void {
+    this.screen = screen
+  }
+
+  /** The kill key, or Stop at the PC. */
+  stopScreen(): void {
+    this.screen?.stopAll('stopped')
+  }
+
   /** The desktop registers each IPC channel here too, so the phone reaches the very same code. */
   register(channel: string, fn: Handler): void {
     this.handlers.set(channel, fn)
@@ -137,14 +150,17 @@ export class Remote {
   async status(): Promise<RemoteStatus> {
     const s = this.load()
     const ts = await tailscale.info()
-    if (this.server && ts.state === 'ready') this.url = await tailscale.served(s.port)
+    // JOLTY_REMOTE_URL: tests (and a PC behind its own HTTPS address) say where the phone opens the page
+    if (process.env.JOLTY_REMOTE_URL) this.url = process.env.JOLTY_REMOTE_URL
+    else if (this.server && ts.state === 'ready') this.url = await tailscale.served(s.port)
     return {
       enabled: s.enabled,
       running: Boolean(this.server?.listening),
       port: s.port,
       tailscale: ts.state,
       url: this.url,
-      devices: s.devices.map(({ id, name, created, lastSeen }) => ({ id, name, created, lastSeen })),
+      devices: s.devices.map(({ id, name, created, lastSeen }) => ({ id, name, created, lastSeen, online: [...this.clients].some((c) => c.device === id) })),
+      screen: { allowed: loadSettings().remoteScreen === true, viewers: this.screen?.viewing() ?? 0 },
       error: this.error
     }
   }
@@ -243,10 +259,17 @@ export class Remote {
     const reply = (v: unknown): void => {
       if (ws.readyState === 1) ws.send(JSON.stringify(v))
     }
+    const view: ScreenClient = {
+      id: crypto.randomBytes(6).toString('hex'),
+      send: reply,
+      sendBinary: (data) => ws.readyState === 1 && ws.send(data, { binary: true }),
+      backlog: () => ws.bufferedAmount
+    }
     ws.on('close', () => {
       clearTimeout(waiting)
       clearInterval(alive)
-      if (client) this.clients.delete(client)
+      if (client && this.clients.delete(client)) this.onChange()
+      this.screen?.drop(view)
     })
     ws.on('message', (raw) => {
       let m: { t?: string; token?: string; id?: number; channel?: string; args?: unknown }
@@ -262,10 +285,16 @@ export class Remote {
         clearTimeout(waiting)
         client = { ws, device }
         this.clients.add(client)
+        this.onChange()
         reply({ t: 'ready', lang: getLang() })
         // the turns running now and the questions waiting for a yes, as the events that would have told it
         for (const id of this.working) reply({ t: 'ev', channel: 'jolty:event', data: { type: 'status', sessionId: id, status: 'running' } })
         for (const ev of this.asking.values()) reply({ t: 'ev', channel: 'jolty:event', data: ev })
+        return
+      }
+      if (m.t === 'screen') {
+        if (this.screen) this.screen.handle(view, m as Record<string, unknown>)
+        else reply({ t: 'screen', op: 'denied', reason: 'none' })
         return
       }
       if (m.t !== 'call' || typeof m.channel !== 'string' || typeof m.id !== 'number') return

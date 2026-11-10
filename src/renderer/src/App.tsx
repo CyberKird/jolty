@@ -8,6 +8,7 @@ import { WhatsNewHost } from './components/WhatsNew'
 import { ShortcutsHost } from './components/Shortcuts'
 import { Welcome } from './components/Welcome'
 import { PowerBar } from './components/PowerBar'
+import { ScreenBar } from './components/ScreenBar'
 import { Sidebar } from './components/Sidebar'
 import { api, liveRows, useStore } from './store'
 import { batchDeltas } from './event-batch'
@@ -26,6 +27,7 @@ const UsagePage = lazy(() => import('./pages/Usage').then((m) => ({ default: m.U
 const SkillsPage = lazy(() => import('./pages/Skills').then((m) => ({ default: m.SkillsPage })))
 // the mascot (and three.js with it) is not needed for the first frame: it starts once the window is idle
 const Mascot = lazy(() => import('./mascot/Mascot').then((m) => ({ default: m.Mascot })))
+const PcScreen = lazy(() => import('./components/PcScreen').then((m) => ({ default: m.PcScreen })))
 const SchedulesPage = lazy(() => import('./pages/Schedules').then((m) => ({ default: m.SchedulesPage })))
 
 /** The Joltarise bolt, drawn from the brand symbol's polygon. */
@@ -192,6 +194,12 @@ export function App() {
       {isChat && <div className="live-scrim" data-state={liveOpen ? 'open' : 'closed'} onClick={() => setLiveOpen(false)} aria-hidden />}
       <ContextMenu />
       <PowerBar />
+      <ScreenBar />
+      {document.documentElement.classList.contains('remote') && (
+        <Suspense fallback={null}>
+          <PcScreen />
+        </Suspense>
+      )}
       {idle && (
         <Suspense fallback={null}>
           <Mascot />

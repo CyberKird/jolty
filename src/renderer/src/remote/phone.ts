@@ -31,6 +31,24 @@ export function setupPhone(): void {
   }
   installHint()
   phoneSounds()
+  window.addEventListener('jolty:resync', resync)
+}
+
+/**
+ * The phone was away (locked, another app, no signal) and missed events. The PC replays what is running and what waits for a yes
+ * right after this; here the lists and the open conversation are read again, and the message box is not touched.
+ */
+function resync(): void {
+  const s = useStore.getState()
+  // what was running or asked is told again by the PC: forget the old picture first, so a turn that ended while away does not stay "running"
+  useStore.setState({ status: {}, permissions: {} })
+  void s.loadProfiles()
+  void s.loadSessions()
+  void s.loadUsage()
+  const id = s.activeId
+  const keep = Object.fromEntries(Object.keys(s.transcripts).filter((k) => k === id).map((k) => [k, s.transcripts[k]]))
+  useStore.setState({ transcripts: keep })
+  if (id) void api.sessions.history(id).then((items) => useStore.setState((st) => ({ transcripts: { ...st.transcripts, [id]: items } })), () => undefined)
 }
 
 /** The mascot is not on a phone, so its sounds are not either: the same soft ones tell when a turn ends, fails or needs a yes. */

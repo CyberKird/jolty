@@ -1,7 +1,8 @@
-import { BarChart3, CalendarClock, Cpu, Download, KeyRound, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck } from 'lucide-react'
+import { BarChart3, CalendarClock, Cpu, Download, KeyRound, Monitor, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck } from 'lucide-react'
 import { BugReportButton } from './BugReport'
 import { MergeHost } from './MergePanel'
 import { useEffect, useMemo, useState } from 'react'
+import { useScreenUi } from '../remote/screen-bus'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { dragShield } from '../dragShield'
 import { pathItems, showMenu } from './ContextMenu'
@@ -408,9 +409,8 @@ export function Sidebar() {
     window.addEventListener('jolty-local-models', look)
     return () => window.removeEventListener('jolty-local-models', look)
   }, [])
-  // a phone only gets the pages that work from there: the others ask for things only the PC can do
   const phone = document.documentElement.classList.contains('remote')
-  const nav = navIds.filter((id) => (id !== 'local' || localOn) && (!phone || id === 'usage')).map((id) => NAV.find((n) => n.id === id)!)
+  const nav = navIds.filter((id) => id !== 'local' || localOn).map((id) => NAV.find((n) => n.id === id)!)
   const navDrag = useProfileDrag(navIds, moveNav)
   const [groupIds, moveGroup] = useOrder('jolty.groupOrder', groups.map(([cwd]) => cwd))
   const groupDrag = useProfileDrag(groupIds, moveGroup)
@@ -441,6 +441,17 @@ export function Sidebar() {
       <button className="btn primary new-chat" onClick={() => void openSession(undefined)}>
         <Plus size={14} strokeWidth={2.5} /> {tr("Conversație nouă")}
       </button>
+      {phone && (
+        <button
+          className="btn new-chat pc-screen-btn"
+          onClick={() => {
+            useStore.getState().setSidebarOpen(false)
+            useScreenUi.getState().setOpen(true)
+          }}
+        >
+          <Monitor size={14} strokeWidth={2} /> {tr("Ecran PC")}
+        </button>
+      )}
       <div className="nav">
         {/* one highlight that slides to the page in use */}
         <span className={`nav-glow ${at < 0 ? 'off' : ''}`} style={{ '--i': Math.max(at, 0) } as React.CSSProperties} aria-hidden />

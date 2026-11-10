@@ -332,6 +332,8 @@ export interface AppSettings {
   visionProfileId?: string
   /** permission mode of sessions a chat starts with start_session; "full" (no permissions) unless set */
   childMode?: PermissionMode
+  /** a paired phone may see this PC's screen and drive its mouse and keyboard; off unless true, set at the PC only */
+  remoteScreen?: boolean
   /** sessions a chat starts get the Jolty browser; on unless false */
   childBrowser?: boolean
   /** a model of its own for started sessions by how hard the job is; unset means the model of the chat that starts them */
@@ -802,6 +804,8 @@ export interface JoltyApi {
     revoke(id: string): Promise<RemoteStatus>
     /** drops every connected phone now; they stay paired */
     disconnect(): Promise<void>
+    /** every phone loses the screen at once */
+    stopScreen(): Promise<void>
     onChange(cb: () => void): () => void
   }
 }

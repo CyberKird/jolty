@@ -137,15 +137,15 @@ test('a wrong or missing key is closed, a right one is served', async () => {
   ok.ws.close()
 })
 
-test('only listed channels, never the desktop ones, and no open modes from the phone', async () => {
+test('only listed channels, never the desktop ones', async () => {
   const c = await connect(await pair())
   await until(() => c.msgs.some((m) => m.t === 'ready'))
   assert.equal((await ask(c, 1, 'app:pickFolder', [])).ok, false)
   assert.equal((await ask(c, 2, 'remote:enable', [true])).ok, false)
-  assert.equal((await ask(c, 3, 'sessions:setPermissionMode', ['s1', 'full'])).ok, false)
-  assert.equal((await ask(c, 4, 'sessions:setPermissionMode', ['s1', 'project'])).ok, false)
+  assert.equal((await ask(c, 3, 'sessions:setPermissionMode', ['s1', 'full'])).ok, true, 'the owner can pick No permissions on the phone')
+  assert.equal((await ask(c, 4, 'sessions:setPermissionMode', ['s1', 'project'])).ok, true)
   assert.equal((await ask(c, 5, 'sessions:setPermissionMode', ['s1', 'ask'])).ok, true)
-  assert.equal((await ask(c, 6, 'sessions:start', [{ profileId: 'p', cwd: 'C:\\x', permissionMode: 'full' }])).ok, false)
+  assert.equal((await ask(c, 6, 'sessions:start', [{ profileId: 'p', cwd: 'C:\\x', permissionMode: 'full' }])).ok, true)
   assert.equal((await ask(c, 7, 'sessions:start', [{ profileId: 'p', cwd: 'C:\\x', permissionMode: 'autoEdit' }])).ok, true)
   assert.equal((await ask(c, 12, 'sessions:handoff', ['s1', 'p2', undefined, undefined, true])).ok, true, 'continue in another model works')
   assert.equal((await ask(c, 13, 'browser:info', [])).ok, true)
@@ -155,8 +155,8 @@ test('only listed channels, never the desktop ones, and no open modes from the p
   assert.deepEqual(calls.at(-1), ['s1', true])
   assert.equal((await ask(c, 8, 'sessions:send', ['s1', 'hello', [], false])).ok, true)
   assert.deepEqual(calls.at(-1), ['s1', 'hello', [], false])
-  await ask(c, 9, 'app:saveSettings', [{ theme: 'glass', browserMode: 'own', siteTrust: 'free', browserApp: 'chrome', dataDir: 'x' }])
-  assert.deepEqual(calls.at(-1), [{ theme: 'glass', browserMode: 'own', siteTrust: 'free' }], 'only look, last-choice and browser-behaviour keys pass')
+  await ask(c, 9, 'app:saveSettings', [{ theme: 'glass', browserMode: 'own', siteTrust: 'free', browserApp: 'chrome', childMode: 'ask', remoteScreen: true, dataDir: 'x' }])
+  assert.deepEqual(calls.at(-1), [{ theme: 'glass', browserMode: 'own', siteTrust: 'free', browserApp: 'chrome', childMode: 'ask' }], 'every preference passes except the PC\'s own doors')
   c.ws.close()
 })
 

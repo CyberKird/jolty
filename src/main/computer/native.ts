@@ -6,7 +6,7 @@ import type { PermissionDecision, PermissionMode } from '@shared/types'
 import { tr } from '@shared/i18n'
 import { dataDir, loadSettings, saveSettings } from '../store'
 import { electronCapturer } from './capture'
-import { NativeInput } from './helper'
+import { NativeInput, type InputBackend } from './helper'
 import { ScreenOverlay } from './overlay'
 import { ComputerService, type AskInput } from './service'
 
@@ -26,6 +26,19 @@ class NativeComputer {
   private svc?: ComputerService
   private input?: NativeInput
   private chats?: ComputerChats
+  private killed: Array<() => void> = []
+
+  /** Something else that drives the PC (the phone's screen) stops with the kill key too. */
+  onKill(cb: () => void): void {
+    this.killed.push(cb)
+  }
+
+  /** The input helper, started: for what drives the PC without a chat (the phone's screen). */
+  async inputBackend(): Promise<InputBackend> {
+    const input = this.service().input
+    await input.start()
+    return input
+  }
 
   bind(chats: ComputerChats): void {
     this.chats = chats
@@ -61,7 +74,10 @@ class NativeComputer {
       }
     })
     this.svc = svc
-    const stop = (): void => void svc.killAll().then(() => this.chats?.killed())
+    const stop = (): void => {
+      for (const cb of this.killed) cb()
+      void svc.killAll().then(() => this.chats?.killed())
+    }
     input.onKill(stop)
     void input.setKillKey(KILL.vk, KILL.mods)
     if (app.isReady()) globalShortcut.register(KILL.accelerator, stop)

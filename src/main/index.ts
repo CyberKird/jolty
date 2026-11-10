@@ -31,6 +31,8 @@ import * as gitMerge from './git-merge'
 import * as background from './background'
 import * as quick from './quick'
 import { Remote } from './remote'
+import { RemoteScreen } from './remote-screen'
+import { nativeScreenInput, nativeScreenSource } from './remote-screen-native'
 import { getLang, setLang, tr } from '@shared/i18n'
 import { openableUrl } from '@shared/links'
 
@@ -74,6 +76,8 @@ let jolty: Jolty
 const browserLive = new BrowserLive(send)
 const preview = new Preview()
 const remote = new Remote(() => win && !win.isDestroyed() && win.webContents.send('remote:changed'))
+remote.useScreen(new RemoteScreen(nativeScreenSource, nativeScreenInput, () => store.loadSettings().remoteScreen === true, () => win && !win.isDestroyed() && win.webContents.send('remote:changed')))
+nativeComputer.onKill(() => remote.stopScreen())
 
 function send(e: ChatEvent): void {
   background.track(e)
@@ -188,6 +192,7 @@ function registerIpc(): void {
   handle('remote:pair', () => remote.startPairing())
   handle('remote:revoke', async (id: string) => (remote.revoke(String(id)), remote.status()))
   handle('remote:disconnect', () => remote.disconnectAll())
+  handle('remote:stopScreen', () => remote.stopScreen())
   handle('profiles:list', () => jolty.profiles())
   handle('profiles:create', (input) => jolty.createProfile(input as never))
   handle('profiles:update', (id: string, patch) => jolty.updateProfile(id, patch as never))
@@ -364,6 +369,7 @@ function registerIpc(): void {
   handle('app:saveSettings', async (patch) => {
     const saved = store.saveSettings(patch as never)
     if (patch && typeof patch === 'object' && 'language' in patch) setLang(saved.language)
+    if (patch && typeof patch === 'object' && 'remoteScreen' in patch && saved.remoteScreen !== true) remote.stopScreen()
     if (patch && typeof patch === 'object' && 'autoUpdate' in patch) updater.setAuto(saved.autoUpdate !== false)
     if (patch && typeof patch === 'object' && Object.keys(patch).some((k) => k.startsWith('browser'))) await jolty.reconnectBrowser()
     if (patch && typeof patch === 'object' && ('keepInBackground' in patch || 'startWithWindows' in patch)) background.apply(patch as never)

@@ -4,6 +4,8 @@ export interface RemoteDevice {
   name: string
   created: number
   lastSeen?: number
+  /** connected to this PC at this moment */
+  online?: boolean
 }
 
 export interface RemoteStatus {
@@ -16,6 +18,8 @@ export interface RemoteStatus {
   /** https address the phone opens (set once Tailscale serves the port) */
   url?: string
   devices: RemoteDevice[]
+  /** the PC's screen on the phone: switched on at the PC only, and how many phones look at it now */
+  screen: { allowed: boolean; viewers: number }
   /** what went wrong last, in words the user can act on */
   error?: string
 }

@@ -1,80 +1,33 @@
-// What a paired phone may ask of this PC. Everything not listed here is refused, so a new IPC channel is
-// never reachable from outside until someone adds it on purpose.
+// What a paired phone may ask of this PC. A phone is the owner's own: the whole app works from it. What is refused is what
+// only makes sense at the PC (folder dialogs, opening local paths, the phone link itself) and what could cut the phone off
+// (installing an update restarts Jolty). A new channel needs a decision before it is reachable from outside.
+
+/** Whole groups of channels: each page of the app lives in one. */
+const GROUPS = ['profiles:', 'sessions:', 'schedules:', 'skills:', 'system:', 'local:', 'setup:', 'usage:', 'backup:', 'merge:', 'codexImport:', 'browser:', 'composer:', 'power:', 'voice:']
 
 const ALLOWED = new Set([
-  'profiles:list',
-  'profiles:status',
-  'profiles:models',
-  'sessions:list',
-  'sessions:start',
-  'sessions:history',
-  'sessions:send',
-  'sessions:interrupt',
-  'sessions:setModel',
-  'sessions:setEffort',
-  'sessions:setPermissionMode',
-  'sessions:setBrowser',
-  // the PC is the point of the phone link: the model drives this PC, every action still asks here (or on the PC) and Ctrl+Alt+Esc stops it
-  'sessions:setComputer',
-  'sessions:compact',
-  'sessions:compactAndWait',
-  // "continue in" another model or account, the side chat, the review and the better-prompt helper: all just chats
-  'sessions:handoff',
-  'sessions:side',
-  'sessions:promoteSide',
-  'sessions:review',
-  'sessions:improvePrompt',
-  'sessions:remove',
-  'sessions:closed',
-  'sessions:restore',
-  'browser:info',
-  'usage:time',
-  'sessions:respond',
-  'sessions:rename',
-  'sessions:setFlags',
-  // shut the PC down (or restart, sleep, lock) when the work is done, from the phone
-  'power:arm',
-  'power:cancel',
-  'power:state',
-  'composer:slash',
-  'composer:files',
-  'usage:summary',
-  'usage:balance',
-  'usage:refreshLimits',
-  'schedules:list',
   'background:state',
   'app:settings',
   'app:saveSettings',
   'app:version',
-  'voice:status',
-  'voice:transcribe',
-  'updates:status'
+  'app:sendBugReport',
+  'app:notificationsBlocked',
+  'updates:status',
+  'updates:check'
 ])
 
-/** Preferences a phone may change: look and last choices. Anything else in a settings patch is dropped. */
-const SETTINGS_KEYS = new Set([
-  'theme',
-  'glassClear',
-  'language',
-  'lastComposer',
-  // how the model works in the browser: asks per action or per site, and how it attaches to a tab
-  'siteTrust',
-  'browserMode',
-  'browserPick',
-  'lastProfileId',
-  'lastModels',
-  'lastCwd',
-  'seenVersion',
-  'ownKeyHintDismissed',
-  'mascot',
-  'mascotSize',
-  'mascotSounds',
-  'reduceMotion',
-  'lowPower'
+/** Inside the groups: what stays at the PC. */
+const REFUSED = new Set([
+  'skills:reveal',
+  'browser:openExtensionPage',
+  'browser:installNative',
+  'local:installOllama',
+  // the phone's own browser and clipboard are used there (remote/boot.ts)
+  'voice:download'
 ])
 
-/** Modes without questions stay a decision made at the PC: a phone cannot switch them on. */
-const OPEN_MODES = new Set(['project', 'full'])
+/** Preferences a phone may not change: where the PC's own doors are. */
+const SETTINGS_REFUSED = new Set(['remoteScreen', 'dataDir'])
 
 function plain(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -82,18 +35,12 @@ function plain(v: unknown): v is Record<string, unknown> {
 
 /** Returns the arguments to run the call with, or throws the reason the phone's call is refused. */
 export function remoteArgs(channel: string, args: unknown): unknown[] {
-  if (!ALLOWED.has(channel)) throw new Error(`Not available from the phone: ${channel}`)
+  if (REFUSED.has(channel) || !(ALLOWED.has(channel) || GROUPS.some((g) => channel.startsWith(g)))) throw new Error(`Not available from the phone: ${channel}`)
   if (!Array.isArray(args)) throw new Error('Bad request')
-  if (channel === 'sessions:setPermissionMode' && OPEN_MODES.has(String(args[1]))) throw new Error('This mode can only be turned on at the PC')
-  if (channel === 'sessions:start') {
-    const input = args[0]
-    if (!plain(input)) throw new Error('Bad request')
-    if (OPEN_MODES.has(String(input.permissionMode))) throw new Error('This mode can only be turned on at the PC')
-  }
   if (channel === 'app:saveSettings') {
     const patch = args[0]
     if (!plain(patch)) throw new Error('Bad request')
-    return [Object.fromEntries(Object.entries(patch).filter(([k]) => SETTINGS_KEYS.has(k)))]
+    return [Object.fromEntries(Object.entries(patch).filter(([k]) => !SETTINGS_REFUSED.has(k)))]
   }
   return args
 }

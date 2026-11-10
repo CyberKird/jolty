@@ -277,9 +277,7 @@ export const OPEN_MODES: PermissionMode[] = ['project', 'full']
 
 export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onMode: (m: PermissionMode) => void; engine?: EngineKind }) {
   const { open, setOpen, ref, shown, state } = usePopover()
-  const all = modesFor(engine)
-  // a phone cannot turn on the modes without questions: the PC decides those, so they are not offered there
-  const choices = document.documentElement.classList.contains('remote') ? all.filter((m) => !OPEN_MODES.includes(m.id)) : all
+  const choices = modesFor(engine)
   // a native confirm() leaves Electron without keyboard focus (the chatbox stops taking input), so the yes is asked inline
   const [armed, setArmed] = useState(false)
   useEffect(() => {
@@ -294,7 +292,7 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
     setOpen(false)
     onMode(m)
   }
-  const current = all.find((m) => m.id === mode) || choices[0]
+  const current = choices.find((m) => m.id === mode) || choices[0]
   // 1-5 pick a mode while the menu is open, like the Claude app
   useEffect(() => {
     if (!open) return

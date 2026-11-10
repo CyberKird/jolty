@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.22.0
+
+### New
+
+- The PC's screen on your phone, like TeamViewer. Settings, Phone, "Allow the PC screen on the phone" (off until you turn it on at the PC), then PC screen in the phone's menu. One finger moves the pointer like a touchpad (or points straight at the spot), a tap clicks, two fingers scroll or pinch to zoom, two fingers tapped together right-click, press and hold drags. A keyboard button, a keys sheet (Ctrl, Alt, Shift, Win, arrows, F keys, Ctrl+C, Alt+Tab and more) and a button for the right mouse click. Several monitors: pick the one you want. The pictures get smaller by themselves when the connection is slow. On the PC a bar says a phone is looking, with Stop, and Ctrl+Alt+Esc ends it.
+- Every page of Jolty works on the phone now (Settings, Accounts, Skills, Scheduled and the rest), and the mode "No permissions" is offered there too, with the same question on the PC and on the phone.
+- Settings, Phone is redone: the connection steps light up, the QR code sits in a frame with a scan line and a countdown, a phone that joins is welcomed, and paired phones show when they are connected now.
+
+### Improvements
+
+- Coming back to the app on the phone no longer reloads the page: the lists and the open conversation catch up and what you were typing stays.
+- The phone app can be turned sideways.
+
 ## 0.21.2
 
 ### Improvements

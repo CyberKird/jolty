@@ -46,7 +46,23 @@ try {
   await phone.locator('.titlebar-btn').first().click()
   await phone.waitForSelector('.session-item')
   // only the pages that work from a phone are offered
-  assert.deepEqual(await phone.locator('.nav-item').allInnerTexts(), ['Usage'])
+  const pages = (await phone.locator('.nav-item').allInnerTexts()).map((t) => t.trim())
+  for (const want of ['Settings', 'Skills', 'Usage', 'Scheduled']) assert.ok(pages.some((t) => t.includes(want)), `${want} page is offered`)
+  // every page opens on the phone without asking the PC for anything it refuses, and fits the screen
+  for (let i = 0; i < pages.length; i++) {
+    if (await phone.evaluate(() => document.querySelector('.app')?.classList.contains('no-sidebar'))) {
+      await phone.locator('.titlebar-btn').first().click()
+      await phone.waitForTimeout(350)
+    }
+    await phone.locator('.nav-item').nth(i).click()
+    await phone.waitForSelector('.page', { timeout: 15000 })
+    await phone.waitForTimeout(500)
+    assert.equal(await phone.locator('.toast.error').count(), 0, `${pages[i]}: no refused call`)
+    assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, `${pages[i]} fits the screen`)
+    await phone.screenshot({ path: path.join(shots, `phone-page-${i}.png`) })
+  }
+  if (await phone.evaluate(() => document.querySelector('.app')?.classList.contains('no-sidebar'))) await phone.locator('.titlebar-btn').first().click()
+  await phone.waitForSelector('.session-item')
   assert.equal(await phone.evaluate(() => typeof window.jolty.remote), 'object')
   // the phone cannot manage the link itself
   const denied = await phone.evaluate(() => window.jolty.remote.enable(true).then(() => 'allowed', (e) => e.message))

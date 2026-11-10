@@ -1165,9 +1165,7 @@ export function NewChat() {
     composerRestored.current = true
     const last = lastComposer
     if (!last) return
-    // the PC's last mode may be one a phone cannot start (without questions): the phone opens on the default
-    const phone = document.documentElement.classList.contains('remote')
-    if (last.mode && modesFor(engine).some((m) => m.id === last.mode) && !(phone && OPEN_MODES.includes(last.mode))) setMode(last.mode)
+    if (last.mode && modesFor(engine).some((m) => m.id === last.mode)) setMode(last.mode)
     if (last.browser && hasJoltyBrowser(engine)) setBrowser(true)
     if (last.computer && hasJoltyComputer(engine)) setComputer(true)
   }, [settingsRead, profileId, profiles, lastComposer])

@@ -1,5 +1,6 @@
 import { createApi } from '@shared/api-factory'
 import type { JoltyApi } from '@shared/types'
+import { screenBus } from './screen-bus'
 
 // The same page runs in a phone's browser: there is no preload there, so the API is built over a WebSocket to the PC's Jolty.
 // A phone is paired once (a code from Settings > Phone) and keeps its own key in this browser.
@@ -33,17 +34,22 @@ class Link {
   private open(first?: () => void, fail?: (e: Error) => void): void {
     const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`)
     this.ws = ws
+    ws.binaryType = 'arraybuffer'
     ws.onopen = () => ws.send(JSON.stringify({ t: 'auth', token: this.token }))
     ws.onmessage = (ev) => {
+      // a picture of the PC's screen
+      if (typeof ev.data !== 'string') return screenBus.frame(ev.data as ArrayBuffer)
       const m = JSON.parse(String(ev.data)) as { t: string; id?: number; ok?: boolean; value?: unknown; error?: string; channel?: string; data?: unknown }
+      if (m.t === 'screen') return screenBus.message(m as unknown as Record<string, unknown>)
       if (m.t === 'ready') {
         const back = this.everReady
+        screenBus.attach((msg) => ws.readyState === 1 && ws.send(JSON.stringify(msg)))
         this.ready = true
         this.everReady = true
         this.delay = 500
         for (const w of this.waiters.splice(0)) w()
-        // while the phone was away, events were missed: start again from the PC's state
-        if (back) location.reload()
+        // while the phone was away, events were missed: the page catches up from the PC (remote/phone.ts), keeping what is typed
+        if (back) window.dispatchEvent(new Event('jolty:resync'))
         else first?.()
       } else if (m.t === 'res' && m.id !== undefined) {
         const p = this.pending.get(m.id)
@@ -56,12 +62,14 @@ class Link {
     }
     ws.onclose = (ev) => {
       this.ready = false
+      screenBus.message({ t: 'screen', op: 'ended', reason: 'link' })
       for (const p of this.pending.values()) p.reject(new Error('Connection to the PC lost'))
       this.pending.clear()
       if (ev.code === 4401) {
         // the PC does not know this key (revoked or reset): pair again
         localStorage.removeItem(KEY)
         if (!this.everReady) return fail?.(new Error('This phone is no longer paired. Open the pairing link from Jolty again.'))
+        // revoked while the app was open: back to the pairing screen (nothing typed is worth keeping for a phone that was cut off)
         location.reload()
         return
       }
