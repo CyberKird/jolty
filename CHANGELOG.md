@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.2
+
+### Improvements
+
+- On the phone, the send button is bigger and answers at once: it sinks under the finger, lights up and sends a ring out. New messages, notes and menus arrive with a short rise instead of appearing, and scrolling keeps its momentum.
+- A scheduled shutdown (or restart, sleep, lock) armed on the PC or the phone shows as a bar on the phone, with Cancel.
+- Notes on the phone appear under the header instead of over the buttons of the message box.
+
 ## 0.21.1
 
 ### Improvements

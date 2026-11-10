@@ -322,3 +322,110 @@ html.remote .sheet-item .small {
     opacity: 0;
   }
 }
+
+/* ---- feel: presses answer at once, things arrive instead of appearing, nothing repaints more than it must ---- */
+@media (max-width: 760px) {
+  /* the send button: bigger, it sinks and flashes under the finger, then a ring leaves it */
+  html.remote .send-btn {
+    position: relative;
+    width: 52px;
+    height: 44px;
+    overflow: visible;
+  }
+  html.remote .send-btn.primary:active:not(:disabled) {
+    transform: scale(0.88);
+    box-shadow: 0 0 0 0 rgba(var(--volt-rgb), 0.55), 0 0 28px rgba(var(--volt-rgb), 0.55);
+    filter: brightness(1.15);
+  }
+  html.remote .send-btn.primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--volt);
+    opacity: 0;
+    pointer-events: none;
+  }
+  html.remote .send-btn.primary:active:not(:disabled)::after {
+    animation: send-ring 0.5s var(--ease) both;
+  }
+  html.remote .send-btn svg {
+    transition: transform 0.22s var(--ease);
+  }
+  html.remote .send-btn.primary:active:not(:disabled) svg {
+    transform: translateY(-3px);
+  }
+  html.remote .send-btn.primary:disabled {
+    opacity: 0.4;
+  }
+  /* what shows after a send */
+  html.remote .pending-turn,
+  html.remote .toast[data-state='open'] {
+    animation: phone-rise 0.34s var(--ease) both;
+  }
+  /* messages and notes sit under the header, not over the buttons of the message box */
+  html.remote .toast-stack {
+    top: calc(56px + env(safe-area-inset-top));
+    bottom: auto;
+    inset-inline: 10px;
+    align-items: stretch;
+  }
+  html.remote .toast {
+    max-width: none;
+  }
+  html.remote .power-bar {
+    top: calc(52px + env(safe-area-inset-top));
+    left: 10px;
+    transform: none;
+    width: calc(100vw - 20px);
+    max-width: none;
+    justify-content: space-between;
+    animation: phone-drop 0.4s var(--ease) both;
+  }
+  html.remote .power-bar span {
+    flex: 1;
+  }
+  /* scrolling stays inside the list and keeps its momentum; the drawer is promoted once, not per frame */
+  html.remote .messages,
+  html.remote .sidebar .session-list,
+  html.remote .page,
+  html.remote .picker-list {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  html.remote .sidebar {
+    will-change: transform;
+  }
+  html.remote .picker-pop[data-state='open'] {
+    animation: phone-rise 0.26s var(--ease) both;
+  }
+}
+@keyframes send-ring {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@keyframes phone-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes phone-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.remote *,
+  html.remote *::before,
+  html.remote *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
