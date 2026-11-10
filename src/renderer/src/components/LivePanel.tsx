@@ -3,9 +3,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ChatItem, FileDiff, PermissionRequest, PlanStep, SessionMeta } from '@shared/types'
 import { clock } from '@shared/eta'
 import { dragShield } from '../dragShield'
-import { api, basename, useStore, type Draft } from '../store'
+import { api, basename, errMsg, useStore, type Draft } from '../store'
 import { toolKind } from './Messages'
-import { DiffView, highlight, highlightLive, langOf } from './Rich'
+import { DiffView, highlight, highlightLive, langOf, type DiffReview } from './Rich'
+import { reviewMessage, type ReviewComment } from '@shared/review'
 import { useNow } from './Tasks'
 import { tr } from '@shared/i18n'
 
@@ -335,8 +336,9 @@ function changesOf(items: ChatItem[], cwd: string): Change[] {
   return [...m.values()].reverse()
 }
 
-function ChangesView({ changes, cwd }: { changes: Change[]; cwd: string }) {
+function ChangesView({ changes, cwd, review, onSend, onClear }: { changes: Change[]; cwd: string; review: DiffReview; onSend: () => void; onClear: () => void }) {
   const [open, setOpen] = useState<string>()
+  const noted = review.comments.length
   if (!changes.length) return <div className="faint small">{tr("Fișierele modificate apar aici, cu diferențele linie cu linie.")}</div>
   const add = changes.reduce((a, c) => a + c.add, 0)
   const del = changes.reduce((a, c) => a + c.del, 0)
@@ -360,12 +362,19 @@ function ChangesView({ changes, cwd }: { changes: Change[]; cwd: string }) {
             </button>
             {open === c.path && (
               <div className="change-diff">
-                <DiffView diffs={c.diffs} />
+                <DiffView diffs={c.diffs} review={review} />
               </div>
             )}
           </div>
         )
       })}
+      {noted > 0 && (
+        <div className="review-bar">
+          <span>{noted === 1 ? tr("1 comentariu") : tr("{n} comentarii", { n: String(noted) })}</span>
+          <button className="btn ghost small" onClick={onClear}>{tr("Șterge tot")}</button>
+          <button className="btn primary small" onClick={onSend}>{tr("Trimite comentariile")}</button>
+        </div>
+      )}
     </>
   )
 }
@@ -600,6 +609,8 @@ function savedWidth(): number {
   }
 }
 
+const NO_COMMENTS: ReviewComment[] = []
+
 export function LivePanel({ session }: { session?: SessionMeta }) {
   const id = session?.id || ''
   const cwd = session?.cwd || ''
@@ -611,6 +622,25 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
   const open = useStore((s) => s.liveOpen)
   const setLiveOpen = useStore((s) => s.setLiveOpen)
   const drafts = useMemo(() => Object.values(draftMap || {}).sort((a, b) => a.at - b.at), [draftMap])
+  // review comments written on diff lines: kept here so they outlive a switch of tab, sent together as one message
+  const [reviews, setReviews] = useState<Record<string, ReviewComment[]>>({})
+  const toast = useStore((s) => s.toast)
+  const review: DiffReview = {
+    comments: reviews[id] || NO_COMMENTS,
+    add: (c) => setReviews((r) => ({ ...r, [id]: [...(r[id] || []), { ...c, id: crypto.randomUUID() }] })),
+    remove: (cid) => setReviews((r) => ({ ...r, [id]: (r[id] || []).filter((c) => c.id !== cid) }))
+  }
+  const sendReview = async (): Promise<void> => {
+    const text = reviewMessage(review.comments, tr("Comentarii la modificări:"))
+    useStore.getState().onEvent({ type: 'status', sessionId: id, status: 'running' })
+    try {
+      await api.sessions.send(id, text, [])
+      setReviews((r) => ({ ...r, [id]: [] }))
+    } catch (err) {
+      useStore.getState().onEvent({ type: 'status', sessionId: id, status: 'error', error: errMsg(err) })
+      toast(errMsg(err), true)
+    }
+  }
   const phase = phaseOf(items, status, perms, drafts)
   const tools = items.filter((i): i is Tool => i.kind === 'tool')
   const reads = new Set(tools.filter((t) => toolKind(t.name) === 'read').flatMap(toolPaths)).size
@@ -733,7 +763,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
       </div>
       <LiveTabs tabs={TABS} tab={tab} onPick={setPicked} />
       <div className="live-pane" role="tabpanel" key={tab}>
-        {tab === 'changes' && <ChangesView changes={changes} cwd={cwd} />}
+        {tab === 'changes' && <ChangesView changes={changes} cwd={cwd} review={review} onSend={() => void sendReview()} onClear={() => setReviews((r) => ({ ...r, [id]: [] }))} />}
         {tab === 'plan' &&
           (plan?.length ? <PlanView steps={plan} /> :<div className="faint small">{tr("Pașii pe care și-i propune modelul apar aici și se bifează pe măsură ce îi termină.")}</div>)}
         {tab === 'terminal' && <TerminalView items={items} />}

@@ -28,11 +28,25 @@ if (!(window as unknown as { jolty?: unknown }).jolty) {
   ;(await import('./remote/phone')).setupPhone()
 }
 
+// a throw while rendering unmounts the whole tree, which is a black window: reload instead, at most twice a minute
+const recover = (e: unknown): void => {
+  console.error('[jolty] renderer crashed', e)
+  const now = Date.now()
+  const recent = JSON.parse(sessionStorage.getItem('jolty-reloads') || '[]').filter((t: number) => now - t < 60_000)
+  if (recent.length >= 2) return
+  sessionStorage.setItem('jolty-reloads', JSON.stringify([...recent, now]))
+  location.reload()
+}
+const opts = { onUncaughtError: recover }
 // the same page is the quick entry box (main/quick.ts loads it with #quick)
-if (location.hash === '#quick') {
-  const { QuickEntry } = await import('./components/QuickEntry')
-  createRoot(document.getElementById('root')!).render(<QuickEntry />)
-} else {
-  const { App } = await import('./App')
-  createRoot(document.getElementById('root')!).render(<App />)
+try {
+  if (location.hash === '#quick') {
+    const { QuickEntry } = await import('./components/QuickEntry')
+    createRoot(document.getElementById('root')!, opts).render(<QuickEntry />)
+  } else {
+    const { App } = await import('./App')
+    createRoot(document.getElementById('root')!, opts).render(<App />)
+  }
+} catch (e) {
+  recover(e)
 }

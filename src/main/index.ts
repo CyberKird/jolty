@@ -33,6 +33,8 @@ import * as quick from './quick'
 import { Remote } from './remote'
 import { RemoteScreen } from './remote-screen'
 import { nativeScreenInput, nativeScreenSource } from './remote-screen-native'
+import { userServerNames } from './mcp-share'
+import * as github from './github'
 import { getLang, setLang, tr } from '@shared/i18n'
 import { openableUrl } from '@shared/links'
 
@@ -172,6 +174,19 @@ function createWindow(): void {
     if ((s.glassClear || 0) > 0 && (s.theme === 'glass' || s.theme === 'frost')) void applyWindowGlass()
   })
   win.once('ready-to-show', () => (background.startHidden() ? undefined : process.env.JOLTY_TEST ? win?.showInactive() : win?.show()))
+  // a dead or hung page stays a black window: bring it back, at most 3 times a minute so a real loop cannot spin
+  let reloads: number[] = []
+  const revive = (why: string): void => {
+    const now = Date.now()
+    reloads = reloads.filter((t) => now - t < 60_000)
+    console.error(`[jolty] window page ${why}`)
+    if (reloads.length >= 3 || !win || win.isDestroyed()) return
+    reloads.push(now)
+    win.webContents.reload()
+  }
+  win.webContents.on('render-process-gone', (_e, d) => revive(`gone: ${d.reason}`))
+  win.webContents.on('unresponsive', () => revive('unresponsive'))
+  win.webContents.on('did-fail-load', (_e, code, desc, _url, isMain) => isMain && code !== -3 && revive(`failed to load: ${desc}`))
   background.attach(win)
   // the hidden quick entry window would otherwise keep the app alive once the main window closed for good
   win.on('closed', () => process.platform !== 'darwin' && !background.keepRunning() && app.quit())
@@ -218,6 +233,17 @@ function registerIpc(): void {
   handle('sessions:rewind', (id: string, itemId: string, dryRun?: boolean) => jolty.rewind(id, String(itemId), dryRun === true))
   handle('sessions:setBrowser', (id: string, on: boolean) => jolty.setBrowser(id, on === true))
   handle('sessions:setComputer', (id: string, on: boolean) => jolty.setComputer(id, on === true))
+  handle('sessions:setMcpOff', (id: string, names: string[]) => jolty.setMcpOff(id, Array.isArray(names) ? names : []))
+  handle('sessions:connectors', () => userServerNames())
+  // the folder comes from the chat, never from the window
+  const cwdOf = (id: string): string => {
+    const cwd = jolty.sessions().find((s) => s.id === id)?.cwd
+    if (!cwd) throw new Error(tr("Conversația nu există."))
+    return cwd
+  }
+  handle('sessions:githubOverview', (id: string, force?: boolean) => github.overview(cwdOf(id), force === true))
+  handle('sessions:githubIssue', (id: string, n: number) => github.issue(cwdOf(id), n))
+  handle('sessions:githubAutoMerge', (id: string, on: boolean) => github.autoMerge(cwdOf(id), on === true))
   handle('schedules:list', () => jolty.scheduler.list())
   handle('schedules:add', (input) => jolty.scheduler.add(input as never))
   handle('schedules:update', (id: string, patch) => jolty.scheduler.update(String(id), (patch || {}) as never))
@@ -496,7 +522,8 @@ if (!app.requestSingleInstanceLock()) {
       scan: !process.env.JOLTY_TEST,
       profiles: () => jolty.profiles(),
       loggedIn: (id) => jolty.status(id).then((s) => s.loggedIn),
-      models: (id) => jolty.models(id)
+      models: (id) => jolty.models(id),
+      limits: (id) => jolty.refreshLimits(id)
     })
     void jolty.sweepTemps().catch(() => undefined)
     const vault = store.loadSettings().obsidianVault

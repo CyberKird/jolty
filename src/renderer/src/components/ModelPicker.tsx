@@ -6,7 +6,8 @@ import { capability } from '@shared/complexity'
 import { modelScore } from '@shared/scores'
 import type { BrowserMode, EngineKind, ModelOption, PermissionMode, Profile, SiteTrust } from '@shared/types'
 import { isAcp } from '@shared/types'
-import { api, ENGINE_LABEL, errMsg } from '../store'
+import { bucketFor } from '@shared/limits'
+import { api, ENGINE_LABEL, errMsg, resetAt, useStore } from '../store'
 import { usePresence } from '../usePresence'
 import { tr } from '@shared/i18n'
 
@@ -114,8 +115,9 @@ export function ModelPicker(p: {
   otherProfileHint?: string
 }) {
   const { open, setOpen, ref, shown, state } = usePopover()
+  const limits = useStore((s) => s.limits)
   const group = p.groups.find((g) => g.profile.id === p.profileId)
-  const current = group?.models.find((m) => m.id === p.model) || group?.models.find((m) => m.isDefault)
+  const current = group?.models.find((m) => m.id === p.model || m.alias === p.model) || group?.models.find((m) => m.isDefault)
   const efforts = current?.efforts || []
   const effort = p.effort || current?.defaultEffort
   const label = current?.label || p.model || (group?.loading ? tr("Se încarcă…") : tr("Alege modelul"))
@@ -147,6 +149,14 @@ export function ModelPicker(p: {
                   const other = g.profile.id !== p.profileId
                   const cap = capability(g.profile, m)
                   const sc = modelScore(g.profile, m)
+                  // a model with its own weekly bucket (the plan includes it for a share of the weekly limit)
+                  const bucket = g.profile.engine === 'claude' ? bucketFor(limits[g.profile.id]?.windows, m.label) : undefined
+                  const bucketVars = bucket && { name: bucket.scope || m.label, n: Math.round(bucket.allowance || 0), used: Math.round(bucket.usedPercent), when: resetAt(bucket.resetsAt) }
+                  const bucketTip = bucketVars
+                    ? bucket.allowance
+                      ? tr("{name} e inclus în plan, până la {n}% din limita săptămânală. Se numără separat: {used}% folosit, resetare {when}.", bucketVars)
+                      : tr("{name} e inclus în plan. Se numără separat: {used}% folosit, resetare {when}.", bucketVars)
+                    : ''
                   const scoreTip = sc ? tr("Inteligență {iq}{v1} (Artificial Analysis): {note}", { iq: sc.iq, v1: sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : '', note: sc.note }) : cap.compare
                   return (
                     <button
@@ -155,7 +165,7 @@ export function ModelPicker(p: {
                       role="menuitemradio"
                       aria-checked={on}
                       className={`picker-opt ${on ? 'on' : ''}`}
-                      title={[scoreTip, m.description, m.efforts?.length ? tr("Gândire: {join}", { join: m.efforts.join(', ') }) : tr("Fără niveluri de gândire"), m.vision === false ? tr("Nu vede imagini: le descrie alt profil") : ''].filter(Boolean).join('\n')}
+                      title={[bucketTip, scoreTip, m.description, m.efforts?.length ? tr("Gândire: {join}", { join: m.efforts.join(', ') }) : tr("Fără niveluri de gândire"), m.vision === false ? tr("Nu vede imagini: le descrie alt profil") : ''].filter(Boolean).join('\n')}
                       onClick={() => {
                         setOpen(false)
                         if (!on) p.onPick(g.profile.id, m.id)
@@ -166,6 +176,7 @@ export function ModelPicker(p: {
                           {m.label}
                           {sc && <span className={`picker-score ${sc.iq >= 45 ? 'hi' : sc.iq < 25 ? 'lo' : ''}`}>{sc.iq}</span>}
                           {sc?.speed && <span className="picker-speed">{sc.speed}</span>}
+                          {bucket && <span className="picker-badge included">{tr("INCLUS")}</span>}
                           {m.badge && <span className={`picker-badge ${m.badge}`}>{m.badge === 'new' ? tr("NOU") : tr("ACTUALIZAT")}</span>}
                         </span>
                         {(m.description || (other && p.otherProfileHint)) && (

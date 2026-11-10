@@ -14,12 +14,14 @@ export interface Tool {
   disabled?: boolean
   /** opens something instead of switching: no check mark, and the menu closes */
   action?: boolean
+  /** false: on is the normal state, so no chip in the bar */
+  chip?: boolean
   onToggle: () => void
 }
 
 export function ToolsMenu({ tools, after }: { tools: Tool[]; after?: Record<string, ReactNode> }) {
   const { open, setOpen, ref, shown, state } = usePopover()
-  const active = tools.filter((t) => t.on)
+  const active = tools.filter((t) => t.on && t.chip !== false)
   return (
     <>
       <div className="picker" ref={ref}>

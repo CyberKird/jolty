@@ -46,6 +46,8 @@ import { SECRET_FILE_RULES, touchesSecretFile } from './secret-files'
 import { ProfileProcesses } from './profile-processes'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 import { tr } from '@shared/i18n'
+import { extraWindows } from '@shared/limits'
+import { mergeAccountModels, parseAccountModels, type AccountModel } from '@shared/claude-models'
 import { SIDE_READ_ONLY } from '../side-chat'
 
 type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
@@ -196,16 +198,41 @@ const usageCooldown = new Map<string, number>()
  * Reads plan limits with this profile's OAuth token. The SDK usage probe can report no
  * limits even while this endpoint has data, and probing first may consume its rate limit.
  */
-async function oauthUsage(profile: Profile): Promise<{ limits?: Record<string, unknown>; plan?: string; cooldownMs?: number }> {
-  const until = usageCooldown.get(profile.id)
-  if (until && Date.now() < until) return { cooldownMs: until - Date.now() }
+/** The subscription token Claude Code keeps for the profile; undefined while it is missing or expired (Claude Code refreshes it on its next run). */
+function oauthCreds(profile: Profile): { accessToken: string; subscriptionType?: string } | undefined {
   try {
     const dir = profileDir(profile) ?? path.join(os.homedir(), '.claude')
     const creds = JSON.parse(fs.readFileSync(path.join(dir, '.credentials.json'), 'utf8')).claudeAiOauth as
       | { accessToken?: string; expiresAt?: number; subscriptionType?: string }
       | undefined
-    // an expired token gets refreshed by Claude Code on its next run; nothing to read until then
-    if (!creds?.accessToken || (creds.expiresAt && Date.now() > creds.expiresAt - 60000)) return {}
+    if (!creds?.accessToken || (creds.expiresAt && Date.now() > creds.expiresAt - 60000)) return undefined
+    return { accessToken: creds.accessToken, subscriptionType: creds.subscriptionType }
+  } catch {
+    return undefined
+  }
+}
+
+/** The models this account can use, as the account itself lists them; empty when it cannot be read. */
+async function accountModels(profile: Profile): Promise<AccountModel[]> {
+  const creds = oauthCreds(profile)
+  if (!creds) return []
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/models?limit=100', {
+      headers: { authorization: `Bearer ${creds.accessToken}`, 'anthropic-beta': 'oauth-2025-04-20', 'anthropic-version': '2023-06-01' },
+      signal: AbortSignal.timeout(15000)
+    })
+    return res.ok ? parseAccountModels(await res.json()) : []
+  } catch {
+    return []
+  }
+}
+
+async function oauthUsage(profile: Profile): Promise<{ limits?: Record<string, unknown>; plan?: string; cooldownMs?: number }> {
+  const until = usageCooldown.get(profile.id)
+  if (until && Date.now() < until) return { cooldownMs: until - Date.now() }
+  try {
+    const creds = oauthCreds(profile)
+    if (!creds) return {}
     const res = await fetch('https://api.anthropic.com/api/oauth/usage', {
       headers: { authorization: `Bearer ${creds.accessToken}`, 'anthropic-beta': 'oauth-2025-04-20' },
       signal: AbortSignal.timeout(15000)
@@ -367,6 +394,7 @@ class ClaudeSession implements EngineSession {
       mcpServers: this.mcpServers(),
       disallowedTools: ['AskUserQuestion', ...BROWSER_BLOCKED_TOOLS.map((t) => `mcp__${BROWSER_SERVER}__${t}`)],
       settings: {
+        ...(this.meta.mcpOff?.length ? { deniedMcpServers: this.meta.mcpOff.map((serverName) => ({ serverName })) } : {}),
         permissions: {
           ...(loadSettings().protectSecretFiles !== false ? { ask: SECRET_FILE_RULES } : {}),
           ...(this.meta.permissionMode === 'full' ? { deny: NEVER_RUN } : {})
@@ -751,10 +779,20 @@ class ClaudeSession implements EngineSession {
     await this.q?.setMcpServers(this.mcpServers())
   }
 
+  /** Connectors on or off from the composer: the running process drops or takes them now, a new one gets deniedMcpServers. */
+  async setMcpOff(names: string[]): Promise<void> {
+    const before = this.meta.mcpOff || []
+    this.meta.mcpOff = names.length ? names : undefined
+    await this.q?.setMcpServers(this.mcpServers())
+    const changed = [...names.filter((n) => !before.includes(n)).map((n) => [n, false] as const), ...before.filter((n) => !names.includes(n)).map((n) => [n, true] as const)]
+    for (const [n, on] of changed) await this.q?.toggleMcpServer(n, on).catch(() => undefined)
+  }
+
   /** Jolty's own tools always, the browser and the computer when they are on. */
   private mcpServers(): NonNullable<Options['mcpServers']> {
+    const off = this.meta.mcpOff || []
     return {
-      ...claudeSharedServers(),
+      ...Object.fromEntries(Object.entries(claudeSharedServers()).filter(([n]) => !off.includes(n))),
       ...claudeJoltyServer(this.meta.id),
       ...(this.meta.browser ? { [BROWSER_SERVER]: claudeBrowserServer(this.meta.id) } : {}),
       ...(this.meta.computer ? claudeComputerServer(this.meta.id) : {})
@@ -910,7 +948,9 @@ export class ClaudeDriver implements EngineDriver {
     const alias = mapped.find((m) => m.id === 'default')
     const twin = alias && mapped.find((m) => m.id !== 'default' && m.label === alias.label)
     if (twin) twin.isDefault = true
-    const models = twin ? mapped.filter((m) => m !== alias) : mapped
+    // the account's own list knows models newer than this Claude Code (a failed read leaves the list as Claude Code gave it)
+    const named = twin ? mapped.filter((m) => m !== alias) : mapped
+    const models = profile.auth === 'subscription' ? mergeAccountModels(named, await accountModels(profile)) : named
     this.modelCache.set(profile.id, { at: Date.now(), models })
     return models
   }
@@ -989,11 +1029,20 @@ export class ClaudeDriver implements EngineDriver {
       if (used === undefined) continue
       windows.push({ label: LIMIT_LABELS[key], usedPercent: used, resetsAt: toMs(w.resets_at) })
     }
+    if (windows.length) {
+      windows.push(...extraWindows(direct.limits))
+      // the SDK's own answer lists the same buckets as model_scoped
+      const viaSdk = (usage?.rate_limits as { model_scoped?: { display_name: string; utilization: number | null; resets_at: string | null }[] } | undefined)?.model_scoped
+      for (const m of viaSdk || []) {
+        const used = usagePercent(m.utilization)
+        if (used !== undefined && m.display_name) windows.push({ label: m.display_name, scope: m.display_name, extra: true, usedPercent: used, resetsAt: toMs(m.resets_at) })
+      }
+    }
     if (!windows.length) {
       return { profileId: profile.id, windows: [], note: tr("Limitele nu au putut fi citite acum"), updatedAt: Date.now() }
     }
     const plan = usage?.subscription_type ?? direct?.plan
-    return { profileId: profile.id, windows, note: plan ? `Plan: ${plan}` : undefined, updatedAt: Date.now() }
+    return { profileId: profile.id, windows, complete: true, note: plan ? `Plan: ${plan}` : undefined, updatedAt: Date.now() }
   }
 
   /** Asks a Claude model to describe images for a model that cannot see them. */

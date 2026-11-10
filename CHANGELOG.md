@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.23.0
+
+### New
+
+- Models the account has but your Claude Code does not know yet show up: the list now also reads the models of your own account, so a new Fable, Opus or Sonnet appears (and is announced as new) without waiting for a Jolty update. Chats started on the old name keep their row.
+- A model the plan includes for a share of the weekly limit (for example Fable, up to 50%) gets its own meter in Usage and Accounts, and an INCLUDED tag in the model picker with the share, what is used and when it resets. Nothing is tied to one model or offer: whatever the account lists is shown, an account with none sees nothing.
+- A notification when a new bucket or promotion shows up on a Claude account. Limits and models are checked every hour in the background.
+- A button for connectors in the message box: switch any of your MCP servers off or on for one chat (Claude), with a count and a "turn all" row.
+- Comments on diff lines in the Changes tab: a plus on hover, a note under the line, and one message that quotes every commented line.
+- A GitHub button where the folder is a repository (needs `gh`): the pull request of the branch with its checks, "Merge when ready" (auto-merge with squash), and the open issues, which go into the message box.
+
+### Improvements
+
+- A window page that crashes or hangs reloads itself (at most three times a minute) instead of staying a black window.
+
 ## 0.22.0
 
 ### New

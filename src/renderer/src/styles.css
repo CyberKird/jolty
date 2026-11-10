@@ -1350,6 +1350,83 @@ a {
 .diff-line.hunk {
   color: var(--volt-2);
 }
+.diff-line.reviewable {
+  position: relative;
+}
+.diff-add {
+  position: absolute;
+  inset-inline-start: 1px;
+  top: 3px;
+  width: 13px;
+  height: 13px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: var(--volt);
+  color: var(--black);
+  opacity: 0;
+  cursor: pointer;
+}
+.diff-line:hover .diff-add,
+.diff-add:focus-visible {
+  opacity: 1;
+}
+.diff-note,
+.diff-note-input {
+  margin: 3px 14px 5px 26px;
+  border: 1px solid var(--line-2);
+  background: var(--s2);
+  color: var(--white);
+  font-family: var(--label);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.diff-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 8px;
+}
+.diff-note span {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.diff-note button {
+  flex: none;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--grey);
+  cursor: pointer;
+}
+.diff-note button:hover {
+  color: var(--white);
+}
+.diff-note-input {
+  display: block;
+  width: calc(100% - 40px);
+  padding: 6px 8px;
+  resize: vertical;
+}
+.diff-note-input:focus-visible {
+  outline: 1px solid var(--volt);
+}
+.review-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line-2);
+  background: var(--s2);
+  font-size: 12.5px;
+}
+.review-bar span {
+  flex: 1;
+}
 
 /* markdown */
 .md {
@@ -2964,7 +3041,8 @@ a {
   border: 1px solid var(--volt-line);
   padding: 0 4px;
 }
-.picker-badge.updated {
+.picker-badge.updated,
+.picker-badge.included {
   color: var(--white);
   border-color: var(--line-2);
 }
@@ -3206,6 +3284,35 @@ a {
 .tool-chip {
   display: inline-flex;
   align-items: center;
+}
+.gh-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--grey);
+}
+.gh-dot.pass {
+  background: var(--add-ink);
+}
+.gh-dot.fail {
+  background: var(--del-ink);
+}
+.gh-empty {
+  padding: 8px 10px;
+  font-size: 12.5px;
+  color: var(--grey);
+}
+.connector-count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+.connectors-pop .connectors-all {
+  width: calc(100% - 12px);
+  margin: 0 6px 6px;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--grey);
 }
 .tool-name {
   display: flex;

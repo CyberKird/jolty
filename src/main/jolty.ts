@@ -19,6 +19,7 @@ import type {
   Profile,
   ProfileInput,
   ProviderBalance,
+  LimitWindow,
   RateLimitSnapshot,
   SessionMeta,
   StartSessionInput,
@@ -66,7 +67,8 @@ import { modelScore } from '@shared/scores'
 import { canHelpSetup, setupHelperBrief } from '@shared/setup'
 import { candidates, FULL_PERCENT, pickAuto, rankHelpers, worthRouting, type Candidate } from './auto-model'
 import type { ScheduledTask } from '@shared/schedule'
-import { getLang, LANG_ENGLISH_NAME, tr } from '@shared/i18n'
+import { dateLocale, getLang, LANG_ENGLISH_NAME, tr } from '@shared/i18n'
+import { newExtras } from '@shared/limits'
 import { withDetectedAgents } from './first-run'
 import { saveTranscriptAsync } from './transcript-save'
 import { lastIndexWhere } from '@shared/last-index'
@@ -409,10 +411,25 @@ export class Jolty {
   }
 
   private recordLimits(s: RateLimitSnapshot): RateLimitSnapshot {
+    const before = store.loadLimits()[s.profileId]?.windows
     const merged = store.saveLimit(s)
+    // a full read that lists a bucket the last one did not have: a model included in the plan, a promotion
+    if (s.complete) this.announceExtras(s.profileId, newExtras(before, merged.windows))
     this.power.onLimits(merged)
     this.send({ type: 'limits', snapshot: merged })
     return merged
+  }
+
+  private announceExtras(profileId: string, fresh: LimitWindow[]): void {
+    if (!fresh.length || process.env.JOLTY_TEST || !Notification.isSupported()) return
+    const profile = this.profiles().find((p) => p.id === profileId)
+    for (const w of fresh) {
+      const vars = { n: Math.round(w.allowance || 0), used: Math.round(w.usedPercent), when: w.resetsAt ? new Date(w.resetsAt).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : tr("ora resetării indisponibilă") }
+      const body = w.allowance
+        ? tr("Până la {n}% din limita săptămânală. Se numără separat: {used}% folosit, resetare {when}.", vars)
+        : tr("Se numără separat de limita planului: {used}% folosit, resetare {when}.", vars)
+      new Notification({ title: tr("Nou în contul {profile}: {name}", { profile: profile?.name || 'Claude', name: w.label }), body }).show()
+    }
   }
 
   private transcript(sessionId: string): ChatItem[] {
@@ -1185,6 +1202,15 @@ export class Jolty {
     this.saveMeta(meta)
     this.rememberComposer({ browser: on })
     if (!on) void nativeBrowser.release(sessionId)
+  }
+
+  async setMcpOff(sessionId: string, names: string[]): Promise<void> {
+    const list = [...new Set(names.filter((n) => typeof n === 'string'))]
+    const s = this.live.get(sessionId)
+    if (s?.setMcpOff) await s.setMcpOff(list)
+    const meta = s?.meta || this.meta(sessionId)
+    meta.mcpOff = list.length ? list : undefined
+    this.saveMeta(meta)
   }
 
   async setComputer(sessionId: string, on: boolean): Promise<void> {

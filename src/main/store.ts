@@ -265,12 +265,12 @@ export function saveLimit(snapshot: RateLimitSnapshot): RateLimitSnapshot {
   const all = loadLimits()
   const prev = all[snapshot.profileId]
   const now = Date.now()
-  const byLabel = new Map((prev?.windows || []).filter((w) => !w.resetsAt || w.resetsAt > now).map((w) => [w.label, w]))
+  const byLabel = new Map((prev?.windows || []).filter((w) => (!w.resetsAt || w.resetsAt > now) && !(snapshot.complete && w.extra)).map((w) => [w.label, w]))
   for (const w of snapshot.windows) byLabel.set(w.label, w)
   const merged: RateLimitSnapshot = {
     ...snapshot,
     // every account in the same order, shortest window first (5 ore above 7 zile), whatever order the engine reports
-    windows: [...byLabel.values()].sort((a, b) => windowHours(a.label) - windowHours(b.label)),
+    windows: [...byLabel.values()].sort((a, b) => (a.extra ? 1e6 : windowHours(a.label)) - (b.extra ? 1e6 : windowHours(b.label))),
     // keep the plan note when a failed read only says "could not read"
     note: snapshot.windows.length || !prev?.note ? snapshot.note : snapshot.note && byLabel.size ? prev.note : snapshot.note
   }

@@ -102,6 +102,8 @@ export interface ModelOption {
   label: string
   description?: string
   isDefault?: boolean
+  /** the id this row replaced ("fable" before it became claude-fable-5-2): chats started on it still show this row */
+  alias?: string
   /** false when the model cannot read images (Jolty then describes them with the vision profile) */
   vision?: boolean
   /** effort levels the model accepts, in the engine's own names (low, medium, high, xhigh, max) */
@@ -139,6 +141,8 @@ export interface SessionMeta {
   browser?: boolean
   /** Computer use: the model may see the screen and operate the user's PC (mouse, keyboard, windows) */
   computer?: boolean
+  /** MCP servers (connectors) switched off for this chat, by name; Claude only */
+  mcpOff?: string[]
   /** temporary chat: lives only in memory, never listed or written to disk, and its engine files are wiped when it ends */
   temporary?: boolean
   /** side chat of this main session: temporary, read-only, never listed in the sidebar */
@@ -186,6 +190,31 @@ export interface FileDiff {
   /** unified diff text, or synthesized -/+ lines */
   diff: string
 }
+
+export interface GithubCheck {
+  name: string
+  state: 'pass' | 'fail' | 'pending' | 'skipped'
+}
+export interface GithubPr {
+  number: number
+  title: string
+  url: string
+  draft: boolean
+  state: 'OPEN' | 'MERGED' | 'CLOSED'
+  checks: GithubCheck[]
+  /** GitHub will merge it once the checks pass */
+  autoMerge: boolean
+}
+export interface GithubIssue {
+  number: number
+  title: string
+  labels: string[]
+  author: string
+}
+/** What the folder of a chat has on GitHub, read with the user's own gh; off says why there is nothing to show. */
+export type GithubOverview =
+  | { kind: 'ok'; repo: string; pr?: GithubPr; issues: GithubIssue[] }
+  | { kind: 'off'; reason: 'no-gh' | 'no-repo' | 'no-auth' }
 
 export type ChatItem =
   | { kind: 'user'; id: string; text: string; images?: { name: string; dataUrl: string }[]; files?: { name: string; mime: string }[] }
@@ -241,11 +270,19 @@ export interface LimitWindow {
   label: string
   usedPercent: number
   resetsAt?: number
+  /** a weekly bucket of one model family ("Fable"), counted apart from the plan's main limit */
+  scope?: string
+  /** a bucket beyond the 5 h / 7 d limits (model included in the plan, promotion): only shown while the account reports it */
+  extra?: boolean
+  /** the share of the weekly limit that bucket may use (50 = up to half) */
+  allowance?: number
 }
 
 export interface RateLimitSnapshot {
   profileId: string
   windows: LimitWindow[]
+  /** the account was asked for everything: extra buckets it no longer lists are gone */
+  complete?: boolean
   note?: string
   updatedAt: number
 }
@@ -587,6 +624,13 @@ export interface JoltyApi {
     setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void>
     setBrowser(sessionId: string, on: boolean): Promise<void>
     setComputer(sessionId: string, on: boolean): Promise<void>
+    /** names of the user's MCP servers (connectors) and which of them are off for this chat */
+    setMcpOff(sessionId: string, names: string[]): Promise<void>
+    connectors(): Promise<string[]>
+    githubOverview(sessionId: string, force?: boolean): Promise<GithubOverview>
+    /** the issue as text to put in a message */
+    githubIssue(sessionId: string, number: number): Promise<string>
+    githubAutoMerge(sessionId: string, on: boolean): Promise<void>
     /** summarize the conversation so far to free context (Claude /compact, Codex thread compaction) */
     compact(sessionId: string): Promise<void>
     /** compacts and resolves when the engine is done; undefined when the context is too small to be worth it */

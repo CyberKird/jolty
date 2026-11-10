@@ -16,6 +16,9 @@ export interface StdioServer {
   env: Record<string, string>
 }
 
+/** The user's MCP configuration. JOLTY_CLAUDE_JSON lets a test point at its own file: os.homedir() ignores HOME on Windows. */
+const claudeJsonPath = (): string => process.env.JOLTY_CLAUDE_JSON || path.join(os.homedir(), '.claude.json')
+
 /** what the local server accepts in its address */
 const SHAREABLE_NAME = /^[A-Za-z0-9_.-]{1,80}$/
 const LIST_TTL = 12 * 3600_000
@@ -32,7 +35,7 @@ const expand = (s: string): string => s.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?:
 let parsed: { file: string; mtime: number; servers: Record<string, StdioServer> } | undefined
 
 /** The stdio servers of ~/.claude.json (the user scope). Remote servers cost no process, project servers belong to one folder: Claude Code keeps both. */
-export function userStdioServers(file = path.join(os.homedir(), '.claude.json')): Record<string, StdioServer> {
+export function userStdioServers(file = claudeJsonPath()): Record<string, StdioServer> {
   try {
     const mtime = fs.statSync(file).mtimeMs
     if (parsed?.file === file && parsed.mtime === mtime) return parsed.servers
@@ -48,6 +51,15 @@ export function userStdioServers(file = path.join(os.homedir(), '.claude.json'))
     return servers
   } catch {
     return {}
+  }
+}
+
+/** Every MCP server name of ~/.claude.json (the user scope), whatever its type: the connectors a chat can switch off. */
+export function userServerNames(file = claudeJsonPath()): string[] {
+  try {
+    return Object.keys((JSON.parse(fs.readFileSync(file, 'utf8')) as { mcpServers?: Record<string, unknown> }).mcpServers || {})
+  } catch {
+    return []
   }
 }
 

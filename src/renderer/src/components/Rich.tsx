@@ -1,9 +1,10 @@
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js/lib/common'
 import { Marked } from 'marked'
-import { FileCode, FileText } from 'lucide-react'
-import { memo, useMemo, type KeyboardEvent, type MouseEvent } from 'react'
+import { FileCode, FileText, Plus, X } from 'lucide-react'
+import { Fragment, memo, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { isShell, shellCommand, valueKind } from '@shared/copy-values'
+import { lineNumbers, markOf, type ReviewComment } from '@shared/review'
 import type { FileDiff } from '@shared/types'
 import { api, errMsg, useStore } from '../store'
 import { chipText, copyText, lastCodeBlock, runAct } from '../copy'
@@ -221,25 +222,74 @@ export function langOf(path?: string): string | undefined {
   return ext ? EXT_LANG[ext] : undefined
 }
 
-export function DiffView({ diffs }: { diffs: FileDiff[] }) {
+/** Comments written on the lines of a diff: the panel that reviews it keeps them and sends them together. */
+export interface DiffReview {
+  comments: ReviewComment[]
+  add: (comment: Omit<ReviewComment, 'id'>) => void
+  remove: (id: string) => void
+}
+
+export function DiffView({ diffs, review }: { diffs: FileDiff[]; review?: DiffReview }) {
+  const [editing, setEditing] = useState<string>()
+  const [draft, setDraft] = useState('')
   return (
     <div className="diff">
-      {diffs.map((d, i) => (
-        <div key={i}>
-          <div className="diff-file">
-            {d.kind === 'add' ? tr("fișier nou · ") : d.kind === 'delete' ? tr("șters · ") : ''}
-            {d.path}
+      {diffs.map((d, i) => {
+        const numbers = review ? lineNumbers(d.diff) : []
+        return (
+          <div key={i}>
+            <div className="diff-file">
+              {d.kind === 'add' ? tr("fișier nou · ") : d.kind === 'delete' ? tr("șters · ") : ''}
+              {d.path}
+            </div>
+            {d.diff.split('\n').map((line, j) => {
+              const cls = line.startsWith('+') && !line.startsWith('+++') ? 'add' : line.startsWith('-') && !line.startsWith('---') ? 'del' : line.startsWith('@@') ? 'hunk' : ''
+              const at = `${i}:${j}`
+              const canComment = Boolean(review) && cls !== 'hunk'
+              return (
+                <Fragment key={j}>
+                  <div className={`diff-line ${cls}${canComment ? ' reviewable' : ''}`}>
+                    {canComment && (
+                      <button className="diff-add" aria-label={tr("Comentează această linie")} title={tr("Comentează această linie")} onClick={() => { setEditing(at); setDraft('') }}>
+                        <Plus size={11} strokeWidth={2.2} />
+                      </button>
+                    )}
+                    {line || ' '}
+                  </div>
+                  {review?.comments.filter((c) => c.path === d.path && c.at === at).map((c) => (
+                    <div className="diff-note" key={c.id}>
+                      <span>{c.text}</span>
+                      <button aria-label={tr("Șterge comentariul")} title={tr("Șterge comentariul")} onClick={() => review.remove(c.id)}>
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {review && editing === at && (
+                    <textarea
+                      className="diff-note-input"
+                      autoFocus
+                      rows={2}
+                      value={draft}
+                      placeholder={tr("Scrie un comentariu...")}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.stopPropagation()
+                          setEditing(undefined)
+                        } else if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                          e.preventDefault()
+                          if (draft.trim()) review.add({ at, path: d.path, line: numbers[j], mark: markOf(line), code: line, text: draft.trim() })
+                          setEditing(undefined)
+                        }
+                      }}
+                    />
+                  )}
+                </Fragment>
+              )
+            })}
           </div>
-          {d.diff.split('\n').map((line, j) => {
-            const cls = line.startsWith('+') && !line.startsWith('+++') ? 'add' : line.startsWith('-') && !line.startsWith('---') ? 'del' : line.startsWith('@@') ? 'hunk' : ''
-            return (
-              <div key={j} className={`diff-line ${cls}`}>
-                {line || ' '}
-              </div>
-            )
-          })}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

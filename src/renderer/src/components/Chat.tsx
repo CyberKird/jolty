@@ -15,6 +15,8 @@ import { FindBar } from './FindBar'
 import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODES, useAllModels, type ModelGroup } from './ModelPicker'
 import { MentionMenu, useMentions } from './Mentions'
 import { ToolsMenu } from './ToolsMenu'
+import { ConnectorsMenu } from './ConnectorsMenu'
+import { GithubMenu } from './GithubMenu'
 import { PowerMenu } from './PowerMenu'
 import { withQuote } from '@shared/quote'
 import { ChatTools } from './ChatTools'
@@ -145,6 +147,9 @@ interface ComposerProps {
   onBrowser: (on: boolean) => void
   computer?: boolean
   onComputer: (on: boolean) => void
+  /** connectors (MCP servers) switched off for this chat; only an existing Claude chat can switch them */
+  mcpOff?: string[]
+  onMcpOff?: (names: string[]) => void
   /** temporary chat: chosen before the first message, shown as locked once the chat exists */
   temporary?: boolean
   onTemporary?: (on: boolean) => void
@@ -157,6 +162,11 @@ interface ComposerProps {
 
 function Composer(p: ComposerProps) {
   const engine = p.profiles.find((profile) => profile.id === p.profileId)?.engine
+  const [connectors, setConnectors] = useState<string[]>([])
+  const canMcp = engine === 'claude' && Boolean(p.onMcpOff)
+  useEffect(() => {
+    if (canMcp) void api.sessions.connectors().then(setConnectors).catch(() => setConnectors([]))
+  }, [canMcp, p.sessionId])
   // what is typed stays through a switch of chat, a new chat and a restart; a temporary chat keeps it in memory only
   const draftStore = p.temporary ? sessionStorage : localStorage
   const draftKey = `jolty:draft:${p.sessionId ?? 'new'}`
@@ -526,6 +536,8 @@ function Composer(p: ComposerProps) {
             ]}
             after={{ browser: !isAcp(engine) ? <BrowserMenu /> : undefined }}
           />
+          {canMcp && connectors.length > 0 && <ConnectorsMenu names={connectors} off={p.mcpOff || []} onChange={(names) => p.onMcpOff?.(names)} />}
+          {p.sessionId && <GithubMenu sessionId={p.sessionId} onIssue={(issue) => { setText((cur) => (cur.trim() ? `${cur.trimEnd()}\n\n${issue}` : issue)); requestAnimationFrame(() => taRef.current?.focus()) }} />}
           {(powerArmed || powerOpen) && <PowerMenu autoOpen={powerOpen} onClosed={() => setPowerOpen(false)} />}
           <div className="spacer" />
           {p.sessionId && p.running && <WorkClock sessionId={p.sessionId} />}
@@ -1087,6 +1099,8 @@ export function ChatView({ session }: { session: SessionMeta }) {
         onMode={(m) => void api.sessions.setPermissionMode(session.id, m).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         browser={session.browser}
         computer={session.computer}
+        mcpOff={session.mcpOff}
+        onMcpOff={(names) => void api.sessions.setMcpOff(session.id, names).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         onComputer={(on) => void api.sessions.setComputer(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
         temporary={session.temporary}
         onBrowser={(on) => void api.sessions.setBrowser(session.id, on).then(loadSessions).catch((e) => toast(errMsg(e), true))}
@@ -1152,7 +1166,7 @@ export function NewChat() {
     if (!profileId || !g || g.loading || !lastModels || restored.current === profileId) return
     restored.current = profileId
     const last = lastModels[profileId]
-    const m = last && g.models.find((x) => x.id === last.model)
+    const m = last && g.models.find((x) => x.id === last.model || x.alias === last.model)
     if (!m) return
     setModel(m.id)
     setEffort(last.effort && m.efforts?.includes(last.effort) ? last.effort : undefined)

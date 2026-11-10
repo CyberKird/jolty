@@ -213,7 +213,7 @@ export function VerificationStrip({ session }: { session: SessionMeta }) {
   if (running || !failed || dismissed === failed.id) return null
 
   const group = groups.find((g) => g.profile.id === session.profileId)
-  const current = group?.models.find((m) => m.id === session.model) || group?.models.find((m) => m.isDefault)
+  const current = group?.models.find((m) => m.id === session.model || m.alias === session.model) || group?.models.find((m) => m.isDefault)
   const grade = group && current ? capability(group.profile, current).grade : 0
   const stronger = current && (group?.profile.auth === 'subscription' || group?.profile.local) ? group.models
     .filter((m) => !m.isDefault && !EXTRA_COST.test(`${m.id} ${m.label} ${m.description || ''}`) && !/\[1m\]|-1m\b/i.test(m.id))

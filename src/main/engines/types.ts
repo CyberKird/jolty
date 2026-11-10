@@ -35,6 +35,8 @@ export interface EngineSession {
   setBrowser(on: boolean): Promise<void>
   /** computer use: the screen, mouse and keyboard of the PC as MCP tools */
   setComputer(on: boolean): Promise<void>
+  /** connectors switched off for this chat (Claude only) */
+  setMcpOff?(names: string[]): Promise<void>
   respond(requestId: string, decision: PermissionDecision): void
   close(): Promise<void>
 }

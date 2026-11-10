@@ -33,7 +33,10 @@ export function LimitMeters({ profileId, compact }: { profileId: string; compact
       {snap.windows.map((w) => (
         <div className="meter" key={w.label}>
           <div className="meter-head">
-            <span>{tr(w.label)}</span>
+            <span>
+              {w.extra ? w.label : tr(w.label)}
+              {w.scope && w.allowance && <span className="faint small meter-share"> {tr("Până la {n}% din limita săptămânală", { n: Math.round(w.allowance) })}</span>}
+            </span>
             <span className="muted meter-time" title={resetIn(w.resetsAt)}>
               <span className="pct" style={{ color: 'var(--white)' }}>{Math.round(w.usedPercent)}%</span>
               <span>{tr("Reset:")} {resetAt(w.resetsAt)}</span>

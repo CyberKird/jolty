@@ -97,7 +97,7 @@ async function refreshScores(): Promise<void> {
 }
 
 /** Loads the cached scores now; with `scan` also checks every source after a short delay and then every hour. */
-export function start(deps: { scan: boolean; profiles: () => Profile[]; loggedIn: (id: string) => Promise<boolean>; models: (id: string) => Promise<ModelOption[]> }): void {
+export function start(deps: { scan: boolean; profiles: () => Profile[]; loggedIn: (id: string) => Promise<boolean>; models: (id: string) => Promise<ModelOption[]>; limits?: (id: string) => Promise<unknown> }): void {
   const cached = parseRemoteScores(store.loadScoresCache())
   if (cached) setRemoteScores(cached)
   if (!deps.scan) return
@@ -109,7 +109,11 @@ export function start(deps: { scan: boolean; profiles: () => Profile[]; loggedIn
       seen.add(sourceKey(p))
       try {
         if (!listedByEngine(p)) record(p, await listProvider(p))
-        else if (await deps.loggedIn(p.id)) await deps.models(p.id)
+        else if (await deps.loggedIn(p.id)) {
+          await deps.models(p.id)
+          // the account's limits too: a model included for a while, a promotion, is announced when it first shows up
+          if (p.engine === 'claude' && p.auth === 'subscription') await deps.limits?.(p.id)
+        }
       } catch {
         // not logged in, offline, provider without a listing
       }
