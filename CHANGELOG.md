@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.25.0
+
+### New
+
+- The PC screen on the phone is now real video with sound. It is encoded on the PC's graphics chip (H.264) and played on the phone, so films and moving pages play smoothly (about 25 to 30 pictures a second, up from 5 to 10), with the PC's sound next to it and a Sound button to mute it. The quality follows the connection: it drops by itself when the link is slow and grows back when it is good. A phone that cannot play it gets the pictures as before.
+- The bars of the PC screen fold away with a button, so the screen takes the whole phone, and a small button brings them back. The phone stays awake while you watch.
+
+### Fixed
+
+- The drawer on the phone scrolls as a whole, not only the list of conversations.
+
 ## 0.24.0
 
 ### New

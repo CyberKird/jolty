@@ -1712,5 +1712,9 @@
  "Adresa agentului": "एजेंट का पता",
  "Salvează și testează": "सहेजें और जाँचें",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "एजेंट जवाब देता है, पर उसे दूसरे कार्ड ({mac}) के साथ शुरू किया गया था। चरण 2 की कमांड फिर चलाएँ।",
- "Agentul răspunde și știe ce PC să pornească.": "एजेंट जवाब देता है और जानता है कि कौन-सा PC चालू करना है।"
+ "Agentul răspunde și știe ce PC să pornească.": "एजेंट जवाब देता है और जानता है कि कौन-सा PC चालू करना है।",
+ "Ascunde comenzile": "कंट्रोल छिपाएँ",
+ "Arată comenzile": "कंट्रोल दिखाएँ",
+ "Sunet": "आवाज़",
+ "Fără sunet": "म्यूट"
 }

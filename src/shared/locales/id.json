@@ -1712,5 +1712,9 @@
  "Adresa agentului": "Alamat agen",
  "Salvează și testează": "Simpan dan uji",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "Agen merespons, tetapi dijalankan dengan kartu lain ({mac}). Jalankan lagi perintah dari langkah 2.",
- "Agentul răspunde și știe ce PC să pornească.": "Agen merespons dan tahu PC mana yang dinyalakan."
+ "Agentul răspunde și știe ce PC să pornească.": "Agen merespons dan tahu PC mana yang dinyalakan.",
+ "Ascunde comenzile": "Sembunyikan kontrol",
+ "Arată comenzile": "Tampilkan kontrol",
+ "Sunet": "Suara",
+ "Fără sunet": "Senyap"
 }

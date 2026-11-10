@@ -46,6 +46,14 @@ try {
   await phone.locator('.titlebar-btn').first().click()
   await phone.waitForSelector('.session-item')
   // only the pages that work from a phone are offered
+  // the drawer scrolls as a whole: the list inside has no scroll of its own to catch the finger
+  const drawer = await phone.evaluate(() => {
+    const side = getComputedStyle(document.querySelector('.sidebar'))
+    const list = getComputedStyle(document.querySelector('.session-list'))
+    return { side: side.overflowY, list: list.overflowY }
+  })
+  assert.equal(drawer.side, 'auto')
+  assert.equal(drawer.list, 'visible')
   const pages = (await phone.locator('.nav-item').allInnerTexts()).map((t) => t.trim())
   for (const want of ['Settings', 'Skills', 'Usage', 'Scheduled']) assert.ok(pages.some((t) => t.includes(want)), `${want} page is offered`)
   // every page opens on the phone without asking the PC for anything it refuses, and fits the screen

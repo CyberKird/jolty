@@ -1712,5 +1712,9 @@
  "Adresa agentului": "Adresse de l'agent",
  "Salvează și testează": "Enregistrer et tester",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "L'agent répond, mais il a été lancé avec une autre carte ({mac}). Relance la commande de l'étape 2.",
- "Agentul răspunde și știe ce PC să pornească.": "L'agent répond et sait quel PC démarrer."
+ "Agentul răspunde și știe ce PC să pornească.": "L'agent répond et sait quel PC démarrer.",
+ "Ascunde comenzile": "Masquer les commandes",
+ "Arată comenzile": "Afficher les commandes",
+ "Sunet": "Son",
+ "Fără sunet": "Muet"
 }

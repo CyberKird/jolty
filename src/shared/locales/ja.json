@@ -1712,5 +1712,9 @@
  "Adresa agentului": "エージェントのアドレス",
  "Salvează și testează": "保存してテスト",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "エージェントは応答しますが、別のカード({mac})で起動されています。手順2のコマンドをもう一度実行してください。",
- "Agentul răspunde și știe ce PC să pornească.": "エージェントは応答し、どのPCを起動するか把握しています。"
+ "Agentul răspunde și știe ce PC să pornească.": "エージェントは応答し、どのPCを起動するか把握しています。",
+ "Ascunde comenzile": "操作を隠す",
+ "Arată comenzile": "操作を表示",
+ "Sunet": "サウンド",
+ "Fără sunet": "ミュート"
 }

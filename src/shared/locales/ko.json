@@ -1712,5 +1712,9 @@
  "Adresa agentului": "에이전트 주소",
  "Salvează și testează": "저장하고 테스트",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "에이전트가 응답하지만 다른 카드({mac})로 시작되었습니다. 2단계의 명령을 다시 실행하세요.",
- "Agentul răspunde și știe ce PC să pornească.": "에이전트가 응답하며 어떤 PC를 켤지 알고 있습니다."
+ "Agentul răspunde și știe ce PC să pornească.": "에이전트가 응답하며 어떤 PC를 켤지 알고 있습니다.",
+ "Ascunde comenzile": "조작 숨기기",
+ "Arată comenzile": "조작 표시",
+ "Sunet": "소리",
+ "Fără sunet": "음소거"
 }

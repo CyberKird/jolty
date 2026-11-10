@@ -1712,5 +1712,9 @@
  "Adresa agentului": "عنوان الوكيل",
  "Salvează și testează": "حفظ واختبار",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "الوكيل يستجيب لكنه بدأ ببطاقة أخرى ({mac}). شغّل أمر الخطوة 2 مجددًا.",
- "Agentul răspunde și știe ce PC să pornească.": "الوكيل يستجيب ويعرف أي كمبيوتر يشغّل."
+ "Agentul răspunde și știe ce PC să pornească.": "الوكيل يستجيب ويعرف أي كمبيوتر يشغّل.",
+ "Ascunde comenzile": "إخفاء عناصر التحكم",
+ "Arată comenzile": "إظهار عناصر التحكم",
+ "Sunet": "الصوت",
+ "Fără sunet": "كتم"
 }

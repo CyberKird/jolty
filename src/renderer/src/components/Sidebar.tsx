@@ -3,6 +3,7 @@ import { BugReportButton } from './BugReport'
 import { MergeHost } from './MergePanel'
 import { useEffect, useMemo, useState } from 'react'
 import { useScreenUi } from '../remote/screen-bus'
+import { audioContext } from '../remote/screen-video'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
 import { dragShield } from '../dragShield'
 import { pathItems, showMenu } from './ContextMenu'
@@ -446,6 +447,7 @@ export function Sidebar() {
           className="btn new-chat pc-screen-btn"
           onClick={() => {
             useStore.getState().setSidebarOpen(false)
+            audioContext()
             useScreenUi.getState().setOpen(true)
           }}
         >

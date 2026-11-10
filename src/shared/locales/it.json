@@ -1712,5 +1712,9 @@
  "Adresa agentului": "Indirizzo dell'agente",
  "Salvează și testează": "Salva e prova",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "L'agente risponde, ma è stato avviato con un'altra scheda ({mac}). Esegui di nuovo il comando del passo 2.",
- "Agentul răspunde și știe ce PC să pornească.": "L'agente risponde e sa quale PC avviare."
+ "Agentul răspunde și știe ce PC să pornească.": "L'agente risponde e sa quale PC avviare.",
+ "Ascunde comenzile": "Nascondi i comandi",
+ "Arată comenzile": "Mostra i comandi",
+ "Sunet": "Audio",
+ "Fără sunet": "Muto"
 }

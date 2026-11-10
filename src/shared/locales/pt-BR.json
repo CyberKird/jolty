@@ -1712,5 +1712,9 @@
  "Adresa agentului": "Endereço do agente",
  "Salvează și testează": "Salvar e testar",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "O agente responde, mas foi iniciado com outra placa ({mac}). Execute de novo o comando do passo 2.",
- "Agentul răspunde și știe ce PC să pornească.": "O agente responde e sabe qual PC ligar."
+ "Agentul răspunde și știe ce PC să pornească.": "O agente responde e sabe qual PC ligar.",
+ "Ascunde comenzile": "Ocultar os controles",
+ "Arată comenzile": "Mostrar os controles",
+ "Sunet": "Som",
+ "Fără sunet": "Sem som"
 }

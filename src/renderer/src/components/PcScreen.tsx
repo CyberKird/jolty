@@ -1,7 +1,8 @@
-import { Command, Hand, Keyboard, Maximize2, Monitor, MousePointer2, MousePointerClick, X } from 'lucide-react'
+import { ChevronUp, Command, Hand, Keyboard, Maximize2, Monitor, MousePointer2, MousePointerClick, SlidersHorizontal, Volume2, VolumeX, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { tr } from '@shared/i18n'
 import { screenBus, useScreenUi } from '../remote/screen-bus'
+import { audioContext, AudioPlayer, BIN_AUDIO, BIN_JPEG, BIN_VIDEO, canPlayAudio, canPlayVideo, VideoPlayer } from '../remote/screen-video'
 import './pcscreen.css'
 
 // The PC's screen on the phone, TeamViewer style, with touches made for a finger: one finger moves the pointer like a touchpad
@@ -13,6 +14,8 @@ interface Info {
   width: number
   height: number
   displays: Array<{ index: number; w: number; h: number; primary: boolean; name: string }>
+  /** present when the screen comes as video: what to decode, and whether the PC's sound comes with it */
+  video?: { codec: string; width: number; height: number; audio: boolean }
 }
 
 type Phase = 'connecting' | 'live' | 'off' | 'ended'
@@ -47,10 +50,21 @@ function Screen() {
   const [zoomed, setZoomed] = useState(false)
   const [hint, setHint] = useState(() => !localStorage.getItem('jolty-screen-hint'))
   const [closing, setClosing] = useState(false)
+  // the bars can be folded away so the whole screen shows; a small button brings them back
+  const [hud, setHud] = useState(true)
+  const [muted, setMuted] = useState(() => localStorage.getItem('jolty-screen-muted') === '1')
+  const mutedRef = useRef(muted)
+  mutedRef.current = muted
 
   const stage = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const img = useRef<HTMLImageElement>(null)
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const root = useRef<HTMLDivElement>(null)
+  const topBar = useRef<HTMLElement>(null)
+  const bottomBar = useRef<HTMLDivElement>(null)
+  const vplayer = useRef<VideoPlayer | undefined>(undefined)
+  const aplayer = useRef<AudioPlayer | undefined>(undefined)
   const cursor = useRef<HTMLDivElement>(null)
   const typer = useRef<HTMLTextAreaElement>(null)
   const infoRef = useRef<Info | undefined>(undefined)
@@ -123,7 +137,9 @@ function Screen() {
   // ------------------------------------------------------------------ connection
   const start = useCallback((display?: number): void => {
     setPhase((p) => (p === 'live' ? p : 'connecting'))
-    screenBus.send({ op: 'start', display: display ?? Number(localStorage.getItem('jolty-screen-display') || NaN) })
+    void Promise.all([canPlayVideo(), canPlayAudio()]).then(([video, audio]) => {
+      screenBus.send({ op: 'start', display: display ?? Number(localStorage.getItem('jolty-screen-display') || NaN), video, audio: video && audio })
+    })
   }, [])
 
   useEffect(() => {
@@ -132,13 +148,24 @@ function Screen() {
       // a picture that was already on its way when the PC ended the view must not bring the screen back
       if (phaseRef.current === 'ended' || phaseRef.current === 'off') return
       const head = new DataView(buf)
-      const cx = head.getUint16(0, true)
-      const cy = head.getUint16(2, true)
+      const kind = head.getUint8(0)
+      if (kind === BIN_VIDEO) {
+        vplayer.current?.feed(head.getUint8(1) === 1, head.getFloat64(2, true), new Uint8Array(buf, 10))
+        if (phaseRef.current !== 'live') setPhase('live')
+        return
+      }
+      if (kind === BIN_AUDIO) {
+        aplayer.current?.feed(head.getFloat64(1, true), new Uint8Array(buf, 9))
+        return
+      }
+      if (kind !== BIN_JPEG) return
+      const cx = head.getUint16(1, true)
+      const cy = head.getUint16(3, true)
       if (Date.now() - cur.current.touched > 450) {
         cur.current.x = cx === 65535 ? -1 : cx / 65534
         cur.current.y = cy === 65535 ? -1 : cy / 65534
       }
-      const url = URL.createObjectURL(new Blob([buf.slice(4)], { type: 'image/jpeg' }))
+      const url = URL.createObjectURL(new Blob([buf.slice(5)], { type: 'image/jpeg' }))
       const el = img.current
       if (!el) return URL.revokeObjectURL(url)
       el.onload = () => {
@@ -156,6 +183,24 @@ function Screen() {
         const i = m as unknown as Info
         infoRef.current = i
         setInfo(i)
+        // the screen comes as video (new decoder for these dimensions) or as pictures
+        vplayer.current?.close()
+        aplayer.current?.close()
+        vplayer.current = aplayer.current = undefined
+        if (i.video && canvas.current) {
+          vplayer.current = new VideoPlayer(
+            canvas.current,
+            () => screenBus.send({ op: 'keyframe' }),
+            () => {
+              // this browser cannot decode it: pictures from now on, and the choice is remembered
+              localStorage.setItem('jolty-screen-novideo', '1')
+              screenBus.send({ op: 'stop' })
+              start()
+            }
+          )
+          const ctx = i.video.audio ? audioContext() : undefined
+          if (ctx) aplayer.current = new AudioPlayer(ctx, mutedRef.current)
+        }
         localStorage.setItem('jolty-screen-display', String(i.display))
         requestAnimationFrame(layout)
       } else if (m.op === 'cursor' && Date.now() - cur.current.touched > 450) {
@@ -174,8 +219,48 @@ function Screen() {
       document.removeEventListener('visibilitychange', onVisible)
       screenBus.send({ op: 'stop' })
       if (last) URL.revokeObjectURL(last)
+      vplayer.current?.close()
+      aplayer.current?.close()
     }
   }, [layout, paint, start])
+
+  // pictures shown per second, for whoever measures (the tests do)
+  useEffect(() => {
+    const t = setInterval(() => root.current?.setAttribute('data-fps', String(vplayer.current?.fps ?? 0)), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  // the screen stays on while it is being watched
+  useEffect(() => {
+    let lock: { release(): Promise<void> } | undefined
+    const take = (): void => {
+      void (navigator as unknown as { wakeLock?: { request(t: 'screen'): Promise<{ release(): Promise<void> }> } }).wakeLock?.request('screen').then((l) => (lock = l), () => undefined)
+    }
+    take()
+    const again = (): void => {
+      if (!document.hidden) take()
+    }
+    document.addEventListener('visibilitychange', again)
+    return () => {
+      document.removeEventListener('visibilitychange', again)
+      void lock?.release()
+    }
+  }, [])
+
+  // the bars are laid over the screen; the picture takes the room they leave, and all of it when they are folded
+  useEffect(() => {
+    const el = root.current
+    if (!el) return
+    const set = (): void => {
+      el.style.setProperty('--pcs-top', `${hud ? topBar.current?.offsetHeight ?? 0 : 0}px`)
+      el.style.setProperty('--pcs-bottom', `${hud ? bottomBar.current?.offsetHeight ?? 0 : 0}px`)
+    }
+    set()
+    const ro = new ResizeObserver(set)
+    if (topBar.current) ro.observe(topBar.current)
+    if (bottomBar.current) ro.observe(bottomBar.current)
+    return () => ro.disconnect()
+  }, [hud, keys])
 
   useEffect(() => {
     const el = stage.current
@@ -397,6 +482,14 @@ function Screen() {
     setTimeout(() => setOpen(false), 220)
   }
 
+  const toggleSound = (): void => {
+    const next = !muted
+    setMuted(next)
+    localStorage.setItem('jolty-screen-muted', next ? '1' : '0')
+    aplayer.current?.mute(next)
+    audioContext()
+  }
+
   const chooseMode = (m: Mode): void => {
     setMode(m)
     localStorage.setItem('jolty-screen-mode', m)
@@ -405,8 +498,8 @@ function Screen() {
   const display = info?.displays.find((d) => d.index === info.display)
 
   return (
-    <div className={`pcs ${closing ? 'closing' : ''}`} role="dialog" aria-label={tr("Ecran PC")}>
-      <header className="pcs-top">
+    <div ref={root} className={`pcs ${closing ? 'closing' : ''} ${hud ? '' : 'hud-off'}`} role="dialog" aria-label={tr("Ecran PC")} onPointerDown={() => audioContext()}>
+      <header className="pcs-top" ref={topBar}>
         <button className="pcs-icon" onClick={close} aria-label={tr("Închide ecranul PC")}>
           <X size={20} />
         </button>
@@ -429,11 +522,19 @@ function Screen() {
             </button>
           ))}
         </div>
+        <button className="pcs-icon" onClick={() => setHud(false)} aria-label={tr("Ascunde comenzile")}>
+          <ChevronUp size={20} />
+        </button>
       </header>
+
+      <button className="pcs-handle" onClick={() => setHud(true)} aria-label={tr("Arată comenzile")} tabIndex={hud ? -1 : 0}>
+        <SlidersHorizontal size={18} />
+      </button>
 
       <div className="pcs-stage" ref={stage} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
         <div className="pcs-wrap" ref={wrap}>
-          <img ref={img} className="pcs-img" alt="" draggable={false} />
+          <img ref={img} className="pcs-img" alt="" draggable={false} hidden={Boolean(info?.video)} />
+          <canvas ref={canvas} className="pcs-img" hidden={!info?.video} />
           <div className="pcs-cursor" ref={cursor}>
             <svg width="18" height="26" viewBox="0 0 12 19" aria-hidden>
               <polygon points="0,0 0,16 4,12.5 7,19 9.4,18 6.6,11.6 11.5,11.6" />
@@ -464,6 +565,7 @@ function Screen() {
         {hint && phase === 'live' && <div className="pcs-hint">{tr("Un deget mișcă cursorul, atingerea face clic, două degete derulează sau fac zoom, apăsarea lungă trage.")}</div>}
       </div>
 
+      <div className="pcs-bottom" ref={bottomBar}>
       {keys && (
         <div className="pcs-keys" onPointerDown={(e) => e.stopPropagation()}>
           <div className="pcs-keys-row">
@@ -498,6 +600,12 @@ function Screen() {
       )}
 
       <footer className="pcs-bar">
+        {info?.video?.audio && (
+          <button className={`pcs-btn ${muted ? '' : 'on'}`} onClick={toggleSound} aria-pressed={!muted}>
+            {muted ? <VolumeX size={19} /> : <Volume2 size={19} />}
+            <span>{muted ? tr("Fără sunet") : tr("Sunet")}</span>
+          </button>
+        )}
         <button className={`pcs-btn ${keys ? 'on' : ''}`} onClick={() => setKeys(!keys)} aria-pressed={keys}>
           <Command size={19} />
           <span>{tr("Taste")}</span>
@@ -519,6 +627,7 @@ function Screen() {
           <span>{tr("Potrivește")}</span>
         </button>
       </footer>
+      </div>
 
       <textarea
         ref={typer}

@@ -1712,5 +1712,9 @@
  "Adresa agentului": "The agent's address",
  "Salvează și testează": "Save and test",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "The agent answers, but it was started with another card ({mac}). Run the command from step 2 again.",
- "Agentul răspunde și știe ce PC să pornească.": "The agent answers and knows which PC to start."
+ "Agentul răspunde și știe ce PC să pornească.": "The agent answers and knows which PC to start.",
+ "Ascunde comenzile": "Hide the controls",
+ "Arată comenzile": "Show the controls",
+ "Sunet": "Sound",
+ "Fără sunet": "Muted"
 }

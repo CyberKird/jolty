@@ -476,3 +476,25 @@ html.remote .ghost-go {
   background: transparent;
   color: var(--white);
 }
+
+/* The drawer: everything in it scrolls together, from the new conversation button down to the usage meters. */
+@media (max-width: 760px) {
+  html.remote .sidebar,
+  html.remote .app.no-sidebar .sidebar {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  html.remote .sidebar > * {
+    flex: none;
+  }
+  html.remote .sidebar .session-list,
+  html.remote .sidebar .live-list,
+  html.remote .sidebar .meter {
+    flex: none;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+  }
+}

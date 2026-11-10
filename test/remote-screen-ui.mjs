@@ -19,7 +19,8 @@ fs.writeFileSync(path.join(data, 'remote.json'), JSON.stringify({ enabled: true,
 
 const env = { ...process.env, JOLTY_TEST: '1', JOLTY_DATA_DIR: data }
 delete env.ELECTRON_RUN_AS_NODE
-const app = await electron.launch({ args: [path.resolve('out/main/index.js'), '--user-data-dir=' + path.join(data, 'electron')], env, timeout: 60000 })
+// a window behind others is not drawn by Chromium: the flags keep the test page working whatever is on top of it
+const app = await electron.launch({ args: [path.resolve('out/main/index.js'), '--user-data-dir=' + path.join(data, 'electron'), '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'], env, timeout: 60000 })
 try {
   const win = await app.firstWindow()
   win.setDefaultTimeout(30000)
@@ -33,6 +34,7 @@ try {
   const phone = await opened
   phone.setDefaultTimeout(30000)
   await phone.waitForSelector('.brand-name', { timeout: 60000 })
+  phone.on('console', (m) => /decoder|screen/i.test(m.text()) && console.log('phone:', m.text()))
   await phone.locator('.titlebar-btn').first().click()
   await phone.locator('.pc-screen-btn').click()
 
@@ -49,8 +51,30 @@ try {
   await win.evaluate(() => window.jolty.app.saveSettings({ remoteScreen: true }))
   await phone.locator('.pcs-state .btn').click()
   await phone.waitForSelector('.pcs-dot.ok', { timeout: 60000 })
-  const natural = await phone.evaluate(() => document.querySelector('.pcs-img').naturalWidth)
-  assert.ok(natural > 300, `a picture arrived (${natural}px wide)`)
+  // the screen comes as video (this Chromium plays H.264): a canvas, not pictures
+  await phone.waitForFunction(() => document.querySelector('canvas.pcs-img') && !document.querySelector('canvas.pcs-img').hidden && document.querySelector('canvas.pcs-img').width > 300, null, { timeout: 30000 })
+  // something moving on the screen at 60 fps: the video has to keep up with it
+  await app.evaluate(({ BrowserWindow, screen }) => {
+    const d = screen.getPrimaryDisplay().workArea
+    const w = new BrowserWindow({ x: d.x + 40, y: d.y + 40, width: 640, height: 360, show: true, frame: false, alwaysOnTop: true, focusable: false, webPreferences: { backgroundThrottling: false } })
+    w.setIgnoreMouseEvents(true)
+    void w.loadURL('data:text/html,<body style="margin:0;background:#111"><div id=b style="position:absolute;top:0;width:90px;height:100%;background:#d4ff00"></div><script>let x=0;function f(){x=(x+9)%560;b.style.left=x+"px";requestAnimationFrame(f)}f()</script>')
+    globalThis.__mover = w
+  })
+  await phone.waitForTimeout(3500)
+  const fps = Number(await phone.evaluate(() => document.querySelector('.pcs').getAttribute('data-fps')))
+  console.log('video fps on the phone:', fps)
+  assert.ok(fps >= 18, `the video keeps up with motion (${fps} fps)`)
+  await phone.screenshot({ path: path.join(shots, 'screen-video.png') })
+  await app.evaluate(() => globalThis.__mover?.destroy())
+  // the bars fold away and a button brings them back
+  await phone.locator('.pcs-top .pcs-icon').nth(1).click()
+  await phone.waitForSelector('.pcs.hud-off')
+  await phone.waitForTimeout(500)
+  const full = await phone.evaluate(() => { const s = document.querySelector('.pcs-stage').getBoundingClientRect(); return s.top === 0 && Math.round(s.height) === window.innerHeight })
+  assert.ok(full, 'the screen takes the whole phone when the bars are folded')
+  await phone.locator('.pcs-handle').click()
+  await phone.waitForSelector('.pcs:not(.hud-off)')
   await phone.screenshot({ path: path.join(shots, 'screen-live.png') })
 
   // 4. the PC window knows, and can end it

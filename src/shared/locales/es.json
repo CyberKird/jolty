@@ -1712,5 +1712,9 @@
  "Adresa agentului": "Dirección del agente",
  "Salvează și testează": "Guardar y probar",
  "Agentul răspunde, dar pornit cu altă placă ({mac}). Rulează din nou comanda de la pasul 2.": "El agente responde, pero se inició con otra tarjeta ({mac}). Vuelve a ejecutar el comando del paso 2.",
- "Agentul răspunde și știe ce PC să pornească.": "El agente responde y sabe qué PC encender."
+ "Agentul răspunde și știe ce PC să pornească.": "El agente responde y sabe qué PC encender.",
+ "Ascunde comenzile": "Ocultar los controles",
+ "Arată comenzile": "Mostrar los controles",
+ "Sunet": "Sonido",
+ "Fără sunet": "Sin sonido"
 }
