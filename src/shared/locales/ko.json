@@ -1603,5 +1603,21 @@
  "Trimite raportul": "보고서 보내기",
  "Se trimite…": "보내는 중…",
  "Raportul a fost trimis. Mulțumim!": "보고서를 보냈습니다. 감사합니다!",
- "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "보고서를 보내지 못했습니다. 인터넷 연결을 확인하거나 이메일로 보내 주세요."
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "보고서를 보내지 못했습니다. 인터넷 연결을 확인하거나 이메일로 보내 주세요.",
+ "Tailscale nu e instalat pe acest PC. Instalează-l de la tailscale.com, intră în cont, apoi revino aici.": "이 PC에 Tailscale이 설치되어 있지 않습니다. tailscale.com에서 설치하고 로그인한 뒤 여기로 돌아오세요.",
+ "Tailscale nu e conectat. Pornește-l și intră în cont.": "Tailscale이 연결되어 있지 않습니다. 실행하고 로그인하세요.",
+ "Telefon": "휴대폰",
+ "Folosește Jolty de pe telefon": "휴대폰에서 Jolty 사용하기",
+ "Telefonul vede aceleași conversații și lucrează pe acest PC, cu toate uneltele lui. Conexiunea trece privat prin Tailscale, fără porturi deschise. Jolty trebuie să rămână pornit pe PC.": "휴대폰에서도 같은 대화가 보이고, 이 PC에서 PC의 모든 도구로 작업합니다. 연결은 Tailscale을 통해 비공개로 이루어지며 열린 포트가 없습니다. Jolty는 PC에서 계속 실행 중이어야 합니다.",
+ "Împerechează un telefon": "휴대폰 페어링",
+ "Deconectează telefoanele acum": "지금 모든 휴대폰 연결 끊기",
+ "Scanează codul QR cu camera telefonului (Tailscale trebuie să fie pornit pe el). Codul e valabil {n} minute și merge o singură dată.": "휴대폰 카메라로 QR 코드를 스캔하세요(휴대폰에서 Tailscale이 켜져 있어야 합니다). 코드는 {n}분 동안 유효하며 한 번만 사용할 수 있습니다.",
+ "Scanează cu camera telefonului": "휴대폰 카메라로 스캔",
+ "Văzut ultima dată: {when}": "마지막 접속: {when}",
+ "Încă neconectat": "아직 연결되지 않음",
+ "Elimină": "제거",
+ "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "확인 없는 모드(프로젝트 안에서 자유롭게, 권한 확인 없음)는 휴대폰에서 켤 수 없습니다. PC에서 직접 정해야 합니다.",
+ "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "앱처럼 쓰려면 공유를 누르고 \"홈 화면에 추가\"를 선택하세요. 앱에서는 코드를 다시 요청합니다. PC에서 \"휴대폰 페어링\"을 누르세요.",
+ "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "계정에서 Tailscale Serve가 켜져 있지 않습니다. 한 번 켠 뒤 체크박스를 다시 선택하세요.",
+ "Activează Tailscale Serve": "Tailscale Serve 켜기"
 }

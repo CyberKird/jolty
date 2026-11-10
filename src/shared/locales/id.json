@@ -1603,5 +1603,21 @@
  "Trimite raportul": "Kirim laporan",
  "Se trimite…": "Mengirim…",
  "Raportul a fost trimis. Mulțumim!": "Laporan terkirim. Terima kasih!",
- "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Laporan tidak dapat dikirim. Periksa koneksi internetmu atau kirim lewat email."
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Laporan tidak dapat dikirim. Periksa koneksi internetmu atau kirim lewat email.",
+ "Tailscale nu e instalat pe acest PC. Instalează-l de la tailscale.com, intră în cont, apoi revino aici.": "Tailscale belum terpasang di PC ini. Pasang dari tailscale.com, masuk ke akun, lalu kembali ke sini.",
+ "Tailscale nu e conectat. Pornește-l și intră în cont.": "Tailscale belum tersambung. Jalankan dan masuk ke akun.",
+ "Telefon": "Ponsel",
+ "Folosește Jolty de pe telefon": "Pakai Jolty dari ponsel",
+ "Telefonul vede aceleași conversații și lucrează pe acest PC, cu toate uneltele lui. Conexiunea trece privat prin Tailscale, fără porturi deschise. Jolty trebuie să rămână pornit pe PC.": "Ponsel melihat percakapan yang sama dan bekerja di PC ini, dengan semua alatnya. Koneksi lewat Tailscale secara privat, tanpa port terbuka. Jolty harus tetap menyala di PC.",
+ "Împerechează un telefon": "Sambungkan ponsel",
+ "Deconectează telefoanele acum": "Putuskan semua ponsel sekarang",
+ "Scanează codul QR cu camera telefonului (Tailscale trebuie să fie pornit pe el). Codul e valabil {n} minute și merge o singură dată.": "Pindai kode QR dengan kamera ponsel (Tailscale harus aktif di ponsel). Kode berlaku {n} menit dan hanya bisa dipakai sekali.",
+ "Scanează cu camera telefonului": "Pindai dengan kamera ponsel",
+ "Văzut ultima dată: {when}": "Terakhir terlihat: {when}",
+ "Încă neconectat": "Belum tersambung",
+ "Elimină": "Hapus",
+ "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "Mode tanpa pertanyaan (Bebas di proyek, Tanpa izin) tidak bisa diaktifkan dari ponsel: tetap pilihan yang dibuat di PC.",
+ "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "Sebagai aplikasi: ketuk Bagikan, lalu \"Tambah ke Layar Utama\". Aplikasi meminta kode lagi: ketuk \"Sambungkan ponsel\" di PC.",
+ "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "Tailscale Serve belum diaktifkan di akunmu. Aktifkan sekali, lalu centang kotaknya lagi.",
+ "Activează Tailscale Serve": "Aktifkan Tailscale Serve"
 }

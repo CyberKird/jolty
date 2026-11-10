@@ -408,7 +408,9 @@ export function Sidebar() {
     window.addEventListener('jolty-local-models', look)
     return () => window.removeEventListener('jolty-local-models', look)
   }, [])
-  const nav = navIds.filter((id) => id !== 'local' || localOn).map((id) => NAV.find((n) => n.id === id)!)
+  // a phone only gets the pages that work from there: the others ask for things only the PC can do
+  const phone = document.documentElement.classList.contains('remote')
+  const nav = navIds.filter((id) => (id !== 'local' || localOn) && (!phone || id === 'usage')).map((id) => NAV.find((n) => n.id === id)!)
   const navDrag = useProfileDrag(navIds, moveNav)
   const [groupIds, moveGroup] = useOrder('jolty.groupOrder', groups.map(([cwd]) => cwd))
   const groupDrag = useProfileDrag(groupIds, moveGroup)

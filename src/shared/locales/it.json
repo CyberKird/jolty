@@ -1603,5 +1603,21 @@
  "Trimite raportul": "Invia il rapporto",
  "Se trimite…": "Invio in corso…",
  "Raportul a fost trimis. Mulțumim!": "Rapporto inviato. Grazie!",
- "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Impossibile inviare il rapporto. Controlla la connessione a internet o invialo via e-mail."
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Impossibile inviare il rapporto. Controlla la connessione a internet o invialo via e-mail.",
+ "Tailscale nu e instalat pe acest PC. Instalează-l de la tailscale.com, intră în cont, apoi revino aici.": "Tailscale non è installato su questo PC. Installalo da tailscale.com, accedi e poi torna qui.",
+ "Tailscale nu e conectat. Pornește-l și intră în cont.": "Tailscale non è connesso. Avvialo e accedi.",
+ "Telefon": "Telefono",
+ "Folosește Jolty de pe telefon": "Usa Jolty dal telefono",
+ "Telefonul vede aceleași conversații și lucrează pe acest PC, cu toate uneltele lui. Conexiunea trece privat prin Tailscale, fără porturi deschise. Jolty trebuie să rămână pornit pe PC.": "Il telefono vede le stesse conversazioni e lavora su questo PC, con tutti i suoi strumenti. La connessione passa in privato da Tailscale, senza porte aperte. Jolty deve restare aperto sul PC.",
+ "Împerechează un telefon": "Abbina un telefono",
+ "Deconectează telefoanele acum": "Disconnetti i telefoni ora",
+ "Scanează codul QR cu camera telefonului (Tailscale trebuie să fie pornit pe el). Codul e valabil {n} minute și merge o singură dată.": "Inquadra il codice QR con la fotocamera del telefono (Tailscale deve essere attivo sul telefono). Il codice vale {n} minuti e si usa una sola volta.",
+ "Scanează cu camera telefonului": "Inquadra con la fotocamera del telefono",
+ "Văzut ultima dată: {when}": "Ultimo accesso: {when}",
+ "Încă neconectat": "Non ancora connesso",
+ "Elimină": "Rimuovi",
+ "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "I modi senza domande (Libero nel progetto, Senza permessi) non si possono attivare dal telefono: restano una scelta da fare sul PC.",
+ "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "Come app: tocca Condividi, poi «Aggiungi a Home». L'app chiede di nuovo un codice: tocca «Abbina un telefono» sul PC.",
+ "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "Tailscale Serve non è attivo sul tuo account. Attivalo una volta, poi spunta di nuovo la casella.",
+ "Activează Tailscale Serve": "Attiva Tailscale Serve"
 }

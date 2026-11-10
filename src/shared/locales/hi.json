@@ -1603,5 +1603,21 @@
  "Trimite raportul": "रिपोर्ट भेजें",
  "Se trimite…": "भेजा जा रहा है…",
  "Raportul a fost trimis. Mulțumim!": "रिपोर्ट भेज दी गई। धन्यवाद!",
- "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "रिपोर्ट नहीं भेजी जा सकी। इंटरनेट कनेक्शन जाँचें या उसे ईमेल से भेजें।"
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "रिपोर्ट नहीं भेजी जा सकी। इंटरनेट कनेक्शन जाँचें या उसे ईमेल से भेजें।",
+ "Tailscale nu e instalat pe acest PC. Instalează-l de la tailscale.com, intră în cont, apoi revino aici.": "इस PC पर Tailscale इंस्टॉल नहीं है। इसे tailscale.com से इंस्टॉल करें, साइन इन करें और फिर यहाँ लौटें।",
+ "Tailscale nu e conectat. Pornește-l și intră în cont.": "Tailscale कनेक्ट नहीं है। इसे चालू करें और साइन इन करें।",
+ "Telefon": "फ़ोन",
+ "Folosește Jolty de pe telefon": "फ़ोन से Jolty इस्तेमाल करें",
+ "Telefonul vede aceleași conversații și lucrează pe acest PC, cu toate uneltele lui. Conexiunea trece privat prin Tailscale, fără porturi deschise. Jolty trebuie să rămână pornit pe PC.": "फ़ोन वही बातचीत देखता है और इस PC पर अपने सारे टूल के साथ काम करता है। कनेक्शन Tailscale से निजी तौर पर जाता है, कोई पोर्ट खुला नहीं रहता। Jolty को PC पर चालू रहना होगा।",
+ "Împerechează un telefon": "फ़ोन जोड़ें",
+ "Deconectează telefoanele acum": "अभी सभी फ़ोन डिस्कनेक्ट करें",
+ "Scanează codul QR cu camera telefonului (Tailscale trebuie să fie pornit pe el). Codul e valabil {n} minute și merge o singură dată.": "फ़ोन के कैमरे से QR कोड स्कैन करें (फ़ोन पर Tailscale चालू होना चाहिए)। कोड {n} मिनट तक मान्य है और सिर्फ़ एक बार चलता है।",
+ "Scanează cu camera telefonului": "फ़ोन के कैमरे से स्कैन करें",
+ "Văzut ultima dată: {when}": "आख़िरी बार देखा गया: {when}",
+ "Încă neconectat": "अभी तक कनेक्ट नहीं हुआ",
+ "Elimină": "हटाएँ",
+ "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "बिना सवाल वाले मोड (प्रोजेक्ट में आज़ाद, बिना अनुमति) फ़ोन से चालू नहीं किए जा सकते: यह फ़ैसला PC पर ही लिया जाता है।",
+ "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "ऐप की तरह: शेयर करें पर टैप करें, फिर \"होम स्क्रीन पर जोड़ें\"। ऐप दोबारा कोड माँगता है: PC पर \"फ़ोन जोड़ें\" दबाएँ।",
+ "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "आपके अकाउंट में Tailscale Serve चालू नहीं है। इसे एक बार चालू करें, फिर बॉक्स दोबारा टिक करें।",
+ "Activează Tailscale Serve": "Tailscale Serve चालू करें"
 }

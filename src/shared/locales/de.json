@@ -1603,5 +1603,21 @@
  "Trimite raportul": "Bericht senden",
  "Se trimite…": "Wird gesendet …",
  "Raportul a fost trimis. Mulțumim!": "Bericht gesendet. Danke!",
- "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Der Bericht konnte nicht gesendet werden. Prüfe deine Internetverbindung oder schick ihn per E-Mail."
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Der Bericht konnte nicht gesendet werden. Prüfe deine Internetverbindung oder schick ihn per E-Mail.",
+ "Tailscale nu e instalat pe acest PC. Instalează-l de la tailscale.com, intră în cont, apoi revino aici.": "Tailscale ist auf diesem PC nicht installiert. Installiere es von tailscale.com, melde dich an und komm dann hierher zurück.",
+ "Tailscale nu e conectat. Pornește-l și intră în cont.": "Tailscale ist nicht verbunden. Starte es und melde dich an.",
+ "Telefon": "Handy",
+ "Folosește Jolty de pe telefon": "Jolty vom Handy aus nutzen",
+ "Telefonul vede aceleași conversații și lucrează pe acest PC, cu toate uneltele lui. Conexiunea trece privat prin Tailscale, fără porturi deschise. Jolty trebuie să rămână pornit pe PC.": "Das Handy sieht dieselben Unterhaltungen und arbeitet auf diesem PC, mit allen seinen Werkzeugen. Die Verbindung läuft privat über Tailscale, ohne offene Ports. Jolty muss auf dem PC geöffnet bleiben.",
+ "Împerechează un telefon": "Handy koppeln",
+ "Deconectează telefoanele acum": "Handys jetzt trennen",
+ "Scanează codul QR cu camera telefonului (Tailscale trebuie să fie pornit pe el). Codul e valabil {n} minute și merge o singură dată.": "Scanne den QR-Code mit der Handykamera (Tailscale muss dort laufen). Der Code gilt {n} Minuten und nur einmal.",
+ "Scanează cu camera telefonului": "Mit der Handykamera scannen",
+ "Văzut ultima dată: {when}": "Zuletzt gesehen: {when}",
+ "Încă neconectat": "Noch nicht verbunden",
+ "Elimină": "Entfernen",
+ "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "Modi ohne Rückfragen (Frei im Projekt, Keine Berechtigungen) lassen sich vom Handy aus nicht einschalten: Das bleibt eine Entscheidung am PC.",
+ "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "Als App: Tippe auf Teilen und dann auf „Zum Home-Bildschirm“. Die App fragt erneut nach einem Code: Tippe am PC auf „Handy koppeln“.",
+ "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "Tailscale Serve ist für dein Konto nicht aktiviert. Aktiviere es einmal und setze dann das Häkchen erneut.",
+ "Activează Tailscale Serve": "Tailscale Serve aktivieren"
 }

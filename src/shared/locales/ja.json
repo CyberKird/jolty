@@ -1603,5 +1603,21 @@
  "Trimite raportul": "レポートを送信",
  "Se trimite…": "送信中…",
  "Raportul a fost trimis. Mulțumim!": "レポートを送信しました。ありがとうございます！",
- "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "レポートを送信できませんでした。インターネット接続を確認するか、メールで送ってください。"
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "レポートを送信できませんでした。インターネット接続を確認するか、メールで送ってください。",
+ "Tailscale nu e instalat pe acest PC. Instalează-l de la tailscale.com, intră în cont, apoi revino aici.": "このPCにはTailscaleがインストールされていません。tailscale.comからインストールしてサインインし、ここに戻ってください。",
+ "Tailscale nu e conectat. Pornește-l și intră în cont.": "Tailscaleが接続されていません。起動してサインインしてください。",
+ "Telefon": "スマートフォン",
+ "Folosește Jolty de pe telefon": "スマートフォンからJoltyを使う",
+ "Telefonul vede aceleași conversații și lucrează pe acest PC, cu toate uneltele lui. Conexiunea trece privat prin Tailscale, fără porturi deschise. Jolty trebuie să rămână pornit pe PC.": "スマートフォンでも同じ会話が見え、このPC上で、PCのツールをすべて使って作業できます。接続はTailscale経由の非公開通信で、開いているポートはありません。JoltyはPCで起動したままにしてください。",
+ "Împerechează un telefon": "スマートフォンをペアリング",
+ "Deconectează telefoanele acum": "すべてのスマートフォンを今すぐ切断",
+ "Scanează codul QR cu camera telefonului (Tailscale trebuie să fie pornit pe el). Codul e valabil {n} minute și merge o singură dată.": "スマートフォンのカメラでQRコードを読み取ってください(スマートフォンでTailscaleがオンになっている必要があります)。コードは{n}分間有効で、1回だけ使えます。",
+ "Scanează cu camera telefonului": "スマートフォンのカメラで読み取る",
+ "Văzut ultima dată: {when}": "最終確認: {when}",
+ "Încă neconectat": "まだ接続されていません",
+ "Elimină": "削除",
+ "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "確認なしのモード(プロジェクト内で自由に、権限の確認なし)はスマートフォンからはオンにできません。PCで決める設定のままです。",
+ "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "アプリとして使うには、共有をタップして「ホーム画面に追加」を選びます。アプリではもう一度コードが求められるので、PCで「スマートフォンをペアリング」をタップしてください。",
+ "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "アカウントでTailscale Serveが有効になっていません。一度有効にしてから、もう一度チェックを入れてください。",
+ "Activează Tailscale Serve": "Tailscale Serveを有効にする"
 }

@@ -1603,5 +1603,21 @@
  "Trimite raportul": "Send the report",
  "Se trimite…": "Sending…",
  "Raportul a fost trimis. Mulțumim!": "Report sent. Thank you!",
- "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Could not send the report. Check your internet connection or send it by email."
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "Could not send the report. Check your internet connection or send it by email.",
+ "Tailscale nu e instalat pe acest PC. Instalează-l de la tailscale.com, intră în cont, apoi revino aici.": "Tailscale is not installed on this PC. Install it from tailscale.com, sign in, then come back here.",
+ "Tailscale nu e conectat. Pornește-l și intră în cont.": "Tailscale is not connected. Start it and sign in.",
+ "Telefon": "Phone",
+ "Folosește Jolty de pe telefon": "Use Jolty from your phone",
+ "Telefonul vede aceleași conversații și lucrează pe acest PC, cu toate uneltele lui. Conexiunea trece privat prin Tailscale, fără porturi deschise. Jolty trebuie să rămână pornit pe PC.": "The phone sees the same conversations and works on this PC, with all its tools. The connection goes privately through Tailscale, with no open ports. Jolty has to stay running on the PC.",
+ "Împerechează un telefon": "Pair a phone",
+ "Deconectează telefoanele acum": "Disconnect phones now",
+ "Scanează codul QR cu camera telefonului (Tailscale trebuie să fie pornit pe el). Codul e valabil {n} minute și merge o singură dată.": "Scan the QR code with the phone's camera (Tailscale has to be on there). The code is valid for {n} minutes and works once.",
+ "Scanează cu camera telefonului": "Scan with the phone's camera",
+ "Văzut ultima dată: {when}": "Last seen: {when}",
+ "Încă neconectat": "Not connected yet",
+ "Elimină": "Remove",
+ "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "Modes without questions (Free in the project, No permissions) cannot be turned on from the phone: they stay a choice made at the PC.",
+ "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "As an app: tap Share, then \"Add to Home Screen\". The app asks for a code again: tap \"Pair a phone\" on the PC.",
+ "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "Tailscale Serve is not turned on for your account. Turn it on once, then tick the box again.",
+ "Activează Tailscale Serve": "Turn on Tailscale Serve"
 }

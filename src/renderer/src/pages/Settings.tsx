@@ -5,6 +5,7 @@ import { isAcp } from '@shared/types'
 import { AccountSettings } from './AccountSettings'
 import { BrowserSettings } from './BrowserSettings'
 import { BackgroundSettings } from './BackgroundSettings'
+import { PhoneSettings } from './PhoneSettings'
 import { ThemeSettings } from './ThemeSettings'
 import { ComputerSettings } from './ComputerSettings'
 import { ChildSessionsSettings } from './ChildSessionsSettings'
@@ -94,6 +95,7 @@ export function SettingsPage() {
               </div>
               <ThemeSettings current={s.theme} clear={s.glassClear} />
               <BackgroundSettings />
+              <PhoneSettings />
               <label className="card row" style={{ marginBottom: 14, cursor: 'pointer' }}>
                 <input
                   type="checkbox"

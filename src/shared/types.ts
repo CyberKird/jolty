@@ -1,6 +1,7 @@
 // Types shared by the main process, the preload bridge and the renderer.
 import type { ScheduledTask, TaskInput } from './schedule'
 import type { ModelScore } from './scores'
+import type { RemoteStatus } from './remote'
 
 export type EngineKind = 'claude' | 'codex' | 'hermes' | 'opencode' | 'gemini'
 
@@ -791,6 +792,17 @@ export interface JoltyApi {
     quickClose(): Promise<void>
     /** the quick entry window was shown again: clear and focus the box */
     onQuickShown(cb: () => void): () => void
+  }
+  /** use Jolty from a paired phone (main/remote.ts) */
+  remote: {
+    status(): Promise<RemoteStatus>
+    enable(on: boolean): Promise<RemoteStatus>
+    /** a one-time code and link for pairing a new phone */
+    pair(): Promise<{ code: string; link?: string; minutes: number }>
+    revoke(id: string): Promise<RemoteStatus>
+    /** drops every connected phone now; they stay paired */
+    disconnect(): Promise<void>
+    onChange(cb: () => void): () => void
   }
 }
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.0
+
+### New
+
+- Use Jolty from your phone. Settings, Phone, turn it on, scan the QR code with the phone's camera, and the phone opens the same conversations and works on this PC with all its tools (Blender, Premiere, your files). The connection is private, through Tailscale, with no open ports; every phone has its own key that you can remove, and modes without questions can only be turned on at the PC. On an iPhone, add the page to the Home Screen to use it like an app. Jolty has to stay open on the PC.
+- The page is laid out for a small screen: the sidebar is a drawer, the message box stays above the keyboard and only the pages that work from a phone are offered.
+
 ## 0.20.2
 
 ### Improvements

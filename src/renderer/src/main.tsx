@@ -7,6 +7,7 @@ import './themes.css'
 import './theme-glass.css'
 import './lowpower.css'
 import './windowed.css'
+import './phone.css'
 import { setLowPowerMode } from './lowpower'
 import { applySavedTheme } from './theme'
 import { addLocales, getLang } from '@shared/i18n'
@@ -15,6 +16,12 @@ import { addLocales, getLang } from '@shared/i18n'
 setLowPowerMode('auto')
 // the last theme is remembered here too, so the window opens in it and does not flash the default first
 applySavedTheme()
+
+// a browser on a paired phone has no preload: the API comes over the connection to the PC (remote/boot.ts)
+if (!(window as unknown as { jolty?: unknown }).jolty) {
+  await (await import('./remote/boot')).connectRemote()
+  ;(await import('./remote/phone')).setupPhone()
+}
 
 // only the chosen language's dictionary is parsed; App comes after it because some modules build their texts on load
 const dicts = import.meta.glob<Record<string, string>>('../../shared/locales/*.json', { import: 'default' })

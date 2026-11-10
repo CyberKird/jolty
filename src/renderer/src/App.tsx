@@ -90,7 +90,8 @@ export function App() {
   // the mascot (three.js, a model, shaders) is the heaviest thing at launch: it waits until the lists are in and the window has had a moment
   const loaded = useStore((s) => s.profilesLoaded)
   useEffect(() => {
-    if (!loaded) return
+    // no three.js model on a phone: it is the heaviest download and the character has no room there
+    if (!loaded || document.documentElement.classList.contains('remote')) return
     const ric = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 300))
     let id = 0
     const t = window.setTimeout(() => (id = ric(() => setIdle(true), { timeout: 3000 })), 1200)

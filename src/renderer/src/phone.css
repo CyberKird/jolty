@@ -1,0 +1,149 @@
+/* The page on a phone: a browser paired through the phone link (html.remote, see remote/boot.ts) with a narrow screen.
+   The desktop window never matches (its minimum width is 960 px). */
+@media (max-width: 760px) {
+  /* --vvh is the visible height set by remote/phone.ts: with the keyboard open it ends above the keyboard */
+  html.remote,
+  html.remote #root {
+    height: var(--vvh, 100dvh);
+  }
+  html.remote body {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--vvh, 100dvh);
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html.remote button,
+  html.remote [role='button'],
+  html.remote a {
+    touch-action: manipulation;
+  }
+  /* iOS zooms the page when a field under 16 px gets focus */
+  html.remote input,
+  html.remote textarea,
+  html.remote select {
+    font-size: 16px;
+  }
+
+  html.remote .app,
+  html.remote .app.no-sidebar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    transition: none;
+  }
+  html.remote .titlebar {
+    height: auto;
+    min-height: 46px;
+    padding: env(safe-area-inset-top) max(10px, env(safe-area-inset-right)) 0 max(6px, env(safe-area-inset-left));
+    -webkit-app-region: no-drag;
+  }
+  html.remote .titlebar-btn {
+    width: 42px;
+    height: 42px;
+  }
+  html.remote .titlebar-by,
+  html.remote .titlebar-wordmark {
+    display: none;
+  }
+
+  /* the sidebar becomes a drawer over the chat */
+  html.remote .sidebar,
+  html.remote .app.no-sidebar .sidebar {
+    position: fixed;
+    z-index: 60;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: min(88vw, 360px);
+    visibility: visible;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    transform: translateX(-104%);
+    transition: transform 0.28s var(--ease);
+  }
+  html.remote .app:not(.no-sidebar) .sidebar {
+    transform: none;
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.7);
+  }
+  html.remote .app:not(.no-sidebar)::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(2, 2, 4, 0.62);
+  }
+  html.remote .resizer {
+    display: none;
+  }
+
+  /* what is only for a wide window */
+  html.remote .live,
+  html.remote .live-scrim {
+    display: none;
+  }
+
+  html.remote .page {
+    padding: 20px max(16px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  html.remote .composer-wrap {
+    padding: 0 max(10px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+
+  html.remote .welcome {
+    padding: 24px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left));
+  }
+  html.remote .starts {
+    grid-template-columns: 1fr;
+  }
+  html.remote .page-title {
+    font-size: clamp(40px, 14vw, 64px);
+  }
+
+  /* the conversation header keeps the title and the context meter: the rest is on the PC */
+  html.remote .chat-header {
+    height: 50px;
+    padding: 0 max(12px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+    gap: 10px;
+  }
+  html.remote .chat-header > :not(:first-child):not(.chat-title):not(.spacer):not(.context-ring) {
+    display: none;
+  }
+
+  html.remote .install-hint {
+    position: fixed;
+    z-index: 90;
+    inset-inline: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border: 1px solid var(--volt-line);
+    background: var(--s3);
+    color: var(--white);
+    font-size: 13.5px;
+    line-height: 1.45;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  }
+  html.remote .install-hint button {
+    flex: none;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--line-2);
+    background: transparent;
+    color: var(--white);
+    font: inherit;
+  }
+
+  /* the keyboard takes half the screen: the box starts small and grows with the text */
+  html.remote .composer textarea {
+    min-height: 48px;
+    padding: 14px 16px 6px;
+  }
+  html.remote .composer-bar {
+    padding-block: 8px;
+    padding-inline: 10px 8px;
+  }
+}

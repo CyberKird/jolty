@@ -30,6 +30,7 @@ import * as obsidian from './obsidian'
 import * as gitMerge from './git-merge'
 import * as background from './background'
 import * as quick from './quick'
+import { Remote } from './remote'
 import { getLang, setLang, tr } from '@shared/i18n'
 import { openableUrl } from '@shared/links'
 
@@ -72,9 +73,11 @@ let win: BrowserWindow | undefined
 let jolty: Jolty
 const browserLive = new BrowserLive(send)
 const preview = new Preview()
+const remote = new Remote(() => win && !win.isDestroyed() && win.webContents.send('remote:changed'))
 
 function send(e: ChatEvent): void {
   background.track(e)
+  remote.broadcast('jolty:event', e)
   if (!win || win.isDestroyed()) return
   win.webContents.send('jolty:event', e)
   // while the user is elsewhere: a Windows notification that brings Jolty back (each kind has its own switch in Settings)
@@ -174,10 +177,17 @@ function createWindow(): void {
 
 /** Registers `channel` so the renderer gets the value, or the error message as a rejection. */
 function handle<A extends unknown[], R>(channel: string, fn: (...args: A) => R | Promise<R>): void {
+  remote.register(channel, fn as (...a: unknown[]) => unknown)
   ipcMain.handle(channel, async (_e, ...args) => fn(...(args as A)))
 }
 
 function registerIpc(): void {
+  // the phone link is managed at the PC only: these channels are not in the phone's allowed list (remote-policy.ts)
+  handle('remote:status', () => remote.status())
+  handle('remote:enable', (on: boolean) => remote.enable(on === true))
+  handle('remote:pair', () => remote.startPairing())
+  handle('remote:revoke', async (id: string) => (remote.revoke(String(id)), remote.status()))
+  handle('remote:disconnect', () => remote.disconnectAll())
   handle('profiles:list', () => jolty.profiles())
   handle('profiles:create', (input) => jolty.createProfile(input as never))
   handle('profiles:update', (id: string, patch) => jolty.updateProfile(id, patch as never))
@@ -447,6 +457,7 @@ if (!app.requestSingleInstanceLock()) {
     void nativeBrowser.start()
     jolty.scheduler.start()
     registerIpc()
+    void remote.init()
     allowFraming(session.defaultSession)
     createWindow()
     updater.init(
@@ -509,6 +520,7 @@ app.on('before-quit', (e) => {
   e.preventDefault()
   quitting = true
   preview.stop()
+  void remote.stop()
   const vault = store.loadSettings().obsidianVault
   const obsidianDone = vault
     ? obsidian.backup(vault, store.loadSettings().obsidianBackupDir || obsidian.defaultBackupDir()).catch(() => undefined).then(() => obsidian.stop())

@@ -1603,5 +1603,21 @@
  "Trimite raportul": "إرسال التقرير",
  "Se trimite…": "جارٍ الإرسال…",
  "Raportul a fost trimis. Mulțumim!": "تم إرسال التقرير. شكرًا لك!",
- "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "تعذّر إرسال التقرير. تحقق من اتصالك بالإنترنت أو أرسله عبر البريد الإلكتروني."
+ "Nu am putut trimite raportul. Verifică internetul sau trimite-l prin email.": "تعذّر إرسال التقرير. تحقق من اتصالك بالإنترنت أو أرسله عبر البريد الإلكتروني.",
+ "Tailscale nu e instalat pe acest PC. Instalează-l de la tailscale.com, intră în cont, apoi revino aici.": "Tailscale غير مثبّت على هذا الكمبيوتر. ثبّته من tailscale.com وسجّل الدخول ثم عد إلى هنا.",
+ "Tailscale nu e conectat. Pornește-l și intră în cont.": "Tailscale غير متصل. شغّله وسجّل الدخول.",
+ "Telefon": "الهاتف",
+ "Folosește Jolty de pe telefon": "استخدم Jolty من هاتفك",
+ "Telefonul vede aceleași conversații și lucrează pe acest PC, cu toate uneltele lui. Conexiunea trece privat prin Tailscale, fără porturi deschise. Jolty trebuie să rămână pornit pe PC.": "يرى الهاتف المحادثات نفسها ويعمل على هذا الكمبيوتر بكل أدواته. يمر الاتصال بشكل خاص عبر Tailscale دون منافذ مفتوحة. يجب أن يبقى Jolty قيد التشغيل على الكمبيوتر.",
+ "Împerechează un telefon": "إقران هاتف",
+ "Deconectează telefoanele acum": "افصل الهواتف الآن",
+ "Scanează codul QR cu camera telefonului (Tailscale trebuie să fie pornit pe el). Codul e valabil {n} minute și merge o singură dată.": "امسح رمز QR بكاميرا الهاتف (يجب أن يكون Tailscale قيد التشغيل عليه). الرمز صالح لمدة {n} دقائق ويعمل مرة واحدة فقط.",
+ "Scanează cu camera telefonului": "امسح بكاميرا الهاتف",
+ "Văzut ultima dată: {when}": "آخر ظهور: {when}",
+ "Încă neconectat": "لم يتصل بعد",
+ "Elimină": "إزالة",
+ "De pe telefon nu se pot porni modurile fără întrebări (Liber în proiect, Fără permisiuni): rămân o alegere făcută la PC.": "لا يمكن تشغيل الأوضاع بلا أسئلة (حرّ داخل المشروع، بلا أذونات) من الهاتف: تبقى قرارًا يُتخذ على الكمبيوتر.",
+ "Ca aplicație: apasă Partajează, apoi „Adaugă pe ecranul principal”. Aplicația cere din nou un cod: apasă „Împerechează un telefon” pe PC.": "كتطبيق: اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية». يطلب التطبيق رمزًا مرة أخرى: اضغط «إقران هاتف» على الكمبيوتر.",
+ "Tailscale Serve nu e activat în contul tău. Activează-l o dată, apoi bifează din nou.": "Tailscale Serve غير مفعّل في حسابك. فعّله مرة واحدة ثم ضع علامة في المربع مجددًا.",
+ "Activează Tailscale Serve": "تفعيل Tailscale Serve"
 }
