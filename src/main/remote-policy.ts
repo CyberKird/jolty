@@ -14,6 +14,8 @@ const ALLOWED = new Set([
   'sessions:setEffort',
   'sessions:setPermissionMode',
   'sessions:setBrowser',
+  // the PC is the point of the phone link: the model drives this PC, every action still asks here (or on the PC) and Ctrl+Alt+Esc stops it
+  'sessions:setComputer',
   'sessions:compact',
   'sessions:respond',
   'sessions:rename',

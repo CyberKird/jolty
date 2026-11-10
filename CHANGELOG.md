@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.1
+
+### Fixed
+
+- The Computer button now works from the phone: the model can use the PC while you are on your phone. Each action still asks for your approval, and Ctrl+Alt+Esc on the PC still stops it.
+
 ## 0.21.0
 
 ### New

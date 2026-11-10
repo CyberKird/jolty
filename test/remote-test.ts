@@ -21,6 +21,7 @@ fs.writeFileSync(path.join(dir, 'remote.json'), JSON.stringify({ enabled: false,
 const remote = new Remote(undefined, web)
 const calls: unknown[][] = []
 remote.register('sessions:list', () => [{ id: 's1' }])
+remote.register('sessions:setComputer', (...a) => (calls.push(a), undefined))
 remote.register('sessions:send', (...a) => (calls.push(a), undefined))
 remote.register('sessions:setPermissionMode', (...a) => (calls.push(a), undefined))
 remote.register('sessions:start', (...a) => (calls.push(a), { id: 'new' }))
@@ -142,6 +143,8 @@ test('only listed channels, never the desktop ones, and no open modes from the p
   assert.equal((await ask(c, 5, 'sessions:setPermissionMode', ['s1', 'ask'])).ok, true)
   assert.equal((await ask(c, 6, 'sessions:start', [{ profileId: 'p', cwd: 'C:\\x', permissionMode: 'full' }])).ok, false)
   assert.equal((await ask(c, 7, 'sessions:start', [{ profileId: 'p', cwd: 'C:\\x', permissionMode: 'autoEdit' }])).ok, true)
+  assert.equal((await ask(c, 10, 'sessions:setComputer', ['s1', true])).ok, true, 'the PC can be driven from the phone')
+  assert.deepEqual(calls.at(-1), ['s1', true])
   assert.equal((await ask(c, 8, 'sessions:send', ['s1', 'hello', [], false])).ok, true)
   assert.deepEqual(calls.at(-1), ['s1', 'hello', [], false])
   await ask(c, 9, 'app:saveSettings', [{ theme: 'glass', browserMode: 'own', dataDir: 'x' }])
