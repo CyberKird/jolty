@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-09",
+ "updated": "2026-11-10",
  "source": "artificialanalysis.ai/leaderboards/models",
  "entries": [
   {
@@ -144,10 +144,10 @@
   },
   {
    "match": [
-    "claude-fable-5-1"
+    "claude-fable-5-2"
    ],
-   "iq": 47,
-   "note": "Claude Fable 5.1 · high (low 39, medium 43, xhigh 50, max 49)"
+   "iq": 62,
+   "note": "Claude Fable 5.2 · high (medium 56, xhigh 62, low 54, max 65)"
   },
   {
    "match": [
@@ -333,6 +333,13 @@
   },
   {
    "match": [
+    "gpt-oss-120b"
+   ],
+   "iq": 4,
+   "note": "gpt-oss-120b · high"
+  },
+  {
+   "match": [
     "gpt-6-astra"
    ],
    "iq": 55,
@@ -351,6 +358,13 @@
    ],
    "iq": 20,
    "note": "Qwen3.8 27B · xhigh (medium 17, low 16)"
+  },
+  {
+   "match": [
+    "muse-ember"
+   ],
+   "iq": 36,
+   "note": "Muse Ember · max (xhigh 34)"
   },
   {
    "match": [
@@ -440,8 +454,8 @@
    "match": [
     "fable"
    ],
-   "iq": 47,
-   "note": "Claude Fable 5.1 · high (low 39, medium 43, xhigh 50, max 49)"
+   "iq": 62,
+   "note": "Claude Fable 5.2 · high (medium 56, xhigh 62, low 54, max 65)"
   },
   {
    "match": [
