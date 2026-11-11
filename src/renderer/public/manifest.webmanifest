@@ -1,6 +1,6 @@
 {
-  "name": "Jolty",
-  "short_name": "Jolty",
+  "name": "Jolty Remote",
+  "short_name": "Jolty Remote",
   "description": "Jolty on your PC, from your phone",
   "start_url": "/",
   "scope": "/",

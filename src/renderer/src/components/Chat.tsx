@@ -23,6 +23,7 @@ import { ChatTools } from './ChatTools'
 import { QuoteBar, SelectionPopup } from './Quote'
 import { CompactStrip, LimitStrip, TaskStrip, UpdateStrip, VerificationStrip, WorkClock } from './Tasks'
 import { tr } from '@shared/i18n'
+import { Liquid } from './Liquid'
 import { VoiceButton } from './VoiceButton'
 import { Trans } from './Trans'
 import { OwnKeyStrip } from './Welcome'
@@ -707,7 +708,7 @@ function ContextMeter({ sessionId, running }: { sessionId: string; running: bool
       title={tr("{k}{v1} tokeni în context. Clic ca să compactezi: modelul rezumă conversația și eliberează loc.", { k: k(ctx.used), v1: ctx.window ? tr(" din {k}", { k: k(ctx.window) }) : '' })}
       onClick={() => void api.sessions.compact(sessionId).then(() => toast(tr("Compactez conversația…"))).catch((e) => toast(errMsg(e), true))}
     >
-      <span className="context-ring" style={{ ['--p' as string]: `${pct ?? 0}` }} aria-hidden />
+      <Liquid pct={pct ?? 0} size={21} high={pct !== undefined && pct >= 80} />
       {pct !== undefined ? `${Math.round(pct)}%` : k(ctx.used)}
     </button>
   )
@@ -754,6 +755,9 @@ function ReviewButton({ session, running, items }: { session: SessionMeta; runni
   )
 }
 
+/** conversations whose model or account is being switched right now */
+const switching = new Set<string>()
+
 function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Profile[] }) {
   const [open, setOpen] = useState(false)
   const pop = usePresence(open)
@@ -767,8 +771,8 @@ function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Pr
     setOpen(false)
     try {
       // same chat on another account of the same provider: it reads the whole context there, so shrink it first
-      if (!fresh && me && sameProvider(me, t)) await compactBefore(session.id)
-      const meta = await api.sessions.handoff(session.id, t.id, undefined, undefined, fresh)
+      const compacted = !fresh && me && sameProvider(me, t) ? await compactBefore(session.id) : true
+      const meta = await api.sessions.handoff(session.id, t.id, undefined, undefined, fresh || !compacted)
       await loadSessions()
       await openSession(meta.id)
       toast(tr("Conversația continuă în {name}", { name: t.name }))
@@ -1072,26 +1076,36 @@ export function ChatView({ session }: { session: SessionMeta }) {
         otherProfileHint={tr("Continuă conversația în acest cont")}
         seed={session.handoffPending ? tr("Continuă de unde ai rămas.") : undefined}
         onPick={(profileId, m, effort) => {
-          if (profileId === session.profileId) {
-            // a new model has no cache of this conversation: compact first, unless only the effort changes
-            void (m !== session.model ? compactBefore(session.id) : Promise.resolve())
-              .then(() => api.sessions.setModel(session.id, m))
-              .then(() => (effort ? api.sessions.setEffort(session.id, effort) : undefined))
-              .then(loadSessions)
-              .catch((e) => toast(errMsg(e), true))
-            return
-          }
-          // another account or engine cannot join a running engine session: carry the conversation over
+          const id = session.id
+          // a switch already under way (compacting takes a while): a second pick would start a second new chat
+          if (switching.has(id)) return toast(tr("Compactez conversația înainte, ca să nu o recitească tot noul cont sau model."))
+          const same = profileId === session.profileId
           const target = profiles.find((x) => x.id === profileId)
           const from = profiles.find((x) => x.id === session.profileId)
-          void (from && target && sameProvider(from, target) ? compactBefore(session.id) : Promise.resolve())
-            .then(() => api.sessions.handoff(session.id, profileId, m, effort))
-            .then(async (meta) => {
+          // a new model or account has no cache of this conversation: compact first (not when only the effort changes)
+          const needsCompact = same ? m !== session.model : Boolean(from && target && sameProvider(from, target))
+          switching.add(id)
+          void (async () => {
+            try {
+              const ok = needsCompact ? await compactBefore(id) : true
+              if (ok && same) {
+                await api.sessions.setModel(id, m)
+                if (effort) await api.sessions.setEffort(id, effort)
+                await loadSessions()
+                return
+              }
+              // another account or engine cannot join a running engine session (and a compaction that failed must not leave the
+              // whole conversation to be read cold): carry a compact brief into a new chat
+              const meta = await api.sessions.handoff(id, profileId, m, effort, !ok)
               await loadSessions()
               await openSession(meta.id)
               toast(tr("Conversația continuă în {v0}", { v0: target?.name || tr("alt profil") }))
-            })
-            .catch((e) => toast(errMsg(e), true))
+            } catch (e) {
+              toast(errMsg(e), true)
+            } finally {
+              switching.delete(id)
+            }
+          })()
         }}
         effort={session.effort}
         onEffort={(e) => void api.sessions.setEffort(session.id, e).then(loadSessions).catch((err) => toast(errMsg(err), true))}

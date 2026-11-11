@@ -1717,5 +1717,19 @@
  "Arată comenzile": "Tampilkan kontrol",
  "Sunet": "Suara",
  "Fără sunet": "Senyap",
- "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} belum diukur. Perkiraan dari versi {v}: kecerdasan {iq}{v1}"
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} belum diukur. Perkiraan dari versi {v}: kecerdasan {iq}{v1}",
+ "Se reconectează la PC…": "Menyambungkan kembali ke PC…",
+ "Compactarea nu a reușit. Continui într-un chat nou cu un rezumat scurt, ca să nu recitească tot.": "Pemadatan gagal. Dilanjutkan di chat baru dengan ringkasan singkat agar tidak membaca ulang semuanya.",
+ "Referință în conversație": "Rujuk di percakapan",
+ "Deschide întâi conversația în care vrei s-o folosești.": "Buka dulu percakapan tempat kamu ingin memakainya.",
+ "Bibliotecă": "Pustaka",
+ "Imagini": "Gambar",
+ "Video": "Video",
+ "Linkuri": "Tautan",
+ "Nimic aici încă. Ce atașezi sau lipești în conversații apare în bibliotecă.": "Belum ada apa-apa. Yang kamu lampirkan atau tempel di percakapan muncul di pustaka.",
+ "Tu": "Kamu",
+ "Rețea": "Jaringan",
+ "Shell": "Shell",
+ "Memorie": "Memori",
+ "Caută în bibliotecă": "Cari di pustaka"
 }

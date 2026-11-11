@@ -1717,5 +1717,19 @@
  "Arată comenzile": "操作を表示",
  "Sunet": "サウンド",
  "Fără sunet": "ミュート",
- "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} はまだ測定されていません。バージョン {v} からの推定: 知能 {iq}{v1}"
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} はまだ測定されていません。バージョン {v} からの推定: 知能 {iq}{v1}",
+ "Se reconectează la PC…": "PCに再接続しています…",
+ "Compactarea nu a reușit. Continui într-un chat nou cu un rezumat scurt, ca să nu recitească tot.": "圧縮に失敗しました。すべてを読み直さないよう、短い要約を付けた新しいチャットで続けます。",
+ "Referință în conversație": "会話で参照する",
+ "Deschide întâi conversația în care vrei s-o folosești.": "まず、使いたい会話を開いてください。",
+ "Bibliotecă": "ライブラリ",
+ "Imagini": "画像",
+ "Video": "動画",
+ "Linkuri": "リンク",
+ "Nimic aici încă. Ce atașezi sau lipești în conversații apare în bibliotecă.": "まだ何もありません。会話で添付または貼り付けたものがライブラリに表示されます。",
+ "Tu": "あなた",
+ "Rețea": "ネットワーク",
+ "Shell": "シェル",
+ "Memorie": "メモリ",
+ "Caută în bibliotecă": "ライブラリを検索"
 }

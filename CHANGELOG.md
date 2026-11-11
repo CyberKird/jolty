@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.26.0
+
+### New
+
+- Library: a new page in the left list, next to Settings and Skills. Everything you attached or pasted in any conversation, in one place: images (tiles that load small, click for the full picture), videos, sounds, files and links, with a filter for each kind and a search. Click a row to open its conversation.
+- The Live panel shows a map of what the model is doing, instead of the signal line: the model in the middle with its context level, and around it You, Model, Files, Shell, Network, Browser, Subagents, Skills and Memory. The place where a tool is running lights up and a small packet runs along its line; the number under a place is how many times the conversation went there, and a red dot counts the commands that failed. On a weak PC or with motion off it holds still and shows the same.
+- The context indicator in the header is a glass sphere with liquid in it: the level is how full the context is, the surface ripples slowly, and it changes colour past 80%. It moves on the graphics chip only and holds still in low-power mode.
+- Right-click a conversation, "Reference in conversation": the open chat gets a note that points the model to that conversation (as a file it reads only if it needs it), so it costs a line, not the whole text.
+- Jolty Remote on the phone is the same app as on the PC: the conversation or page you open on one opens on the other, and a theme change shows up on both at once. On the home screen it is called Jolty Remote.
+- On the phone: swipe from the left edge to pull the drawer out (it follows your finger and goes where you were heading), swipe to the left to push it back. More motion: the drawer fills in item by item, the last messages come in one after another, pages rise with a small spring and the message box lights up when you touch it.
+
+### Improvements
+
+- The phone works on a poor connection. Pages and messages travel compressed, the page opens at once from the phone's own copy (and from the last picture of your conversations) while the line is being made, a dead connection is noticed and remade the moment you come back to the app, reads that were cut off are asked again, and a small note says when the PC cannot be reached.
+- The keyboard on the phone: the message box sits on it, the newest message stays in view and the page no longer jumps. The page no longer scrolls sideways; only code blocks and tables do.
+- The Gemini models in the model list show their name (3.6 Flash, 4 Argon) instead of what each one is for; the rest is in the note that appears on hover, which now follows the theme of the app.
+
+### Fixed
+
+- Switching a chat to another model or account when compacting fails no longer hangs for minutes and leaves several new chats behind: the switch goes on in a new chat with a short summary, and a second click while it works is ignored.
+
 ## 0.25.1
 
 ### Fixed

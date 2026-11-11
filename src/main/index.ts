@@ -19,6 +19,7 @@ import * as updater from './updater'
 import * as local from './local'
 import * as modelWatch from './model-watch'
 import * as store from './store'
+import { buildLibrary } from './library'
 import * as skills from './skills'
 import * as pack from './share-pack'
 import * as system from './system'
@@ -319,6 +320,27 @@ function registerIpc(): void {
     jolty.handoff(id, target, typeof model === 'string' ? model : undefined, typeof effort === 'string' ? effort : undefined, fresh === true)
   )
   handle('sessions:remove', (id: string) => jolty.removeSession(id))
+  handle('sessions:referenceFile', (id: string) => jolty.referenceFile(String(id)))
+  // the Library page: what was attached or linked, and the pictures one by one (small ones for the grid)
+  const thumbs = new Map<string, string>()
+  handle('library:list', () => buildLibrary(jolty.sessions(), (id) => store.loadTranscript(id)))
+  handle('library:image', (sessionId: unknown, itemId: unknown, index: unknown, small: unknown) => {
+    if (typeof sessionId !== 'string' || typeof itemId !== 'string' || typeof index !== 'number') return null
+    const key = `${sessionId}:${itemId}:${index}:${small === true}`
+    const hit = thumbs.get(key)
+    if (hit) return hit
+    const item = store.loadTranscript(sessionId).find((x) => x.id === itemId)
+    const url = item && item.kind === 'user' ? item.images?.[index]?.dataUrl : undefined
+    if (!url) return null
+    let out = url
+    if (small === true) {
+      const img = nativeImage.createFromDataURL(url)
+      if (!img.isEmpty() && img.getSize().width > 280) out = `data:image/jpeg;base64,${img.resize({ width: 280, quality: 'good' }).toJPEG(72).toString('base64')}`
+      if (thumbs.size > 400) thumbs.clear()
+      thumbs.set(key, out)
+    }
+    return out
+  })
   handle('sessions:rename', (id: string, title: string) => jolty.renameSession(String(id), String(title)))
   handle('sessions:setFlags', (ids: unknown, flags: { pinned?: boolean; archived?: boolean }) => jolty.setFlags(Array.isArray(ids) ? ids.map(String) : [], flags ?? {}))
   handle('sessions:closed', () => jolty.closedSessions())
@@ -395,6 +417,18 @@ function registerIpc(): void {
   handle('codexImport:detect', (id: string, cwd?: string) => jolty.codex.importDetect(jolty.profile(id), cwd))
   handle('codexImport:run', (id: string, cwd?: string, types?: string[]) => jolty.codex.importRun(jolty.profile(id), cwd, types))
 
+  // what is shown (open conversation, page): the PC's window and the phones follow each other; the last change wins
+  let shown: { activeId?: string; page?: string } = {}
+  handle('ui:state', (patch: unknown, from: unknown) => {
+    if (patch && typeof patch === 'object') {
+      const p = patch as { activeId?: unknown; page?: unknown }
+      if (typeof p.activeId === 'string') shown.activeId = p.activeId.slice(0, 80)
+      else if (p.activeId === null) shown.activeId = undefined
+      if (typeof p.page === 'string' && /^[a-z]{3,12}$/.test(p.page)) shown.page = p.page
+      send({ type: 'ui', ...shown, from: typeof from === 'string' ? from.slice(0, 40) : '' })
+    }
+    return shown
+  })
   handle('app:settings', () => store.loadSettings())
   // read synchronously by the preload, before the interface builds any text
   ipcMain.on('app:lang', (e) => (e.returnValue = getLang()))
@@ -406,6 +440,7 @@ function registerIpc(): void {
     if (patch && typeof patch === 'object' && Object.keys(patch).some((k) => k.startsWith('browser'))) await jolty.reconnectBrowser()
     if (patch && typeof patch === 'object' && ('keepInBackground' in patch || 'startWithWindows' in patch)) background.apply(patch as never)
     if (patch && typeof patch === 'object' && ('theme' in patch || 'glassClear' in patch)) void applyWindowGlass()
+    send({ type: 'settingsChanged' })
     return saved
   })
   handle('app:pickFolder', async () => {

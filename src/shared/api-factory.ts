@@ -45,6 +45,7 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       handoff: (id, target, model, effort, fresh) => call('sessions:handoff', id, target, model, effort, fresh),
       remove: (id) => call('sessions:remove', id),
       rename: (id, title) => call('sessions:rename', id, title),
+      referenceFile: (id) => call('sessions:referenceFile', id),
       setFlags: (ids, flags) => call('sessions:setFlags', ids, flags),
       closed: () => call('sessions:closed'),
       restore: (id) => call('sessions:restore', id),
@@ -182,6 +183,13 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       quickSubmit: (input) => call('quick:submit', input),
       quickClose: () => call('quick:close'),
       onQuickShown: (cb) => listen('quick:shown', () => cb())
+    },
+    library: {
+      list: () => call('library:list'),
+      image: (sessionId, itemId, index, small) => call('library:image', sessionId, itemId, index, small)
+    },
+    ui: {
+      state: (patch, from) => call('ui:state', patch, from)
     },
     remote: {
       status: () => call('remote:status'),

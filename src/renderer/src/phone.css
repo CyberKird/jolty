@@ -498,3 +498,190 @@ html.remote .ghost-go {
     overflow: visible;
   }
 }
+
+/* The line to the PC is down: a small note under the header, while the page stays usable from the last picture. */
+html.remote .link-pill {
+  position: fixed;
+  z-index: 95;
+  top: calc(8px + env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 12px;
+  border: 1px solid var(--line-2);
+  background: var(--s3);
+  color: var(--white);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -14px) scale(0.96);
+  transition: opacity 0.26s var(--ease), transform 0.34s var(--ease);
+}
+html.remote .link-pill.on {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+html.remote .link-pill i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--volt);
+  animation: link-dot 1.1s ease-in-out infinite;
+}
+@keyframes link-dot {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+}
+
+/* ---- the page never moves sideways: only what is made to (a code block, a table) scrolls that way ---- */
+@media (max-width: 760px) {
+  html.remote,
+  html.remote body {
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
+  html.remote :is(.app, .main, .page, .messages, .welcome, .sidebar, .chat-header, .composer-wrap) {
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+  html.remote :is(.page, .messages, .welcome, .main) {
+    touch-action: pan-y pinch-zoom;
+  }
+  html.remote :is(pre, table, .table-wrap, .md-table, .code-block) {
+    touch-action: pan-x pan-y;
+    overscroll-behavior-x: contain;
+  }
+  /* a long path or link breaks instead of pushing the screen wider */
+  html.remote :is(.msg-user, .msg-assistant, .page, .welcome, .toast, .session-item) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  html.remote :is(img, video, canvas, svg):not(.icon) {
+    max-width: 100%;
+  }
+
+  /* the keyboard is up: the box sits right on it, without the home bar's room under it */
+  html.remote.kb .composer-wrap {
+    padding-bottom: 8px;
+  }
+  html.remote.kb .install-hint {
+    display: none;
+  }
+
+  /* the finger has the drawer: it follows it one to one, with no easing of its own */
+  html.drawer-drag .sidebar,
+  html.drawer-drag .app::after {
+    transition: none !important;
+  }
+  html.drawer-drag .sidebar {
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.7);
+  }
+  html.drawer-drag .app::after {
+    opacity: var(--scrim, 0) !important;
+    pointer-events: none !important;
+  }
+}
+
+/* ---- motion on a phone: more travel and a little spring, since a thumb sees movement a mouse pointer does not ---- */
+@media (max-width: 760px) {
+  html.remote:not(.reduce-motion):not(.low-power) {
+    --t-base: 260ms;
+    --t-slow: 380ms;
+    --t-exit: 180ms;
+    --t-exit-slow: 240ms;
+    --rise: 16px;
+    --stagger: 36ms;
+    --e-out: cubic-bezier(0.2, 0.85, 0.2, 1);
+    --e-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+  }
+  /* the drawer slides without overshoot (it would leave a gap at the edge); what is inside comes in behind it, one after another */
+  html.remote .sidebar,
+  html.remote .app.no-sidebar .sidebar {
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  html.remote .app::after {
+    transition: opacity 0.4s var(--ease);
+  }
+  html.remote:not(.reduce-motion) .app:not(.no-sidebar) .sidebar > * {
+    animation: drawer-in 0.55s var(--e-spring, var(--ease)) both;
+  }
+  html.remote .app:not(.no-sidebar) .sidebar > :nth-child(2) {
+    animation-delay: 40ms;
+  }
+  html.remote .app:not(.no-sidebar) .sidebar > :nth-child(3) {
+    animation-delay: 80ms;
+  }
+  html.remote .app:not(.no-sidebar) .sidebar > :nth-child(4) {
+    animation-delay: 120ms;
+  }
+  html.remote .app:not(.no-sidebar) .sidebar > :nth-child(n + 5) {
+    animation-delay: 160ms;
+  }
+  /* the last messages of a conversation arrive in turn; a new one rises into place, yours from the side it was sent from */
+  html.remote:not(.reduce-motion) .messages :is(.msg-row, .msg-assistant):nth-last-child(-n + 4) {
+    animation: msg-pop 0.5s var(--e-spring, var(--ease)) both;
+  }
+  html.remote:not(.reduce-motion) .messages .msg-row:nth-last-child(-n + 4) {
+    animation-name: msg-pop-user;
+  }
+  html.remote .messages :is(.msg-row, .msg-assistant):nth-last-child(4) {
+    animation-delay: 0ms;
+  }
+  html.remote .messages :is(.msg-row, .msg-assistant):nth-last-child(3) {
+    animation-delay: 50ms;
+  }
+  html.remote .messages :is(.msg-row, .msg-assistant):nth-last-child(2) {
+    animation-delay: 100ms;
+  }
+  html.remote .messages :is(.msg-row, .msg-assistant):nth-last-child(1) {
+    animation-delay: 150ms;
+  }
+  html.remote:not(.reduce-motion) .page {
+    animation: phone-page 0.5s var(--e-spring, var(--ease)) both;
+  }
+  /* the box wakes up when it is touched */
+  html.remote .composer {
+    transition: box-shadow 0.35s var(--ease), border-color 0.3s var(--ease), transform 0.4s var(--e-spring, var(--ease));
+  }
+  html.remote .composer:focus-within {
+    box-shadow: 0 0 0 1px var(--volt-line), 0 14px 44px -14px rgba(var(--volt-rgb), 0.4);
+  }
+}
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+@keyframes msg-pop {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+}
+@keyframes msg-pop-user {
+  from {
+    opacity: 0;
+    transform: translateX(18px) scale(0.94);
+  }
+}
+@keyframes phone-page {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+  }
+}
+
+/* the "PC does not answer" screen over a page that was opened from the last picture of the PC */
+html.remote .offline-over {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow-y: auto;
+  background: var(--black);
+}

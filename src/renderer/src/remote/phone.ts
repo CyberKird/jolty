@@ -1,6 +1,7 @@
 import { tr } from '@shared/i18n'
 import { api, useStore } from '../store'
 import { play, soundsOn, unlockAudio } from '../mascot/sfx'
+import { setupGestures } from './gestures'
 
 /** Behaviour only a phone needs: the sidebar is a drawer, closed at the start and after a conversation or page is chosen. */
 export function setupPhone(): void {
@@ -19,16 +20,45 @@ export function setupPhone(): void {
   // the visible height: on iOS the keyboard covers the page instead of shrinking it, so the composer would hide under it
   const vv = window.visualViewport
   if (vv) {
-    // iOS also scrolls the page up to show the focused field: the page follows the visible area (offsetTop) instead of staying put
+    // the tallest the page has been with no field being typed in: below that by a keyboard's height, the keyboard is up
+    let full = vv.height
+    let frame = 0
+    const typing = (): boolean => {
+      const a = document.activeElement
+      return a instanceof HTMLTextAreaElement || a instanceof HTMLInputElement || (a instanceof HTMLElement && a.isContentEditable)
+    }
+    const apply = (): void => {
+      frame = 0
+      const root = document.documentElement
+      if (!typing()) full = Math.max(full, vv.height)
+      const kb = vv.height < full - 110
+      const messages = document.querySelector<HTMLElement>('.messages')
+      // at the bottom of the conversation the newest message stays in view when the keyboard comes up
+      const atEnd = !!messages && messages.scrollHeight - messages.scrollTop - messages.clientHeight < 90
+      const was = root.classList.contains('kb')
+      root.style.setProperty('--vvh', `${vv.height}px`)
+      // iOS also scrolls the page up to show the focused field: the page follows the visible area (offsetTop) instead of staying put
+      root.style.setProperty('--vvt', `${vv.offsetTop}px`)
+      root.classList.toggle('kb', kb)
+      if (kb !== was && atEnd && messages) requestAnimationFrame(() => (messages.scrollTop = messages.scrollHeight))
+    }
+    // once per frame: the keyboard's slide fires many events, and the page follows it in step instead of stuttering behind
     const fit = (): void => {
-      const root = document.documentElement.style
-      root.setProperty('--vvh', `${vv.height}px`)
-      root.setProperty('--vvt', `${vv.offsetTop}px`)
+      if (!frame) frame = requestAnimationFrame(apply)
     }
     vv.addEventListener('resize', fit)
     vv.addEventListener('scroll', fit)
-    fit()
+    document.addEventListener('focusin', () => {
+      fit()
+      // iOS scrolls the whole page to the field; the page is fixed, so it is put back
+      window.setTimeout(() => window.scrollTo(0, 0), 60)
+    })
+    document.addEventListener('focusout', () => window.setTimeout(fit, 120))
+    // turning the phone changes what "full" is
+    window.addEventListener('orientationchange', () => window.setTimeout(() => ((full = vv.height), fit()), 400))
+    apply()
   }
+  setupGestures()
   installHint()
   phoneSounds()
   keepWake()

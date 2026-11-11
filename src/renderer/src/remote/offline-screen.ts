@@ -33,8 +33,10 @@ async function ask(w: WakeConfig): Promise<string | undefined> {
 }
 
 /** Puts the screen up; the connection keeps trying behind it and the app takes over the moment the PC answers. */
-export function offlineScreen(retry: () => void): void {
-  const root = document.getElementById('root')!
+export function offlineScreen(retry: () => void, over = false): void {
+  // over a page that is already up (opened from the last picture of the PC): the screen covers it and goes away when the PC answers
+  const root = over ? Object.assign(document.createElement('div'), { id: 'offline-host', className: 'offline-over' }) : document.getElementById('root')!
+  if (over) document.body.append(root)
   const wake = savedWake()
   root.replaceChildren()
   const page = el('div', 'pair offline')
@@ -90,5 +92,7 @@ export function offlineScreen(retry: () => void): void {
 /** The app is about to start: the screen goes. */
 export function clearOffline(): void {
   clearInterval(timer)
-  document.getElementById('root')?.replaceChildren()
+  const over = document.getElementById('offline-host')
+  if (over) over.remove()
+  else document.getElementById('root')?.replaceChildren()
 }

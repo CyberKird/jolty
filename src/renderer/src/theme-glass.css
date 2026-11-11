@@ -148,7 +148,7 @@ html:is([data-theme='glass'], [data-theme='frost']) :is(.btn, .msg-user, .meta-c
   border-color: transparent;
 }
 /* what floats over content bends the light at its rim and blurs what is behind it; it is short-lived, so the cost is brief */
-html:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast) {
+html:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .picker-tip, .ctx, .mentions, .sel-popup, .toast) {
   background: var(--glass-sheen), var(--glass-pop);
   backdrop-filter: var(--glass-lens);
   box-shadow: var(--glass-rim-hi), 0 22px 60px -14px rgba(0, 0, 0, 0.7);

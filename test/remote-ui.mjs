@@ -88,6 +88,50 @@ try {
   assert.equal(await phone.locator('.live').first().isVisible(), false)
   assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'nothing wider than the screen')
   await phone.screenshot({ path: path.join(shots, 'phone-chat.png') })
+  // nothing inside the page reaches past the screen (a code block or table scrolls inside itself), and nothing scrolls sideways
+  const wide = await phone.evaluate(() =>
+    [...document.querySelectorAll('.app *')]
+      .filter((e) => {
+        const r = e.getBoundingClientRect()
+        return r.width > 0 && r.right > window.innerWidth + 1 && !e.closest('pre, table, .sidebar') && getComputedStyle(e).position !== 'fixed'
+      })
+      .slice(0, 6)
+      .map((e) => `${e.tagName}.${e.className}`)
+  )
+  assert.deepEqual(wide, [], 'nothing reaches past the screen')
+  assert.equal(await phone.evaluate(() => getComputedStyle(document.querySelector('.messages')).touchAction), 'pan-y pinch-zoom')
+
+  // a finger moves the drawer: a swipe from the left edge opens it, a swipe to the left closes it, a short or low one does nothing
+  const touch = await phone.context().newCDPSession(phone)
+  await touch.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 })
+  const swipe = async (x0, x1, y = 420) => {
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y }] })
+    for (let i = 1; i <= 8; i++) {
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + ((x1 - x0) * i) / 8, y }] })
+      await phone.waitForTimeout(18)
+    }
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await phone.waitForTimeout(500)
+  }
+  const closed = () => phone.evaluate(() => document.querySelector('.app').classList.contains('no-sidebar'))
+  await swipe(4, 40)
+  assert.equal(await closed(), true, 'a short pull leaves the drawer shut')
+  await swipe(4, 300)
+  assert.equal(await closed(), false, 'a swipe from the edge opens the drawer')
+  assert.equal(await phone.evaluate(() => document.documentElement.classList.contains('drawer-drag')), false, 'the drag ends')
+  await swipe(320, 30)
+  assert.equal(await closed(), true, 'a swipe to the left closes it')
+  await touch.send('Emulation.setTouchEmulationEnabled', { enabled: false })
+  await touch.detach()
+
+  // one app on two screens: what the phone opened is what the PC shows, and a page the PC opens opens on the phone too
+  await phone.waitForTimeout(600)
+  const seen = await win.evaluate(() => window.jolty.ui.state())
+  assert.equal(seen.activeId, 's1', 'the PC knows which conversation the phone has open')
+  await win.evaluate(() => window.jolty.ui.state({ page: 'usage' }, 'pc-test'))
+  await phone.waitForFunction(() => document.querySelector('.nav-item.active')?.textContent?.includes('Usage'), null, { timeout: 10000 })
+  await win.evaluate(() => window.jolty.ui.state({ activeId: 's1', page: 'chat' }, 'pc-test'))
+  await phone.waitForSelector('.msg-assistant .md', { timeout: 10000 })
 
   // the desktop sees the paired phone
   const st = await win.evaluate(() => window.jolty.remote.status())

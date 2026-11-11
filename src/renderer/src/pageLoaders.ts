@@ -1,5 +1,6 @@
 // The lazy pages, loadable ahead of the switch: the page cross-fades in with its content, not a blank column that fills later.
 const loaders: Record<string, () => Promise<unknown>> = {
+  library: () => import('./pages/Library'),
   import: () => import('./pages/Import'),
   accounts: () => import('./pages/Accounts'),
   local: () => import('./pages/Local'),

@@ -1,4 +1,4 @@
-import { BarChart3, CalendarClock, Cpu, Download, KeyRound, Monitor, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck } from 'lucide-react'
+import { BarChart3, CalendarClock, Cpu, Download, Images, KeyRound, Monitor, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck } from 'lucide-react'
 import { BugReportButton } from './BugReport'
 import { MergeHost } from './MergePanel'
 import { useEffect, useMemo, useState } from 'react'
@@ -303,6 +303,7 @@ const NAV: { id: Page; label: string; icon: typeof Plus }[] = [
   { id: 'accounts', label: tr("Conturi și chei"), icon: KeyRound },
   { id: 'local', label: tr("Modele locale"), icon: Cpu },
   { id: 'usage', label: tr("Consum"), icon: BarChart3 },
+  { id: 'library', label: tr("Bibliotecă"), icon: Images },
   { id: 'schedules', label: tr("Programate"), icon: CalendarClock },
   { id: 'skills', label: tr("Skilluri"), icon: Puzzle },
   { id: 'system', label: tr("Verificare sistem"), icon: ShieldCheck },

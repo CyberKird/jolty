@@ -31,6 +31,23 @@ test('the model menu becomes the picker list: locked rows out, the checked one i
   assert.deepEqual(effortIds(2), ['low', 'high'])
 })
 
+test('the row shows the model name, the mode line goes to the hover note, whichever way the menu lists them', () => {
+  const now = parseMenu({
+    ok: true,
+    models: [
+      { id: 'a', title: 'Răspunsuri rapide', note: '3.5 Flash-Lite', locked: false },
+      { id: 'b', title: 'Cod și analiză', note: '4 Argon', locked: false, selected: true }
+    ]
+  })
+  assert.deepEqual(now.map((m) => m.label), ['3.5 Flash-Lite', '4 Argon'])
+  assert.deepEqual(now.map((m) => m.id), ['Răspunsuri rapide', 'Cod și analiză'])
+  assert.deepEqual(now.map((m) => m.tip), ['Răspunsuri rapide', 'Cod și analiză'])
+  const before = parseMenu(MENU)
+  assert.equal(before[1].label, '3.6 Flash')
+  assert.equal(before[1].tip, 'All round')
+  assert.equal(before[1].description, undefined)
+})
+
 const meta = (over: Partial<SessionMeta> = {}): SessionMeta => ({ id: 's1', profileId: 'p1', engine: 'gemini', cwd: '/', title: 't', permissionMode: 'ask', createdAt: 0, updatedAt: 0, ...over })
 const profile: Profile = { id: 'p1', name: 'Gemini', engine: 'gemini', auth: 'existing', isDefaultDir: true, color: '#fff' }
 

@@ -1717,5 +1717,19 @@
  "Arată comenzile": "조작 표시",
  "Sunet": "소리",
  "Fără sunet": "음소거",
- "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label}은(는) 아직 측정되지 않았습니다. 버전 {v} 기준 추정: 지능 {iq}{v1}"
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label}은(는) 아직 측정되지 않았습니다. 버전 {v} 기준 추정: 지능 {iq}{v1}",
+ "Se reconectează la PC…": "PC에 다시 연결하는 중…",
+ "Compactarea nu a reușit. Continui într-un chat nou cu un rezumat scurt, ca să nu recitească tot.": "압축에 실패했습니다. 전체를 다시 읽지 않도록 짧은 요약과 함께 새 채팅에서 이어갑니다.",
+ "Referință în conversație": "대화에서 참조",
+ "Deschide întâi conversația în care vrei s-o folosești.": "먼저 사용하려는 대화를 여세요.",
+ "Bibliotecă": "라이브러리",
+ "Imagini": "이미지",
+ "Video": "동영상",
+ "Linkuri": "링크",
+ "Nimic aici încă. Ce atașezi sau lipești în conversații apare în bibliotecă.": "아직 아무것도 없습니다. 대화에서 첨부하거나 붙여넣은 항목이 라이브러리에 표시됩니다.",
+ "Tu": "나",
+ "Rețea": "네트워크",
+ "Shell": "셸",
+ "Memorie": "메모리",
+ "Caută în bibliotecă": "라이브러리 검색"
 }

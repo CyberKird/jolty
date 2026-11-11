@@ -11,6 +11,7 @@ import { PowerBar } from './components/PowerBar'
 import { ScreenBar } from './components/ScreenBar'
 import { Sidebar } from './components/Sidebar'
 import { api, liveRows, useStore } from './store'
+import { setupUiSync } from './uisync'
 import { batchDeltas } from './event-batch'
 import { lowPower, setLowPowerMode } from './lowpower'
 import { applyTheme, setClear } from './theme'
@@ -24,6 +25,7 @@ const LocalPage = lazy(() => import('./pages/Local').then((m) => ({ default: m.L
 const SettingsPage = lazy(() => import('./pages/Settings').then((m) => ({ default: m.SettingsPage })))
 const SystemPage = lazy(() => import('./pages/System').then((m) => ({ default: m.SystemPage })))
 const UsagePage = lazy(() => import('./pages/Usage').then((m) => ({ default: m.UsagePage })))
+const LibraryPage = lazy(() => import('./pages/Library').then((m) => ({ default: m.LibraryPage })))
 const SkillsPage = lazy(() => import('./pages/Skills').then((m) => ({ default: m.SkillsPage })))
 // the mascot (and three.js with it) is not needed for the first frame: it starts once the window is idle
 const Mascot = lazy(() => import('./mascot/Mascot').then((m) => ({ default: m.Mascot })))
@@ -128,18 +130,26 @@ export function App() {
     const off = api.sessions.onEvent(batchDeltas(onEvent, () => (lowPower() ? 120 : 40)))
     // limits and 24 h spend for the sidebar meter; events keep them live afterwards
     void loadUsage()
-    void api.app.settings().then((s) => {
-      document.documentElement.classList.toggle('reduce-motion', Boolean(s.reduceMotion))
-      setLowPowerMode(s.lowPower)
-      applyTheme(s.theme, s.glassClear)
-      // without Windows' transparency effects the window stays solid, so the page must not thin out either
-      void api.app.glassSupport().then((support) => support !== 'ok' && setClear(0))
-    })
+    const applySettings = (): void =>
+      void api.app.settings().then((s) => {
+        document.documentElement.classList.toggle('reduce-motion', Boolean(s.reduceMotion))
+        setLowPowerMode(s.lowPower)
+        applyTheme(s.theme, s.glassClear)
+        // without Windows' transparency effects the window stays solid, so the page must not thin out either
+        void api.app.glassSupport().then((support) => support !== 'ok' && setClear(0))
+      })
+    applySettings()
+    // a preference changed on the PC or on a phone: the look follows at once
+    window.addEventListener('jolty:settings', applySettings)
+    setupUiSync()
     document.documentElement.lang = getLang()
     document.documentElement.dir = isRtl() ? 'rtl' : 'ltr'
     void api.updates.status().then((status) => onEvent({ type: 'update', status }))
     void api.power.state().then((p) => onEvent({ type: 'power', ...p }))
-    return off
+    return () => {
+      off()
+      window.removeEventListener('jolty:settings', applySettings)
+    }
   }, [loadProfiles, loadSessions, loadUsage, onEvent])
 
   // Ctrl+N new conversation, Ctrl+K search conversations, Ctrl+B sidebar, Ctrl+L live panel
@@ -184,6 +194,7 @@ export function App() {
           {page === 'local' && <LocalPage />}
           {page === 'usage' && <UsagePage />}
           {page === 'schedules' && <SchedulesPage />}
+          {page === 'library' && <LibraryPage />}
           {page === 'skills' && <SkillsPage />}
           {page === 'system' && <SystemPage />}
           {page === 'settings' && <SettingsPage />}

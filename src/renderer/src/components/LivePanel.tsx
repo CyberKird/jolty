@@ -9,17 +9,19 @@ import { DiffView, highlight, highlightLive, langOf, type DiffReview } from './R
 import { reviewMessage, type ReviewComment } from '@shared/review'
 import { useNow } from './Tasks'
 import { tr } from '@shared/i18n'
+import { ActivityGraph } from './ActivityGraph'
+import './activity-graph.css'
 
 type Tool = Extract<ChatItem, { kind: 'tool' }>
 
 const EMPTY: ChatItem[] = []
 
 // ---------------------------------------------------------------------------
-// State: what the agent is doing, drawn as a live electrical signal
+// State: what the agent is doing, drawn as a map of the places it reaches (ActivityGraph)
 // ---------------------------------------------------------------------------
 type Wave = 'flat' | 'sine' | 'square' | 'spike' | 'saw' | 'pulse'
 
-interface Phase {
+export interface Phase {
   key: string
   name: string
   detail?: string
@@ -66,56 +68,6 @@ function phaseOf(items: ChatItem[], status: string | undefined, perms: Permissio
     if (it.kind === 'user') break
   }
   return make('think')
-}
-
-/** One period of the signal repeated across the strip; the strip scrolls by exactly one period. */
-function wavePath(wave: Wave, amp: number, period: number, width: number, mid: number): string {
-  const pts: string[] = []
-  const total = width + period * 2
-  for (let x = 0; x <= total; x += 1) {
-    const t = (x % period) / period
-    let y = 0
-    if (wave === 'sine') y = Math.sin(t * Math.PI * 2) * amp
-    else if (wave === 'square') y = t < 0.5 ? -amp : amp
-    else if (wave === 'saw') y = (t * 2 - 1) * amp
-    else if (wave === 'pulse') y = t < 0.16 ? -Math.sin((t / 0.16) * Math.PI) * amp : 0
-    else if (wave === 'spike') y = t > 0.4 && t < 0.44 ? -amp : t >= 0.44 && t < 0.5 ? amp * 0.55 : t >= 0.5 && t < 0.54 ? -amp * 0.2 : 0
-    pts.push(`${x},${(mid + y).toFixed(1)}`)
-  }
-  return 'M' + pts.join(' L')
-}
-
-function Signal({ phase }: { phase: Phase }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [w, setW] = useState(330)
-  useEffect(() => {
-    if (!ref.current) return
-    const ro = new ResizeObserver(([e]) => setW(Math.floor(e.contentRect.width)))
-    ro.observe(ref.current)
-    return () => ro.disconnect()
-  }, [])
-  const H = 64
-  const total = w + phase.period * 2
-  const d = useMemo(() => wavePath(phase.wave, phase.amp, phase.period, w, H / 2), [phase.wave, phase.amp, phase.period, w])
-  // the wave scrolls as an HTML layer: the compositor moves it, nothing is repainted per frame
-  return (
-    <div ref={ref} className="state-line" aria-hidden>
-      <div
-        key={phase.key}
-        className="state-wave"
-        style={{
-          width: total,
-          animation: phase.on ? `signal-${phase.key} ${phase.speed}s linear infinite` : undefined,
-          filter: phase.on ? 'drop-shadow(0 0 4px rgba(212,255,0,.45))' : undefined
-        }}
-      >
-        <svg width={total} height="100%" viewBox={`0 0 ${total} ${H}`} preserveAspectRatio="none">
-          <path d={d} stroke={phase.color} vectorEffect="non-scaling-stroke" />
-        </svg>
-      </div>
-      <style>{`@keyframes signal-${phase.key} { to { transform: translateX(-${phase.period}px) } }`}</style>
-    </div>
-  )
 }
 
 // ---------------------------------------------------------------------------
@@ -642,6 +594,8 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
     }
   }
   const phase = phaseOf(items, status, perms, drafts)
+  const ctx = useStore((st) => st.contexts[id])
+  const ctxPct = ctx?.window ? Math.min(100, (ctx.used / ctx.window) * 100) : undefined
   const tools = items.filter((i): i is Tool => i.kind === 'tool')
   const reads = new Set(tools.filter((t) => toolKind(t.name) === 'read').flatMap(toolPaths)).size
   const edits = new Set(tools.filter((t) => ['edit', 'write'].includes(toolKind(t.name)) || t.diffs?.length).flatMap(toolPaths)).size
@@ -734,7 +688,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
             <X size={14} />
           </button>
         </div>
-        <Signal phase={phase} />
+        {open && <ActivityGraph items={items} phase={phase} engine={session?.engine || 'claude'} model={session?.model} context={ctxPct} />}
         <div className={`state-name ${phase.on && phase.key !== 'approval' ? 'on' : ''}`} style={phase.key === 'approval' ? { color: 'var(--warning)' } : undefined}>
           {phase.name}
         </div>

@@ -2,6 +2,7 @@
 // the way the Claude app does it. Also the compact permission-mode menu next to it.
 import { Check, ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { capability } from '@shared/complexity'
 import { modelScore } from '@shared/scores'
 import type { BrowserMode, EngineKind, ModelOption, PermissionMode, Profile, SiteTrust } from '@shared/types'
@@ -116,6 +117,22 @@ export function ModelPicker(p: {
 }) {
   const { open, setOpen, ref, shown, state } = usePopover()
   const limits = useStore((s) => s.limits)
+  // what a row says about its model, in a note of the app's own look (the system's tooltip does not follow the theme)
+  const [tip, setTip] = useState<{ head: string; lines: string[]; x: number; y: number } | null>(null)
+  const showTip = (el: HTMLElement, head: string, lines: string[]): void => {
+    if (!lines.length) return setTip(null)
+    const r = el.getBoundingClientRect()
+    const w = 270
+    const h = 34 + lines.length * 40
+    const right = r.right + 10 + w <= window.innerWidth - 8
+    const left = r.left - 10 - w >= 8
+    if (right || left) {
+      setTip({ head, lines, x: right ? r.right + 10 : r.left - 10 - w, y: Math.min(Math.max(8, r.top), window.innerHeight - 8 - h) })
+    } else {
+      // narrow screens have no room beside the row: the note goes below it, or above when the screen ends there
+      setTip({ head, lines, x: Math.max(8, Math.min(r.left, window.innerWidth - 8 - w)), y: r.bottom + 8 + h > window.innerHeight ? Math.max(8, r.top - 8 - h) : r.bottom + 8 })
+    }
+  }
   const group = p.groups.find((g) => g.profile.id === p.profileId)
   const current = group?.models.find((m) => m.id === p.model || m.alias === p.model) || group?.models.find((m) => m.isDefault)
   const efforts = current?.efforts || []
@@ -158,6 +175,7 @@ export function ModelPicker(p: {
                       : tr("{name} e inclus în plan. Se numără separat: {used}% folosit, resetare {when}.", bucketVars)
                     : ''
                   const scoreTip = sc ? (sc.measured ? tr("{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}", { label: m.label, v: sc.measured, iq: sc.iq, v1: sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : '' }) : tr("Inteligență {iq}{v1} (Artificial Analysis): {note}", { iq: sc.iq, v1: sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : '', note: sc.note })) : cap.compare
+                  const rowTip = [m.tip, m.description, other && p.otherProfileHint ? p.otherProfileHint : '', m.efforts?.length ? tr("Gândire: {join}", { join: m.efforts.join(', ') }) : tr("Fără niveluri de gândire"), m.vision === false ? tr("Nu vede imagini: le descrie alt profil") : '', scoreTip, bucketTip].filter(Boolean) as string[]
                   return (
                     <button
                       key={m.id}
@@ -165,7 +183,10 @@ export function ModelPicker(p: {
                       role="menuitemradio"
                       aria-checked={on}
                       className={`picker-opt ${on ? 'on' : ''}`}
-                      title={[bucketTip, scoreTip, m.description, m.efforts?.length ? tr("Gândire: {join}", { join: m.efforts.join(', ') }) : tr("Fără niveluri de gândire"), m.vision === false ? tr("Nu vede imagini: le descrie alt profil") : ''].filter(Boolean).join('\n')}
+                      onPointerEnter={(e) => e.pointerType === 'mouse' && showTip(e.currentTarget, m.label, rowTip)}
+                      onPointerLeave={() => setTip(null)}
+                      onFocus={(e) => e.currentTarget.matches(':focus-visible') && showTip(e.currentTarget, m.label, rowTip)}
+                      onBlur={() => setTip(null)}
                       onClick={() => {
                         setOpen(false)
                         if (!on) p.onPick(g.profile.id, m.id)
@@ -179,9 +200,7 @@ export function ModelPicker(p: {
                           {bucket && <span className="picker-badge included">{tr("INCLUS")}</span>}
                           {m.badge && <span className={`picker-badge ${m.badge}`}>{m.badge === 'new' ? tr("NOU") : tr("ACTUALIZAT")}</span>}
                         </span>
-                        {(m.description || (other && p.otherProfileHint)) && (
-                          <span className="picker-opt-desc">{other && p.otherProfileHint ? p.otherProfileHint : m.description}</span>
-                        )}
+                        {m.description && <span className="picker-opt-desc">{m.description}</span>}
                       </span>
                       {on && <Check size={14} />}
                     </button>
@@ -210,6 +229,17 @@ export function ModelPicker(p: {
           )}
         </div>
       )}
+      {tip &&
+        shown &&
+        createPortal(
+          <div className="picker-tip" role="tooltip" style={{ left: tip.x, top: tip.y }}>
+            <b>{tip.head}</b>
+            {tip.lines.map((l, i) => (
+              <span key={i}>{l}</span>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

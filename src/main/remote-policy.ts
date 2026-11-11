@@ -3,7 +3,7 @@
 // (installing an update restarts Jolty). A new channel needs a decision before it is reachable from outside.
 
 /** Whole groups of channels: each page of the app lives in one. */
-const GROUPS = ['profiles:', 'sessions:', 'schedules:', 'skills:', 'system:', 'local:', 'setup:', 'usage:', 'backup:', 'merge:', 'codexImport:', 'browser:', 'composer:', 'power:', 'voice:']
+const GROUPS = ['profiles:', 'sessions:', 'schedules:', 'skills:', 'system:', 'local:', 'setup:', 'usage:', 'backup:', 'merge:', 'codexImport:', 'browser:', 'composer:', 'power:', 'voice:', 'ui:', 'library:']
 
 const ALLOWED = new Set([
   'background:state',

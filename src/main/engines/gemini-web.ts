@@ -83,10 +83,14 @@ export function parseMenu(menu: MenuRead): ModelOption[] {
   const models = (menu.models ?? []).filter((m) => !m.locked && m.title)
   const current = Math.max(0, models.findIndex((m) => m.selected))
   const level = menu.levels?.findIndex((l) => l.selected) ?? -1
-  return models.map((m, i): ModelOption => ({
-    id: m.title, label: m.title, description: m.note || undefined, isDefault: i === current, vision: true,
+  return models.map((m, i): ModelOption => {
+    // the menu names a row by what it is for ("Fast answers") and gives the model under it ("3.6 Flash"), or the other way round: the row shows the model's name, the other line is its hover note
+    const swap = Boolean(m.note) && !/\d/.test(m.title) && /\d/.test(m.note)
+    return {
+    id: m.title, label: swap ? m.note : m.title, tip: (swap ? m.title : m.note) || undefined, isDefault: i === current, vision: true,
     ...(efforts.length ? { efforts, defaultEffort: efforts[level >= 0 ? level : Math.floor((efforts.length - 1) / 2)] } : {})
-  }))
+    }
+  })
 }
 
 /** Gemini does not report tokens: about four characters make one, enough for the usage page to move. */

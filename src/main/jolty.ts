@@ -53,6 +53,7 @@ import { prepareAttachments, filePrompt } from './attachments'
 import { handoffPrompt, roughTokens, sameProvider } from './handoff'
 import { gitDiff, reviewerFor, reviewPrompt, transcriptDiff } from './review'
 import * as store from './store'
+import { writeReference } from './reference'
 import { removeProfileFiles } from './profile-files'
 import { bindJoltyTools } from './jolty-tools'
 import { accepts, fileKindsOf, readAskFiles, type AskInput, type AskProfile } from './ask-model'
@@ -146,6 +147,7 @@ export class Jolty {
   private ctxUsed = new Map<string, number>()
   /** callers waiting for a conversation's turn to end (see waitIdle, compactAndWait) */
   private idleWaiters = new Set<(sessionId: string) => void>()
+  private compactFailWaiters = new Set<(sessionId: string) => void>()
   private transcripts = new Map<string, ChatItem[]>()
   private saveTimers = new Map<string, NodeJS.Timeout>()
   private saving = new Set<string>()
@@ -483,6 +485,7 @@ export class Jolty {
       if (e.status !== 'running') nativeBrowser.closeLater(e.sessionId)
       if (e.status !== 'running') this.learnReport(e.sessionId)
     }
+    if (e.type === 'compacting' && !e.active && e.failed) for (const w of [...this.compactFailWaiters]) w(e.sessionId)
     if (e.type === 'context') this.ctxUsed.set(e.sessionId, e.used)
     if (e.type === 'item') {
       const t = this.transcript(e.sessionId)
@@ -858,24 +861,37 @@ export class Jolty {
    * cold cache, so what it reads should be the summary, not the conversation: this runs first, on the
    * model that has the context warm. Small contexts are not worth a turn (undefined).
    */
-  async compactAndWait(sessionId: string): Promise<{ before: number; after: number } | undefined> {
+  async compactAndWait(sessionId: string): Promise<{ before: number; after: number; failed?: boolean } | undefined> {
     const meta = this.meta(sessionId)
     const before = this.ctxUsed.get(sessionId) ?? 0
     if (isAcp(meta.engine) || before < COMPACT_MIN) return undefined
     if (this.busy.has(sessionId)) throw new Error(tr("Conversația lucrează deja."))
     let release = (): void => undefined
+    // a compaction the engine reports as failed, or one that says nothing for 2.5 minutes, ends the wait: the caller then switches the
+    // other way (a new chat with a short brief) instead of the switch hanging for minutes and being tried again
+    let failed = false
     const finished = new Promise<void>((resolve) => {
       const done = (): void => {
         clearTimeout(timer)
         this.idleWaiters.delete(onIdle)
+        this.compactFailWaiters.delete(onFail)
         resolve()
       }
       const onIdle = (id: string): void => {
         if (id === sessionId) done()
       }
-      const timer = setTimeout(done, 6 * 60e3)
+      const onFail = (id: string): void => {
+        if (id !== sessionId) return
+        failed = true
+        done()
+      }
+      const timer = setTimeout(() => {
+        failed = true
+        done()
+      }, 150e3)
       release = done
       this.idleWaiters.add(onIdle)
+      this.compactFailWaiters.add(onFail)
     })
     try {
       await this.compact(sessionId)
@@ -884,7 +900,7 @@ export class Jolty {
       throw err
     }
     await finished
-    return { before, after: this.ctxUsed.get(sessionId) ?? before }
+    return { before, after: this.ctxUsed.get(sessionId) ?? before, ...(failed ? { failed } : {}) }
   }
 
   /** a lead waiting on its sessions (wait_for_sessions) gives up the wait when the user writes to it, so the message is read now, not after up to 100 s */
@@ -1459,6 +1475,12 @@ export class Jolty {
   }
 
   /** the title in the sidebar and in the search tool: the user's own words win over the auto-namer */
+  /** Another conversation as a Markdown file, for "reference in conversation": the model opens it when it needs it. */
+  referenceFile(sessionId: string): { path: string; title: string } {
+    const meta = this.meta(sessionId)
+    return { path: writeReference(store.dataDir(), meta, this.transcript(sessionId)), title: meta.title }
+  }
+
   renameSession(sessionId: string, title: string): void {
     const t = title.replace(/\s+/g, ' ').trim().slice(0, 80)
     if (t) this.setTitle(sessionId, t)

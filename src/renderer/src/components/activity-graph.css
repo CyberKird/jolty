@@ -1,0 +1,171 @@
+/* The activity map of the Live panel (ActivityGraph.tsx). App tokens only, so every theme dresses it; only transforms and opacity move. */
+.actgraph {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 2px 0 6px;
+  overflow: visible;
+  user-select: none;
+}
+.ag-orbit {
+  fill: none;
+  stroke: var(--line);
+  stroke-dasharray: 1.5 6;
+}
+.ag-link line {
+  stroke: var(--line-2);
+  stroke-width: 1;
+  opacity: 0.45;
+  transition: opacity var(--t-base) var(--e-move), stroke var(--t-base) var(--e-move);
+}
+.ag-link.used line {
+  opacity: 0.9;
+}
+.ag-link.on line {
+  stroke: var(--volt);
+  stroke-width: 1.4;
+  opacity: 1;
+}
+.ag-packet {
+  fill: var(--volt);
+  animation: ag-packet 0.95s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes ag-packet {
+  from {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(var(--dx), var(--dy));
+    opacity: 0;
+  }
+}
+
+.ag-node {
+  color: var(--grey-2);
+  transition: color var(--t-base) var(--e-move);
+}
+.ag-node.used {
+  color: var(--grey);
+}
+.ag-node.on {
+  color: var(--volt);
+}
+.ag-disc {
+  fill: var(--s2);
+  stroke: var(--line-2);
+  stroke-width: 1;
+  transition: stroke var(--t-base) var(--e-move), fill var(--t-base) var(--e-move);
+}
+.ag-node.used .ag-disc {
+  stroke: var(--grey-2);
+}
+.ag-node.on .ag-disc {
+  stroke: var(--volt);
+  fill: var(--volt-dim);
+}
+.ag-node svg {
+  fill: none;
+  stroke: currentColor;
+}
+.ag-halo {
+  fill: none;
+  stroke: var(--volt);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ag-halo 1.6s ease-out infinite;
+}
+@keyframes ag-halo {
+  from {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+.ag-label {
+  font-family: var(--label);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--grey-2);
+  transition: fill var(--t-base) var(--e-move);
+}
+.ag-node.on .ag-label,
+.ag-node.used .ag-label {
+  fill: var(--grey);
+}
+.ag-node.on .ag-label {
+  fill: var(--white);
+}
+.ag-count {
+  font-family: var(--label);
+  font-size: 8.5px;
+  fill: var(--grey-2);
+}
+.ag-fail circle {
+  fill: var(--critical);
+}
+.ag-fail text {
+  fill: #fff;
+  font-size: 7.5px;
+  font-weight: 600;
+}
+
+.ag-core-bg {
+  fill: var(--s2);
+  stroke: var(--line-2);
+}
+.ag-core-ring {
+  fill: none;
+  stroke: var(--volt);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  transition: stroke-dasharray var(--t-slow) var(--e-out);
+}
+.ag-core-pulse {
+  fill: none;
+  stroke: var(--volt);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.ag-core.on .ag-core-pulse {
+  animation: ag-halo 2s ease-out infinite;
+}
+.ag-core.wait .ag-core-pulse {
+  stroke: var(--warning);
+  animation: ag-halo 1.2s ease-out infinite;
+}
+.ag-core.wait .ag-core-bg {
+  stroke: var(--warning);
+}
+.ag-core-name {
+  font-family: var(--label);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  fill: var(--white);
+}
+.ag-core-model,
+.ag-core-pct {
+  font-family: var(--label);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  fill: var(--grey-2);
+}
+
+/* a weak PC, or motion switched off: the map holds still and shows the same state */
+html.low-power .actgraph *,
+html.reduce-motion .actgraph * {
+  animation: none !important;
+  transition: none !important;
+}
+.live.closed .actgraph * {
+  animation-play-state: paused;
+}

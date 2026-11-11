@@ -101,6 +101,8 @@ export interface ModelOption {
   id: string
   label: string
   description?: string
+  /** more about the model, shown only when the row is hovered (the row itself carries the name) */
+  tip?: string
   isDefault?: boolean
   /** the id this row replaced ("fable" before it became claude-fable-5-2): chats started on it still show this row */
   alias?: string
@@ -334,6 +336,10 @@ export type ChatEvent =
   | { type: 'schedules' }
   /** the tray or the quick entry asks the main window to open a chat (none: a new conversation) */
   | { type: 'focus'; open?: string }
+  /** what the PC's window and the paired phones show (open conversation, page), so they follow each other; `from` is the window that changed it */
+  | { type: 'ui'; activeId?: string; page?: string; from: string }
+  /** a preference was saved: every window and phone reads the settings again */
+  | { type: 'settingsChanged' }
 
 export interface PlanStep {
   text: string
@@ -634,7 +640,7 @@ export interface JoltyApi {
     /** summarize the conversation so far to free context (Claude /compact, Codex thread compaction) */
     compact(sessionId: string): Promise<void>
     /** compacts and resolves when the engine is done; undefined when the context is too small to be worth it */
-    compactAndWait(sessionId: string): Promise<{ before: number; after: number } | undefined>
+    compactAndWait(sessionId: string): Promise<{ before: number; after: number; failed?: boolean } | undefined>
     /** Claude only: the project's files go back to how they were before that user message */
     rewind(sessionId: string, itemId: string, dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }>
     respond(sessionId: string, requestId: string, decision: PermissionDecision): Promise<void>
@@ -645,6 +651,8 @@ export interface JoltyApi {
     improvePrompt(text: string, profileId?: string, model?: string, cwd?: string, sessionId?: string): Promise<{ text?: string; question?: string }>
     remove(sessionId: string): Promise<void>
     rename(sessionId: string, title: string): Promise<void>
+    /** the conversation as a Markdown file the model can read (for "reference in conversation") */
+    referenceFile(sessionId: string): Promise<{ path: string; title: string }>
     /** pin / archive; neither changes the conversation's last-activity time */
     setFlags(sessionIds: string[], flags: { pinned?: boolean; archived?: boolean }): Promise<void>
     /** removed this run, newest first */
@@ -838,6 +846,17 @@ export interface JoltyApi {
     quickClose(): Promise<void>
     /** the quick entry window was shown again: clear and focus the box */
     onQuickShown(cb: () => void): () => void
+  }
+  /** the open conversation and page, shared by the PC's window and the paired phones (uisync.ts) */
+  ui: {
+    /** with a patch: sets what is shown and tells the other windows; without: reads it */
+    state(patch?: { activeId?: string | null; page?: string }, from?: string): Promise<{ activeId?: string; page?: string }>
+  }
+  /** pictures, files and links of every conversation, for the Library page */
+  library: {
+    list(): Promise<import('./library').Library>
+    /** one picture of a conversation; `small` is a thumbnail for the grid. Null when it is no longer there. */
+    image(sessionId: string, itemId: string, index: number, small?: boolean): Promise<string | null>
   }
   /** use Jolty from a paired phone (main/remote.ts) */
   remote: {

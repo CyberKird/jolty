@@ -1717,5 +1717,19 @@
  "Arată comenzile": "Afficher les commandes",
  "Sunet": "Son",
  "Fără sunet": "Muet",
- "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} n'a pas encore été mesuré. Estimation d'après la version {v} : intelligence {iq}{v1}"
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} n'a pas encore été mesuré. Estimation d'après la version {v} : intelligence {iq}{v1}",
+ "Se reconectează la PC…": "Reconnexion au PC…",
+ "Compactarea nu a reușit. Continui într-un chat nou cu un rezumat scurt, ca să nu recitească tot.": "La compaction n'a pas abouti. Je continue dans une nouvelle conversation avec un court résumé, pour éviter de tout relire.",
+ "Referință în conversație": "Référencer dans la conversation",
+ "Deschide întâi conversația în care vrei s-o folosești.": "Ouvre d’abord la conversation dans laquelle tu veux l’utiliser.",
+ "Bibliotecă": "Bibliothèque",
+ "Imagini": "Images",
+ "Video": "Vidéos",
+ "Linkuri": "Liens",
+ "Nimic aici încă. Ce atașezi sau lipești în conversații apare în bibliotecă.": "Rien ici pour l'instant. Ce que tu joins ou colles dans les conversations apparaît dans la bibliothèque.",
+ "Tu": "Toi",
+ "Rețea": "Réseau",
+ "Shell": "Shell",
+ "Memorie": "Mémoire",
+ "Caută în bibliotecă": "Rechercher dans la bibliothèque"
 }

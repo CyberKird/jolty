@@ -1717,5 +1717,19 @@
  "Arată comenzile": "إظهار عناصر التحكم",
  "Sunet": "الصوت",
  "Fără sunet": "كتم",
- "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "لم يتم قياس {label} بعد. تقدير من الإصدار {v}: الذكاء {iq}{v1}"
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "لم يتم قياس {label} بعد. تقدير من الإصدار {v}: الذكاء {iq}{v1}",
+ "Se reconectează la PC…": "جارٍ إعادة الاتصال بالكمبيوتر…",
+ "Compactarea nu a reușit. Continui într-un chat nou cu un rezumat scurt, ca să nu recitească tot.": "فشل الضغط. سأواصل في محادثة جديدة مع ملخص قصير حتى لا تتم قراءة كل شيء من جديد.",
+ "Referință în conversație": "الإشارة إلى المحادثة",
+ "Deschide întâi conversația în care vrei s-o folosești.": "افتح أولاً المحادثة التي تريد استخدامها فيها.",
+ "Bibliotecă": "المكتبة",
+ "Imagini": "الصور",
+ "Video": "فيديو",
+ "Linkuri": "الروابط",
+ "Nimic aici încă. Ce atașezi sau lipești în conversații apare în bibliotecă.": "لا يوجد شيء هنا بعد. ما ترفقه أو تلصقه في المحادثات يظهر في المكتبة.",
+ "Tu": "أنت",
+ "Rețea": "الشبكة",
+ "Shell": "الطرفية",
+ "Memorie": "الذاكرة",
+ "Caută în bibliotecă": "ابحث في المكتبة"
 }

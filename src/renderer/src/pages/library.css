@@ -1,0 +1,240 @@
+/* The Library page: kinds as chips, pictures as a grid, everything else as rows. Only the app's own tokens, so every theme dresses it. */
+.lib-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 20px;
+}
+.lib-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.lib-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--grey);
+  font: inherit;
+  font-size: 13px;
+  transition: background var(--t-fast) var(--e-move), color var(--t-fast) var(--e-move), border-color var(--t-fast) var(--e-move), transform var(--t-fast) var(--e-out);
+}
+.lib-chip .count {
+  font-size: 11.5px;
+  opacity: 0.7;
+}
+.lib-chip:hover:not(:disabled) {
+  color: var(--white);
+  border-color: var(--grey-2);
+}
+.lib-chip.on {
+  color: var(--black);
+  background: var(--volt);
+  border-color: var(--volt);
+}
+.lib-chip:disabled {
+  opacity: 0.35;
+}
+.lib-chip:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.lib-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  min-width: 180px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  color: var(--grey);
+}
+.lib-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--white);
+  font: inherit;
+  font-size: 13px;
+}
+.lib-empty {
+  margin: 40px 0;
+  color: var(--grey-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* pictures: square tiles; off screen they cost nothing (content-visibility), on screen one small file each */
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 6px;
+}
+.lib-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: var(--s2);
+  content-visibility: auto;
+  contain-intrinsic-size: 132px 132px;
+}
+.lib-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity var(--t-slow) var(--e-out), transform var(--t-slow) var(--e-out);
+}
+.lib-thumb.ready img {
+  opacity: 1;
+  transform: none;
+}
+.lib-thumb:hover img,
+.lib-thumb:focus-visible img {
+  transform: scale(1.05);
+}
+.lib-thumb:focus-visible {
+  outline: 2px solid var(--volt);
+  outline-offset: -2px;
+}
+
+.lib-list {
+  display: flex;
+  flex-direction: column;
+}
+.lib-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: 56px;
+  transition: background var(--t-fast) var(--e-move);
+}
+.lib-row:hover,
+.lib-row:focus-visible {
+  background: var(--s2);
+  outline: 0;
+}
+.lib-row-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line-2);
+  color: var(--grey);
+}
+.lib-row-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+.lib-row-name {
+  font-size: 14px;
+  color: var(--white);
+}
+.lib-row-meta {
+  font-size: 12px;
+  color: var(--grey-2);
+}
+.lib-row-chat {
+  flex: none;
+  max-width: 34%;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--grey-2);
+  font: inherit;
+  font-size: 12px;
+  text-align: end;
+}
+.lib-row-chat:hover {
+  color: var(--volt);
+}
+
+.lib-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px 24px;
+  background: rgba(2, 2, 4, 0.86);
+  animation: lib-fade var(--t-base) var(--e-out) both;
+}
+.lib-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  animation: lib-zoom var(--t-slow) var(--e-out) both;
+}
+.lib-lightbox-bar {
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  color: var(--white);
+  font-size: 13px;
+}
+.lib-lightbox-bar .ellipsis {
+  flex: 1;
+  min-width: 0;
+}
+.lib-lightbox-wait {
+  color: var(--grey);
+}
+@keyframes lib-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes lib-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@media (max-width: 760px) {
+  .lib-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+  }
+  .lib-search {
+    flex: 1 1 100%;
+  }
+  .lib-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    touch-action: pan-x;
+  }
+  .lib-chip {
+    flex: none;
+  }
+  .lib-row-chat {
+    display: none;
+  }
+}

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import http from 'node:http'
 import os from 'node:os'
+import zlib from 'node:zlib'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
 import { WebSocket } from 'ws'
@@ -14,6 +15,10 @@ const web = path.join(dir, 'web')
 fs.mkdirSync(path.join(web, 'assets'), { recursive: true })
 fs.writeFileSync(path.join(web, 'index.html'), `<html><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' blob:"></head><body></body></html>`)
 fs.writeFileSync(path.join(web, 'assets', 'a.js'), 'x')
+// a script big enough to be worth compressing, and files the phone does not keep (the 3D character, another language's dictionary)
+fs.writeFileSync(path.join(web, 'assets', 'big-AbCd1234.js'), 'export const t = "jolty jolty jolty jolty";\n'.repeat(400))
+fs.writeFileSync(path.join(web, 'assets', 'Rig3D-AbCd1234.js'), 'y')
+fs.writeFileSync(path.join(web, 'assets', 'de-AbCd1234.js'), 'y')
 fs.writeFileSync(path.join(web, 'sw.js'), "const CACHE = 'jolty-shell-__VERSION__'")
 fs.writeFileSync(path.join(dir, 'secret.txt'), 'secret')
 
@@ -213,6 +218,54 @@ test('the page is kept for offline starts: the service worker is served fresh wi
   assert.doesNotMatch(r.text, /__VERSION__/)
   assert.match(String(r.headers['cache-control']), /no-cache/)
   assert.equal(r.headers['service-worker-allowed'], '/')
+})
+
+/** One GET with the bytes as they came (the compressed body is not text). */
+function raw(p: string, headers: Record<string, string> = {}): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: Buffer }> {
+  return new Promise((resolve, reject) => {
+    http
+      .get({ host: '127.0.0.1', port: PORT, path: p, headers }, (res) => {
+        const parts: Buffer[] = []
+        res.on('data', (c: Buffer) => parts.push(c))
+        res.on('end', () => resolve({ status: res.statusCode || 0, headers: res.headers, body: Buffer.concat(parts) }))
+      })
+      .on('error', reject)
+  })
+}
+
+test('on a slow line the page comes compressed, and a visit again gets "not modified" instead of the file', async () => {
+  const plain = await raw('/assets/big-AbCd1234.js')
+  assert.equal(plain.headers['content-encoding'], undefined)
+  assert.ok(plain.body.length > 10_000)
+  const br = await raw('/assets/big-AbCd1234.js', { 'Accept-Encoding': 'gzip, br' })
+  assert.equal(br.headers['content-encoding'], 'br')
+  assert.ok(br.body.length < plain.body.length / 10, 'much smaller')
+  assert.equal(zlib.brotliDecompressSync(br.body).toString(), plain.body.toString())
+  const gz = await raw('/assets/big-AbCd1234.js', { 'Accept-Encoding': 'gzip' })
+  assert.equal(gz.headers['content-encoding'], 'gzip')
+  assert.equal(zlib.gunzipSync(gz.body).toString(), plain.body.toString())
+  assert.match(String(br.headers.vary), /Accept-Encoding/)
+  // the page itself is checked again each visit, and answers 304 when it has not changed
+  const first = await raw('/')
+  assert.ok(first.headers.etag)
+  const again = await raw('/', { 'If-None-Match': String(first.headers.etag) })
+  assert.equal(again.status, 304)
+  assert.equal(again.body.length, 0)
+})
+
+test('the list of files the phone keeps leaves out the 3D character and other languages', async () => {
+  const list = JSON.parse((await raw('/shell.json')).body.toString()) as string[]
+  assert.ok(list.includes('/assets/big-AbCd1234.js'))
+  assert.ok(!list.some((f) => f.includes('Rig3D')))
+  assert.ok(!list.some((f) => f.includes('/de-')))
+})
+
+test('the phone can ask whether the line is alive, and the PC answers', async () => {
+  const c = await connect(await pair())
+  await until(() => c.msgs.some((m) => m.t === 'ready'))
+  c.ws.send(JSON.stringify({ t: 'ping' }))
+  await until(() => c.msgs.some((m) => m.t === 'pong'))
+  c.ws.close()
 })
 
 test('the wake agent: only https addresses, a shared secret, allowed in the page policy, and phones get the way to wake but cannot change it', async () => {

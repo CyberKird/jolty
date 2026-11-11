@@ -1,8 +1,8 @@
-import { Archive, FolderOpen, GitBranch, GitMerge, Link, Loader2, MessageSquare, MessageSquareDashed, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Archive, AtSign, FolderOpen, GitBranch, GitMerge, Link, Loader2, MessageSquare, MessageSquareDashed, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { tr } from '@shared/i18n'
 import type { SessionMeta } from '@shared/types'
-import { api, timeAgo, useStore } from '../store'
+import { api, referenceConversation, timeAgo, useStore } from '../store'
 import { archive, togglePin } from '../organize'
 import { copyItem, showMenu, type Entry } from './ContextMenu'
 import { BranchButton, openMerge } from './MergePanel'
@@ -41,6 +41,7 @@ export function SessionRow({ s, onRemove }: { s: SessionMeta; onRemove: (id: str
           { label: tr("Deschide conversația"), icon: MessageSquare, run: () => void openSession(s.id) },
           { label: tr("Redenumește"), icon: Pencil, run: () => setRenaming(true) },
           copyItem(tr("Copiază titlul"), s.title),
+          { label: tr("Referință în conversație"), icon: AtSign, run: () => void referenceConversation(s.id) },
           'sep',
           ...organize,
           { label: tr("Arată folderul în Explorer"), icon: FolderOpen, run: () => void api.app.revealPath(s.cwd) },

@@ -1717,5 +1717,19 @@
  "Arată comenzile": "Show the controls",
  "Sunet": "Sound",
  "Fără sunet": "Muted",
- "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} has not been measured yet. Estimate from version {v}: intelligence {iq}{v1}"
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} has not been measured yet. Estimate from version {v}: intelligence {iq}{v1}",
+ "Se reconectează la PC…": "Reconnecting to the PC…",
+ "Compactarea nu a reușit. Continui într-un chat nou cu un rezumat scurt, ca să nu recitească tot.": "Compaction did not work. Continuing in a new chat with a short summary, so it does not read everything again.",
+ "Referință în conversație": "Reference in conversation",
+ "Deschide întâi conversația în care vrei s-o folosești.": "First open the conversation where you want to use it.",
+ "Bibliotecă": "Library",
+ "Imagini": "Images",
+ "Video": "Videos",
+ "Linkuri": "Links",
+ "Nimic aici încă. Ce atașezi sau lipești în conversații apare în bibliotecă.": "Nothing here yet. What you attach or paste in conversations shows up in the library.",
+ "Tu": "You",
+ "Rețea": "Network",
+ "Shell": "Shell",
+ "Memorie": "Memory",
+ "Caută în bibliotecă": "Search the library"
 }

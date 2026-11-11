@@ -25,7 +25,7 @@ import { reduceCompaction, settleCompaction, type CompactState } from '@shared/c
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
-export type Page = 'chat' | 'import' | 'accounts' | 'local' | 'usage' | 'schedules' | 'skills' | 'system' | 'settings'
+export type Page = 'chat' | 'library' | 'import' | 'accounts' | 'local' | 'usage' | 'schedules' | 'skills' | 'system' | 'settings'
 
 export interface Draft {
   toolId: string
@@ -320,6 +320,13 @@ export const useStore = create<State>((set, get) => ({
       case 'focus':
         void get().openSession(e.open)
         return
+      // the other window or a phone changed what is shown / a preference: uisync.ts and App.tsx act on it
+      case 'ui':
+        window.dispatchEvent(new CustomEvent('jolty:ui', { detail: e }))
+        return
+      case 'settingsChanged':
+        window.dispatchEvent(new Event('jolty:settings'))
+        return
       case 'power':
         set({ power: { armed: e.armed, plan: e.plan, due: e.due, seconds: e.seconds, reason: e.reason } })
         return
@@ -486,12 +493,34 @@ export function setCompactFirst(on: boolean): void {
  * A new account or model reads the whole context with a cold cache, which is the usage spike of a switch.
  * Compacting first, on the model that has the context warm, leaves it a summary to read.
  */
-export async function compactBefore(sessionId: string): Promise<void> {
+export async function compactBefore(sessionId: string): Promise<boolean> {
   const { contexts, toast } = useStore.getState()
-  if (!compactFirst() || (contexts[sessionId]?.used ?? 0) < COMPACT_MIN) return
+  if (!compactFirst() || (contexts[sessionId]?.used ?? 0) < COMPACT_MIN) return true
   toast(tr("Compactez conversația înainte, ca să nu o recitească tot noul cont sau model."))
   const r = await api.sessions.compactAndWait(sessionId)
+  if (r?.failed) {
+    // the switch must not read the whole conversation cold: it goes on in a new chat with a short brief instead
+    toast(tr("Compactarea nu a reușit. Continui într-un chat nou cu un rezumat scurt, ca să nu recitească tot."), true)
+    return false
+  }
   if (r && r.after < r.before) toast(tr("Compactat: de la {before}k la {after}k tokeni.", { before: Math.round(r.before / 1000), after: Math.round(r.after / 1000) }))
+  return true
+}
+
+/**
+ * "Reference in conversation": the open conversation gets a note pointing at another one, which goes out in front of the next message.
+ * The other conversation is a file the model reads only if it needs to, so pointing at a long one costs a line, not its whole text.
+ */
+export async function referenceConversation(otherId: string): Promise<void> {
+  const { activeId, page, toast, setQuote } = useStore.getState()
+  if (!activeId || page !== 'chat' || activeId === otherId) return toast(tr("Deschide întâi conversația în care vrei s-o folosești."), true)
+  try {
+    const r = await api.sessions.referenceFile(otherId)
+    setQuote(activeId, `Reference: the conversation "${r.title}". Read ${r.path} (Markdown) for what was said there, only as far as the request needs it.`)
+    requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('.composer textarea')?.focus())
+  } catch (e) {
+    toast(errMsg(e), true)
+  }
 }
 
 export function basename(p: string): string {

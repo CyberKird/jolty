@@ -1717,5 +1717,19 @@
  "Arată comenzile": "कंट्रोल दिखाएँ",
  "Sunet": "आवाज़",
  "Fără sunet": "म्यूट",
- "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} का अभी तक मापन नहीं हुआ है। संस्करण {v} के आधार पर अनुमान: बुद्धिमत्ता {iq}{v1}"
+ "{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}": "{label} का अभी तक मापन नहीं हुआ है। संस्करण {v} के आधार पर अनुमान: बुद्धिमत्ता {iq}{v1}",
+ "Se reconectează la PC…": "पीसी से दोबारा कनेक्ट हो रहा है…",
+ "Compactarea nu a reușit. Continui într-un chat nou cu un rezumat scurt, ca să nu recitească tot.": "कॉम्पैक्ट करना सफल नहीं रहा। सब कुछ दोबारा न पढ़ना पड़े, इसलिए छोटे सारांश के साथ नई चैट में जारी रखा जा रहा है।",
+ "Referință în conversație": "बातचीत में संदर्भ दें",
+ "Deschide întâi conversația în care vrei s-o folosești.": "पहले वह बातचीत खोलें जिसमें आप इसे इस्तेमाल करना चाहते हैं।",
+ "Bibliotecă": "लाइब्रेरी",
+ "Imagini": "चित्र",
+ "Video": "वीडियो",
+ "Linkuri": "लिंक",
+ "Nimic aici încă. Ce atașezi sau lipești în conversații apare în bibliotecă.": "यहाँ अभी कुछ नहीं है। बातचीत में आप जो अटैच या पेस्ट करते हैं, वह लाइब्रेरी में दिखता है।",
+ "Tu": "आप",
+ "Rețea": "नेटवर्क",
+ "Shell": "शेल",
+ "Memorie": "मेमोरी",
+ "Caută în bibliotecă": "लाइब्रेरी में खोजें"
 }
