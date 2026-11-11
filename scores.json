@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-10",
+ "updated": "2026-11-11",
  "source": "artificialanalysis.ai/leaderboards/models",
  "entries": [
   {
@@ -372,6 +372,13 @@
    ],
    "iq": 4,
    "note": "Gemma 4 31B · reasoning"
+  },
+  {
+   "match": [
+    "apodex-1-1"
+   ],
+   "iq": 14,
+   "note": "Apodex 1.1"
   },
   {
    "match": [
