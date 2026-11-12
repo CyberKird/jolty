@@ -4,6 +4,7 @@ import type { UsageDay, UsageSummary } from '@shared/types'
 import { ProfileDot } from '../components/Chat'
 import { api, ENGINE_LABEL, errMsg, fmtTokens, fmtUsd, useStore } from '../store'
 import { LimitMeters } from './Accounts'
+import { LimitResets } from '../components/LimitResets'
 import { dateLocale, tr } from '@shared/i18n'
 import { useShallow } from 'zustand/shallow'
 
@@ -150,6 +151,7 @@ export function UsagePage() {
                   <span className="faint small">{ENGINE_LABEL[p.engine]}</span>
                 </div>
                 {p.auth === 'subscription' && <LimitMeters profileId={p.id} compact />}
+                {p.auth === 'subscription' && p.engine === 'claude' && <LimitResets profile={p} compact />}
                 <div className="stat-strip">
                   {(
                     [

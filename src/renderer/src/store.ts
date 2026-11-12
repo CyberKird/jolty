@@ -22,6 +22,7 @@ import { exitMs } from './usePresence'
 import { lastIndexWhere } from '@shared/last-index'
 import type { BackupEntry } from '@shared/backup'
 import { reduceCompaction, settleCompaction, type CompactState } from '@shared/compaction'
+import type { ClaudeResets, ClaudeWebInfo } from '@shared/claude-resets'
 
 export const api = (window as unknown as { jolty: JoltyApi }).jolty
 
@@ -81,6 +82,10 @@ interface State {
   spend7d: Record<string, { tokens: number; costUsd: number; turns: number }>
   balances: Record<string, ProviderBalance>
   contexts: Record<string, { used: number; window?: number }>
+  /** limit resets and promotions per Claude profile, and where each one's claude.ai sign-in stands */
+  resets: Record<string, ClaudeResets>
+  claudeWeb: Record<string, ClaudeWebInfo>
+  loadClaudeWeb(): Promise<void>
   /** conversations being compacted, and the result of the last compaction for a few seconds */
   compactions: Record<string, CompactState>
   update?: UpdateStatus
@@ -179,6 +184,8 @@ export const useStore = create<State>((set, get) => ({
   spend7d: {},
   balances: {},
   contexts: {},
+  resets: {},
+  claudeWeb: {},
   compactions: {},
   pulls: {},
   toasts: [],
@@ -221,6 +228,11 @@ export const useStore = create<State>((set, get) => ({
 
   loadProfiles: async () => {
     set({ profiles: await api.profiles.list(), profilesLoaded: true })
+  },
+
+  loadClaudeWeb: async () => {
+    const { infos, resets } = await api.claudeWeb.list().catch(() => ({ infos: [], resets: [] }))
+    set({ claudeWeb: Object.fromEntries(infos.map((i) => [i.profileId, i])), resets: Object.fromEntries(resets.map((r) => [r.profileId, r])) })
   },
 
   moveProfile: async (from, to) => {
@@ -360,6 +372,12 @@ export const useStore = create<State>((set, get) => ({
         return
       case 'limits':
         set((s) => ({ limits: { ...s.limits, [e.snapshot.profileId]: e.snapshot } }))
+        return
+      case 'resets':
+        set((s) => ({ resets: { ...s.resets, [e.resets.profileId]: e.resets } }))
+        return
+      case 'claudeWeb':
+        set((s) => ({ claudeWeb: { ...s.claudeWeb, [e.info.profileId]: e.info } }))
         return
       case 'pull':
         set((s) => ({ pulls: { ...s.pulls, [e.tag]: { status: e.status, completed: e.completed, total: e.total, done: e.done, error: e.error } } }))

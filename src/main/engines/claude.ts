@@ -230,6 +230,23 @@ async function accountModels(profile: Profile): Promise<AccountModel[]> {
   }
 }
 
+/** Who the profile's login is: its account and organisation, as Claude Code's own profile call reports them. */
+export async function claudeAccount(profile: Profile): Promise<{ accountUuid?: string; email?: string; orgUuid?: string } | undefined> {
+  const creds = oauthCreds(profile)
+  if (!creds) return undefined
+  try {
+    const res = await fetch('https://api.anthropic.com/api/oauth/profile', {
+      headers: { authorization: `Bearer ${creds.accessToken}`, 'anthropic-beta': 'oauth-2025-04-20' },
+      signal: AbortSignal.timeout(15000)
+    })
+    if (!res.ok) return undefined
+    const j = (await res.json()) as { account?: { uuid?: string; email?: string }; organization?: { uuid?: string } }
+    return { accountUuid: j.account?.uuid, email: j.account?.email, orgUuid: j.organization?.uuid }
+  } catch {
+    return undefined
+  }
+}
+
 async function oauthUsage(profile: Profile): Promise<{ limits?: Record<string, unknown>; plan?: string; cooldownMs?: number }> {
   const until = usageCooldown.get(profile.id)
   if (until && Date.now() < until) return { cooldownMs: until - Date.now() }

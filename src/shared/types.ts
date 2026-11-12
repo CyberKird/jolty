@@ -1,6 +1,7 @@
 // Types shared by the main process, the preload bridge and the renderer.
 import type { ScheduledTask, TaskInput } from './schedule'
 import type { ModelScore } from './scores'
+import type { ClaudeResets, ClaudeWebInfo } from './claude-resets'
 import type { RemoteStatus, WakeConfig, WakeStatus, WakeTest } from './remote'
 
 export type EngineKind = 'claude' | 'codex' | 'hermes' | 'opencode' | 'gemini'
@@ -324,6 +325,9 @@ export type ChatEvent =
   /** a conversation is being compacted (active) or just was (before and after are context tokens when the engine says) */
   | { type: 'compacting'; sessionId: string; active: boolean; before?: number; after?: number; failed?: boolean }
   | { type: 'update'; status: UpdateStatus }
+  /** the limit resets and promotions a Claude profile holds, read with its claude.ai sign-in */
+  | { type: 'resets'; resets: ClaudeResets }
+  | { type: 'claudeWeb'; info: ClaudeWebInfo }
   | { type: 'limits'; snapshot: RateLimitSnapshot }
   /** the agent's own step-by-step plan (Claude's todo list, Codex's plan) */
   | { type: 'plan'; sessionId: string; steps: PlanStep[] }
@@ -733,6 +737,15 @@ export interface JoltyApi {
     remove(tag: string): Promise<void>
     createProfile(tag: string): Promise<Profile>
     installOllama(): Promise<void>
+  }
+  /** the claude.ai sign-in of a Claude profile, for its limit resets and promotions */
+  claudeWeb: {
+    /** what is saved: where each session stands, and the resets read last */
+    list(): Promise<{ infos: ClaudeWebInfo[]; resets: ClaudeResets[] }>
+    /** opens the sign-in window; resolves when the person is in or closed it */
+    connect(profileId: string): Promise<ClaudeWebInfo>
+    disconnect(profileId: string): Promise<void>
+    refresh(profileId: string): Promise<ClaudeResets | undefined>
   }
   /** welcome screen: the checks that prove a way of connecting works before it is kept */
   setup: {

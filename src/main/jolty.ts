@@ -47,6 +47,8 @@ import { DESCRIBE_PROMPT } from './engines/claude'
 import { describeWithGemini } from './gemini-vision'
 import { GEMINI_BROWSER } from '@shared/gemini'
 import { endpointCost, fetchBalance } from './balance'
+import { ClaudeWeb } from './claude-web'
+import type { ClaudeResets, ClaudeWebInfo } from '@shared/claude-resets'
 import * as local from './local'
 import { claudeSettingsOverride } from './runtime'
 import { prepareAttachments, filePrompt } from './attachments'
@@ -186,8 +188,21 @@ export class Jolty {
     changed: () => this.send({ type: 'schedules' })
   })
 
+  /** the claude.ai sign-ins of the Claude profiles (limit resets and promotions) */
+  readonly claudeWeb = new ClaudeWeb(
+    (e) => this.send(e),
+    () => this.profiles()
+  )
+
+  async claudeWebList(): Promise<{ infos: ClaudeWebInfo[]; resets: ClaudeResets[] }> {
+    const saved = store.loadClaudeWeb()
+    const infos = await Promise.all(this.profiles().filter((p) => saved[p.id]).map((p) => this.claudeWeb.info(p)))
+    return { infos, resets: Object.values(store.loadResets()) }
+  }
+
   constructor(private send: (e: ChatEvent) => void) {
     this.codex.onLimits = (s) => this.recordLimits(s)
+    this.claudeWeb.start()
     setHelper({ ask: (prompt) => this.helperAsk(prompt), enabled: () => store.loadSettings().learningLoop !== false })
     bindJoltyTools({
       sessions: () => store.loadSessions(),
@@ -1815,6 +1830,7 @@ ${text.slice(0, 1500)}`
 
   async shutdown(): Promise<void> {
     this.scheduler.stop()
+    this.claudeWeb.stop()
     for (const s of this.live.values()) await s.close().catch(() => undefined)
     for (const [id, t] of this.saveTimers) {
       clearTimeout(t)

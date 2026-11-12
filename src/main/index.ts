@@ -412,6 +412,10 @@ function registerIpc(): void {
   handle('local:createProfile', (tag: string) => jolty.createLocalProfile(tag))
   handle('local:installOllama', () => system.fix('ollama', (p) => shell.openPath(p)))
 
+  handle('claudeWeb:list', () => jolty.claudeWebList())
+  handle('claudeWeb:connect', (id: string) => jolty.claudeWeb.connect(jolty.profile(id)))
+  handle('claudeWeb:disconnect', (id: string) => jolty.claudeWeb.disconnect(id))
+  handle('claudeWeb:refresh', (id: string) => jolty.claudeWeb.refresh(jolty.profile(id)))
   handle('setup:testKey', (baseUrl: unknown, model: unknown, key: unknown) => connect.testKey(baseUrl, model, key))
   handle('setup:providerModels', (baseUrl: unknown, key: unknown, profileId: unknown) => connect.providerModels(baseUrl, key, profileId))
   handle('setup:testFree', (model: unknown) => connect.testFree(model))

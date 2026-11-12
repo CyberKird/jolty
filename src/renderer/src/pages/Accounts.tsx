@@ -5,6 +5,7 @@ import { isAcp } from '@shared/types'
 import { CONNECT_PROVIDERS } from '@shared/setup'
 import { ProfileDot } from '../components/Chat'
 import { UncensoredMark } from '../components/ModelPicker'
+import { LimitResets } from '../components/LimitResets'
 import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
 import { tr } from '@shared/i18n'
 import { useExitClose } from '../usePresence'
@@ -175,6 +176,7 @@ function ProfileCard({ profile, onEdit, dragProps }: { profile: Profile; onEdit:
         </div>
       )}
       {profile.auth === 'subscription' && <LimitMeters profileId={profile.id} />}
+      {profile.auth === 'subscription' && profile.engine === 'claude' && <LimitResets profile={profile} />}
       <div className="row wrap" style={{ marginTop: 12 }}>
         {profile.auth === 'existing' && <button className="btn small" onClick={() => void refresh()}><RefreshCw size={14} /> {tr("Verifică {agent}", { agent: ENGINE_LABEL[profile.engine] })}</button>}
         {!status?.loggedIn && ((profile.auth !== 'endpoint' && profile.auth !== 'existing') || profile.engine === 'gemini') && (

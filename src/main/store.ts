@@ -4,6 +4,7 @@ import path from 'path'
 import type { AppSettings, ChatItem, Profile, RateLimitSnapshot, SessionMeta, TurnUsage } from '@shared/types'
 import { isAcp } from '@shared/types'
 import type { ScheduledTask } from '@shared/schedule'
+import type { ClaudeResets } from '@shared/claude-resets'
 import type { SeenFile } from './model-watch-core'
 
 /** Root folder for Jolty's own data. JOLTY_DATA_DIR overrides it (used by tests). */
@@ -277,6 +278,34 @@ export function saveLimit(snapshot: RateLimitSnapshot): RateLimitSnapshot {
   all[snapshot.profileId] = merged
   writeJson('limits.json', all)
   return merged
+}
+
+// ---------------------------------------------------------------------------
+// claude.ai side of a Claude profile: that a sign-in exists, and the limit resets it showed at the last read
+// ---------------------------------------------------------------------------
+export function loadResets(): Record<string, ClaudeResets> {
+  return readJson<Record<string, ClaudeResets>>('claude-resets.json', {})
+}
+
+export function saveResets(r: ClaudeResets): void {
+  writeJson('claude-resets.json', { ...loadResets(), [r.profileId]: r })
+}
+
+export function loadClaudeWeb(): Record<string, { email?: string; at: number }> {
+  return readJson<Record<string, { email?: string; at: number }>>('claude-web.json', {})
+}
+
+export function saveClaudeWeb(profileId: string, entry: { email?: string; at: number }): void {
+  writeJson('claude-web.json', { ...loadClaudeWeb(), [profileId]: entry })
+}
+
+export function dropClaudeWeb(profileId: string): void {
+  const web = loadClaudeWeb()
+  const resets = loadResets()
+  delete web[profileId]
+  delete resets[profileId]
+  writeJson('claude-web.json', web)
+  writeJson('claude-resets.json', resets)
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.30.0
+
+### New
+
+- Limit resets and promotions of your Claude accounts, account by account. In Accounts and keys, each Claude profile has a Limit resets section: Connect claude.ai opens a sign-in window of its own (you sign in yourself, once, for that account only), and then the resets the account holds appear with what they are and when they expire ("Full reset", "Fable reset" and the launch offers). Usage shows the same in short. A reset or promotion that appears later is announced once. If the session belongs to another account than the profile, it says so instead of showing the wrong one. Disconnect forgets the session.
+- Abliterated, heretic and uncensored models carry a small crossed shield in the model picker, on the picker button and in the catalog, so they are not mistaken for the usual ones.
+- A small refresh button next to Restart and update looks for another version, also while one is waiting, and says what it found.
+
+### Improvements
+
+- Restart and update now installs exactly the version the card shows. It no longer looks for a newer one at the last second and installs that instead; the search button (or the hourly check) shows a newer version first.
+- The context button at the top has a hint on hover and answers to it while a reply is running, instead of staying silent.
+
 ## 0.29.0
 
 ### New

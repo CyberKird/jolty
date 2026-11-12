@@ -1751,5 +1751,21 @@
  "Caută altă versiune": "Procurar outra versão",
  "Am găsit Jolty {version}.": "Encontrei o Jolty {version}.",
  "Nu am găsit altă versiune decât {version}.": "Não encontrei outra versão além da {version}.",
- "Fără filtre de refuz: model abliterated sau uncensored.": "Sem filtros de recusa: modelo abliterated ou uncensored."
+ "Fără filtre de refuz: model abliterated sau uncensored.": "Sem filtros de recusa: modelo abliterated ou uncensored.",
+ "Resetări de limită": "Resets de limite",
+ "Conectează claude.ai": "Conectar o claude.ai",
+ "Deconectează claude.ai": "Desconectar o claude.ai",
+ "Resetările și promoțiile contului vin de la claude.ai. Te conectezi o dată, într-o fereastră Jolty, doar pentru acest cont.": "Os resets e as promoções da conta vêm do claude.ai. Você entra uma vez, em uma janela do Jolty, só para esta conta.",
+ "Sesiunea claude.ai a expirat. Conectează-te din nou.": "A sessão do claude.ai expirou. Entre de novo.",
+ "Sesiunea claude.ai e pe alt cont ({email}). Conectează-l pe cel al acestui profil.": "A sessão do claude.ai é de outra conta ({email}). Conecte a deste perfil.",
+ "Contul nu are resetări acum.": "A conta não tem resets no momento.",
+ "Reset complet": "Reset completo",
+ "Reset parțial": "Reset parcial",
+ "Expiră {when}": "Expira {when}",
+ "{left} din {total}": "{left} de {total}",
+ "Nu se poate folosi acum": "Não pode ser usado agora",
+ "Conectare claude.ai": "Conexão com o claude.ai",
+ "Reset nou pe {name}": "Novo reset em {name}",
+ "{label}. Expiră {when}.": "{label}. Expira {when}.",
+ "Actualizează resetările": "Atualizar resets"
 }

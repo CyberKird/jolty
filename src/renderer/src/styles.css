@@ -725,6 +725,31 @@ a {
 }
 
 /* the provider's model list in the profile form: a search field over a short scrolling list of checkboxes */
+.resets {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.reset-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0;
+}
+.reset-row + .reset-row {
+  border-top: 1px solid var(--line);
+}
+.reset-main {
+  min-width: 0;
+}
+.reset-when {
+  flex: none;
+  text-align: end;
+  color: var(--white);
+}
+.reset-line {
+  margin-top: 6px;
+}
 .catalog {
   margin-top: 8px;
 }

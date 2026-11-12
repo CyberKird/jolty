@@ -1751,5 +1751,21 @@
  "Caută altă versiune": "다른 버전 찾기",
  "Am găsit Jolty {version}.": "Jolty {version}을(를) 찾았습니다.",
  "Nu am găsit altă versiune decât {version}.": "{version} 외의 버전은 찾지 못했습니다.",
- "Fără filtre de refuz: model abliterated sau uncensored.": "거부 필터 없음: abliterated 또는 uncensored 모델."
+ "Fără filtre de refuz: model abliterated sau uncensored.": "거부 필터 없음: abliterated 또는 uncensored 모델.",
+ "Resetări de limită": "한도 초기화",
+ "Conectează claude.ai": "claude.ai 연결",
+ "Deconectează claude.ai": "claude.ai 연결 해제",
+ "Resetările și promoțiile contului vin de la claude.ai. Te conectezi o dată, într-o fereastră Jolty, doar pentru acest cont.": "계정의 초기화와 프로모션은 claude.ai에서 가져옵니다. Jolty 창에서 이 계정에 대해서만 한 번 로그인합니다.",
+ "Sesiunea claude.ai a expirat. Conectează-te din nou.": "claude.ai 세션이 만료되었습니다. 다시 로그인하세요.",
+ "Sesiunea claude.ai e pe alt cont ({email}). Conectează-l pe cel al acestui profil.": "claude.ai 세션이 다른 계정({email})입니다. 이 프로필의 계정으로 연결하세요.",
+ "Contul nu are resetări acum.": "지금 이 계정에는 사용할 수 있는 초기화가 없습니다.",
+ "Reset complet": "전체 초기화",
+ "Reset parțial": "부분 초기화",
+ "Expiră {when}": "{when} 만료",
+ "{left} din {total}": "{total}개 중 {left}개",
+ "Nu se poate folosi acum": "지금은 사용할 수 없음",
+ "Conectare claude.ai": "claude.ai 연결",
+ "Reset nou pe {name}": "{name}의 새 초기화",
+ "{label}. Expiră {when}.": "{label}. {when} 만료.",
+ "Actualizează resetările": "초기화 새로고침"
 }

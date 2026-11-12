@@ -1751,5 +1751,21 @@
  "Caută altă versiune": "कोई और संस्करण खोजें",
  "Am găsit Jolty {version}.": "Jolty {version} मिला।",
  "Nu am găsit altă versiune decât {version}.": "{version} के अलावा कोई संस्करण नहीं मिला।",
- "Fără filtre de refuz: model abliterated sau uncensored.": "इनकार वाले फ़िल्टर के बिना: abliterated या uncensored मॉडल।"
+ "Fără filtre de refuz: model abliterated sau uncensored.": "इनकार वाले फ़िल्टर के बिना: abliterated या uncensored मॉडल।",
+ "Resetări de limită": "लिमिट रीसेट",
+ "Conectează claude.ai": "claude.ai कनेक्ट करें",
+ "Deconectează claude.ai": "claude.ai डिस्कनेक्ट करें",
+ "Resetările și promoțiile contului vin de la claude.ai. Te conectezi o dată, într-o fereastră Jolty, doar pentru acest cont.": "खाते के रीसेट और प्रमोशन claude.ai से आते हैं। आप Jolty की एक विंडो में सिर्फ़ इस खाते के लिए एक बार साइन इन करते हैं।",
+ "Sesiunea claude.ai a expirat. Conectează-te din nou.": "claude.ai का सत्र समाप्त हो गया है। फिर से साइन इन करें।",
+ "Sesiunea claude.ai e pe alt cont ({email}). Conectează-l pe cel al acestui profil.": "claude.ai का सत्र किसी दूसरे खाते ({email}) पर है। इस प्रोफ़ाइल वाला खाता कनेक्ट करें।",
+ "Contul nu are resetări acum.": "इस खाते के पास अभी कोई रीसेट नहीं है।",
+ "Reset complet": "पूरा रीसेट",
+ "Reset parțial": "आंशिक रीसेट",
+ "Expiră {when}": "{when} को समाप्त",
+ "{left} din {total}": "{total} में से {left}",
+ "Nu se poate folosi acum": "अभी इस्तेमाल नहीं किया जा सकता",
+ "Conectare claude.ai": "claude.ai से कनेक्ट करना",
+ "Reset nou pe {name}": "{name} पर नया रीसेट",
+ "{label}. Expiră {when}.": "{label}। {when} को समाप्त।",
+ "Actualizează resetările": "रीसेट अपडेट करें"
 }

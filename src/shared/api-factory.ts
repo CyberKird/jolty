@@ -101,6 +101,12 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       createProfile: (tag) => call('local:createProfile', tag),
       installOllama: () => call('local:installOllama')
     },
+    claudeWeb: {
+      list: () => call('claudeWeb:list'),
+      connect: (profileId) => call('claudeWeb:connect', profileId),
+      disconnect: (profileId) => call('claudeWeb:disconnect', profileId),
+      refresh: (profileId) => call('claudeWeb:refresh', profileId)
+    },
     setup: {
       testKey: (baseUrl, model, key) => call('setup:testKey', baseUrl, model, key),
       providerModels: (baseUrl, key, profileId) => call('setup:providerModels', baseUrl, key, profileId),

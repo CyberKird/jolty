@@ -1751,5 +1751,21 @@
  "Caută altă versiune": "ابحث عن إصدار آخر",
  "Am găsit Jolty {version}.": "وجدت Jolty {version}.",
  "Nu am găsit altă versiune decât {version}.": "لم أجد إصدارًا آخر غير {version}.",
- "Fără filtre de refuz: model abliterated sau uncensored.": "بلا مرشّحات رفض: نموذج abliterated أو uncensored."
+ "Fără filtre de refuz: model abliterated sau uncensored.": "بلا مرشّحات رفض: نموذج abliterated أو uncensored.",
+ "Resetări de limită": "إعادة ضبط الحدود",
+ "Conectează claude.ai": "ربط claude.ai",
+ "Deconectează claude.ai": "فصل claude.ai",
+ "Resetările și promoțiile contului vin de la claude.ai. Te conectezi o dată, într-o fereastră Jolty, doar pentru acest cont.": "إعادة الضبط والعروض الخاصة بالحساب تأتي من claude.ai. تسجّل الدخول مرة واحدة في نافذة داخل Jolty، لهذا الحساب فقط.",
+ "Sesiunea claude.ai a expirat. Conectează-te din nou.": "انتهت جلسة claude.ai. سجّل الدخول من جديد.",
+ "Sesiunea claude.ai e pe alt cont ({email}). Conectează-l pe cel al acestui profil.": "جلسة claude.ai على حساب آخر ({email}). اربط حساب هذا الملف الشخصي.",
+ "Contul nu are resetări acum.": "لا توجد إعادات ضبط متاحة للحساب الآن.",
+ "Reset complet": "إعادة ضبط كاملة",
+ "Reset parțial": "إعادة ضبط جزئية",
+ "Expiră {when}": "ينتهي {when}",
+ "{left} din {total}": "{left} من {total}",
+ "Nu se poate folosi acum": "لا يمكن استخدامه الآن",
+ "Conectare claude.ai": "الاتصال بـ claude.ai",
+ "Reset nou pe {name}": "إعادة ضبط جديدة على {name}",
+ "{label}. Expiră {when}.": "{label}. ينتهي {when}.",
+ "Actualizează resetările": "تحديث إعادات الضبط"
 }
