@@ -178,9 +178,25 @@ try {
   assert.equal(await closed(), true, 'a swipe while text is selected does not pull the drawer')
   await phone.evaluate(() => window.getSelection().removeAllRanges())
   await phone.waitForTimeout(1700)
-  // a swipe on the chat itself, away from the edge, is not the drawer's either
-  await swipe(120, 330)
-  assert.equal(await closed(), true, 'a swipe over the chat does not open the drawer')
+  // a thumb does not hit the very edge: from 40 px in it opens too, and so does a clear swipe over the chat (nothing selected)
+  await swipe(40, 300)
+  assert.equal(await closed(), false, 'a swipe from near the edge opens the drawer')
+  await swipe(320, 30)
+  await swipe(150, 340)
+  assert.equal(await closed(), false, 'a clear swipe over the chat opens the drawer')
+  await swipe(320, 30)
+  // a mostly vertical move is a scroll, not the drawer
+  const diagonal = async () => {
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 150, y: 300 }] })
+    for (let i = 1; i <= 8; i++) {
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 150 + i * 6, y: 300 + i * 40 }] })
+      await phone.waitForTimeout(18)
+    }
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await phone.waitForTimeout(500)
+  }
+  await diagonal()
+  assert.equal(await closed(), true, 'scrolling the chat does not open the drawer')
   await touch.send('Emulation.setTouchEmulationEnabled', { enabled: false })
   await touch.detach()
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.27.1
+
+### Fixed
+
+- The swipe that pulls out the drawer on the phone is easier to hit again: the strip at the left edge is wider (a thumb does not land on the very edge), it forgives a little drift up or down, and a clear sideways swipe over the chat opens it too. It still lets go the moment text is being selected, so the blue handles stay yours.
+
 ## 0.27.0
 
 ### New

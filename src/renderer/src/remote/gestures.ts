@@ -6,7 +6,8 @@ import { useScreenUi } from './screen-bus'
 // to the left pushes it back. The drawer follows the finger one to one and, on release, goes where the finger was heading
 // (position and speed decide), so it feels like part of the phone and not like a button with an animation.
 
-const EDGE = 28
+/** a thumb does not hit the very edge: this wide a strip counts as the edge, where the swipe is certain */
+const EDGE = 48
 const MIN_MOVE = 10
 
 interface Drag {
@@ -19,6 +20,18 @@ interface Drag {
   v: number
   lastX: number
   lastT: number
+}
+
+/** Whether something under the finger scrolls sideways itself (a code block, a table): the swipe is then its own. */
+function scrollsSideways(el: Element | null): boolean {
+  for (let n = el; n && n !== document.body; n = n.parentElement) {
+    if (n instanceof HTMLInputElement || n instanceof HTMLTextAreaElement || (n instanceof HTMLElement && n.isContentEditable)) return true
+    if (n instanceof HTMLElement && n.scrollWidth > n.clientWidth + 2) {
+      const ox = getComputedStyle(n).overflowX
+      if (ox === 'auto' || ox === 'scroll') return true
+    }
+  }
+  return false
 }
 
 /** Text is being selected (or was a moment ago): the handles of the selection, and the finger that places them, belong to the text, not to the drawer. */
@@ -76,8 +89,9 @@ export function setupGestures(): void {
     if (target?.closest('.pcscreen, .sheet, .sheet-scrim, .picker-pop, .ctx')) return
     const open = useStore.getState().sidebarOpen
     if (open) pending = { mode: 'close', x0: t.clientX, y0: t.clientY }
-    // the drawer is pulled out from the left edge only: a swipe on the chat itself is the text's (selecting it, its handles), never the drawer's
-    else if (t.clientX <= EDGE) pending = { mode: 'open', x0: t.clientX, y0: t.clientY }
+    // from the left strip the swipe is certain; anywhere else it has to be clearly sideways (decided in onMove). A selection, a finger that rests, a code
+    // block or a field keep their own touches, so the handles of a selection are never taken for the drawer
+    else if (t.clientX <= EDGE || !scrollsSideways(target)) pending = { mode: 'open', x0: t.clientX, y0: t.clientY }
     if (pending) hold = setTimeout(() => (pending = null), 350)
   }
 
@@ -99,11 +113,12 @@ export function setupGestures(): void {
       const dx = t.clientX - pending.x0
       const dy = t.clientY - pending.y0
       const fromEdge = pending.mode === 'open' && pending.x0 <= EDGE
-      if (Math.abs(dy) > 22 && Math.abs(dy) > Math.abs(dx)) {
+      // a thumb from the edge drifts a little up or down: it gets more room before it is taken for a scroll
+      if (Math.abs(dy) > (fromEdge ? 40 : 22) && Math.abs(dy) > Math.abs(dx) * (fromEdge ? 1.6 : 1)) {
         pending = null
         return
       }
-      const ok = pending.mode === 'open' ? dx > MIN_MOVE && (fromEdge || dx > Math.abs(dy) * 1.6) : dx < -MIN_MOVE && -dx > Math.abs(dy) * 1.4
+      const ok = pending.mode === 'open' ? dx > MIN_MOVE && (fromEdge || (dx > 16 && dx > Math.abs(dy) * 2)) : dx < -MIN_MOVE && -dx > Math.abs(dy) * 1.4
       if (!ok) return
       begin(pending.mode, t.clientX, t.clientY)
       pending = null
