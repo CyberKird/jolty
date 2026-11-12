@@ -1738,5 +1738,8 @@
  "Arată mai puține": "간단히 보기",
  "Jolty se actualizează. Telefonul se reconectează singur.": "Jolty를 업데이트하는 중입니다. 휴대폰이 자동으로 다시 연결됩니다.",
  "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "PC의 Jolty를 업데이트할까요? 종료 후 다시 시작되며, 휴대폰은 약 1분 안에 자동으로 다시 연결됩니다. 지금 작업 중인 것은 멈추지만 대화는 유지됩니다.",
- "Nu e nicio actualizare de instalat.": "설치할 업데이트가 없습니다."
+ "Nu e nicio actualizare de instalat.": "설치할 업데이트가 없습니다.",
+ "Mărimea hărții": "지도 크기",
+ "Jolty e instalat pentru toți utilizatorii, deci Windows cere aprobare pe PC. Instalează-l de acolo sau reinstalează-l doar pentru tine.": "Jolty가 모든 사용자용으로 설치되어 있어 Windows가 PC에서 승인을 요청합니다. PC에서 업데이트하거나 나만 사용하도록 다시 설치하세요.",
+ "Windows îți cere aprobare, conversațiile rămân": "Windows가 승인을 요청합니다. 대화는 그대로 남습니다"
 }

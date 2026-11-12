@@ -398,8 +398,8 @@ function balanceNote(err: unknown): string {
   return `Sold indisponibil (${errMsg(err)})`
 }
 /** Settles when the read is done (at once when nothing is read), so a refresh button can spin until then. */
-export function refreshLimitsSoon(p: Profile, force = false): Promise<void> {
-  if (p.local || (!force && Date.now() - (lastProbe.get(p.id) || 0) < 60e3)) return Promise.resolve()
+export function refreshLimitsSoon(p: Profile, force = false, gap = 60e3): Promise<void> {
+  if (p.local || (!force && Date.now() - (lastProbe.get(p.id) || 0) < gap)) return Promise.resolve()
   if (p.auth === 'endpoint') {
     // pay-as-you-go providers: what is left on the account instead of 5 h / 7 d windows
     if (!p.hasSecret && !p.hasCookie) return Promise.resolve()

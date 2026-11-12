@@ -710,3 +710,25 @@ html.remote .offline-over {
     user-select: text;
   }
 }
+
+/* the update pill in the phone's title bar: the icon alone in a round button (the strip by the composer has the words) */
+.update-pill {
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .titlebar .update-pill:not(.quiet) {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 999px;
+    flex: none;
+  }
+  .titlebar .update-pill-text {
+    display: none;
+  }
+  .titlebar .update-pill svg {
+    width: 15px;
+    height: 15px;
+  }
+}

@@ -175,11 +175,22 @@ export function UpdateStrip() {
     sessionStorage.setItem('jolty:update-hidden', update.version || '')
     setHidden(update.version || '')
   }
+  const remote = document.documentElement.classList.contains('remote')
+  // installed for all users: Windows asks for permission on the PC at every update, and nobody can say yes from the phone
+  const needsPc = remote && update.machineWide
   return (
     <div className="verification-strip update-strip" role="status">
       <span className="verification-text">{tr("Jolty {version} e gata de instalat", { version: update.version })}</span>
-      <span className="verification-cost">{busy ? tr("Așteaptă să termine conversațiile care lucrează") : tr("Câteva secunde, conversațiile rămân")}</span>
-      <button disabled={busy} onClick={() => void api.updates.install()}>{tr("Repornește acum")}</button>
+      <span className="verification-cost">
+        {needsPc
+          ? tr("Jolty e instalat pentru toți utilizatorii, deci Windows cere aprobare pe PC. Instalează-l de acolo sau reinstalează-l doar pentru tine.")
+          : busy
+            ? tr("Așteaptă să termine conversațiile care lucrează")
+            : update.machineWide
+              ? tr("Windows îți cere aprobare, conversațiile rămân")
+              : tr("Câteva secunde, conversațiile rămân")}
+      </span>
+      {!needsPc && <button disabled={busy} onClick={() => void api.updates.install()}>{tr("Repornește acum")}</button>}
       <button onClick={hide} aria-label={tr("Mai târziu")} title={tr("Mai târziu (rămâne butonul din bara de sus)")}>×</button>
     </div>
   )

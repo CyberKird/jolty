@@ -2829,7 +2829,7 @@ a {
 .meter-limit .fill {
   display: block;
   height: 100%;
-  transition: width 0.4s var(--ease);
+  transition: width 0.7s var(--ease), background-color 0.7s var(--ease);
 }
 .meter-pct {
   text-align: end;
@@ -3059,6 +3059,10 @@ a {
 }
 .picker-score.lo {
   color: var(--grey-2);
+}
+.picker-score.tick {
+  display: inline-block;
+  animation: tick 0.5s var(--ease);
 }
 .picker-speed {
   font-family: var(--label);

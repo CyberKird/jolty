@@ -194,6 +194,9 @@ async function withProbe<T>(profile: Profile, fn: (q: Query) => Promise<T>, time
 
 /** The usage endpoint is rate limited (429 + retry-after), so remember when we may ask again. */
 const usageCooldown = new Map<string, number>()
+/** when Claude Code was last asked for the usage instead (a process start each time) */
+const lastSdkProbe = new Map<string, number>()
+const SDK_PROBE_GAP = 90e3
 /**
  * Reads plan limits with this profile's OAuth token. The SDK usage probe can report no
  * limits even while this endpoint has data, and probing first may consume its rate limit.
@@ -1007,9 +1010,13 @@ export class ClaudeDriver implements EngineDriver {
   async limits(profile: Profile): Promise<RateLimitSnapshot | undefined> {
     if (profile.auth !== 'subscription') return undefined
     const direct = await oauthUsage(profile)
-    const usage = direct.limits || direct.cooldownMs
+    // while the usage endpoint makes us wait (429), Claude Code's own reading still answers: used then too, so the meter and the refresh
+    // button do not sit on an old number for minutes; at most every 90 s, since it starts a Claude Code process
+    const probeOk = !direct.cooldownMs || Date.now() - (lastSdkProbe.get(profile.id) || 0) > SDK_PROBE_GAP
+    const usage = direct.limits || !probeOk
       ? undefined
-      : await withProbe(profile, (q) => q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }))
+      : (lastSdkProbe.set(profile.id, Date.now()),
+        await withProbe(profile, (q) => q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true })).catch(() => undefined))
     const raw = (direct.limits ?? usage?.rate_limits) as
       | Record<string, { utilization?: number | null; resets_at?: string | null; limit_dollars?: number | null } | null>
       | undefined

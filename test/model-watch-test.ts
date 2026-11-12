@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { candidates, pickAuto, rankHelpers, worthRouting, type HelperEntry } from '../src/main/auto-model'
 import { FLAG_DAYS, flagOf, observe, parseOllamaTags, parseProviderList, withBadges } from '../src/main/model-watch-core'
-import { modelScore, parseRemoteScores, setRemoteScores } from '../src/shared/scores'
+import { iqAt, levelsIn, modelScore, parseRemoteScores, setRemoteScores } from '../src/shared/scores'
 import type { ModelOption, Profile } from '../src/shared/types'
 
 const DAY = 864e5
@@ -198,4 +198,20 @@ test('small jobs go to the quickest usable model, a failed one is skipped, an un
   // nothing scored or named small: the unscored model is still better than no helper
   assert.deepEqual(rankHelpers([list[3]], () => false).map((e) => e.model), ['big-pickle'])
   assert.deepEqual(rankHelpers(list, () => true), [])
+})
+
+test('the intelligence follows the thinking level written in the note', () => {
+  const opus = { iq: 54, note: '', ...levelsIn('Claude Opus 5.5 · high (low 35, xhigh 57, medium 48, max 59)', 54) }
+  assert.equal(opus.base, 'high')
+  assert.equal(iqAt(opus, 'low'), 35)
+  assert.equal(iqAt(opus, 'max'), 59)
+  assert.equal(iqAt(opus, undefined), 54)
+  // the Romanian table and a version number before the level
+  const fable = { iq: 51, note: '', ...levelsIn('Fable 5.1 la efort high (46 la low, 53 la max)', 51) }
+  assert.deepEqual(fable.levels, { low: 46, max: 53, high: 51 })
+  // a level the benchmark did not measure sits between its neighbours
+  assert.equal(iqAt(fable, 'medium'), 49)
+  // no level in the note: the score stays the same at every level
+  assert.equal(levelsIn('Beam 1.0', 30), undefined)
+  assert.equal(iqAt({ iq: 30, note: '' }, 'max'), 30)
 })

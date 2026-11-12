@@ -37,25 +37,13 @@
 .ag-rays {
   transform-origin: 12.8% 52.1%;
 }
-.ag-dash {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.28);
-  stroke-width: 0.8;
-  stroke-dasharray: 2.2 3;
+.ag-dots circle,
+.ag-rays line {
+  transition: opacity 0.9s var(--e-out, ease-out);
 }
-.ag-ring {
-  fill: none;
-  stroke: var(--volt);
-  stroke-width: 1;
-  stroke-linecap: round;
-  opacity: 0.7;
-  transition: stroke-dasharray var(--t-slow) var(--e-out);
-}
-.actgraph.wait .ag-ring {
-  stroke: var(--warning);
-}
-.ag-dots circle {
-  opacity: 0.95;
+.ag-rays {
+  opacity: var(--ag-ray, 0.8);
+  transition: opacity 0.9s ease-out;
 }
 .ag-glow {
   position: absolute;
@@ -90,67 +78,41 @@
   color: var(--grey);
 }
 
-/* the cables */
-.ag-edge {
-  stroke: rgba(0, 0, 0, 0.55);
+/* the cables: one canvas the graphics chip draws (activity-gl.ts), and one for the sparks of a transfer */
+.ag-cv {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
-.ag-speck {
-  stroke: rgba(0, 0, 0, 0.42);
+/* the place the work moved to gathers out of the sparks, then its tile settles */
+.ag-node.arrive .ag-tile {
+  animation: ag-arrive 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-.ag-spark {
-  stroke: #fff;
-  stroke-width: 2.2;
-  stroke-dasharray: 6 94;
-  animation: ag-travel 1.35s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-}
-.ag-spark.wide {
-  stroke-width: 7;
-  opacity: 0.4;
-}
-@keyframes ag-travel {
-  from {
-    stroke-dashoffset: 6;
+@keyframes ag-arrive {
+  0%,
+  35% {
+    opacity: 0;
+    transform: scale(0.7);
   }
-  to {
-    stroke-dashoffset: -94;
-  }
-}
-
-/* the glitter: two layers that fade into each other slowly, so the cables shimmer instead of flickering */
-.ag-glit.a {
-  animation: ag-shimmer-a 2.8s ease-in-out infinite alternate;
-}
-.ag-glit.b {
-  animation: ag-shimmer-b 2.8s ease-in-out infinite alternate;
-}
-@keyframes ag-shimmer-a {
-  from {
+  100% {
     opacity: 1;
-  }
-  to {
-    opacity: 0.25;
-  }
-}
-@keyframes ag-shimmer-b {
-  from {
-    opacity: 0.25;
-  }
-  to {
-    opacity: 1;
+    transform: none;
   }
 }
 /* the dots twinkle in four groups, out of step; the rays turn very slowly; the light breathes */
 .ag-dots.g0 {
-  animation: ag-twinkle 3.1s ease-in-out infinite;
+  animation: ag-twinkle calc(3.1s * var(--ag-tw, 1)) ease-in-out infinite;
 }
 .ag-dots.g1 {
-  animation: ag-twinkle 3.7s ease-in-out -1.2s infinite;
+  animation: ag-twinkle calc(3.7s * var(--ag-tw, 1)) ease-in-out -1.2s infinite;
 }
 .ag-dots.g2 {
-  animation: ag-twinkle 2.6s ease-in-out -0.5s infinite;
+  animation: ag-twinkle calc(2.6s * var(--ag-tw, 1)) ease-in-out -0.5s infinite;
 }
 .ag-dots.g3 {
-  animation: ag-twinkle 4.3s ease-in-out -2.4s infinite;
+  animation: ag-twinkle calc(4.3s * var(--ag-tw, 1)) ease-in-out -2.4s infinite;
 }
 @keyframes ag-twinkle {
   50% {
@@ -158,7 +120,7 @@
   }
 }
 .ag-rays {
-  animation: ag-turn 120s linear infinite;
+  animation: ag-turn var(--ag-spin, 120s) linear infinite;
 }
 @keyframes ag-turn {
   to {
@@ -170,10 +132,10 @@
 }
 @keyframes ag-breathe {
   from {
-    transform: translate(-50%, -50%) scale(0.92);
+    transform: translate(-50%, -50%) scale(calc(0.92 * var(--ag-g, 1)));
   }
   to {
-    transform: translate(-50%, -50%) scale(1.1);
+    transform: translate(-50%, -50%) scale(calc(1.1 * var(--ag-g, 1)));
   }
 }
 .actgraph.live-on .ag-glow {
@@ -343,19 +305,47 @@ html.reduce-motion .actgraph *::after {
   animation: none !important;
   transition: none !important;
 }
-html.low-power .ag-glit,
-html.reduce-motion .ag-glit {
-  opacity: 0.6;
-}
 html.low-power .ag-node.on .ag-tile::after,
 html.reduce-motion .ag-node.on .ag-tile::after {
   opacity: 0.6;
 }
-html.low-power .ag-spark,
-html.reduce-motion .ag-spark {
-  stroke-dasharray: none;
-  opacity: 0.35;
-}
 .live.closed .actgraph * {
   animation-play-state: paused;
+}
+/* still, the light keeps the size of the model */
+html.low-power .ag-glow,
+html.reduce-motion .ag-glow {
+  transform: translate(-50%, -50%) scale(var(--ag-g, 1));
+}
+
+/* the bar above the Live tabs that sizes the board: no room of its own, a thin line that lights under the pointer */
+.ag-sizer {
+  position: relative;
+  z-index: 3;
+  flex: none;
+  height: 0;
+}
+.ag-sizer::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: -4px;
+  height: 8px;
+  cursor: row-resize;
+  touch-action: none;
+}
+.ag-sizer::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: -1px;
+  height: 2px;
+  background: var(--volt-line);
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--e-move);
+  pointer-events: none;
+}
+.ag-sizer:hover::after,
+.resizing .ag-sizer:active::after {
+  opacity: 1;
 }

@@ -4,7 +4,7 @@ import { Check, ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { capability } from '@shared/complexity'
-import { modelScore } from '@shared/scores'
+import { iqAt, modelScore } from '@shared/scores'
 import type { BrowserMode, EngineKind, ModelOption, PermissionMode, Profile, SiteTrust } from '@shared/types'
 import { isAcp } from '@shared/types'
 import { bucketFor } from '@shared/limits'
@@ -137,6 +137,7 @@ export function ModelPicker(p: {
   const current = group?.models.find((m) => m.id === p.model || m.alias === p.model) || group?.models.find((m) => m.isDefault)
   const efforts = current?.efforts || []
   const effort = p.effort || current?.defaultEffort
+  const currentScore = group && current ? modelScore(group.profile, current) : undefined
   const label = current?.label || p.model || (group?.loading ? tr("Se încarcă…") : tr("Alege modelul"))
 
   return (
@@ -166,6 +167,8 @@ export function ModelPicker(p: {
                   const other = g.profile.id !== p.profileId
                   const cap = capability(g.profile, m)
                   const sc = modelScore(g.profile, m)
+                  // the chosen model's number follows its thinking level as it is changed below
+                  const iq = sc ? (on ? iqAt(sc, effort) : iqAt(sc, m.defaultEffort)) : 0
                   // a model with its own weekly bucket (the plan includes it for a share of the weekly limit)
                   const bucket = g.profile.engine === 'claude' ? bucketFor(limits[g.profile.id]?.windows, m.label) : undefined
                   const bucketVars = bucket && { name: bucket.scope || m.label, n: Math.round(bucket.allowance || 0), used: Math.round(bucket.usedPercent), when: resetAt(bucket.resetsAt) }
@@ -195,7 +198,11 @@ export function ModelPicker(p: {
                       <span className="picker-opt-text">
                         <span className="picker-opt-name">
                           {m.label}
-                          {sc && <span className={`picker-score ${sc.measured ? 'est' : sc.iq >= 45 ? 'hi' : sc.iq < 25 ? 'lo' : ''}`}>{sc.measured ? `~${sc.iq}` : sc.iq}</span>}
+                          {sc && (
+                            <span key={iq} className={`picker-score ${on ? 'tick' : ''} ${sc.measured ? 'est' : iq >= 45 ? 'hi' : iq < 25 ? 'lo' : ''}`}>
+                              {sc.measured ? `~${iq}` : iq}
+                            </span>
+                          )}
                           {sc?.speed && <span className="picker-speed">{sc.speed}</span>}
                           {bucket && <span className="picker-badge included">{tr("INCLUS")}</span>}
                           {m.badge && <span className={`picker-badge ${m.badge}`}>{m.badge === 'new' ? tr("NOU") : tr("ACTUALIZAT")}</span>}
@@ -220,7 +227,7 @@ export function ModelPicker(p: {
                   </button>
                 )}
                 {efforts.map((e) => (
-                  <button key={e} data-opt role="radio" aria-checked={effort === e} className={effort === e ? 'on' : ''} title={EFFORT_TITLES[e] || e} onClick={() => p.onEffort(e)}>
+                  <button key={e} data-opt role="radio" aria-checked={effort === e} className={effort === e ? 'on' : ''} title={currentScore?.levels ? `${EFFORT_TITLES[e] || e} · ${tr("inteligență {iq}", { iq: iqAt(currentScore, e) })}` : EFFORT_TITLES[e] || e} onClick={() => p.onEffort(e)}>
                     {e}
                   </button>
                 ))}

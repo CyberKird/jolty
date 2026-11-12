@@ -1,7 +1,7 @@
 import { BarChart3, CalendarClock, Cpu, Download, Images, KeyRound, Monitor, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck } from 'lucide-react'
 import { BugReportButton } from './BugReport'
 import { MergeHost } from './MergePanel'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useScreenUi } from '../remote/screen-bus'
 import { audioContext } from '../remote/screen-video'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
@@ -120,18 +120,59 @@ function isMiMoProfile(p: { auth: string; baseUrl?: string }): boolean {
   return p.auth === 'endpoint' && /^https:\/\/(?:api|token-plan-cn)\.xiaomimimo\.com(?:[:/]|$)/i.test(p.baseUrl || '')
 }
 
+/** A number that runs to its new value instead of jumping (a new reading of the usage); still with low power or reduced motion. */
+function Rolling({ value }: { value: number }) {
+  const [shown, setShown] = useState(value)
+  const from = useRef(value)
+  useEffect(() => {
+    const start = from.current
+    const root = document.documentElement.classList
+    if (start === value || root.contains('low-power') || root.contains('reduce-motion')) {
+      from.current = value
+      setShown(value)
+      return
+    }
+    const t0 = performance.now()
+    let raf = 0
+    const step = (now: number): void => {
+      const q = Math.min(1, (now - t0) / 700)
+      const v = Math.round(start + (value - start) * (1 - Math.pow(1 - q, 3)))
+      from.current = v
+      setShown(v)
+      if (q < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [value])
+  return <>{shown}</>
+}
+
 /** Always-visible meter: each account's 5 h / 7 d limits and its last 24 h, updated as turns finish. */
 function UsageMeter() {
   const { profiles, limits, spend, spend7d, balances, status, sessions, setPage, loadUsage, loadSessions, toast } = useStore(useShallow((st) => ({ profiles: st.profiles, limits: st.limits, spend: st.spend, spend7d: st.spend7d, balances: st.balances, status: st.status, sessions: st.sessions, setPage: st.setPage, loadUsage: st.loadUsage, loadSessions: st.loadSessions, toast: st.toast })))
   const running = Object.values(status).some((s) => s === 'running')
   const [refreshing, setRefreshing] = useState(false)
+  // the accounts whose chats are working right now: their usage moves, so they are read more often
+  const busyProfiles = useMemo(() => [...new Set(sessions.filter((x) => status[x.id] === 'running').map((x) => x.profileId))].sort().join(','), [sessions, status])
+  const wasBusy = useRef('')
   useEffect(() => {
+    // a chat that just finished changed its account's usage: read it now instead of at the next tick
+    const ended = wasBusy.current.split(',').filter((id) => id && !busyProfiles.split(',').includes(id))
+    wasBusy.current = busyProfiles
+    for (const id of ended) {
+      const p = profiles.find((x) => x.id === id)
+      if (p) void refreshLimitsSoon(p, false, 15e3)
+    }
+  }, [busyProfiles, profiles])
+  useEffect(() => {
+    const busy = new Set(busyProfiles.split(',').filter(Boolean))
     const probe = (): void => {
-      if (!document.hidden) for (const p of profiles) void refreshLimitsSoon(p)
+      if (!document.hidden) for (const p of profiles) void refreshLimitsSoon(p, false, busy.has(p.id) ? 25e3 : 60e3)
     }
     probe()
-    // live without the refresh button: every minute while visible, and at once when the window comes back (refreshLimitsSoon throttles per account)
-    const timer = setInterval(probe, 65e3)
+    // live without the refresh button: every 30 s for an account that is working, every minute otherwise, and at once when the window
+    // comes back (refreshLimitsSoon throttles per account)
+    const timer = setInterval(probe, busy.size ? 30e3 : 65e3)
     document.addEventListener('visibilitychange', probe)
     window.addEventListener('focus', probe)
     return () => {
@@ -139,7 +180,7 @@ function UsageMeter() {
       document.removeEventListener('visibilitychange', probe)
       window.removeEventListener('focus', probe)
     }
-  }, [profiles])
+  }, [profiles, busyProfiles])
   // a profile with empty windows but a note (rate-limited probe) stays visible so the row does not vanish
   // OpenCode publishes no limits, so its row stays like Gemini's; Hermes is listed as soon as one of its chats works
   const working = new Set(sessions.filter((x) => status[x.id] === 'running').map((x) => x.profileId))
@@ -246,7 +287,9 @@ function UsageMeter() {
                 <span className="track">
                   <span className="fill" style={{ width: `${Math.min(100, w.usedPercent)}%`, background: levelColor(w.usedPercent) }} />
                 </span>
-                <span className="meter-pct">{Math.round(w.usedPercent)}%</span>
+                <span className="meter-pct">
+                  <Rolling value={Math.round(w.usedPercent)} />%
+                </span>
               </span>
             ))}
             {!limits[p.id]?.windows.length && limits[p.id]?.note && <span className="faint small">{limits[p.id]!.note}</span>}

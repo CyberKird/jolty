@@ -108,6 +108,8 @@ try {
   await win.locator('.session-item').first().click()
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('jolty:event', { type: 'context', sessionId: 's1', used: 170000, window: 200000 }))
   await win.waitForSelector('.actgraph')
+  // the transfer: the rope reaches the running place spread out and closes up while the place gathers out of sparks
+  for (const name of ['transfer-a', 'transfer-b', 'transfer-c', 'transfer-d', 'transfer-e']) await win.locator('.actgraph').screenshot({ path: path.join(shots, `${name}.png`) })
   assert.equal(await win.locator('.ag-node.on').count(), 1, 'the running tool lights one place')
   assert.match(await win.locator('.ag-node.on .ag-label').textContent(), /Network/i)
   assert.equal(await win.locator('.ag-fail').count(), 1, 'the failed command is counted')
@@ -115,8 +117,26 @@ try {
   assert.equal(await win.locator('.liquid.high').count(), 1, 'over 80% the liquid turns')
   await win.waitForTimeout(1600)
   await win.locator('.actgraph').screenshot({ path: path.join(shots, 'actgraph.png') })
+  // the glitter flows: two shots a tenth of a second apart (measured by the caller)
+  await win.locator('.actgraph').screenshot({ path: path.join(shots, 'flow-a.png') })
+  await win.waitForTimeout(100)
+  await win.locator('.actgraph').screenshot({ path: path.join(shots, 'flow-b.png') })
   await win.screenshot({ path: path.join(shots, 'chat-map.png') })
-  await win.screenshot({ path: path.join(shots, 'chat-map.png') })
+  // the bar above the Live tabs makes the board bigger when dragged down
+  const w0 = (await win.locator('.ag-wrap').boundingBox()).width
+  const bar = await win.locator('.ag-sizer').boundingBox()
+  await win.mouse.move(bar.x + bar.width / 2, bar.y)
+  await win.mouse.down()
+  await win.mouse.move(bar.x + bar.width / 2, bar.y - 40, { steps: 4 })
+  await win.mouse.up()
+  const w1 = (await win.locator('.ag-wrap').boundingBox()).width
+  assert.ok(w1 < w0 - 30, `dragging up makes the board smaller (${w0} -> ${w1})`)
+  const bar2 = await win.locator('.ag-sizer').boundingBox()
+  await win.mouse.dblclick(bar2.x + bar2.width / 2, bar2.y)
+  await win.waitForTimeout(100)
+  const w2 = (await win.locator('.ag-wrap').boundingBox()).width
+  const hit = await win.evaluate(([x, y]) => `${document.querySelector('.ag-wrap').getAttribute('style')} | ${document.elementFromPoint(x, y)?.className}`, [bar2.x + bar2.width / 2, bar2.y])
+  assert.ok(Math.abs(w2 - w0) < 2, `a double click fits it again (${w0} ${w1} ${w2}; ${hit})`)
   const level = await win.evaluate(() => getComputedStyle(document.querySelector('.liquid')).getPropertyValue('--lvl'))
   assert.equal(Number(level), 85)
   // a lower level, close up: the liquid sphere with its surface

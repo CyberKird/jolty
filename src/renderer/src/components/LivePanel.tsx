@@ -9,7 +9,9 @@ import { DiffView, highlight, highlightLive, langOf, type DiffReview } from './R
 import { reviewMessage, type ReviewComment } from '@shared/review'
 import { useNow } from './Tasks'
 import { tr } from '@shared/i18n'
-import { ActivityGraph } from './ActivityGraph'
+import { ActivityGraph, ActivitySizer } from './ActivityGraph'
+import { useAllModels } from './ModelPicker'
+import { iqAt, modelScore } from '@shared/scores'
 import './activity-graph.css'
 
 type Tool = Extract<ChatItem, { kind: 'tool' }>
@@ -566,6 +568,14 @@ const NO_COMMENTS: ReviewComment[] = []
 export function LivePanel({ session }: { session?: SessionMeta }) {
   const id = session?.id || ''
   const cwd = session?.cwd || ''
+  // how bright the burst on the board is: the model's intelligence at the thinking level the chat runs at
+  const profiles = useStore((s) => s.profiles)
+  const own = useMemo(() => profiles.filter((p) => p.id === session?.profileId), [profiles, session?.profileId])
+  const [modelGroup] = useAllModels(own)
+  const modelOpt = modelGroup?.models.find((m) => m.id === session?.model || m.alias === session?.model) || modelGroup?.models.find((m) => m.isDefault)
+  const modelSc = modelGroup && modelOpt ? modelScore(modelGroup.profile, modelOpt) : undefined
+  const runEffort = session?.effort || modelOpt?.defaultEffort
+  const modelIq = modelSc ? iqAt(modelSc, runEffort) : undefined
   const items = useStore((s) => s.transcripts[id]) || EMPTY
   const status = useStore((s) => s.status[id])
   const perms = useStore((s) => s.permissions[id]) || []
@@ -688,7 +698,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
             <X size={14} />
           </button>
         </div>
-        {open && <ActivityGraph items={items} phase={phase} engine={session?.engine || 'claude'} model={session?.model} context={ctxPct} />}
+        {open && <ActivityGraph items={items} phase={phase} engine={session?.engine || 'claude'} model={session?.model} context={ctxPct} iq={modelIq} effort={runEffort} />}
         <div className={`state-name ${phase.on && phase.key !== 'approval' ? 'on' : ''}`} style={phase.key === 'approval' ? { color: 'var(--warning)' } : undefined}>
           {phase.name}
         </div>
@@ -715,6 +725,7 @@ export function LivePanel({ session }: { session?: SessionMeta }) {
         </div>
         )}
       </div>
+      {open && <ActivitySizer />}
       <LiveTabs tabs={TABS} tab={tab} onPick={setPicked} />
       <div className="live-pane" role="tabpanel" key={tab}>
         {tab === 'changes' && <ChangesView changes={changes} cwd={cwd} review={review} onSend={() => void sendReview()} onClear={() => setReviews((r) => ({ ...r, [id]: [] }))} />}

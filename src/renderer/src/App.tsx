@@ -46,19 +46,26 @@ function UpdatePill() {
   if (update?.state === 'downloading')
     return (
       <span className="update-pill quiet" title={tr("Descarc Jolty {v0} în fundal", { v0: update.version || '' })}>
-        <ArrowDownToLine size={12} /> {tr("Actualizare")} {update.percent ?? 0}%
+        <ArrowDownToLine size={12} /> <span className="update-pill-text">{tr("Actualizare")}</span> {update.percent ?? 0}%
       </span>
     )
   if (update?.state === 'available')
     return (
       <button className="update-pill" onClick={() => void api.updates.install()} title={tr("Descarcă Jolty {version}, îl instalează și îl pornește din nou. Conversațiile rămân.", { version: update.version || '' })}>
-        <ArrowDownToLine size={12} /> {tr("Jolty {version} e disponibil · Actualizează", { version: update.version || '' })}
+        <ArrowDownToLine size={12} /> <span className="update-pill-text">{tr("Jolty {version} e disponibil · Actualizează", { version: update.version || '' })}</span>
       </button>
     )
   if (update?.state !== 'ready') return null
+  // on the phone an all-users install cannot be updated (Windows asks on the PC); the strip by the composer says so
+  if (update.machineWide && document.documentElement.classList.contains('remote')) return null
   return (
-    <button className="update-pill" onClick={() => void api.updates.install()} title={tr("Închide Jolty, instalează noua versiune și îl pornește din nou. Conversațiile rămân.")}>
-      <RefreshCw size={12} /> {tr("Jolty {version} e gata · Repornește", { version: update.version })}
+    <button
+      className="update-pill"
+      onClick={() => void api.updates.install()}
+      aria-label={tr("Jolty {version} e gata · Repornește", { version: update.version })}
+      title={tr("Închide Jolty, instalează noua versiune și îl pornește din nou. Conversațiile rămân.")}
+    >
+      <RefreshCw size={12} /> <span className="update-pill-text">{tr("Jolty {version} e gata · Repornește", { version: update.version })}</span>
     </button>
   )
 }

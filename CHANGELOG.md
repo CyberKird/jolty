@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.28.0
+
+### New
+
+- The burst of light on the activity map follows the model: a smarter model has more stars and rays and a bigger light, and a higher thinking level turns it faster and makes it twinkle quicker. Change the model or the thinking level and the stars come and go smoothly.
+- In the model picker, the intelligence number of the model you are using follows its thinking level as you change it (low, medium, high, max), with the levels the leaderboard measured. A level it did not measure sits between its neighbours, and hovering a level shows its number.
+- A bar above the Live tabs (Changes, Plan, Terminal and the rest) sets the size of the activity map, like the bar between Live and Usage on the left: drag it down to make the map bigger, up to make it smaller, double click to fit it again.
+
+### Improvements
+
+- The activity map now looks and moves like its reference. The cables are made of fine glitter that flows from the light out to the tiles and twinkles grain by grain, drawn by the graphics card at 30 frames a second, not little dashes anymore. When the model starts working somewhere new, three warm strands leave the light, run to that place spread apart and close into one rope, and the place gathers out of a cloud of sparks. On a weak PC or with motion off the cables hold still with the same glitter.
+- The dashed circle around the light and the green ring on it are gone: the stars thin out towards the edge on their own, and the context share stays in the label.
+- No more little bumps where a cable turned into its tile: every cable runs as one piece from the light to its tile, and the side branches come out from under the bundle.
+
+### Fixed
+
+- The update button in the phone's title bar no longer breaks over two lines: on the phone it is a round button with the icon, and the strip by the message box has the words.
+- When Jolty is installed for all users (in Program Files), the phone no longer offers a restart that then hangs on the PC waiting for Windows to approve it. It says the update has to be approved on the PC, or that Jolty can be reinstalled just for you, so updates go through silently, from the phone too.
+- Live usage at the bottom left is live again. When Anthropic's usage service asks Jolty to wait (it limits how often it can be read), Jolty reads it through Claude Code instead of showing the old number for minutes, so the refresh button gives the real usage. An account with a chat at work is read every 30 seconds, and once more as soon as the chat finishes. A new number runs to its value and the bar slides, instead of jumping.
+
 ## 0.27.1
 
 ### Fixed

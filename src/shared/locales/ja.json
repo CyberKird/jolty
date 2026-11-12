@@ -1738,5 +1738,8 @@
  "Arată mai puține": "表示を減らす",
  "Jolty se actualizează. Telefonul se reconectează singur.": "Jolty を更新しています。スマホは自動で再接続します。",
  "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "PC の Jolty を更新しますか？ 一度閉じて再起動し、スマホは約 1 分で自動的に再接続します。実行中の作業は止まりますが、会話は残ります。",
- "Nu e nicio actualizare de instalat.": "インストールする更新はありません。"
+ "Nu e nicio actualizare de instalat.": "インストールする更新はありません。",
+ "Mărimea hărții": "マップのサイズ",
+ "Jolty e instalat pentru toți utilizatorii, deci Windows cere aprobare pe PC. Instalează-l de acolo sau reinstalează-l doar pentru tine.": "Jolty はすべてのユーザー向けにインストールされているため、Windows が PC で許可を求めます。PC から更新するか、自分専用に入れ直してください。",
+ "Windows îți cere aprobare, conversațiile rămân": "Windows が許可を求めます。会話はそのまま残ります"
 }

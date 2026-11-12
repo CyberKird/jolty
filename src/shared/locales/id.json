@@ -1738,5 +1738,8 @@
  "Arată mai puține": "Tampilkan lebih sedikit",
  "Jolty se actualizează. Telefonul se reconectează singur.": "Jolty sedang diperbarui. Ponsel tersambung kembali sendiri.",
  "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "Perbarui Jolty di PC? Aplikasi akan menutup dan menyala lagi, lalu ponsel tersambung kembali sendiri dalam sekitar satu menit. Yang sedang berjalan akan berhenti, percakapan tetap ada.",
- "Nu e nicio actualizare de instalat.": "Tidak ada pembaruan untuk dipasang."
+ "Nu e nicio actualizare de instalat.": "Tidak ada pembaruan untuk dipasang.",
+ "Mărimea hărții": "Ukuran peta",
+ "Jolty e instalat pentru toți utilizatorii, deci Windows cere aprobare pe PC. Instalează-l de acolo sau reinstalează-l doar pentru tine.": "Jolty terpasang untuk semua pengguna, jadi Windows meminta persetujuan di PC. Pasang pembaruan dari sana atau pasang ulang Jolty hanya untukmu.",
+ "Windows îți cere aprobare, conversațiile rămân": "Windows akan meminta persetujuanmu, percakapan tetap ada"
 }

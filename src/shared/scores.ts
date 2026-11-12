@@ -14,6 +14,37 @@ export interface ModelScore {
   note: string
   /** set when the measurement is of an older version of this model ("5.1"): the number is shown as an estimate, not as this model's */
   measured?: string
+  /** intelligence at each thinking level the benchmark measured ("low" -> 46); `iq` is the one at `base` */
+  levels?: Record<string, number>
+  base?: string
+}
+
+export const EFFORT_ORDER = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
+/** The levels written in a note: "· high (medium 31, low 26)" or "la efort high (46 la low, 53 la max)", in any language the note was put in. */
+export function levelsIn(note: string, iq: number): { levels: Record<string, number>; base: string } | undefined {
+  const levels: Record<string, number> = {}
+  const rest = note
+    .replace(/\b(minimal|low|medium|high|xhigh|max)\s+(\d{1,3})(?![\d.])/gi, (_, l: string, n: string) => ((levels[l.toLowerCase()] = Number(n)), ' '))
+    .replace(/(?<![\d.])(\d{1,3})(?![\d.])\s+(?:\p{L}+\s+)?(minimal|low|medium|high|xhigh|max)\b/giu, (_, n: string, l: string) => ((levels[l.toLowerCase()] = Number(n)), ' '))
+  const base = /\b(minimal|low|medium|high|xhigh|max)\b/i.exec(rest)?.[1]?.toLowerCase()
+  if (!base) return undefined
+  levels[base] = iq
+  return { levels, base }
+}
+
+/** Intelligence at a thinking level: measured when the benchmark has it, else between the two nearest measured levels, else the score itself. */
+export function iqAt(s: ModelScore, effort?: string): number {
+  const lv = s.levels
+  if (!lv || !effort) return s.iq
+  const e = effort.toLowerCase()
+  if (lv[e] !== undefined) return lv[e]
+  const idx = EFFORT_ORDER.indexOf(e as (typeof EFFORT_ORDER)[number])
+  if (idx < 0) return s.iq
+  const known = EFFORT_ORDER.map((l, i) => ({ i, v: lv[l] })).filter((k) => k.v !== undefined) as { i: number; v: number }[]
+  const lo = [...known].reverse().find((k) => k.i < idx)
+  const hi = known.find((k) => k.i > idx)
+  if (lo && hi) return Math.round(lo.v + ((hi.v - lo.v) * (idx - lo.i)) / (hi.i - lo.i))
+  return (lo ?? hi)?.v ?? s.iq
 }
 
 // [pattern on "id label", index, tokens/s, note]; first match wins, so the longer names come first
@@ -98,9 +129,9 @@ export function setRemoteScores(entries: RemoteScore[]): void {
   remote = entries
 }
 
-function toScore(profile: Profile, iq: number, measured: number | undefined, note: string): ModelScore {
+function toScore(profile: Profile, iq: number, measured: number | undefined, note: string, raw = note): ModelScore {
   const tps = profile.local ? undefined : measured
-  return { iq, tps, speed: tps === undefined ? undefined : tps >= 100 ? 'rapid' : tps >= 60 ? 'mediu' : 'lent', note }
+  return { iq, tps, speed: tps === undefined ? undefined : tps >= 100 ? 'rapid' : tps >= 60 ? 'mediu' : 'lent', note, ...levelsIn(raw, iq) }
 }
 
 /** The first version number in a name or a note: "Claude Fable 5.1 · high" -> "5.1", "claude-fable-5-2" -> "5.2". */
@@ -122,7 +153,7 @@ export function modelScore(profile: Profile, m: ModelOption): ModelScore | undef
   const flat = squash(text)
   const r = remote.find((e) => e.match.every((t) => flat.includes(squash(t))))
   // the notes in scores.json are the same Romanian texts as the table, so they translate the same way
-  if (r) return forVersion(m, toScore(profile, r.iq, r.tps, tr(r.note)))
+  if (r) return forVersion(m, toScore(profile, r.iq, r.tps, tr(r.note), r.note))
   const hit = SCORES.find(([re]) => re.test(text))
   return hit ? forVersion(m, toScore(profile, hit[1], hit[2], hit[3])) : undefined
 }

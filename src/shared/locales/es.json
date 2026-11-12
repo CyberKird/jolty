@@ -1738,5 +1738,8 @@
  "Arată mai puține": "Mostrar menos",
  "Jolty se actualizează. Telefonul se reconectează singur.": "Jolty se está actualizando. El teléfono se reconecta solo.",
  "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "¿Actualizar Jolty en el PC? Se cierra y vuelve a abrirse, y el teléfono se reconecta solo en cerca de un minuto. Lo que está trabajando ahora se detiene; las conversaciones se conservan.",
- "Nu e nicio actualizare de instalat.": "No hay ninguna actualización que instalar."
+ "Nu e nicio actualizare de instalat.": "No hay ninguna actualización que instalar.",
+ "Mărimea hărții": "Tamaño del mapa",
+ "Jolty e instalat pentru toți utilizatorii, deci Windows cere aprobare pe PC. Instalează-l de acolo sau reinstalează-l doar pentru tine.": "Jolty está instalado para todos los usuarios, así que Windows pide aprobación en el PC. Instálalo desde allí o reinstala Jolty solo para ti.",
+ "Windows îți cere aprobare, conversațiile rămân": "Windows te pedirá aprobación, las conversaciones se conservan"
 }
