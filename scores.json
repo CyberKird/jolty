@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-11",
+ "updated": "2026-11-12",
  "source": "artificialanalysis.ai/leaderboards/models",
  "entries": [
   {
@@ -81,6 +81,13 @@
   },
   {
    "match": [
+    "jt-4-1-flash-236b-a21b"
+   ],
+   "iq": 19,
+   "note": "JT-4.1 Flash 236B A21B"
+  },
+  {
+   "match": [
     "k2-horizon-375b-a23b"
    ],
    "iq": 18,
@@ -99,6 +106,13 @@
    ],
    "iq": 30,
    "note": "Ling 3.1 Flash 1019"
+  },
+  {
+   "match": [
+    "qwen3-8-flash-next"
+   ],
+   "iq": 29,
+   "note": "Qwen3.8-Flash-Next"
   },
   {
    "match": [
@@ -337,6 +351,13 @@
    ],
    "iq": 4,
    "note": "gpt-oss-120b · high"
+  },
+  {
+   "match": [
+    "solar-pro4"
+   ],
+   "iq": 14,
+   "note": "Solar Pro 4"
   },
   {
    "match": [
