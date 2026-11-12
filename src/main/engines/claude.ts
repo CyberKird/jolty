@@ -399,7 +399,7 @@ class ClaudeSession implements EngineSession {
       ...baseOptions(this.profile, this.meta.cwd, this.meta.model),
       model: this.meta.model || undefined,
       // third-party endpoints only get what their provider documents (see thinking.ts)
-      ...(this.profile.auth === 'endpoint' ? endpointThinking(this.meta.effort) : this.meta.effort ? { effort: this.meta.effort as EffortLevel } : {}),
+      ...(this.profile.auth === 'endpoint' ? endpointThinking(this.meta.effort, this.profile) : this.meta.effort ? { effort: this.meta.effort as EffortLevel } : {}),
       // newer models omit thinking text by default; a summary lets the reasoning row open onto something
       ...(this.profile.auth !== 'endpoint' ? { extraArgs: { 'thinking-display': 'summarized' } } : {}),
       permissionMode: this.sdkMode(this.meta.permissionMode),

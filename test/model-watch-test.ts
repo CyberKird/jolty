@@ -4,6 +4,7 @@ import { candidates, pickAuto, rankHelpers, worthRouting, type HelperEntry } fro
 import { FLAG_DAYS, flagOf, observe, parseOllamaTags, parseProviderList, withBadges } from '../src/main/model-watch-core'
 import { iqAt, levelsIn, modelScore, parseRemoteScores, setRemoteScores } from '../src/shared/scores'
 import { isUncensored } from '../src/shared/uncensored'
+import { endpointEfforts, endpointThinking } from '../src/main/engines/thinking'
 import type { ModelOption, Profile } from '../src/shared/types'
 
 const DAY = 864e5
@@ -220,4 +221,17 @@ test('the intelligence follows the thinking level written in the note', () => {
 test('abliterated, heretic and uncensored builds are marked, ordinary models are not', () => {
   for (const id of ['z-ai/glm-5.3-flash-apex-abliterated', 'pqhaz/DeepSeek-V4.1-Flash-1017-heretic', 'deepseek/deepseek-v4.1-flash-1017-uncensored:thinking', 'abliteration-ai/abliterated-model-large', 'huihui-ai/Llama-3.3-70B-Instruct-abliterated']) assert.equal(isUncensored(id), true, id)
   for (const id of ['deepseek-chat', 'anthropic/claude-opus-5.5', 'openai/gpt-6.1-sol', 'qwen/qwen3.8-flash', '', undefined]) assert.equal(isUncensored(id), false, String(id))
+})
+
+test('NanoGPT gets thinking levels from off to max, sent as thinking and effort like the other providers', () => {
+  const nano = { id: 'n', name: 'N', engine: 'claude', auth: 'endpoint', isDefaultDir: true, color: '', baseUrl: 'https://api.nano-gpt.com/api' } as Profile
+  assert.deepEqual(endpointEfforts(nano).efforts, ['off', 'low', 'medium', 'high', 'xhigh', 'max'])
+  for (const level of ['low', 'medium', 'high', 'xhigh', 'max']) assert.equal(endpointThinking(level, nano).effort, level, level)
+  assert.deepEqual(endpointThinking('off', nano), { thinking: { type: 'disabled' } })
+  assert.deepEqual(endpointThinking('', nano), {}, 'auto adds nothing')
+  // the other providers keep what they documented
+  const ds = { ...nano, baseUrl: 'https://api.deepseek.com/anthropic' } as Profile
+  assert.deepEqual(endpointEfforts(ds).efforts, ['off', 'low', 'high', 'max'])
+  assert.equal(endpointThinking('medium', ds).effort, undefined, 'DeepSeek has no medium')
+  assert.equal(endpointEfforts({ ...nano, baseUrl: 'https://evil.example/nano-gpt.com' } as Profile).efforts, undefined)
 })

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.30.1
+
+### Improvements
+
+- Models on NanoGPT now have thinking levels in the model picker, like on the NanoGPT site: Off, Low, Medium, High, XHigh and Max (Auto leaves the model's own default). The level you pick goes to NanoGPT with the request. A model that does not think simply ignores it.
+
 ## 0.30.0
 
 ### New
