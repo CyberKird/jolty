@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import { candidates, pickAuto, rankHelpers, worthRouting, type HelperEntry } from '../src/main/auto-model'
 import { FLAG_DAYS, flagOf, observe, parseOllamaTags, parseProviderList, withBadges } from '../src/main/model-watch-core'
 import { iqAt, levelsIn, modelScore, parseRemoteScores, setRemoteScores } from '../src/shared/scores'
+import { isUncensored } from '../src/shared/uncensored'
 import type { ModelOption, Profile } from '../src/shared/types'
 
 const DAY = 864e5
@@ -214,4 +215,9 @@ test('the intelligence follows the thinking level written in the note', () => {
   // no level in the note: the score stays the same at every level
   assert.equal(levelsIn('Beam 1.0', 30), undefined)
   assert.equal(iqAt({ iq: 30, note: '' }, 'max'), 30)
+})
+
+test('abliterated, heretic and uncensored builds are marked, ordinary models are not', () => {
+  for (const id of ['z-ai/glm-5.3-flash-apex-abliterated', 'pqhaz/DeepSeek-V4.1-Flash-1017-heretic', 'deepseek/deepseek-v4.1-flash-1017-uncensored:thinking', 'abliteration-ai/abliterated-model-large', 'huihui-ai/Llama-3.3-70B-Instruct-abliterated']) assert.equal(isUncensored(id), true, id)
+  for (const id of ['deepseek-chat', 'anthropic/claude-opus-5.5', 'openai/gpt-6.1-sol', 'qwen/qwen3.8-flash', '', undefined]) assert.equal(isUncensored(id), false, String(id))
 })

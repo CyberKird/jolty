@@ -1747,5 +1747,9 @@
  "Alese: {n}": "Dipilih: {n}",
  "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "Penyedia tidak memberikan daftar model. Ketik namanya secara manual.",
  "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter, atau NanoGPT: aku membawamu ke halaman kunci, kamu menempelkannya, lalu aku mengujinya.",
- "Se poate compacta după ce se termină tura.": "Bisa dipadatkan setelah giliran selesai."
+ "Se poate compacta după ce se termină tura.": "Bisa dipadatkan setelah giliran selesai.",
+ "Caută altă versiune": "Cari versi lain",
+ "Am găsit Jolty {version}.": "Jolty {version} ditemukan.",
+ "Nu am găsit altă versiune decât {version}.": "Tidak ada versi lain selain {version}.",
+ "Fără filtre de refuz: model abliterated sau uncensored.": "Tanpa filter penolakan: model abliterated atau uncensored."
 }

@@ -1,4 +1,4 @@
-import { Coffee, Cpu, Keyboard, ExternalLink, UserRound, Eye, FolderOpen, Gauge, Globe, Info, Languages, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
+import { Coffee, Cpu, Keyboard, ExternalLink, UserRound, Eye, FolderOpen, Gauge, Globe, Info, Languages, Loader2, RefreshCw, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { isAcp } from '@shared/types'
@@ -419,8 +419,22 @@ export function SettingsPage() {
 
 function UpdatesCard({ auto }: { auto: boolean }) {
   const update = useStore((s) => s.update)
-  const { onEvent } = useStore(useShallow(({ onEvent }) => ({ onEvent })))
+  const { onEvent, toast } = useStore(useShallow(({ onEvent, toast }) => ({ onEvent, toast })))
   const [busy, setBusy] = useState(false)
+  // looks for another version, also while one is waiting to be installed: says what it found, since nothing else changes on screen
+  const search = async (): Promise<void> => {
+    const before = update?.version
+    setBusy(true)
+    try {
+      const next = await api.updates.check()
+      onEvent({ type: 'update', status: next })
+      if (next.error) toast(tr("Verificarea nu a mers: {error}", { error: next.error }), true)
+      else if (next.version && next.version !== before) toast(tr("Am găsit Jolty {version}.", { version: next.version }))
+      else toast(tr("Nu am găsit altă versiune decât {version}.", { version: before ?? '' }))
+    } finally {
+      setBusy(false)
+    }
+  }
   const text =
     update?.state === 'ready'
       ? tr("Jolty {version} e descărcat. Repornește ca să-l instalezi, sau se instalează când închizi aplicația.", { version: update.version })
@@ -452,14 +466,15 @@ function UpdatesCard({ auto }: { auto: boolean }) {
           </div>
         )}
       </div>
-      {update?.state === 'ready' ? (
-        <button className="btn primary small" onClick={() => void api.updates.install()}>
-         {tr("Repornește și actualizează")}
-        </button>
-      ) : update?.state === 'available' ? (
-        <button className="btn primary small" onClick={() => void api.updates.install()}>
-         {tr("Actualizează")}
-        </button>
+      {update?.state === 'ready' || update?.state === 'available' ? (
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn small icon" disabled={busy} title={tr("Caută altă versiune")} aria-label={tr("Caută altă versiune")} onClick={() => void search()}>
+            {busy ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />}
+          </button>
+          <button className="btn primary small" onClick={() => void api.updates.install()}>
+            {update.state === 'ready' ? tr("Repornește și actualizează") : tr("Actualizează")}
+          </button>
+        </div>
       ) : (
         <button
           className="btn small"

@@ -1747,5 +1747,9 @@
  "Alese: {n}": "選択中: {n}",
  "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "プロバイダーからモデルの一覧が返りませんでした。名前を手入力してください。",
  "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek、OpenRouter、NanoGPT: キーのページへご案内します。貼り付けてもらえれば、私がテストします。",
- "Se poate compacta după ce se termină tura.": "ターンが終わったら圧縮できます。"
+ "Se poate compacta după ce se termină tura.": "ターンが終わったら圧縮できます。",
+ "Caută altă versiune": "別のバージョンを探す",
+ "Am găsit Jolty {version}.": "Jolty {version} が見つかりました。",
+ "Nu am găsit altă versiune decât {version}.": "{version} 以外のバージョンは見つかりませんでした。",
+ "Fără filtre de refuz: model abliterated sau uncensored.": "拒否フィルターなし: abliterated または uncensored モデル。"
 }

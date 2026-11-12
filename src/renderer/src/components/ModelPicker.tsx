@@ -1,6 +1,7 @@
 // One picker for every model Jolty knows about (all profiles), with the effort level underneath,
 // the way the Claude app does it. Also the compact permission-mode menu next to it.
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, ShieldOff } from 'lucide-react'
+import { isUncensored } from '@shared/uncensored'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { capability } from '@shared/complexity'
@@ -17,6 +18,13 @@ export interface ModelGroup {
   models: ModelOption[]
   loading: boolean
   error?: string
+}
+
+/** A small shield with a slash on models that answer without refusals, so they are not mistaken for the usual ones. */
+export function UncensoredMark({ id, size = 12 }: { id?: string; size?: number }) {
+  if (!isUncensored(id)) return null
+  const text = tr("Fără filtre de refuz: model abliterated sau uncensored.")
+  return <ShieldOff className="uncensored-mark" size={size} aria-label={text}><title>{text}</title></ShieldOff>
 }
 
 // cached for half an hour (badges and scores come with the list); the key changes when an endpoint profile's model list does
@@ -145,6 +153,7 @@ export function ModelPicker(p: {
       <button className="picker-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title={group ? `${group.profile.name} · ${label}` : label}>
         <span className="dot" style={{ width: 7, height: 7, background: group?.profile.color || 'var(--grey-2)' }} />
         <span className="ellipsis">{label}</span>
+        <UncensoredMark id={current?.id || p.model} />
         {effort && <span className="picker-effort">{effort}</span>}
         <ChevronDown size={13} />
       </button>
@@ -198,6 +207,7 @@ export function ModelPicker(p: {
                       <span className="picker-opt-text">
                         <span className="picker-opt-name">
                           {m.label}
+                          <UncensoredMark id={m.id} />
                           {sc && (
                             <span key={iq} className={`picker-score ${on ? 'tick' : ''} ${sc.measured ? 'est' : iq >= 45 ? 'hi' : iq < 25 ? 'lo' : ''}`}>
                               {sc.measured ? `~${iq}` : iq}

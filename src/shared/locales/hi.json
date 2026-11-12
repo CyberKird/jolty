@@ -1747,5 +1747,9 @@
  "Alese: {n}": "चुने गए: {n}",
  "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "प्रदाता ने मॉडलों की सूची नहीं दी। नाम हाथ से लिखें।",
  "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter या NanoGPT: मैं आपको कुंजी वाले पेज पर ले जाता हूँ, आप उसे पेस्ट करते हैं, मैं उसे जाँचता हूँ।",
- "Se poate compacta după ce se termină tura.": "टर्न पूरा होने के बाद कॉम्पैक्ट किया जा सकता है।"
+ "Se poate compacta după ce se termină tura.": "टर्न पूरा होने के बाद कॉम्पैक्ट किया जा सकता है।",
+ "Caută altă versiune": "कोई और संस्करण खोजें",
+ "Am găsit Jolty {version}.": "Jolty {version} मिला।",
+ "Nu am găsit altă versiune decât {version}.": "{version} के अलावा कोई संस्करण नहीं मिला।",
+ "Fără filtre de refuz: model abliterated sau uncensored.": "इनकार वाले फ़िल्टर के बिना: abliterated या uncensored मॉडल।"
 }

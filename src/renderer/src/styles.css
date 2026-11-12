@@ -3114,6 +3114,15 @@ a {
   text-transform: uppercase;
   color: var(--grey-2);
 }
+.uncensored-mark {
+  flex: none;
+  margin-inline-start: 6px;
+  vertical-align: -1px;
+  color: var(--warning);
+}
+.catalog-row .uncensored-mark {
+  margin-inline-start: auto;
+}
 .picker-badge {
   font-family: var(--label);
   font-weight: 500;

@@ -50,7 +50,7 @@ function set(next: Partial<UpdateStatus>): void {
 
 /** A failed check or download never hides an update that is already downloaded. */
 function fail(error?: string): void {
-  if (downloaded) set({ state: 'ready', version: downloaded, percent: 100 })
+  if (downloaded) set({ state: 'ready', version: downloaded, percent: 100, error: clean(error) || tr("verificarea a eșuat") })
   else set({ state: 'error', error: clean(error) || tr("verificarea a eșuat"), checkedAt: Date.now() })
 }
 
@@ -113,6 +113,8 @@ export async function check(): Promise<UpdateStatus> {
   }
   if (status.state === 'downloading') return status
   lastCheck = Date.now()
+  // a failure of an earlier check is not shown again as the answer of this one
+  if (status.error && downloaded) set({ error: undefined })
   try {
     await autoUpdater.checkForUpdates()
   } catch (err) {
@@ -123,7 +125,8 @@ export async function check(): Promise<UpdateStatus> {
 
 /**
  * Silent install and relaunch: the per-user installer needs no questions or elevation.
- * One last check first: a release newer than the downloaded one is fetched and installed instead.
+ * It installs the version the card shows, never a different one found at the last second: another version is
+ * looked for with the search button (or the hourly check), shown, and only then installed.
  */
 export async function install(): Promise<void> {
   if (status.state === 'available') {
@@ -140,12 +143,5 @@ export async function install(): Promise<void> {
   }
   if (status.state !== 'ready') return
   installing = true
-  try {
-    const r = await autoUpdater.checkForUpdates()
-    // the same version resolves at once from the download cache
-    if (r?.isUpdateAvailable) await r.downloadPromise
-  } catch {
-    // offline or GitHub unreachable: install what is already downloaded
-  }
   if (downloaded) autoUpdater.quitAndInstall(true, true)
 }

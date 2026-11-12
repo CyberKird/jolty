@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { autoUpdater, shown } from './updater-stubs'
 import { current, init, install, setAuto } from '../src/main/updater'
 
-test('one restart lands on the newest release, even one published after the download', async () => {
+test('the restart installs the version shown; a newer one is found by a check, shown, and then installed', async () => {
   init(() => undefined, () => undefined)
   autoUpdater.emit('update-available', { version: '0.5.4' })
   assert.equal(current().state, 'downloading')
@@ -21,17 +21,16 @@ test('one restart lands on the newest release, even one published after the down
   autoUpdater.emit('error', new Error('offline'))
   assert.equal(current().state, 'ready')
 
-  // 0.5.5 came out meanwhile: the restart fetches it first and installs once, with no extra notification
-  autoUpdater.next = async () => {
-    autoUpdater.emit('update-available', { version: '0.5.5' })
-    const downloadPromise = new Promise((r) => setTimeout(r, 20)).then(() => autoUpdater.emit('update-downloaded', { version: '0.5.5' }))
-    return { isUpdateAvailable: true, updateInfo: { version: '0.5.5' }, downloadPromise }
-  }
+  // 0.5.5 came out meanwhile: the restart does not go looking for it, it installs what the card shows
+  autoUpdater.next = () => Promise.reject(new Error('the restart must not check again'))
   await install()
-  assert.deepEqual([autoUpdater.installs, current().version, shown.length], [1, '0.5.5', 1])
+  assert.deepEqual([autoUpdater.installs, current().version], [1, '0.5.4'])
 
-  // offline at restart: what is downloaded still installs
-  autoUpdater.next = () => Promise.reject(new Error('offline'))
+  // a check (the search button, the hourly one) finds 0.5.5: the card shows it, and the next restart installs that one
+  autoUpdater.emit('update-available', { version: '0.5.5' })
+  assert.deepEqual([current().state, current().version], ['downloading', '0.5.5'])
+  autoUpdater.emit('update-downloaded', { version: '0.5.5' })
+  assert.deepEqual([current().state, current().version], ['ready', '0.5.5'])
   await install()
   assert.equal(autoUpdater.installs, 2)
 })

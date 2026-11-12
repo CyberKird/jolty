@@ -1747,5 +1747,9 @@
  "Alese: {n}": "Choisis : {n}",
  "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "Le fournisseur n'a pas renvoyé de liste de modèles. Saisis les noms à la main.",
  "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter ou NanoGPT : je t'emmène sur la page de la clé, tu la colles, je la teste.",
- "Se poate compacta după ce se termină tura.": "Tu pourras compacter une fois le tour terminé."
+ "Se poate compacta după ce se termină tura.": "Tu pourras compacter une fois le tour terminé.",
+ "Caută altă versiune": "Chercher une autre version",
+ "Am găsit Jolty {version}.": "Jolty {version} trouvé.",
+ "Nu am găsit altă versiune decât {version}.": "Aucune autre version que {version} n'a été trouvée.",
+ "Fără filtre de refuz: model abliterated sau uncensored.": "Sans filtres de refus : un modèle abliterated ou uncensored."
 }

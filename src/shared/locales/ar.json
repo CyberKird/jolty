@@ -1747,5 +1747,9 @@
  "Alese: {n}": "المحدد: {n}",
  "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "لم يعرض المزوّد قائمة نماذج. اكتب أسماءها يدويًا.",
  "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek أو OpenRouter أو NanoGPT: آخذك إلى صفحة المفتاح، تلصقه، وأختبره.",
- "Se poate compacta după ce se termină tura.": "يمكن الضغط بعد انتهاء الدور الحالي."
+ "Se poate compacta după ce se termină tura.": "يمكن الضغط بعد انتهاء الدور الحالي.",
+ "Caută altă versiune": "ابحث عن إصدار آخر",
+ "Am găsit Jolty {version}.": "وجدت Jolty {version}.",
+ "Nu am găsit altă versiune decât {version}.": "لم أجد إصدارًا آخر غير {version}.",
+ "Fără filtre de refuz: model abliterated sau uncensored.": "بلا مرشّحات رفض: نموذج abliterated أو uncensored."
 }

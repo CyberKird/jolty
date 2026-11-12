@@ -4,6 +4,7 @@ import type { AccountStatus, AuthKind, EngineKind, Profile, ProfileInput } from 
 import { isAcp } from '@shared/types'
 import { CONNECT_PROVIDERS } from '@shared/setup'
 import { ProfileDot } from '../components/Chat'
+import { UncensoredMark } from '../components/ModelPicker'
 import { api, ENGINE_LABEL, errMsg, levelColor, resetAt, resetIn, useStore } from '../store'
 import { tr } from '@shared/i18n'
 import { useExitClose } from '../usePresence'
@@ -274,6 +275,7 @@ function ModelCatalog({ baseUrl, secret, profileId, models, onChange }: { baseUr
           <label key={id} className="catalog-row">
             <input type="checkbox" checked={picked.includes(id)} onChange={() => toggle(id)} />
             <span className="mono" title={id}>{id}</span>
+            <UncensoredMark id={id} />
           </label>
         ))}
       </div>
