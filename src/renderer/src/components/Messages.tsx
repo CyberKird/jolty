@@ -75,7 +75,7 @@ function ZoomImage({ src, name }: { src: string; name: string }) {
 }
 
 /** A chat image: click opens a large preview, right-click offers copy, save and open. */
-function ChatImage({ src, name }: { src: string; name: string }) {
+export function ChatImage({ src, name, className = 'chat-image' }: { src: string; name: string; className?: string }) {
   const [big, setBig] = useState(false)
   const { shown, state } = usePresence(big)
   useEffect(() => {
@@ -88,7 +88,7 @@ function ChatImage({ src, name }: { src: string; name: string }) {
   }, [big])
   return (
     <>
-      <img className="chat-image" src={src} alt={name} title={name} onClick={() => setBig(true)} onContextMenu={(e) => imageMenu(e, src, name)} />
+      <img className={className || undefined} src={src} alt={name} title={name} onClick={() => setBig(true)} onContextMenu={(e) => imageMenu(e, src, name)} />
       {shown &&
         createPortal(
           <div className="lightbox" data-state={state} role="dialog" aria-label={tr("Previzualizare imagine")} onClick={() => setBig(false)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation() }}>

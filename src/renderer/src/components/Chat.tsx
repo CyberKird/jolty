@@ -8,7 +8,7 @@ import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Pr
 import { hasJoltyBrowser, hasJoltyComputer, hasJoltyTools, isAcp } from '@shared/types'
 import { sameProvider } from '@shared/provider'
 import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, timeAgo, useStore } from '../store'
-import { MessageItem, PermissionCard } from './Messages'
+import { ChatImage, MessageItem, PermissionCard } from './Messages'
 import { CopyButton } from './CopyField'
 import { useWindowedItems } from './useWindowedItems'
 import { FindBar } from './FindBar'
@@ -368,7 +368,7 @@ function Composer(p: ComposerProps) {
           <div className="attachments">
             {atts.map((a) => (
               <div className={`attachment ${a.mime.startsWith('image/') ? 'attachment-image' : 'attachment-file'}`} key={a.id} title={a.name}>
-                {a.mime.startsWith('image/') && a.data ? <img src={`data:${a.mime};base64,${a.data}`} alt={a.name} /> : <Paperclip size={15} />}
+                {a.mime.startsWith('image/') && a.data ? <ChatImage className="" src={`data:${a.mime};base64,${a.data}`} name={a.name} /> : <Paperclip size={15} />}
                 {!a.mime.startsWith('image/') && <span className="attachment-name">{a.name}</span>}
                 <button onClick={() => setAtts((x) => x.filter((y) => y.id !== a.id))} aria-label={tr("Scoate {name}", { name: a.name })}>
                   <X size={11} />
@@ -701,12 +701,18 @@ function ContextMeter({ sessionId, running }: { sessionId: string; running: bool
   if (!ctx?.used) return null
   const pct = ctx.window ? Math.min(100, (ctx.used / ctx.window) * 100) : undefined
   const k = (n: number): string => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round(n / 1000)}k`)
+  const tip = tr("{k}{v1} tokeni în context. Clic ca să compactezi: modelul rezumă conversația și eliberează loc.", { k: k(ctx.used), v1: ctx.window ? tr(" din {k}", { k: k(ctx.window) }) : '' })
+  // not `disabled` while a turn runs: a disabled button gets no hover at all, and the person should still see what it is
   return (
     <button
       className={`context-meter ${pct !== undefined && pct >= 80 ? 'high' : ''}`}
-      disabled={running}
-      title={tr("{k}{v1} tokeni în context. Clic ca să compactezi: modelul rezumă conversația și eliberează loc.", { k: k(ctx.used), v1: ctx.window ? tr(" din {k}", { k: k(ctx.window) }) : '' })}
-      onClick={() => void api.sessions.compact(sessionId).then(() => toast(tr("Compactez conversația…"))).catch((e) => toast(errMsg(e), true))}
+      aria-disabled={running || undefined}
+      aria-label={tip}
+      data-tip={running ? `${tip} ${tr("Se poate compacta după ce se termină tura.")}` : tip}
+      onClick={() => {
+        if (running) return
+        void api.sessions.compact(sessionId).then(() => toast(tr("Compactez conversația…"))).catch((e) => toast(errMsg(e), true))
+      }}
     >
       <Liquid pct={pct ?? 0} size={21} high={pct !== undefined && pct >= 80} />
       {pct !== undefined ? `${Math.round(pct)}%` : k(ctx.used)}

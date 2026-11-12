@@ -1746,5 +1746,6 @@
  "Caută în {n} modele": "Rechercher parmi {n} modèles",
  "Alese: {n}": "Choisis : {n}",
  "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "Le fournisseur n'a pas renvoyé de liste de modèles. Saisis les noms à la main.",
- "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter ou NanoGPT : je t'emmène sur la page de la clé, tu la colles, je la teste."
+ "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter ou NanoGPT : je t'emmène sur la page de la clé, tu la colles, je la teste.",
+ "Se poate compacta după ce se termină tura.": "Tu pourras compacter une fois le tour terminé."
 }

@@ -1746,5 +1746,6 @@
  "Caută în {n} modele": "Search {n} models",
  "Alese: {n}": "Selected: {n}",
  "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "The provider did not return a model list. Type the names by hand.",
- "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter or NanoGPT: I take you to the key page, you paste it, I test it."
+ "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter or NanoGPT: I take you to the key page, you paste it, I test it.",
+ "Se poate compacta după ce se termină tura.": "You can compact once the turn has finished."
 }

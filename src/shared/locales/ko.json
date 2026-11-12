@@ -1746,5 +1746,6 @@
  "Caută în {n} modele": "모델 {n}개에서 검색",
  "Alese: {n}": "선택됨: {n}",
  "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "제공업체가 모델 목록을 주지 않았습니다. 이름을 직접 입력하세요.",
- "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter 또는 NanoGPT: 키 페이지로 안내하고, 붙여넣으면 제가 테스트합니다."
+ "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter 또는 NanoGPT: 키 페이지로 안내하고, 붙여넣으면 제가 테스트합니다.",
+ "Se poate compacta după ce se termină tura.": "턴이 끝나면 압축할 수 있습니다."
 }

@@ -1737,6 +1737,7 @@ a {
   border: 1px solid var(--line-2);
 }
 .attachment-image { width: 68px; }
+.attachment-image img { cursor: zoom-in; }
 .attachment-file { display: flex; align-items: center; gap: 7px; max-width: min(190px, 100%); padding-block: 0 0; padding-inline: 10px 25px; color: var(--grey); box-sizing: border-box; }
 .attachment-note { padding: 6px 16px 0; color: var(--warning); font-size: 11px; }
 .message-files { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -3678,13 +3679,52 @@ a {
   font-size: 11.5px;
   cursor: pointer;
 }
-.context-meter:hover:not(:disabled) {
+.context-meter {
+  position: relative;
+}
+.context-meter:hover,
+.context-meter:focus-visible {
   color: var(--white);
   border-color: var(--line-3);
 }
-.context-meter:disabled {
+.context-meter[aria-disabled] {
   cursor: default;
+}
+.context-meter[aria-disabled] > :not(.liquid) {
   opacity: 0.7;
+}
+/* what it is and what a click does, in the app's own look (a native title never shows on this button) */
+.context-meter[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  right: 0;
+  width: max-content;
+  max-width: 250px;
+  padding: 9px 11px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius, 0);
+  background: var(--s3);
+  color: var(--grey);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: start;
+  text-transform: none;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.context-meter[data-tip]:hover::after,
+.context-meter[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.25s;
 }
 .context-ring {
   width: 12px;

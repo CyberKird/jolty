@@ -1746,5 +1746,6 @@
  "Caută în {n} modele": "{n} 個のモデルから検索",
  "Alese: {n}": "選択中: {n}",
  "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "プロバイダーからモデルの一覧が返りませんでした。名前を手入力してください。",
- "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek、OpenRouter、NanoGPT: キーのページへご案内します。貼り付けてもらえれば、私がテストします。"
+ "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek、OpenRouter、NanoGPT: キーのページへご案内します。貼り付けてもらえれば、私がテストします。",
+ "Se poate compacta după ce se termină tura.": "ターンが終わったら圧縮できます。"
 }
