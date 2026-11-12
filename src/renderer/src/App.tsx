@@ -11,7 +11,6 @@ import { PowerBar } from './components/PowerBar'
 import { ScreenBar } from './components/ScreenBar'
 import { Sidebar } from './components/Sidebar'
 import { api, liveRows, useStore } from './store'
-import { setupUiSync } from './uisync'
 import { batchDeltas } from './event-batch'
 import { lowPower, setLowPowerMode } from './lowpower'
 import { applyTheme, setClear } from './theme'
@@ -141,7 +140,6 @@ export function App() {
     applySettings()
     // a preference changed on the PC or on a phone: the look follows at once
     window.addEventListener('jolty:settings', applySettings)
-    setupUiSync()
     document.documentElement.lang = getLang()
     document.documentElement.dir = isRtl() ? 'rtl' : 'ltr'
     void api.updates.status().then((status) => onEvent({ type: 'update', status }))

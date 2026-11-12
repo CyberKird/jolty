@@ -41,6 +41,7 @@ remote.register('remote:wakeStatus', () => 'nope')
 remote.register('app:copyText', () => 'pc clipboard')
 remote.register('app:pickFolder', () => 'C:\\')
 remote.register('remote:enable', () => 'nope')
+remote.register('updates:installFromPhone', () => 'updating')
 
 type Reply = { status: number; text: string; headers: http.IncomingHttpHeaders }
 
@@ -265,6 +266,90 @@ test('the phone can ask whether the line is alive, and the PC answers', async ()
   await until(() => c.msgs.some((m) => m.t === 'ready'))
   c.ws.send(JSON.stringify({ t: 'ping' }))
   await until(() => c.msgs.some((m) => m.t === 'pong'))
+  c.ws.close()
+})
+
+/** A connection that reports why it was closed. */
+function closeInfo(headers: Record<string, string> = {}, token = 'wrong'): Promise<{ code: number; reason: string; msgs: Array<Record<string, unknown>> }> {
+  return new Promise((resolve) => {
+    const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws`, { headers })
+    const msgs: Array<Record<string, unknown>> = []
+    ws.on('message', (d) => msgs.push(JSON.parse(String(d))))
+    ws.on('open', () => ws.send(JSON.stringify({ t: 'auth', token })))
+    // an accepted phone stays open: it is closed here once it has been told it is ready
+    const t = setInterval(() => {
+      if (msgs.some((m) => m.t === 'ready')) {
+        clearInterval(t)
+        ws.close()
+      }
+    }, 20)
+    ws.on('close', (code, reason) => {
+      clearInterval(t)
+      resolve({ code, reason: String(reason), msgs })
+    })
+  })
+}
+
+test('a phone is unpaired only by the PC saying so: the reasons differ, a key kept as a cookie still works, and a file that cannot be read for a moment pairs nobody out', async () => {
+  const code = remote.startPairing().code
+  const r = await request({ path: '/api/pair', method: 'POST', headers: { 'Content-Type': 'application/json' } }, JSON.stringify({ code, name: 'Cookie phone' }))
+  const token = JSON.parse(r.text).token as string
+  const cookie = String(([] as string[]).concat(r.headers['set-cookie'] || [])[0] || '')
+  assert.match(cookie, new RegExp(`^jolty_dev=${token}; .*HttpOnly.*SameSite=Strict`))
+  const sent = cookie.split(';')[0]
+
+  // the cookie alone names the phone (storage cleared on the phone): the session check and the socket both accept it
+  assert.equal((await request({ path: '/api/session', headers: { Cookie: sent } })).status, 200)
+  assert.equal((await request({ path: '/api/session' })).status, 401)
+  assert.equal((await request({ path: '/api/session', headers: { Cookie: 'jolty_dev=nope' } })).status, 401)
+  const viaCookie = await closeInfo({ Cookie: sent }, '')
+  assert.ok(viaCookie.msgs.some((m) => m.t === 'ready'), 'ready by cookie')
+  const ready = viaCookie.msgs.find((m) => m.t === 'ready') as { version?: string }
+  assert.equal(typeof ready.version, 'string', 'the PC tells its version, so a phone with an old copy of the page can load the new one')
+  assert.match((await request({ path: '/lang.js' })).text, /joltyVersion/)
+
+  // a key the PC does not know says so in words the phone can tell from a dropped line
+  const unknown = await closeInfo({}, 'not-a-key')
+  assert.equal(unknown.code, 4401)
+  assert.equal(unknown.reason, 'unknown key')
+  // a first message that is not a key is not "unpaired" either
+  const odd = await new Promise<{ code: number; reason: string }>((resolve) => {
+    const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws`)
+    ws.on('open', () => ws.send(JSON.stringify({ t: 'hello' })))
+    ws.on('close', (c, rs) => resolve({ code: c, reason: String(rs) }))
+  })
+  assert.notEqual(odd.code, 4401)
+
+  // the file cannot be read for a moment (replaced, held by a scanner): the phones stay paired
+  const file = path.join(dir, 'remote.json')
+  const whole = fs.readFileSync(file, 'utf8')
+  fs.writeFileSync(file, '{"enabled": tru')
+  try {
+    const during = await closeInfo({}, token)
+    assert.ok(during.msgs.some((m) => m.t === 'ready'), 'still paired while the file is unreadable')
+  } finally {
+    fs.writeFileSync(file, whole)
+  }
+})
+
+test('a phone connecting mid-turn is told how long the turn has been running, so its clock matches the PC', async () => {
+  remote.broadcast('jolty:event', { type: 'status', sessionId: 'clock1', status: 'running' })
+  await new Promise((r) => setTimeout(r, 60))
+  const c = await connect(await pair())
+  await until(() => c.msgs.some((m) => m.t === 'ready'))
+  await until(() => c.msgs.some((m) => m.t === 'ev' && (m.data as { sessionId?: string }).sessionId === 'clock1'))
+  const ev = c.msgs.find((m) => m.t === 'ev' && (m.data as { sessionId?: string }).sessionId === 'clock1')!.data as { ageMs?: number }
+  assert.ok(typeof ev.ageMs === 'number' && ev.ageMs >= 50, `age ${ev.ageMs}`)
+  remote.broadcast('jolty:event', { type: 'status', sessionId: 'clock1', status: 'idle' })
+  c.ws.close()
+})
+
+test('an update can be started from a phone, and only that one: the PC restarts and the phone reconnects', async () => {
+  const c = await connect(await pair())
+  await until(() => c.msgs.some((m) => m.t === 'ready'))
+  const r = await ask(c, 61, 'updates:installFromPhone', [])
+  assert.equal(r.ok, true)
+  assert.equal((await ask(c, 62, 'updates:install', [])).ok, false, 'the PC dialog one stays at the PC')
   c.ws.close()
 })
 

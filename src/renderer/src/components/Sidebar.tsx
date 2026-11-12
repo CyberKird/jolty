@@ -342,6 +342,8 @@ function useOrder(storeKey: string, natural: string[]): [string[], (from: string
 
 /** how many conversations of one project the list draws at first; the rest is one click away (a list of hundreds made launch crawl) */
 const GROUP_CAP = 30
+/** conversations the phone's list shows until "show more" */
+const PHONE_RECENT = 15
 
 function GroupRows({ list, activeId, searching, onRemove }: { list: SessionMeta[]; activeId?: string; searching: boolean; onRemove: (id: string) => void }) {
   const [all, setAll] = useState(false)
@@ -417,6 +419,17 @@ export function Sidebar() {
   const [groupIds, moveGroup] = useOrder('jolty.groupOrder', groups.map(([cwd]) => cwd))
   const groupDrag = useProfileDrag(groupIds, moveGroup)
   const orderedGroups = groupIds.map((cwd) => groups.find(([c]) => c === cwd)!)
+  // on a phone the list is the latest 15 conversations, with a button for the rest: a long list pushes the usage meter and the account out of reach
+  const [recentOnly, setRecentOnly] = useState(true)
+  const everyone = useMemo(() => [...pinned, ...groups.flatMap(([, l]) => l)].sort((a, b) => b.updatedAt - a.updatedAt), [pinned, groups])
+  const longList = phone && !q && everyone.length > PHONE_RECENT
+  const recent = useMemo(() => {
+    if (!longList || !recentOnly) return null
+    const ids = new Set(everyone.slice(0, PHONE_RECENT).map((s) => s.id))
+    if (activeId) ids.add(activeId)
+    return ids
+  }, [longList, recentOnly, everyone, activeId])
+  const seen = (list: SessionMeta[]): SessionMeta[] => (recent ? list.filter((s) => recent.has(s.id)) : list)
   const at = nav.findIndex((n) => n.id === page)
   return (
     <nav className="sidebar" aria-label={tr("Navigare")}>
@@ -483,22 +496,30 @@ export function Sidebar() {
       </div>
       <div className="session-list">
         {groups.length === 0 && pinned.length === 0 && archived.length === 0 && <div className="faint small" style={{ padding: '6px 12px' }}>{tr("Nicio conversație încă.")}</div>}
-        {pinned.length > 0 && (
+        {seen(pinned).length > 0 && (
           <div className="session-group pinned">
             <div className="session-group-title">{tr("Fixate")}</div>
-            {pinned.map((s) => (
+            {seen(pinned).map((s) => (
               <SessionRow key={s.id} s={s} onRemove={(id) => void removeSession(id)} />
             ))}
           </div>
         )}
-        {orderedGroups.map(([cwd, list]) => (
+        {orderedGroups.filter(([, list]) => seen(list).length > 0).map(([cwd, listAll]) => {
+          const list = seen(listAll)
+          return (
           <div className="session-group" key={cwd}>
             <div className="session-group-title" title={`${cwd}\n${MOVE_HINT}`} tabIndex={0} onContextMenu={(e) => showMenu(e, pathItems(cwd))} {...groupDrag(cwd)}>
               {basename(cwd)}
             </div>
             <GroupRows list={list} activeId={activeId} searching={Boolean(q)} onRemove={(id) => void removeSession(id)} />
           </div>
-        ))}
+          )
+        })}
+        {longList && (
+          <button type="button" className="session-more phone-more" onClick={() => setRecentOnly(!recentOnly)}>
+            {recentOnly ? tr("Arată mai multe ({n})", { n: everyone.length - PHONE_RECENT }) : tr("Arată mai puține")}
+          </button>
+        )}
         <ArchivedSection list={archived} onRemove={(id) => void removeSession(id)} />
       </div>
       <UsageMeter />

@@ -1731,5 +1731,12 @@
  "Rețea": "नेटवर्क",
  "Shell": "शेल",
  "Memorie": "मेमोरी",
- "Caută în bibliotecă": "लाइब्रेरी में खोजें"
+ "Caută în bibliotecă": "लाइब्रेरी में खोजें",
+ "Context": "संदर्भ",
+ "Trage ca să schimbi mărimea. Dublu clic: mărimea potrivită.": "आकार बदलने के लिए खींचें। डबल क्लिक: सही आकार।",
+ "Arată mai multe ({n})": "और दिखाएँ ({n})",
+ "Arată mai puține": "कम दिखाएँ",
+ "Jolty se actualizează. Telefonul se reconectează singur.": "Jolty अपडेट हो रहा है। फ़ोन अपने आप दोबारा कनेक्ट हो जाएगा।",
+ "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "PC पर Jolty अपडेट करें? यह बंद होकर फिर से चालू होगा और फ़ोन लगभग एक मिनट में अपने आप दोबारा कनेक्ट हो जाएगा। जो अभी चल रहा है वह रुक जाएगा, बातचीत बनी रहेगी।",
+ "Nu e nicio actualizare de instalat.": "इंस्टॉल करने के लिए कोई अपडेट नहीं है।"
 }

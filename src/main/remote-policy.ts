@@ -3,7 +3,7 @@
 // (installing an update restarts Jolty). A new channel needs a decision before it is reachable from outside.
 
 /** Whole groups of channels: each page of the app lives in one. */
-const GROUPS = ['profiles:', 'sessions:', 'schedules:', 'skills:', 'system:', 'local:', 'setup:', 'usage:', 'backup:', 'merge:', 'codexImport:', 'browser:', 'composer:', 'power:', 'voice:', 'ui:', 'library:']
+const GROUPS = ['profiles:', 'sessions:', 'schedules:', 'skills:', 'system:', 'local:', 'setup:', 'usage:', 'backup:', 'merge:', 'codexImport:', 'browser:', 'composer:', 'power:', 'voice:', 'library:']
 
 const ALLOWED = new Set([
   'background:state',
@@ -15,7 +15,9 @@ const ALLOWED = new Set([
   'app:sendBugReport',
   'app:notificationsBlocked',
   'updates:status',
-  'updates:check'
+  'updates:check',
+  // the phone's own tap is the yes (the PC's dialog is for someone sitting at the PC): Jolty restarts and the phone reconnects by itself
+  'updates:installFromPhone'
 ])
 
 /** Inside the groups: what stays at the PC. */

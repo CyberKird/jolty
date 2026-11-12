@@ -310,7 +310,7 @@ export interface PowerState {
 }
 
 export type ChatEvent =
-  | { type: 'status'; sessionId: string; status: 'idle' | 'running' | 'error'; error?: string }
+  | { type: 'status'; sessionId: string; status: 'idle' | 'running' | 'error'; error?: string; /** a phone that connects mid-turn is told how long the turn has been running (ms), so its clock matches the PC's */ ageMs?: number }
   /** the PC power plan: armed, and the countdown once it started */
   | ({ type: 'power' } & PowerState)
   | { type: 'meta'; sessionId: string; meta: SessionMeta }
@@ -336,10 +336,12 @@ export type ChatEvent =
   | { type: 'schedules' }
   /** the tray or the quick entry asks the main window to open a chat (none: a new conversation) */
   | { type: 'focus'; open?: string }
-  /** what the PC's window and the paired phones show (open conversation, page), so they follow each other; `from` is the window that changed it */
-  | { type: 'ui'; activeId?: string; page?: string; from: string }
+  /** the list of conversations changed in a way no `meta` event tells (removed, archived, pinned, restored): read it again */
+  | { type: 'sessionsChanged' }
   /** a preference was saved: every window and phone reads the settings again */
   | { type: 'settingsChanged' }
+  /** Jolty is about to restart to install an update: the phones say so and reconnect */
+  | { type: 'restarting' }
 
 export interface PlanStep {
   text: string
@@ -846,11 +848,6 @@ export interface JoltyApi {
     quickClose(): Promise<void>
     /** the quick entry window was shown again: clear and focus the box */
     onQuickShown(cb: () => void): () => void
-  }
-  /** the open conversation and page, shared by the PC's window and the paired phones (uisync.ts) */
-  ui: {
-    /** with a patch: sets what is shown and tells the other windows; without: reads it */
-    state(patch?: { activeId?: string | null; page?: string }, from?: string): Promise<{ activeId?: string; page?: string }>
   }
   /** pictures, files and links of every conversation, for the Library page */
   library: {

@@ -1731,5 +1731,12 @@
  "Rețea": "الشبكة",
  "Shell": "الطرفية",
  "Memorie": "الذاكرة",
- "Caută în bibliotecă": "ابحث في المكتبة"
+ "Caută în bibliotecă": "ابحث في المكتبة",
+ "Context": "السياق",
+ "Trage ca să schimbi mărimea. Dublu clic: mărimea potrivită.": "اسحب لتغيير الحجم. انقر مرتين للحجم المناسب.",
+ "Arată mai multe ({n})": "عرض المزيد ({n})",
+ "Arată mai puține": "عرض أقل",
+ "Jolty se actualizează. Telefonul se reconectează singur.": "جارٍ تحديث Jolty. سيعيد الهاتف الاتصال تلقائياً.",
+ "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "هل تريد تحديث Jolty على الكمبيوتر؟ سيُغلق ويُفتح من جديد، ويعيد الهاتف الاتصال تلقائياً خلال دقيقة تقريباً. ما يعمل الآن يتوقف وتبقى المحادثات.",
+ "Nu e nicio actualizare de instalat.": "لا يوجد تحديث لتثبيته."
 }

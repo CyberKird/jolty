@@ -685,3 +685,28 @@ html.remote .offline-over {
   overflow-y: auto;
   background: var(--black);
 }
+
+/* ---- thumbs: every row and button that is tapped is at least 44 px tall, and the drawer rows have room between them ---- */
+@media (max-width: 760px) {
+  html.remote :is(.nav-item, .session-item, .meter-row, .session-more, .titlebar-btn, .btn) {
+    min-height: 44px;
+  }
+  html.remote .session-item {
+    margin-block: 1px;
+  }
+  html.remote :is(.session-more, .phone-more) {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+  /* long text stays selectable where it is read; the rest of the screen does not start a selection or a callout when a finger rests on it */
+  html.remote :is(.sidebar, .titlebar, .nav, .composer-bar, .chat-header, button) {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  html.remote :is(.msg-assistant, .msg-user, .md, pre, code) {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}

@@ -6,7 +6,7 @@ import { useScreenUi } from './screen-bus'
 // to the left pushes it back. The drawer follows the finger one to one and, on release, goes where the finger was heading
 // (position and speed decide), so it feels like part of the phone and not like a button with an animation.
 
-const EDGE = 30
+const EDGE = 28
 const MIN_MOVE = 10
 
 interface Drag {
@@ -21,23 +21,24 @@ interface Drag {
   lastT: number
 }
 
-/** Whether something under the finger scrolls sideways itself (a code block, a table): the swipe is then its own. */
-function scrollsSideways(el: Element | null): boolean {
-  for (let n = el; n && n !== document.body; n = n.parentElement) {
-    if (n instanceof HTMLInputElement || n instanceof HTMLTextAreaElement || (n instanceof HTMLElement && n.isContentEditable)) return true
-    if (n instanceof HTMLElement && n.scrollWidth > n.clientWidth + 2) {
-      const ox = getComputedStyle(n).overflowX
-      if (ox === 'auto' || ox === 'scroll') return true
-    }
-  }
-  return false
+/** Text is being selected (or was a moment ago): the handles of the selection, and the finger that places them, belong to the text, not to the drawer. */
+let selectedAt = 0
+const selecting = (): boolean => {
+  const s = window.getSelection()
+  return Boolean(s && !s.isCollapsed && s.toString().length > 0) || Date.now() - selectedAt < 1500
 }
 
 export function setupGestures(): void {
+  document.addEventListener('selectionchange', () => {
+    const s = window.getSelection()
+    if (s && !s.isCollapsed) selectedAt = Date.now()
+  })
   const narrow = window.matchMedia('(max-width: 760px)')
   const root = document.documentElement
   let drag: Drag | null = null
   let pending: { mode: 'open' | 'close'; x0: number; y0: number } | null = null
+  /** a finger resting on one spot is about to select text, not to swipe */
+  let hold: ReturnType<typeof setTimeout> | undefined
 
   const parts = (): { app: HTMLElement; side: HTMLElement } | null => {
     const app = document.querySelector<HTMLElement>('.app')
@@ -50,18 +51,34 @@ export function setupGestures(): void {
     el.app.style.setProperty('--scrim', String(d.p))
   }
 
+  /** Lets go of a drag that started and puts the drawer back where it was. */
+  const abort = (): void => {
+    pending = null
+    const d = drag
+    drag = null
+    clearTimeout(hold)
+    if (!d) return
+    const el = parts()
+    root.classList.remove('drawer-drag')
+    if (el) {
+      el.side.style.removeProperty('transform')
+      el.app.style.removeProperty('--scrim')
+    }
+  }
+
   const onStart = (e: TouchEvent): void => {
     pending = null
-    if (!narrow.matches || e.touches.length !== 1 || useScreenUi.getState().open) return
+    clearTimeout(hold)
+    if (!narrow.matches || e.touches.length !== 1 || useScreenUi.getState().open || selecting()) return
     const t = e.touches[0]
     const target = e.target instanceof Element ? e.target : null
     // the screen of the PC and its sheets keep their own touches
     if (target?.closest('.pcscreen, .sheet, .sheet-scrim, .picker-pop, .ctx')) return
     const open = useStore.getState().sidebarOpen
     if (open) pending = { mode: 'close', x0: t.clientX, y0: t.clientY }
-    else if (t.clientX <= EDGE || !scrollsSideways(target)) pending = { mode: 'open', x0: t.clientX, y0: t.clientY }
-    // from the edge the swipe is certain; elsewhere it must be clearly sideways (decided in onMove)
-    if (pending && pending.mode === 'open' && t.clientX > EDGE) pending.x0 = t.clientX
+    // the drawer is pulled out from the left edge only: a swipe on the chat itself is the text's (selecting it, its handles), never the drawer's
+    else if (t.clientX <= EDGE) pending = { mode: 'open', x0: t.clientX, y0: t.clientY }
+    if (pending) hold = setTimeout(() => (pending = null), 350)
   }
 
   const begin = (mode: 'open' | 'close', x: number, y: number): void => {
@@ -76,6 +93,8 @@ export function setupGestures(): void {
   const onMove = (e: TouchEvent): void => {
     const t = e.touches[0]
     if (!t) return
+    // text got selected under the finger: whatever this swipe was, it is not the drawer's now
+    if (selecting() && (pending || drag)) return abort()
     if (!drag && pending) {
       const dx = t.clientX - pending.x0
       const dy = t.clientY - pending.y0
@@ -105,6 +124,7 @@ export function setupGestures(): void {
   }
 
   const onEnd = (): void => {
+    clearTimeout(hold)
     pending = null
     const d = drag
     drag = null

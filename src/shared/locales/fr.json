@@ -1731,5 +1731,12 @@
  "Rețea": "Réseau",
  "Shell": "Shell",
  "Memorie": "Mémoire",
- "Caută în bibliotecă": "Rechercher dans la bibliothèque"
+ "Caută în bibliotecă": "Rechercher dans la bibliothèque",
+ "Context": "Contexte",
+ "Trage ca să schimbi mărimea. Dublu clic: mărimea potrivită.": "Glisse pour redimensionner. Double clic : la taille adaptée.",
+ "Arată mai multe ({n})": "Afficher plus ({n})",
+ "Arată mai puține": "Afficher moins",
+ "Jolty se actualizează. Telefonul se reconectează singur.": "Jolty se met à jour. Le téléphone se reconnecte tout seul.",
+ "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "Mettre à jour Jolty sur le PC ? Il se ferme et redémarre, et le téléphone se reconnecte tout seul en une minute environ. Ce qui travaille en ce moment s'arrête, les conversations restent.",
+ "Nu e nicio actualizare de instalat.": "Aucune mise à jour à installer."
 }

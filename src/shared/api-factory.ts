@@ -188,9 +188,6 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       list: () => call('library:list'),
       image: (sessionId, itemId, index, small) => call('library:image', sessionId, itemId, index, small)
     },
-    ui: {
-      state: (patch, from) => call('ui:state', patch, from)
-    },
     remote: {
       status: () => call('remote:status'),
       enable: (on) => call('remote:enable', on),

@@ -1,170 +1,360 @@
-/* The activity map of the Live panel (ActivityGraph.tsx). App tokens only, so every theme dresses it; only transforms and opacity move. */
+/* The activity board of the Live panel (ActivityGraph.tsx): a burst of light, four glittering cables, dark tiles.
+   Everything that moves is its own layer and moves by opacity or transform (the graphics chip does it); the board scales with its width. */
+.ag-wrap {
+  position: relative;
+  width: var(--agw, min(100%, 380px));
+  max-width: 100%;
+  min-width: 200px;
+  margin: 4px auto 10px;
+  container-type: inline-size;
+}
 .actgraph {
-  display: block;
+  --u: calc(100cqw / 360);
+  position: relative;
   width: 100%;
-  height: auto;
-  margin: 2px 0 6px;
-  overflow: visible;
+  aspect-ratio: 360 / 192;
   user-select: none;
 }
-.ag-orbit {
+.ag-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.ag-layer path {
   fill: none;
-  stroke: var(--line);
-  stroke-dasharray: 1.5 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.ag-link line {
-  stroke: var(--line-2);
-  stroke-width: 1;
-  opacity: 0.45;
-  transition: opacity var(--t-base) var(--e-move), stroke var(--t-base) var(--e-move);
+
+/* the burst */
+.ag-rays line {
+  stroke: #dbe8ff;
+  stroke-width: 0.5;
 }
-.ag-link.used line {
-  opacity: 0.9;
+.ag-rays {
+  transform-origin: 12.8% 52.1%;
 }
-.ag-link.on line {
+.ag-dash {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 0.8;
+  stroke-dasharray: 2.2 3;
+}
+.ag-ring {
+  fill: none;
   stroke: var(--volt);
-  stroke-width: 1.4;
-  opacity: 1;
+  stroke-width: 1;
+  stroke-linecap: round;
+  opacity: 0.7;
+  transition: stroke-dasharray var(--t-slow) var(--e-out);
 }
-.ag-packet {
-  fill: var(--volt);
-  animation: ag-packet 0.95s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+.actgraph.wait .ag-ring {
+  stroke: var(--warning);
 }
-@keyframes ag-packet {
+.ag-dots circle {
+  opacity: 0.95;
+}
+.ag-glow {
+  position: absolute;
+  width: calc(var(--u) * 66);
+  height: calc(var(--u) * 66);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 5%, rgba(200, 222, 255, 0.9) 12%, rgba(130, 170, 255, 0.38) 30%, rgba(110, 150, 255, 0.1) 50%, transparent 70%);
+  pointer-events: none;
+}
+.ag-pill {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--u) * 4);
+  padding: calc(var(--u) * 2.6) calc(var(--u) * 7);
+  border-radius: 999px;
+  background: rgba(8, 8, 12, 0.82);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  font-size: max(7px, calc(var(--u) * 8.6));
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.ag-pill b {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--white);
+}
+.ag-pill em {
+  font-style: normal;
+  color: var(--grey);
+}
+
+/* the cables */
+.ag-edge {
+  stroke: rgba(0, 0, 0, 0.55);
+}
+.ag-speck {
+  stroke: rgba(0, 0, 0, 0.42);
+}
+.ag-spark {
+  stroke: #fff;
+  stroke-width: 2.2;
+  stroke-dasharray: 6 94;
+  animation: ag-travel 1.35s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.ag-spark.wide {
+  stroke-width: 7;
+  opacity: 0.4;
+}
+@keyframes ag-travel {
   from {
-    transform: translate(0, 0);
-    opacity: 1;
-  }
-  75% {
-    opacity: 1;
+    stroke-dashoffset: 6;
   }
   to {
-    transform: translate(var(--dx), var(--dy));
-    opacity: 0;
+    stroke-dashoffset: -94;
   }
 }
 
-.ag-node {
+/* the glitter: two layers that fade into each other slowly, so the cables shimmer instead of flickering */
+.ag-glit.a {
+  animation: ag-shimmer-a 2.8s ease-in-out infinite alternate;
+}
+.ag-glit.b {
+  animation: ag-shimmer-b 2.8s ease-in-out infinite alternate;
+}
+@keyframes ag-shimmer-a {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.25;
+  }
+}
+@keyframes ag-shimmer-b {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* the dots twinkle in four groups, out of step; the rays turn very slowly; the light breathes */
+.ag-dots.g0 {
+  animation: ag-twinkle 3.1s ease-in-out infinite;
+}
+.ag-dots.g1 {
+  animation: ag-twinkle 3.7s ease-in-out -1.2s infinite;
+}
+.ag-dots.g2 {
+  animation: ag-twinkle 2.6s ease-in-out -0.5s infinite;
+}
+.ag-dots.g3 {
+  animation: ag-twinkle 4.3s ease-in-out -2.4s infinite;
+}
+@keyframes ag-twinkle {
+  50% {
+    opacity: 0.25;
+  }
+}
+.ag-rays {
+  animation: ag-turn 120s linear infinite;
+}
+@keyframes ag-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.ag-glow {
+  animation: ag-breathe 3.6s ease-in-out infinite alternate;
+}
+@keyframes ag-breathe {
+  from {
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+.actgraph.live-on .ag-glow {
+  animation-duration: 1.6s;
+}
+
+/* the rows' names, on the outer side of the first tile, like the board's captions */
+.ag-caption {
+  position: absolute;
+  transform: translateY(-50%);
+  font-family: var(--label);
+  font-size: max(6.5px, calc(var(--u) * 7.2));
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: var(--grey-2);
-  transition: color var(--t-base) var(--e-move);
+  white-space: nowrap;
 }
-.ag-node.used {
-  color: var(--grey);
+
+/* a place: a dark tile with its icon, the name beside the outer edge, how many times the conversation went there */
+.ag-node {
+  position: absolute;
+  width: 0;
+  height: 0;
 }
-.ag-node.on {
-  color: var(--volt);
+.ag-tile {
+  position: absolute;
+  left: calc(var(--u) * -14);
+  top: calc(var(--u) * -14);
+  width: calc(var(--u) * 28);
+  height: calc(var(--u) * 28);
+  display: grid;
+  place-items: center;
+  border-radius: calc(var(--u) * 8);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 55%), var(--s2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09), 0 4px 10px -4px rgba(0, 0, 0, 0.7);
+  color: var(--grey-2);
+  transition: box-shadow var(--t-base) var(--e-move), color var(--t-base) var(--e-move);
 }
-.ag-disc {
-  fill: var(--s2);
-  stroke: var(--line-2);
-  stroke-width: 1;
-  transition: stroke var(--t-base) var(--e-move), fill var(--t-base) var(--e-move);
+.ag-tile::after {
+  content: '';
+  position: absolute;
+  inset: calc(var(--u) * -3);
+  border-radius: calc(var(--u) * 10);
+  box-shadow: 0 0 0 1px var(--c);
+  opacity: 0;
+  pointer-events: none;
 }
-.ag-node.used .ag-disc {
-  stroke: var(--grey-2);
-}
-.ag-node.on .ag-disc {
-  stroke: var(--volt);
-  fill: var(--volt-dim);
-}
-.ag-node svg {
+.ag-icon {
+  width: calc(var(--u) * 15);
+  height: calc(var(--u) * 15);
   fill: none;
   stroke: currentColor;
 }
-.ag-halo {
-  fill: none;
-  stroke: var(--volt);
-  stroke-width: 1;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: ag-halo 1.6s ease-out infinite;
+.ag-node.used .ag-tile {
+  color: var(--c);
+}
+.ag-node.on .ag-tile {
+  color: var(--c);
+  box-shadow: inset 0 0 0 1px var(--c), 0 0 calc(var(--u) * 14) calc(var(--u) * -2) var(--c);
+}
+.ag-node.on .ag-tile::after {
+  animation: ag-halo 1.7s ease-out infinite;
 }
 @keyframes ag-halo {
   from {
-    transform: scale(0.85);
-    opacity: 0.7;
+    transform: scale(0.9);
+    opacity: 0.75;
   }
   to {
-    transform: scale(1.55);
+    transform: scale(1.35);
     opacity: 0;
   }
 }
 .ag-label {
-  font-family: var(--label);
-  font-size: 8.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  fill: var(--grey-2);
-  transition: fill var(--t-base) var(--e-move);
+  position: absolute;
+  left: calc(var(--u) * -30);
+  width: calc(var(--u) * 60);
+  text-align: center;
+  font-size: max(7px, calc(var(--u) * 8.4));
+  font-weight: 500;
+  color: var(--grey);
+  white-space: nowrap;
+  transition: color var(--t-base) var(--e-move);
+}
+.ag-label.top {
+  top: calc(var(--u) * -29);
+}
+.ag-label.bottom {
+  top: calc(var(--u) * 18);
 }
 .ag-node.on .ag-label,
 .ag-node.used .ag-label {
-  fill: var(--grey);
-}
-.ag-node.on .ag-label {
-  fill: var(--white);
+  color: var(--white);
 }
 .ag-count {
+  position: absolute;
+  right: calc(var(--u) * -4);
+  bottom: calc(var(--u) * -4);
+  min-width: calc(var(--u) * 11);
+  height: calc(var(--u) * 11);
+  padding: 0 calc(var(--u) * 3);
+  border-radius: 999px;
+  background: var(--s3);
+  box-shadow: 0 0 0 1px var(--line-2);
   font-family: var(--label);
-  font-size: 8.5px;
-  fill: var(--grey-2);
+  font-size: max(6px, calc(var(--u) * 6.8));
+  line-height: calc(var(--u) * 11);
+  text-align: center;
+  color: var(--grey);
 }
-.ag-fail circle {
-  fill: var(--critical);
-}
-.ag-fail text {
-  fill: #fff;
-  font-size: 7.5px;
+.ag-fail {
+  position: absolute;
+  z-index: 2;
+  right: calc(var(--u) * -5);
+  top: calc(var(--u) * -5);
+  min-width: calc(var(--u) * 12);
+  height: calc(var(--u) * 12);
+  padding: 0 calc(var(--u) * 3);
+  border-radius: 999px;
+  background: var(--critical);
+  font-family: var(--label);
+  font-size: max(6.5px, calc(var(--u) * 7.2));
   font-weight: 600;
+  line-height: calc(var(--u) * 12);
+  text-align: center;
+  color: #fff;
 }
 
-.ag-core-bg {
-  fill: var(--s2);
-  stroke: var(--line-2);
-}
-.ag-core-ring {
-  fill: none;
-  stroke: var(--volt);
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  transition: stroke-dasharray var(--t-slow) var(--e-out);
-}
-.ag-core-pulse {
-  fill: none;
-  stroke: var(--volt);
+/* the grip that resizes the board */
+.ag-grip {
+  position: absolute;
+  right: -2px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--grey-2);
+  cursor: nwse-resize;
   opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
+  touch-action: none;
+  transition: opacity var(--t-base) var(--e-move), color var(--t-fast) var(--e-move);
 }
-.ag-core.on .ag-core-pulse {
-  animation: ag-halo 2s ease-out infinite;
+.ag-grip path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linecap: round;
 }
-.ag-core.wait .ag-core-pulse {
-  stroke: var(--warning);
-  animation: ag-halo 1.2s ease-out infinite;
+.ag-wrap:hover .ag-grip,
+.ag-grip:focus-visible {
+  opacity: 0.8;
 }
-.ag-core.wait .ag-core-bg {
-  stroke: var(--warning);
-}
-.ag-core-name {
-  font-family: var(--label);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  fill: var(--white);
-}
-.ag-core-model,
-.ag-core-pct {
-  font-family: var(--label);
-  font-size: 8px;
-  letter-spacing: 0.04em;
-  fill: var(--grey-2);
+.ag-grip:hover {
+  color: var(--white);
+  opacity: 1;
 }
 
-/* a weak PC, or motion switched off: the map holds still and shows the same state */
+/* a weak PC, or motion switched off: the board holds still and shows the same state (the glitter shows both layers, half each) */
 html.low-power .actgraph *,
-html.reduce-motion .actgraph * {
+html.low-power .actgraph *::after,
+html.reduce-motion .actgraph *,
+html.reduce-motion .actgraph *::after {
   animation: none !important;
   transition: none !important;
+}
+html.low-power .ag-glit,
+html.reduce-motion .ag-glit {
+  opacity: 0.6;
+}
+html.low-power .ag-node.on .ag-tile::after,
+html.reduce-motion .ag-node.on .ag-tile::after {
+  opacity: 0.6;
+}
+html.low-power .ag-spark,
+html.reduce-motion .ag-spark {
+  stroke-dasharray: none;
+  opacity: 0.35;
 }
 .live.closed .actgraph * {
   animation-play-state: paused;

@@ -302,7 +302,7 @@ export const useStore = create<State>((set, get) => ({
         const prev = get().status[e.sessionId]
         set((s) => ({
           status: { ...s.status, [e.sessionId]: e.status },
-          clocks: e.status === 'running' && s.status[e.sessionId] !== 'running' ? { ...s.clocks, [e.sessionId]: { turn: Date.now() } } : s.clocks
+          clocks: e.status === 'running' && s.status[e.sessionId] !== 'running' ? { ...s.clocks, [e.sessionId]: { turn: Date.now() - (e.ageMs ?? 0) } } : s.clocks
         }))
         if (e.status !== 'running') {
           const settled = settleCompaction(get().compactions[e.sessionId])
@@ -320,10 +320,10 @@ export const useStore = create<State>((set, get) => ({
       case 'focus':
         void get().openSession(e.open)
         return
-      // the other window or a phone changed what is shown / a preference: uisync.ts and App.tsx act on it
-      case 'ui':
-        window.dispatchEvent(new CustomEvent('jolty:ui', { detail: e }))
+      case 'sessionsChanged':
+        void get().loadSessions()
         return
+      // a preference changed on the PC or on a phone: App.tsx reads the settings again
       case 'settingsChanged':
         window.dispatchEvent(new Event('jolty:settings'))
         return

@@ -841,7 +841,9 @@ function useStickToBottom(dep: unknown): React.RefObject<HTMLDivElement | null> 
     let lastTop = el.scrollTop
     let held = false
     const markInput = (): void => { lastInput = Date.now() }
-    const onDown = (): void => { held = true; markInput() }
+    // a finger is not "held" the way a mouse button is: the browser takes the touch over for scrolling and sends pointercancel, never pointerup, so a
+    // finger would stay "held" for good and every later scroll (the page growing or shrinking under a streaming answer) would look like the reader's
+    const onDown = (e: PointerEvent): void => { if (e.pointerType !== 'touch') held = true; markInput() }
     const onUp = (): void => { held = false }
     const onScroll = (): void => {
       const top = el.scrollTop
@@ -862,6 +864,8 @@ function useStickToBottom(dep: unknown): React.RefObject<HTMLDivElement | null> 
     el.addEventListener('touchmove', markInput, { passive: true })
     el.addEventListener('pointerdown', onDown)
     window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    el.addEventListener('touchend', markInput, { passive: true })
     el.addEventListener('keydown', onKey)
     el.addEventListener('scroll', onScroll)
     const resize = new ResizeObserver(follow)
@@ -872,6 +876,8 @@ function useStickToBottom(dep: unknown): React.RefObject<HTMLDivElement | null> 
       el.removeEventListener('touchmove', markInput)
       el.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      el.removeEventListener('touchend', markInput)
       el.removeEventListener('keydown', onKey)
       el.removeEventListener('scroll', onScroll)
       resize.disconnect()

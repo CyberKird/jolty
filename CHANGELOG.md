@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.27.0
+
+### New
+
+- Update Jolty from the phone: when a new version is ready, the update button works from Jolty Remote too. Tap it, confirm, and the PC closes, installs and starts again; the phone says "Jolty is updating", reconnects by itself, and loads the new version of the page by itself.
+- The activity map in the Live panel is redrawn like a control board: the model as a burst of light in a dashed circle, a bundle of four glittering cables that rise and fall and peel off to dark tiles (You, Model, Skills, Memory above; Files, Shell, Network, Browser, Subagents below). The tile where a tool is running lights up and a spark runs along its cable; a red dot counts the commands that failed. Drag the grip at its bottom right to make it any size you want (double click goes back); it remembers the size. On a weak PC or with motion off it holds still and shows the same.
+- On the phone the drawer lists the latest 15 conversations with "Show more" and "Show less", so the usage meters and your account are within reach at the bottom.
+
+### Improvements
+
+- Jolty Remote works on its own: what is open on the phone does not follow what is open on the PC, and the other way round. What is shared is the data, live and without a refresh: the list of conversations (also when one is removed, archived or pinned on the PC), what is switched on in the message box, and for how long a task has been running (a phone that connects mid-turn shows the real time, not 0:00).
+- The phone is no longer unpaired by a bad moment of the line. Only the PC saying it does not know the key (twice in a row), or that you removed the phone, ends the pairing. A slow line, a file that cannot be read for a second, or Safari clearing the page's storage no longer unpair it: the PC also sets a cookie when pairing, and the phone is recognised by it. After an update of Jolty the PC waits for its own port to be free instead of staying off.
+- The drawer on the phone no longer jumps out when you select text. It is pulled out from the left edge only (a swipe on the chat belongs to the text), and it lets go the moment a selection starts, so the blue handles can be dragged freely. Rows and buttons are at least 44 pixels tall for the thumb, and the parts that are not text no longer start a selection when a finger rests on them.
+- Scrolling in a chat on the phone follows the newest line again while the model works and thinks, and a finger that scrolls up to read still stops it.
+
+### Fixed
+
+- The Accounts page on the phone is no longer cut off at the right: a card needed a width of 440 pixels, more than the screen.
+
 ## 0.26.0
 
 ### New

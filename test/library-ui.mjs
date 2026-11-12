@@ -114,6 +114,7 @@ try {
   await win.waitForSelector('.context-meter .liquid')
   assert.equal(await win.locator('.liquid.high').count(), 1, 'over 80% the liquid turns')
   await win.waitForTimeout(1600)
+  await win.locator('.actgraph').screenshot({ path: path.join(shots, 'actgraph.png') })
   await win.screenshot({ path: path.join(shots, 'chat-map.png') })
   await win.screenshot({ path: path.join(shots, 'chat-map.png') })
   const level = await win.evaluate(() => getComputedStyle(document.querySelector('.liquid')).getPropertyValue('--lvl'))

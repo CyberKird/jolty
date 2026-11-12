@@ -15,7 +15,8 @@ const items = [
   { kind: 'assistant', id: 'a1', text: 'Done. The deck is now **12 m** long.\n\n```py\nbpy.data.objects["Deck"].scale.x = 1.5\n```' }
 ]
 fs.writeFileSync(path.join(data, 'profiles.json'), JSON.stringify([{ id: 'p1', name: 'Tools', engine: 'claude', auth: 'subscription', color: '#d97757' }]))
-fs.writeFileSync(path.join(data, 'sessions.json'), JSON.stringify([{ id: 's1', profileId: 'p1', engine: 'claude', cwd: data, title: 'Blender bridge', permissionMode: 'ask', createdAt: 1, updatedAt: 1 }]))
+// one real conversation and nineteen older ones: the drawer shows the latest fifteen, with a button for the rest
+fs.writeFileSync(path.join(data, 'sessions.json'), JSON.stringify([{ id: 's1', profileId: 'p1', engine: 'claude', cwd: data, title: 'Blender bridge', permissionMode: 'ask', createdAt: 1, updatedAt: 100 }, ...Array.from({ length: 19 }, (_, i) => ({ id: `o${i}`, profileId: 'p1', engine: 'claude', cwd: data, title: `Older ${i}`, permissionMode: 'ask', createdAt: 1, updatedAt: 50 - i }))]))
 fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ language: 'en', lastCwd: data }))
 fs.writeFileSync(path.join(data, 'remote.json'), JSON.stringify({ enabled: true, port: PORT, devices: [] }))
 fs.mkdirSync(path.join(data, 'transcripts'))
@@ -54,6 +55,11 @@ try {
   })
   assert.equal(drawer.side, 'auto')
   assert.equal(drawer.list, 'visible')
+  assert.equal(await phone.locator('.session-item').count(), 15, 'the phone lists the latest 15 conversations')
+  await phone.locator('.phone-more').click()
+  assert.equal(await phone.locator('.session-item').count(), 20, 'show more lists them all')
+  await phone.locator('.phone-more').click()
+  assert.equal(await phone.locator('.session-item').count(), 15, 'show less goes back')
   const pages = (await phone.locator('.nav-item').allInnerTexts()).map((t) => t.trim())
   for (const want of ['Settings', 'Skills', 'Usage', 'Scheduled']) assert.ok(pages.some((t) => t.includes(want)), `${want} page is offered`)
   // every page opens on the phone without asking the PC for anything it refuses, and fits the screen
@@ -67,6 +73,17 @@ try {
     await phone.waitForTimeout(500)
     assert.equal(await phone.locator('.toast.error').count(), 0, `${pages[i]}: no refused call`)
     assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, `${pages[i]} fits the screen`)
+    // the page is clipped sideways, so a card wider than the screen would only be cut off: measure what is drawn, not the scroll width
+    const cut = await phone.evaluate(() =>
+      [...document.querySelectorAll('.page *')]
+        .filter((e) => {
+          const r = e.getBoundingClientRect()
+          return r.width > 0 && r.right > window.innerWidth + 1 && !e.closest('pre, table, .lib-chips')
+        })
+        .slice(0, 5)
+        .map((e) => `${e.tagName}.${e.className}`)
+    )
+    assert.deepEqual(cut, [], `${pages[i]}: nothing is cut off at the right`)
     await phone.screenshot({ path: path.join(shots, `phone-page-${i}.png`) })
   }
   if (await phone.evaluate(() => document.querySelector('.app')?.classList.contains('no-sidebar'))) await phone.locator('.titlebar-btn').first().click()
@@ -83,6 +100,33 @@ try {
     throw e
   })
   assert.match(await phone.locator('.msg-assistant').first().innerText(), /12 m/)
+  // the chat keeps following the newest line after a finger touched it (a touch ends with pointercancel, never pointerup), even when the page
+  // shrinks and grows under it, as a thinking block does
+  const follows = await phone.evaluate(async () => {
+    const el = document.querySelector('.messages')
+    const inner = el.firstElementChild
+    const tick = () => new Promise((r) => setTimeout(r, 120))
+    const grow = (h) => {
+      const d = document.createElement('div')
+      d.style.height = `${h}px`
+      d.className = 'probe'
+      inner.append(d)
+    }
+    el.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }))
+    // the finger is long gone: the reader's half second is over, what moves the page now is the page
+    await new Promise((r) => setTimeout(r, 700))
+    grow(1500)
+    await tick()
+    document.querySelectorAll('.probe').forEach((e) => e.remove())
+    await tick()
+    grow(1500)
+    await tick()
+    const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 3
+    document.querySelectorAll('.probe').forEach((e) => e.remove())
+    return atEnd
+  })
+  assert.equal(follows, true, 'the chat still follows the newest line after a touch')
+
   // choosing a conversation closes the drawer, and the PC-only panels are gone
   assert.ok(await phone.evaluate(() => document.querySelector('.app')?.classList.contains('no-sidebar')))
   assert.equal(await phone.locator('.live').first().isVisible(), false)
@@ -121,17 +165,30 @@ try {
   assert.equal(await phone.evaluate(() => document.documentElement.classList.contains('drawer-drag')), false, 'the drag ends')
   await swipe(320, 30)
   assert.equal(await closed(), true, 'a swipe to the left closes it')
+  // text is selected (its handles are dragged by the same finger): the drawer stays where it is, from the edge too
+  await phone.evaluate(() => {
+    const p = document.querySelector('.msg-assistant')
+    const r = document.createRange()
+    r.selectNodeContents(p)
+    const sel = window.getSelection()
+    sel.removeAllRanges()
+    sel.addRange(r)
+  })
+  await swipe(4, 300)
+  assert.equal(await closed(), true, 'a swipe while text is selected does not pull the drawer')
+  await phone.evaluate(() => window.getSelection().removeAllRanges())
+  await phone.waitForTimeout(1700)
+  // a swipe on the chat itself, away from the edge, is not the drawer's either
+  await swipe(120, 330)
+  assert.equal(await closed(), true, 'a swipe over the chat does not open the drawer')
   await touch.send('Emulation.setTouchEmulationEnabled', { enabled: false })
   await touch.detach()
 
-  // one app on two screens: what the phone opened is what the PC shows, and a page the PC opens opens on the phone too
-  await phone.waitForTimeout(600)
-  const seen = await win.evaluate(() => window.jolty.ui.state())
-  assert.equal(seen.activeId, 's1', 'the PC knows which conversation the phone has open')
-  await win.evaluate(() => window.jolty.ui.state({ page: 'usage' }, 'pc-test'))
-  await phone.waitForFunction(() => document.querySelector('.nav-item.active')?.textContent?.includes('Usage'), null, { timeout: 10000 })
-  await win.evaluate(() => window.jolty.ui.state({ activeId: 's1', page: 'chat' }, 'pc-test'))
-  await phone.waitForSelector('.msg-assistant .md', { timeout: 10000 })
+  // the phone works on its own: a page the PC opens does not move the phone (the data is the same, what is open is each one's own)
+  await win.locator('.nav-item', { hasText: 'Usage' }).click()
+  await win.waitForSelector('.page')
+  await phone.waitForTimeout(800)
+  assert.equal(await phone.locator('.msg-assistant .md').count() > 0, true, 'the phone keeps its conversation while the PC goes to another page')
 
   // the desktop sees the paired phone
   const st = await win.evaluate(() => window.jolty.remote.status())

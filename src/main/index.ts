@@ -281,6 +281,14 @@ function registerIpc(): void {
     })
     if (r.response === 0) await updater.install()
   })
+  // from a paired phone: no dialog on the PC (nobody is there), the phone asked its user. The phones are told first, so they say "updating" and not "lost".
+  handle('updates:installFromPhone', async () => {
+    const s = updater.current()
+    if (s.state !== 'ready' && s.state !== 'available') throw new Error(tr("Nu e nicio actualizare de instalat."))
+    remote.broadcast('jolty:event', { type: 'restarting' })
+    await new Promise((r) => setTimeout(r, 400))
+    await updater.install()
+  })
   handle('composer:slash', (cwd?: string) => slashItems(typeof cwd === 'string' ? cwd : undefined))
   handle('composer:files', (cwd: string) => (typeof cwd === 'string' && fs.existsSync(cwd) ? projectFiles(cwd) : []))
   handle('browser:setToken', async (token: string) => {
@@ -319,7 +327,9 @@ function registerIpc(): void {
   handle('sessions:handoff', (id: string, target: string, model?: string, effort?: string, fresh?: boolean) =>
     jolty.handoff(id, target, typeof model === 'string' ? model : undefined, typeof effort === 'string' ? effort : undefined, fresh === true)
   )
-  handle('sessions:remove', (id: string) => jolty.removeSession(id))
+  // a conversation removed, archived, pinned or brought back on the PC or on a phone: every window and phone reads the list again
+  const listChanged = <T>(v: T): T => (send({ type: 'sessionsChanged' }), v)
+  handle('sessions:remove', async (id: string) => listChanged(await jolty.removeSession(id)))
   handle('sessions:referenceFile', (id: string) => jolty.referenceFile(String(id)))
   // the Library page: what was attached or linked, and the pictures one by one (small ones for the grid)
   const thumbs = new Map<string, string>()
@@ -342,9 +352,9 @@ function registerIpc(): void {
     return out
   })
   handle('sessions:rename', (id: string, title: string) => jolty.renameSession(String(id), String(title)))
-  handle('sessions:setFlags', (ids: unknown, flags: { pinned?: boolean; archived?: boolean }) => jolty.setFlags(Array.isArray(ids) ? ids.map(String) : [], flags ?? {}))
+  handle('sessions:setFlags', async (ids: unknown, flags: { pinned?: boolean; archived?: boolean }) => listChanged(await jolty.setFlags(Array.isArray(ids) ? ids.map(String) : [], flags ?? {})))
   handle('sessions:closed', () => jolty.closedSessions())
-  handle('sessions:restore', (id?: string) => jolty.restoreSession(id === undefined ? undefined : String(id)))
+  handle('sessions:restore', async (id?: string) => listChanged(await jolty.restoreSession(id === undefined ? undefined : String(id))))
   handle('sessions:review', (id: string) => jolty.review(String(id)))
   // the worktree comes from the session's own record, never from a path the renderer sends
   const tree = (id: unknown) => {
@@ -417,18 +427,6 @@ function registerIpc(): void {
   handle('codexImport:detect', (id: string, cwd?: string) => jolty.codex.importDetect(jolty.profile(id), cwd))
   handle('codexImport:run', (id: string, cwd?: string, types?: string[]) => jolty.codex.importRun(jolty.profile(id), cwd, types))
 
-  // what is shown (open conversation, page): the PC's window and the phones follow each other; the last change wins
-  let shown: { activeId?: string; page?: string } = {}
-  handle('ui:state', (patch: unknown, from: unknown) => {
-    if (patch && typeof patch === 'object') {
-      const p = patch as { activeId?: unknown; page?: unknown }
-      if (typeof p.activeId === 'string') shown.activeId = p.activeId.slice(0, 80)
-      else if (p.activeId === null) shown.activeId = undefined
-      if (typeof p.page === 'string' && /^[a-z]{3,12}$/.test(p.page)) shown.page = p.page
-      send({ type: 'ui', ...shown, from: typeof from === 'string' ? from.slice(0, 40) : '' })
-    }
-    return shown
-  })
   handle('app:settings', () => store.loadSettings())
   // read synchronously by the preload, before the interface builds any text
   ipcMain.on('app:lang', (e) => (e.returnValue = getLang()))

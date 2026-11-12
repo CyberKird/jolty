@@ -1731,5 +1731,12 @@
  "Rețea": "ネットワーク",
  "Shell": "シェル",
  "Memorie": "メモリ",
- "Caută în bibliotecă": "ライブラリを検索"
+ "Caută în bibliotecă": "ライブラリを検索",
+ "Context": "コンテキスト",
+ "Trage ca să schimbi mărimea. Dublu clic: mărimea potrivită.": "ドラッグでサイズ変更。ダブルクリックで最適なサイズ。",
+ "Arată mai multe ({n})": "もっと見る ({n})",
+ "Arată mai puține": "表示を減らす",
+ "Jolty se actualizează. Telefonul se reconectează singur.": "Jolty を更新しています。スマホは自動で再接続します。",
+ "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "PC の Jolty を更新しますか？ 一度閉じて再起動し、スマホは約 1 分で自動的に再接続します。実行中の作業は止まりますが、会話は残ります。",
+ "Nu e nicio actualizare de instalat.": "インストールする更新はありません。"
 }

@@ -63,6 +63,13 @@ const PHONE_HEAD = [
 /** the dictionary chunks of the interface languages (named like "de-AbCd1234.js"): a phone keeps only its own */
 const LOCALE_CHUNK = /^(ar|de|en|es|fr|hi|id|it|ja|ko|pt-BR)-[\w-]{8}\.js$/
 
+const COOKIE = 'jolty_dev'
+
+/** The phone's key as the cookie carries it. */
+function cookieToken(req: http.IncomingMessage): string | undefined {
+  return new RegExp(`(?:^|;\\s*)${COOKIE}=([\\w-]+)`).exec(String(req.headers.cookie || ''))?.[1]
+}
+
 const sha = (s: string): string => crypto.createHash('sha256').update(s).digest('hex')
 
 function same(a: string, b: string): boolean {
@@ -147,13 +154,15 @@ export class Remote {
   }
 
   /** What is happening now, kept from the events: a phone that connects (or comes back) mid-turn has to learn it, as it never saw the event. */
-  private working = new Set<string>()
+  private working = new Map<string, number>()
   private asking = new Map<string, unknown>()
 
   private track(e: { type?: string; sessionId?: string; status?: string; request?: { id?: string }; requestId?: string }): void {
     if (!e.sessionId) return
     if (e.type === 'status') {
-      if (e.status === 'running') this.working.add(e.sessionId)
+      if (e.status === 'running') {
+        if (!this.working.has(e.sessionId)) this.working.set(e.sessionId, Date.now())
+      }
       else {
         this.working.delete(e.sessionId)
         for (const [id, ev] of this.asking) if ((ev as { sessionId?: string }).sessionId === e.sessionId) this.asking.delete(id)
@@ -170,13 +179,22 @@ export class Remote {
     for (const c of this.clients) if (c.ws.readyState === 1) c.ws.send(msg)
   }
 
+  /** the last file that was read whole: a read that fails for a moment (the file is being replaced, a scanner holds it) must not look like "no phones are paired" */
+  private good?: Stored
+
   private load(): Stored {
-    try {
-      const j = JSON.parse(fs.readFileSync(path.join(dataDir(), 'remote.json'), 'utf8')) as Partial<Stored>
-      return { enabled: j.enabled === true, port: Number(j.port) || DEFAULT_PORT, devices: Array.isArray(j.devices) ? j.devices : [], wake: j.wake && typeof j.wake.token === 'string' ? j.wake : undefined }
-    } catch {
-      return { enabled: false, port: DEFAULT_PORT, devices: [] }
+    const file = path.join(dataDir(), 'remote.json')
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        const j = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<Stored>
+        return (this.good = { enabled: j.enabled === true, port: Number(j.port) || DEFAULT_PORT, devices: Array.isArray(j.devices) ? j.devices : [], wake: j.wake && typeof j.wake.token === 'string' ? j.wake : undefined })
+      } catch (e) {
+        // no file: nothing was ever paired (or it was deleted on purpose)
+        if ((e as NodeJS.ErrnoException).code === 'ENOENT') break
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20)
+      }
     }
+    return this.good && fs.existsSync(file) ? this.good : { enabled: false, port: DEFAULT_PORT, devices: [] }
   }
 
   private save(s: Stored): void {
@@ -185,11 +203,24 @@ export class Remote {
     const tmp = `${file}.${process.pid}.tmp`
     fs.writeFileSync(tmp, JSON.stringify(s, null, 2), { mode: 0o600 })
     fs.renameSync(tmp, file)
+    this.good = s
   }
 
   /** Called once the app is ready: starts the server again when the user left it on. */
   async init(): Promise<void> {
-    if (this.load().enabled) await this.listen().catch((e: unknown) => (this.error = e instanceof Error ? e.message : String(e)))
+    if (!this.load().enabled) return
+    // after an update the old process can still hold the port for a few seconds: try again before giving up
+    for (let attempt = 0; attempt < 12; attempt++) {
+      try {
+        await this.listen()
+        this.error = undefined
+        return
+      } catch (e) {
+        this.error = e instanceof Error ? e.message : String(e)
+        if (!/already used/.test(this.error)) return
+        await new Promise((r) => setTimeout(r, 2500))
+      }
+    }
   }
 
   async status(): Promise<RemoteStatus> {
@@ -272,7 +303,7 @@ export class Remote {
       perMessageDeflate: { threshold: 512, zlibDeflateOptions: { level: 3 }, serverNoContextTakeover: true, clientNoContextTakeover: true, concurrencyLimit: 4 }
     })
     server.on('upgrade', (req, socket, head) => this.upgrade(req, socket, head, wss))
-    wss.on('connection', (ws) => this.connection(ws))
+    wss.on('connection', (ws, req) => this.connection(ws, req))
     this.wss = wss
     this.server = server
     return new Promise((resolve, reject) => {
@@ -299,10 +330,11 @@ export class Remote {
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req))
   }
 
-  private connection(ws: WebSocket): void {
+  private connection(ws: WebSocket, req: http.IncomingMessage): void {
     let device: string | undefined
     let client: { ws: WebSocket; device: string } | undefined
-    const waiting = setTimeout(() => ws.close(4401, 'no key'), 5000)
+    // a slow line can take a while to deliver the first message: that is not a wrong key (4408 is retried by the phone, 4401 is not)
+    const waiting = setTimeout(() => ws.close(4408, 'no key'), 20_000)
     const alive = setInterval(() => {
       if (ws.readyState === 1) ws.ping()
     }, 25_000)
@@ -329,16 +361,17 @@ export class Remote {
         return
       }
       if (!device) {
-        if (m.t !== 'auth' || typeof m.token !== 'string') return ws.close(4401, 'no key')
-        device = this.deviceFor(m.token)
+        if (m.t !== 'auth' || typeof m.token !== 'string') return ws.close(4400, 'bad first message')
+        // the key is kept in the phone's storage and, set by this server, in a cookie: a phone whose storage was cleared (Safari does that to pages not opened for a week) is still known by the cookie
+        device = this.deviceFor(m.token || cookieToken(req) || '')
         if (!device) return ws.close(4401, 'unknown key')
         clearTimeout(waiting)
         client = { ws, device }
         this.clients.add(client)
         this.onChange()
-        reply({ t: 'ready', lang: getLang() })
+        reply({ t: 'ready', lang: getLang(), version: typeof __JOLTY_VERSION__ === 'string' ? __JOLTY_VERSION__ : 'dev' })
         // the turns running now and the questions waiting for a yes, as the events that would have told it
-        for (const id of this.working) reply({ t: 'ev', channel: 'jolty:event', data: { type: 'status', sessionId: id, status: 'running' } })
+        for (const [id, since] of this.working) reply({ t: 'ev', channel: 'jolty:event', data: { type: 'status', sessionId: id, status: 'running', ageMs: Date.now() - since } })
         for (const ev of this.asking.values()) reply({ t: 'ev', channel: 'jolty:event', data: ev })
         return
       }
@@ -416,14 +449,21 @@ export class Remote {
           const j = JSON.parse(body) as { code?: unknown; name?: unknown }
           const out = this.claim(j.code, j.name)
           if (!out) return end(403, '{"error":"Code not valid or expired"}', 'application/json')
-          end(200, JSON.stringify(out), 'application/json')
+          const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''
+          end(200, JSON.stringify(out), 'application/json', { 'Set-Cookie': `${COOKIE}=${out.token}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict${secure}` })
         } catch {
           end(400, '{"error":"Bad request"}', 'application/json')
         }
       })
       return
     }
-    if (url.pathname === '/lang.js') return end(200, `window.joltyLang=${JSON.stringify(getLang())};`, 'text/javascript; charset=utf-8')
+    // does the cookie still name a paired phone? (a phone whose own copy of the key is gone asks before showing the pairing screen)
+    if (url.pathname === '/api/session' && req.method === 'GET') {
+      const t = cookieToken(req)
+      return t && this.deviceFor(t) ? end(200, '{"ok":true}', 'application/json') : end(401, '{"ok":false}', 'application/json')
+    }
+    // the version tells the page it is an old copy kept on the phone (after an update of Jolty): it then loads the new one
+    if (url.pathname === '/lang.js') return end(200, `window.joltyLang=${JSON.stringify(getLang())};window.joltyVersion=${JSON.stringify(typeof __JOLTY_VERSION__ === 'string' ? __JOLTY_VERSION__ : 'dev')};`, 'text/javascript; charset=utf-8')
     if (req.method !== 'GET' && req.method !== 'HEAD') return end(405)
     this.file(url.pathname, req.headers.host || '', req, end)
   }

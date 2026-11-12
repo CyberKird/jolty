@@ -108,7 +108,7 @@ class Link {
       this.lastRx = Date.now()
       // a picture of the PC's screen
       if (typeof ev.data !== 'string') return screenBus.frame(ev.data as ArrayBuffer)
-      const m = JSON.parse(String(ev.data)) as { t: string; id?: number; ok?: boolean; value?: unknown; error?: string; channel?: string; data?: unknown }
+      const m = JSON.parse(String(ev.data)) as { t: string; id?: number; ok?: boolean; value?: unknown; error?: string; channel?: string; data?: unknown; version?: string }
       if (m.t === 'pong') return
       if (m.t === 'screen') return screenBus.message(m as unknown as Record<string, unknown>)
       if (m.t === 'ready') {
@@ -119,7 +119,9 @@ class Link {
         this.everReady = true
         this.delay = 400
         this.failed = 0
+        this.unknown = 0
         this.onState(true)
+        refreshIfNewer(m.version)
         if (this.offlineShown) {
           this.offlineShown = false
           clearOffline()
@@ -143,7 +145,7 @@ class Link {
         for (const cb of this.listeners.get(m.channel) || []) cb(m.data)
       }
     }
-    ws.onclose = (ev) => this.lost(ws, ev.code)
+    ws.onclose = (ev) => this.lost(ws, ev.code, ev.reason)
   }
 
   /** Cuts a line that is not answering; the close handler does the rest. */
@@ -156,10 +158,13 @@ class Link {
     } catch {
       // already gone
     }
-    this.lost(ws, 1006)
+    this.lost(ws, 1006, '')
   }
 
-  private lost(ws: WebSocket, code: number): void {
+  /** how many times in a row the PC said it does not know the key */
+  private unknown = 0
+
+  private lost(ws: WebSocket, code: number, reason: string): void {
     if (this.ws !== ws) return
     this.ws = undefined
     clearTimeout(this.helloTimer)
@@ -175,13 +180,17 @@ class Link {
     }
     this.pending.clear()
     for (const [channel, args, p] of redo) void this.issue(channel, args, false).then(p.resolve, p.reject)
-    if (code === 4401) {
-      // the PC does not know this key (revoked or reset): pair again
-      localStorage.removeItem(KEY)
-      if (!this.everReady || this.optimistic) return this.fail?.(new Error('This phone is no longer paired. Open the pairing link from Jolty again.'))
-      // revoked while the app was open: back to the pairing screen (nothing typed is worth keeping for a phone that was cut off)
-      location.reload()
-      return
+    // Only the PC saying "I do not know this key" ends the pairing, and not on the first word: the key is tried once more by the cookie the PC set
+    // when this phone was paired (a storage that was cleared does not unpair a phone). Every other way a line closes is the line, not the key.
+    if (code === 4401 && (reason === 'revoked' || reason === 'unknown key')) {
+      if (reason === 'unknown key' && ++this.unknown < 2) this.token = ''
+      else {
+        localStorage.removeItem(KEY)
+        if (!this.everReady || this.optimistic) return this.fail?.(new Error('This phone is no longer paired. Open the pairing link from Jolty again.'))
+        // revoked while the app was open: back to the pairing screen (nothing typed is worth keeping for a phone that was cut off)
+        location.reload()
+        return
+      }
     }
     // the PC does not answer (off, asleep, no Tailscale): the page says so and offers to start it, the tries go on behind it
     if (!this.everReady && ++this.failed >= 2 && !this.offlineShown) {
@@ -268,6 +277,30 @@ async function pairScreen(message?: string): Promise<string> {
   return show(message, claim)
 }
 
+const UPDATING = 'jolty-updating'
+const updating = (): boolean => Date.now() - Number(sessionStorage.getItem(UPDATING) || 0) < 5 * 60_000
+
+/**
+ * Jolty on the PC was updated while this page was kept on the phone: the page is the old copy. Once the PC says its version, the kept copies
+ * are dropped and the page loads again, so the phone runs the new one (once per version, and never over text that is being typed).
+ */
+function refreshIfNewer(version?: string): void {
+  const mine = (window as unknown as { joltyVersion?: string }).joltyVersion
+  if (!version || !mine || version === mine || sessionStorage.getItem('jolty-reloaded') === version) return
+  const box = document.querySelector<HTMLTextAreaElement>('.composer textarea')
+  if (box?.value.trim()) return
+  sessionStorage.setItem('jolty-reloaded', version)
+  void (async () => {
+    try {
+      for (const k of await caches.keys()) await caches.delete(k)
+      for (const r of (await navigator.serviceWorker?.getRegistrations()) ?? []) await r.unregister()
+    } catch {
+      // the page just loads again
+    }
+    location.reload()
+  })()
+}
+
 /** A small note over the page while the line to the PC is down (shown after a moment, so a short blink does not flash it). */
 function linkPill(link: Link): void {
   const pill = document.createElement('div')
@@ -281,8 +314,15 @@ function linkPill(link: Link): void {
   let timer: ReturnType<typeof setTimeout> | undefined
   link.onState = (up) => {
     clearTimeout(timer)
-    if (up) pill.classList.remove('on')
-    else timer = setTimeout(() => pill.classList.add('on'), 1800)
+    if (up) {
+      sessionStorage.removeItem(UPDATING)
+      pill.classList.remove('on')
+      return
+    }
+    // an update is installing: Jolty is closed and opened again, say that and do not wait to say it
+    const busy = updating()
+    text.textContent = busy ? tr("Jolty se actualizează. Telefonul se reconectează singur.") : tr("Se reconectează la PC…")
+    timer = setTimeout(() => pill.classList.add('on'), busy ? 0 : 1800)
   }
   // opened from the last picture: the line is not up yet
   if (link.optimistic) link.onState(false)
@@ -296,6 +336,9 @@ export async function connectRemote(): Promise<void> {
   let token = localStorage.getItem(KEY) || ''
   const fromLink = /[#&]pair=([0-9A-Za-z]+)/.exec(location.hash)?.[1]
   let note: string | undefined
+  // the key is also kept by the PC's cookie: a phone whose own storage was cleared (Safari does it to pages not opened for a week) is still paired
+  let viaCookie = false
+  if (!token && !fromLink) viaCookie = await fetch('/api/session', { cache: 'no-store' }).then((r) => r.ok, () => false)
   if (!token && fromLink) {
     try {
       token = await claim(fromLink)
@@ -305,8 +348,8 @@ export async function connectRemote(): Promise<void> {
   }
   history.replaceState(null, '', location.pathname)
   for (;;) {
-    if (!token) token = await pairScreen(note)
-    localStorage.setItem(KEY, token)
+    if (!token && !viaCookie) token = await pairScreen(note)
+    if (token) localStorage.setItem(KEY, token)
     const link = new Link(token)
     try {
       // paired before and the last picture of the PC is kept: the page opens from it at once and the line is made behind it
@@ -323,11 +366,26 @@ export async function connectRemote(): Promise<void> {
       api.app.openLink = async (url) => void window.open(url, '_blank', 'noopener')
       // no see-through window on a phone
       api.app.glassSupport = async () => 'os'
+      // an update of Jolty from the phone: the tap is the yes, the PC restarts and this page reconnects by itself
+      link.listen('jolty:event', (e) => (e as { type?: string })?.type === 'restarting' && sessionStorage.setItem(UPDATING, String(Date.now())))
+      api.updates.install = async () => {
+        if (!window.confirm(tr("Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân."))) return
+        sessionStorage.setItem(UPDATING, String(Date.now()))
+        try {
+          await link.call('updates:installFromPhone')
+        } catch (e) {
+          // Jolty closing is the update starting, not a failure
+          if (/connection to the pc lost/i.test(String(e))) return
+          sessionStorage.removeItem(UPDATING)
+          window.alert(e instanceof Error ? e.message : String(e))
+        }
+      }
       ;(window as unknown as { jolty: JoltyApi }).jolty = api
       return
     } catch (e) {
       note = e instanceof Error ? e.message : String(e)
       token = ''
+      viaCookie = false
     }
   }
 }

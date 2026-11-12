@@ -1731,5 +1731,12 @@
  "Rețea": "Jaringan",
  "Shell": "Shell",
  "Memorie": "Memori",
- "Caută în bibliotecă": "Cari di pustaka"
+ "Caută în bibliotecă": "Cari di pustaka",
+ "Context": "Konteks",
+ "Trage ca să schimbi mărimea. Dublu clic: mărimea potrivită.": "Seret untuk mengubah ukuran. Klik dua kali: ukuran yang pas.",
+ "Arată mai multe ({n})": "Tampilkan lebih banyak ({n})",
+ "Arată mai puține": "Tampilkan lebih sedikit",
+ "Jolty se actualizează. Telefonul se reconectează singur.": "Jolty sedang diperbarui. Ponsel tersambung kembali sendiri.",
+ "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "Perbarui Jolty di PC? Aplikasi akan menutup dan menyala lagi, lalu ponsel tersambung kembali sendiri dalam sekitar satu menit. Yang sedang berjalan akan berhenti, percakapan tetap ada.",
+ "Nu e nicio actualizare de instalat.": "Tidak ada pembaruan untuk dipasang."
 }

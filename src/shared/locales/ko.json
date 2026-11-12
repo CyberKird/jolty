@@ -1731,5 +1731,12 @@
  "Rețea": "네트워크",
  "Shell": "셸",
  "Memorie": "메모리",
- "Caută în bibliotecă": "라이브러리 검색"
+ "Caută în bibliotecă": "라이브러리 검색",
+ "Context": "컨텍스트",
+ "Trage ca să schimbi mărimea. Dublu clic: mărimea potrivită.": "드래그하여 크기 조절. 더블 클릭: 알맞은 크기.",
+ "Arată mai multe ({n})": "더 보기 ({n})",
+ "Arată mai puține": "간단히 보기",
+ "Jolty se actualizează. Telefonul se reconectează singur.": "Jolty를 업데이트하는 중입니다. 휴대폰이 자동으로 다시 연결됩니다.",
+ "Actualizezi Jolty pe PC? Se închide și se pornește din nou, iar telefonul se reconectează singur în câteva zeci de secunde. Ce lucrează acum se oprește, conversațiile rămân.": "PC의 Jolty를 업데이트할까요? 종료 후 다시 시작되며, 휴대폰은 약 1분 안에 자동으로 다시 연결됩니다. 지금 작업 중인 것은 멈추지만 대화는 유지됩니다.",
+ "Nu e nicio actualizare de instalat.": "설치할 업데이트가 없습니다."
 }
