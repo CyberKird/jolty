@@ -413,6 +413,7 @@ function registerIpc(): void {
   handle('local:installOllama', () => system.fix('ollama', (p) => shell.openPath(p)))
 
   handle('setup:testKey', (baseUrl: unknown, model: unknown, key: unknown) => connect.testKey(baseUrl, model, key))
+  handle('setup:providerModels', (baseUrl: unknown, key: unknown, profileId: unknown) => connect.providerModels(baseUrl, key, profileId))
   handle('setup:testFree', (model: unknown) => connect.testFree(model))
   handle('setup:account', (engine: unknown) => jolty.connectAccount(engine))
   handle('setup:presets', () => jolty.setupPresets())

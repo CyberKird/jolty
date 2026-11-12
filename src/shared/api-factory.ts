@@ -103,6 +103,7 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
     },
     setup: {
       testKey: (baseUrl, model, key) => call('setup:testKey', baseUrl, model, key),
+      providerModels: (baseUrl, key, profileId) => call('setup:providerModels', baseUrl, key, profileId),
       testFree: (model) => call('setup:testFree', model),
       account: (engine) => call('setup:account', engine),
       presets: () => call('setup:presets'),

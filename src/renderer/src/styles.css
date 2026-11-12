@@ -724,6 +724,47 @@ a {
   color: var(--grey-2);
 }
 
+/* the provider's model list in the profile form: a search field over a short scrolling list of checkboxes */
+.catalog {
+  margin-top: 8px;
+}
+.catalog-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--grey-2);
+}
+.catalog-head .input {
+  flex: 1;
+  min-width: 0;
+}
+.catalog-list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.catalog-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.catalog-row:hover {
+  background: var(--line);
+}
+.catalog-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .segmented {
   display: inline-flex;
   border: 1px solid var(--line-2);

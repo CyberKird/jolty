@@ -1741,5 +1741,10 @@
  "Nu e nicio actualizare de instalat.": "インストールする更新はありません。",
  "Mărimea hărții": "マップのサイズ",
  "Jolty e instalat pentru toți utilizatorii, deci Windows cere aprobare pe PC. Instalează-l de acolo sau reinstalează-l doar pentru tine.": "Jolty はすべてのユーザー向けにインストールされているため、Windows が PC で許可を求めます。PC から更新するか、自分専用に入れ直してください。",
- "Windows îți cere aprobare, conversațiile rămân": "Windows が許可を求めます。会話はそのまま残ります"
+ "Windows îți cere aprobare, conversațiile rămân": "Windows が許可を求めます。会話はそのまま残ります",
+ "Alege din catalog": "カタログから選ぶ",
+ "Caută în {n} modele": "{n} 個のモデルから検索",
+ "Alese: {n}": "選択中: {n}",
+ "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "プロバイダーからモデルの一覧が返りませんでした。名前を手入力してください。",
+ "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek、OpenRouter、NanoGPT: キーのページへご案内します。貼り付けてもらえれば、私がテストします。"
 }

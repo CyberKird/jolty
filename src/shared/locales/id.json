@@ -1741,5 +1741,10 @@
  "Nu e nicio actualizare de instalat.": "Tidak ada pembaruan untuk dipasang.",
  "Mărimea hărții": "Ukuran peta",
  "Jolty e instalat pentru toți utilizatorii, deci Windows cere aprobare pe PC. Instalează-l de acolo sau reinstalează-l doar pentru tine.": "Jolty terpasang untuk semua pengguna, jadi Windows meminta persetujuan di PC. Pasang pembaruan dari sana atau pasang ulang Jolty hanya untukmu.",
- "Windows îți cere aprobare, conversațiile rămân": "Windows akan meminta persetujuanmu, percakapan tetap ada"
+ "Windows îți cere aprobare, conversațiile rămân": "Windows akan meminta persetujuanmu, percakapan tetap ada",
+ "Alege din catalog": "Pilih dari katalog",
+ "Caută în {n} modele": "Cari di {n} model",
+ "Alese: {n}": "Dipilih: {n}",
+ "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "Penyedia tidak memberikan daftar model. Ketik namanya secara manual.",
+ "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter, atau NanoGPT: aku membawamu ke halaman kunci, kamu menempelkannya, lalu aku mengujinya."
 }

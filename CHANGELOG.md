@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.29.0
+
+### New
+
+- NanoGPT is a provider of its own. In Accounts and keys, Add profile, Compatible endpoint, pick NanoGPT: the address and a starting model are filled in, and the welcome screen offers it too when you paste a key. The balance of your NanoGPT account shows up with the other providers.
+- Choose from the catalog, under the models of a compatible endpoint profile: Jolty asks the provider for its model list (over 600 on NanoGPT), you search it and tick only the models you use, and only those reach the chat's model picker. The first one you tick is the default. It works with any provider that publishes a list (DeepSeek, OpenRouter and others, with your key where they ask for one).
+
+### Improvements
+
+- Jolty now finds the model list of gateways that keep it under a path, like NanoGPT's `/api/v1/models`, so the notice for a new model works for them too.
+
 ## 0.28.0
 
 ### New

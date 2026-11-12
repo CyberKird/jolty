@@ -1741,5 +1741,10 @@
  "Nu e nicio actualizare de instalat.": "There is no update to install.",
  "Mărimea hărții": "Map size",
  "Jolty e instalat pentru toți utilizatorii, deci Windows cere aprobare pe PC. Instalează-l de acolo sau reinstalează-l doar pentru tine.": "Jolty is installed for all users, so Windows asks for approval on the PC. Install it there, or reinstall Jolty just for you.",
- "Windows îți cere aprobare, conversațiile rămân": "Windows asks for your approval, your conversations stay"
+ "Windows îți cere aprobare, conversațiile rămân": "Windows asks for your approval, your conversations stay",
+ "Alege din catalog": "Choose from the catalog",
+ "Caută în {n} modele": "Search {n} models",
+ "Alese: {n}": "Selected: {n}",
+ "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "The provider did not return a model list. Type the names by hand.",
+ "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter or NanoGPT: I take you to the key page, you paste it, I test it."
 }

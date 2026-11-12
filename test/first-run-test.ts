@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { Profile } from '../src/shared/types'
-import { CONNECT_PROVIDERS, explainKeyFailure, keyTestRequest, wantsOwnKeyHint } from '../src/shared/setup'
+import { CONNECT_PROVIDERS, explainKeyFailure, keyTestRequest, modelListUrls, wantsOwnKeyHint } from '../src/shared/setup'
 import { withDetectedAgents } from '../src/main/first-run'
 
 const claude: Profile = { id: 'claude-main', name: 'Claude', engine: 'claude', auth: 'subscription', isDefaultDir: true, color: '#d97757' }
@@ -41,6 +41,16 @@ test('the key test is one small messages request with the key as a bearer token'
   assert.equal(body.model, p.model)
   assert.ok(body.max_tokens <= 16)
   assert.ok(CONNECT_PROVIDERS.every((x) => x.baseUrl.startsWith('https://') && x.keyUrl.startsWith('https://')))
+})
+
+test('NanoGPT is offered and its model list is looked up under /api first, on its own host only', () => {
+  const nano = CONNECT_PROVIDERS.find((p) => p.name === 'NanoGPT')
+  assert.ok(nano)
+  assert.equal(keyTestRequest(nano.baseUrl, nano.model, 'k').url, 'https://api.nano-gpt.com/api/v1/messages')
+  const urls = modelListUrls(nano.baseUrl + '/')
+  assert.equal(urls[0], 'https://api.nano-gpt.com/api/v1/models')
+  assert.ok(urls.every((u) => u.startsWith('https://api.nano-gpt.com/')))
+  assert.deepEqual(modelListUrls('not a url'), [])
 })
 
 test('a failed key test says what is wrong', () => {

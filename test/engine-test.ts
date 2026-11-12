@@ -98,6 +98,15 @@ app.whenReady().then(async () => {
     const mimo = await fetchBalance(ep('https://api.xiaomimimo.com/anthropic'), undefined, 'api-platform_serviceToken=x; userId=y')
     check(mimo?.amount === 8.5 && mimo.currency === 'CNY' && mimoUrl === 'https://platform.xiaomimimo.com/api/v1/balance' && mimoCookie === 'api-platform_serviceToken=x; userId=y', 'MiMo balance from the console with the cookie, not the API key')
     check((await fetchBalance(ep('https://api.xiaomimimo.com/anthropic'), undefined, undefined)) === undefined, 'MiMo without a cookie does not call or invent a balance')
+    let nanoReq = ''
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      const h = (init?.headers ?? {}) as Record<string, string>
+      nanoReq = `${init?.method} ${url} ${h['x-api-key']} ${h.Authorization}`
+      return new Response(JSON.stringify({ usd_balance: '3.75000000', nano_balance: '0.1', nanoDepositAddress: 'nano_x' }), { status: 200 })
+    }) as typeof fetch
+    const nano = await fetchBalance(ep('https://api.nano-gpt.com/api'), 'sk-nano')
+    check(nano?.amount === 3.75 && nano.currency === 'USD' && nanoReq === 'POST https://api.nano-gpt.com/api/check-balance sk-nano Bearer sk-nano', 'NanoGPT balance: POST check-balance with the key, USD string read as a number')
+    check(!hasBalance(ep('https://evil.example/api.nano-gpt.com')), 'no NanoGPT balance call for a look-alike host')
     globalThis.fetch = real
     const u = { profileId: 'x', engine: 'claude' as const, model: 'm', inputTokens: 1e6, outputTokens: 5e5, cacheReadTokens: 2e6, cacheWriteTokens: 0, ts: 0 }
     check(endpointCost(u, ep('https://api.deepseek.com/anthropic', { price: { input: 0.3, output: 1.2, cacheRead: 0.03 } })) === 0.3 + 0.6 + 0.06, 'real cost from the provider prices')

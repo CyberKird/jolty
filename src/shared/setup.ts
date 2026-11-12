@@ -7,8 +7,24 @@ import { tr } from './i18n'
  */
 export const CONNECT_PROVIDERS = [
   { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/anthropic', model: 'deepseek-flash', keyUrl: 'https://platform.deepseek.com/api_keys' },
-  { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api', model: 'deepseek/deepseek-chat', keyUrl: 'https://openrouter.ai/settings/keys' }
+  { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api', model: 'deepseek/deepseek-chat', keyUrl: 'https://openrouter.ai/settings/keys' },
+  { name: 'NanoGPT', baseUrl: 'https://api.nano-gpt.com/api', model: 'pqhaz/DeepSeek-V4.1-Flash-1017-heretic', keyUrl: 'https://nano-gpt.com/api' }
 ] as const
+
+/**
+ * Where a provider may publish its model list, most specific first: `<base>/v1/models` (NanoGPT keeps it under
+ * /api), then the same under the host root. Every address is on the host of `baseUrl`, so the key never leaves it.
+ */
+export function modelListUrls(baseUrl: string): string[] {
+  let origin: string
+  try {
+    origin = new URL(baseUrl).origin
+  } catch {
+    return []
+  }
+  const base = baseUrl.replace(/\/+$/, '')
+  return [...new Set([`${base}/v1/models`, `${base}/models`, `${origin}/v1/models`, `${origin}/models`])]
+}
 
 /** The one small request that proves a key works: the Anthropic-style messages call Claude Code itself makes. */
 export function keyTestRequest(baseUrl: string, model: string, key: string): { url: string; init: RequestInit } {

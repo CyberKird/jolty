@@ -1741,5 +1741,10 @@
  "Nu e nicio actualizare de instalat.": "इंस्टॉल करने के लिए कोई अपडेट नहीं है।",
  "Mărimea hărții": "मानचित्र का आकार",
  "Jolty e instalat pentru toți utilizatorii, deci Windows cere aprobare pe PC. Instalează-l de acolo sau reinstalează-l doar pentru tine.": "Jolty सभी उपयोगकर्ताओं के लिए इंस्टॉल है, इसलिए Windows PC पर अनुमति माँगता है। अपडेट वहीं से इंस्टॉल करें या Jolty को सिर्फ़ अपने लिए फिर से इंस्टॉल करें।",
- "Windows îți cere aprobare, conversațiile rămân": "Windows आपकी अनुमति माँगेगा, बातचीत बनी रहेंगी"
+ "Windows îți cere aprobare, conversațiile rămân": "Windows आपकी अनुमति माँगेगा, बातचीत बनी रहेंगी",
+ "Alege din catalog": "कैटलॉग से चुनें",
+ "Caută în {n} modele": "{n} मॉडलों में खोजें",
+ "Alese: {n}": "चुने गए: {n}",
+ "Furnizorul nu a dat o listă de modele. Scrie numele lor cu mâna.": "प्रदाता ने मॉडलों की सूची नहीं दी। नाम हाथ से लिखें।",
+ "DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.": "DeepSeek, OpenRouter या NanoGPT: मैं आपको कुंजी वाले पेज पर ले जाता हूँ, आप उसे पेस्ट करते हैं, मैं उसे जाँचता हूँ।"
 }

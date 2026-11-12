@@ -12,6 +12,8 @@ interface Provider {
   parse: (json: any, base: URL) => Parsed
   /** true when the provider authenticates with browser cookies, not the API key (Xiaomi MiMo) */
   cookieAuth?: boolean
+  /** true when the balance is asked with POST and the key also goes in x-api-key (NanoGPT) */
+  post?: boolean
 }
 
 const num = (v: unknown): number | undefined => {
@@ -60,6 +62,16 @@ const PROVIDERS: Provider[] = [
       const amount = num(j?.data?.balance)
       return amount === undefined ? undefined : { amount, currency: String(j.data.currency || 'CNY') }
     }
+  },
+  // https://docs.nano-gpt.com/api-reference/endpoint/check-balance: POST /api/check-balance, usd_balance is a string
+  {
+    host: /^(api\.)?nano-gpt\.com$/,
+    post: true,
+    url: (base) => `https://${base.host}/api/check-balance`,
+    parse: (j) => {
+      const amount = num(j?.usd_balance)
+      return amount === undefined ? undefined : { amount, currency: 'USD' }
+    }
   }
 ]
 
@@ -93,8 +105,10 @@ export async function fetchBalance(profile: Profile, secret: string | undefined,
   } else {
     if (!secret) return undefined
     headers.Authorization = `Bearer ${secret}`
+    if (found.provider.post) headers['x-api-key'] = secret
   }
   const res = await fetch(found.provider.url(found.base), {
+    method: found.provider.post ? 'POST' : 'GET',
     headers,
     signal: AbortSignal.timeout(10000)
   })

@@ -738,6 +738,8 @@ export interface JoltyApi {
   setup: {
     /** one small request with the key; rejects with a sentence that says what is wrong */
     testKey(baseUrl: string, model: string, key: string): Promise<void>
+    /** the model ids the provider at this address publishes (typed key, else the profile's saved one); rejects with a sentence */
+    providerModels(baseUrl: string, key: string, profileId?: string): Promise<string[]>
     /** one real prompt to a free OpenCode model */
     testFree(model: string): Promise<void>
     /** uses the Claude / Codex account already signed in on this PC, else creates a profile to sign in with */

@@ -1,4 +1,4 @@
-import { GripVertical, KeyRound, Loader2, LogIn, LogOut, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { GripVertical, KeyRound, ListChecks, Loader2, LogIn, LogOut, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
 import type { AccountStatus, AuthKind, EngineKind, Profile, ProfileInput } from '@shared/types'
 import { isAcp } from '@shared/types'
@@ -227,6 +227,60 @@ function ProfileCard({ profile, onEdit, dragProps }: { profile: Profile; onEdit:
   )
 }
 
+/**
+ * Picks the models of an endpoint profile from the list the provider publishes (hundreds on a gateway such as
+ * NanoGPT), so only the ones the person uses reach the chat's model picker. The first one picked is the default.
+ */
+function ModelCatalog({ baseUrl, secret, profileId, models, onChange }: { baseUrl: string; secret: string; profileId?: string; models: string; onChange: (models: string) => void }) {
+  const [list, setList] = useState<string[]>()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+  const [query, setQuery] = useState('')
+  const picked = models.split(',').map((m) => m.trim()).filter(Boolean)
+  const load = async (): Promise<void> => {
+    setBusy(true)
+    setError(undefined)
+    try {
+      setList(await api.setup.providerModels(baseUrl, secret, profileId))
+    } catch (err) {
+      setError(errMsg(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const toggle = (id: string): void => onChange((picked.includes(id) ? picked.filter((m) => m !== id) : [...picked, id]).join(', '))
+  const q = query.trim().toLowerCase()
+  const rest = (list ?? []).filter((id) => !picked.includes(id) && (!q || id.toLowerCase().includes(q)))
+  const shown = [...picked, ...rest.slice(0, 80)]
+  if (!list) {
+    return (
+      <div className="catalog">
+        <button className="btn small" disabled={busy || !baseUrl.startsWith('https://')} onClick={() => void load()}>
+          {busy ? <Loader2 size={14} className="spin" /> : <ListChecks size={14} />} {tr("Alege din catalog")}
+        </button>
+        {error && <div className="hint" role="alert" style={{ color: 'var(--warning)', marginTop: 6 }}>{error}</div>}
+      </div>
+    )
+  }
+  return (
+    <div className="catalog">
+      <div className="catalog-head">
+        <Search size={14} />
+        <input className="input" value={query} autoFocus placeholder={tr("Caută în {n} modele", { n: list.length })} onChange={(e) => setQuery(e.target.value)} />
+        <span className="faint small">{tr("Alese: {n}", { n: picked.length })}</span>
+      </div>
+      <div className="catalog-list">
+        {shown.map((id) => (
+          <label key={id} className="catalog-row">
+            <input type="checkbox" checked={picked.includes(id)} onChange={() => toggle(id)} />
+            <span className="mono" title={id}>{id}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function ProfileModal({ profile, onClose: closeNow }: { profile?: Profile; onClose: () => void }) {
   const { state, close: onClose } = useExitClose(closeNow)
   const { loadProfiles, toast } = useStore(useShallow(({ loadProfiles, toast }) => ({ loadProfiles, toast })))
@@ -366,6 +420,7 @@ function ProfileModal({ profile, onClose: closeNow }: { profile?: Profile; onClo
             <div className="field">
               <label>{tr("Modele (separate prin virgulă, primul e implicit)")}</label>
               <input className="input mono" value={models} onChange={(e) => setModels(e.target.value)} />
+              {!profile?.local && <ModelCatalog baseUrl={baseUrl.trim()} secret={secret} profileId={profile?.id} models={models} onChange={setModels} />}
               <div className="hint">{tr("Verifică numele exacte în documentația furnizorului.")}</div>
             </div>
             <label className="row small" style={{ marginBottom: 14, cursor: 'pointer' }}>

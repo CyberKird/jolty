@@ -8,6 +8,7 @@ import type { ModelOption, Profile } from '@shared/types'
 import { isAcp } from '@shared/types'
 import { modelScore, parseRemoteScores, setRemoteScores } from '@shared/scores'
 import { tr } from '@shared/i18n'
+import { modelListUrls } from '@shared/setup'
 import * as store from './store'
 import { OLLAMA_URL } from './local'
 import { observe, parseOllamaTags, parseProviderList, withBadges, type Observed } from './model-watch-core'
@@ -73,9 +74,9 @@ async function listProvider(p: Profile): Promise<Observed[]> {
   const url = p.baseUrl ? new URL(p.baseUrl) : undefined
   // the key only goes to the host the chat itself talks to, and only over https
   if (!secret || url?.protocol !== 'https:') return []
-  for (const path of ['/models', '/v1/models']) {
+  for (const listUrl of modelListUrls(url.href)) {
     try {
-      const list = parseProviderList(await getJson(url.origin + path, { authorization: `Bearer ${secret}` }))
+      const list = parseProviderList(await getJson(listUrl, { authorization: `Bearer ${secret}` }))
       if (list.length) return list
     } catch {
       // this provider has no listing at that path

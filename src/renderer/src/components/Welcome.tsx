@@ -229,7 +229,7 @@ export function Welcome() {
 
   const choices: { way: Way; title: string; text: string }[] = [
     { way: 'free', title: tr("Gratuit, fără cheie"), text: tr("Instalez OpenCode și folosesc modelele lui gratuite. Limitele le stabilește OpenCode.") },
-    { way: 'key', title: tr("Am o cheie API"), text: tr("DeepSeek sau OpenRouter: te duc la pagina cheii, o lipești, o testez.") },
+    { way: 'key', title: tr("Am o cheie API"), text: tr("DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.") },
     { way: 'claude', title: tr("Abonament Claude"), text: tr("Te conectezi cu contul tău claude.ai.") },
     { way: 'codex', title: tr("Abonament ChatGPT"), text: tr("Te conectezi cu contul ChatGPT, prin Codex.") },
     { way: 'gemini', title: tr("Abonament Gemini"), text: tr("Folosești abonamentul Google direct din browserul Jolty, fără cheie.") }
