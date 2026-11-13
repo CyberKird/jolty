@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-12",
+ "updated": "2026-11-13",
  "source": "artificialanalysis.ai/leaderboards/models",
  "entries": [
   {
@@ -109,6 +109,13 @@
   },
   {
    "match": [
+    "gemini-4-hydrogen"
+   ],
+   "iq": 51,
+   "note": "Gemini 4 Hydrogen · high (low 27, medium 41, max 54)"
+  },
+  {
+   "match": [
     "qwen3-8-flash-next"
    ],
    "iq": 29,
@@ -169,13 +176,6 @@
    ],
    "iq": 60,
    "note": "Gemini 4 Carbon · high (medium 58, low 54)"
-  },
-  {
-   "match": [
-    "k-exaone-2-0-0803"
-   ],
-   "iq": 8,
-   "note": "K-EXAONE 2.0"
   },
   {
    "match": [
@@ -361,6 +361,13 @@
   },
   {
    "match": [
+    "k-exaone-2-0"
+   ],
+   "iq": 8,
+   "note": "K-EXAONE 2.0"
+  },
+  {
+   "match": [
     "gpt-6-astra"
    ],
    "iq": 55,
@@ -393,6 +400,13 @@
    ],
    "iq": 4,
    "note": "Gemma 4 31B · reasoning"
+  },
+  {
+   "match": [
+    "4-hydrogen"
+   ],
+   "iq": 51,
+   "note": "Gemini 4 Hydrogen · high (low 27, medium 41, max 54)"
   },
   {
    "match": [
