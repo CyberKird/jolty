@@ -2,7 +2,7 @@
 // token, one URL per chat): search and read earlier conversations, schedule work for later, and run
 // several sessions at once (start_session, worktrees, a shared ledger). Like Hermes' session_search
 // and cronjob tools, for Claude Code and Codex.
-import type { ChatItem, PermissionMode, SessionMeta } from '@shared/types'
+import type { AskQuestion, ChatItem, PermissionMode, SessionMeta } from '@shared/types'
 import type { ScheduledTask } from '@shared/schedule'
 import { pageOf, savedTurns, search, turnsOf } from './recall'
 import type { Scheduler } from './scheduler'
@@ -10,6 +10,7 @@ import { projectOf, readLedger, writeLedger } from './workers'
 import { formatAskable, parseAskInput, type AskInput, type AskProfile } from './ask-model'
 import { formatFinds, hubSearch, localMatches, type HubSkill } from './skill-finder'
 import { list as listSkills } from './skills'
+import { ASK_USER_SCHEMA, ASK_USER_TOOL, formatAnswers, NOBODY_WATCHING, parseQuestions } from './ask-user'
 
 export const JOLTY_SERVER = 'jolty'
 
@@ -41,6 +42,8 @@ export interface ToolHost {
   askable(): Promise<AskProfile[]>
   /** one question to one model of one profile: no tools, one answer */
   ask(input: AskInput): Promise<{ who: string; answer: string }>
+  /** questions with choices, as a card in the chat; undefined when the user dismisses them */
+  askUser(sessionId: string, questions: AskQuestion[], signal?: AbortSignal): Promise<Record<string, string> | undefined>
 }
 
 let host: ToolHost | undefined
@@ -68,6 +71,7 @@ const SCHEDULE_SCHEMA = {
 }
 
 const TOOLS = [
+  ASK_USER_SCHEMA,
   {
     name: 'search_conversations',
     description:
@@ -223,6 +227,12 @@ export function taskMode(mode: PermissionMode): PermissionMode {
 }
 
 async function run(h: ToolHost, sid: string, name: string, a: Record<string, unknown>): Promise<ToolResult> {
+  if (name === ASK_USER_TOOL) {
+    if (unattended(sid)) return fail(NOBODY_WATCHING)
+    const questions = parseQuestions(a)
+    if (!questions) return fail('Each question needs a question text and at least 2 options with a label.')
+    return ok(formatAnswers(questions, await h.askUser(sid, questions)))
+  }
   if (name === 'search_conversations') {
     const query = String(a.query || '').trim()
     if (!query) return fail('query is empty')
@@ -357,6 +367,11 @@ async function run(h: ToolHost, sid: string, name: string, a: Record<string, unk
   return fail(`Unknown tool ${name}`)
 }
 
+function unattended(sid: string): boolean {
+  const m = host?.meta(sid)
+  return Boolean(m?.parentId || m?.scheduled)
+}
+
 /** One JSON-RPC message of the MCP protocol; undefined for notifications. */
 export async function handleJoltyTools(sid: string, msg: Record<string, unknown>): Promise<Record<string, unknown> | undefined> {
   const id = msg.id
@@ -371,7 +386,10 @@ export async function handleJoltyTools(sid: string, msg: Record<string, unknown>
   if (method === 'tools/list') {
     // a session started by a lead does not start sessions of its own: no tree of sessions nobody can follow
     const child = Boolean(host?.meta(sid)?.parentId)
-    return reply({ tools: child ? TOOLS.filter((t) => t.name !== 'start_session' && t.name !== 'send_to_session') : TOOLS })
+    // Claude Code asks with its own AskUserQuestion; nobody answers a scheduled run or a job of a lead
+    const noAsk = unattended(sid) || host?.meta(sid)?.engine === 'claude'
+    const tools = TOOLS.filter((t) => !(child && (t.name === 'start_session' || t.name === 'send_to_session')) && !(noAsk && t.name === ASK_USER_TOOL))
+    return reply({ tools })
   }
   if (method === 'tools/call') {
     const params = (msg.params || {}) as { name?: string; arguments?: Record<string, unknown> }

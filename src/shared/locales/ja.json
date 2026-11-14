@@ -1767,5 +1767,12 @@
  "Conectare claude.ai": "claude.ai への接続",
  "Reset nou pe {name}": "{name} に新しいリセット",
  "{label}. Expiră {when}.": "{label}。期限 {when}。",
- "Actualizează resetările": "リセットを更新"
+ "Actualizează resetările": "リセットを更新",
+ "Jolty: are o întrebare pentru tine": "Jolty: 質問があります",
+ "Întrebare": "質問",
+ "Decide tu": "任せる",
+ "Trimite": "送信",
+ "Alege unul sau mai multe răspunsuri": "1つ以上選択してください",
+ "Alege un răspuns": "1つ選択してください",
+ "Scrie alt răspuns...": "自分の回答を入力..."
 }

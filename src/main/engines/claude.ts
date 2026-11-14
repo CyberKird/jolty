@@ -49,6 +49,7 @@ import { tr } from '@shared/i18n'
 import { extraWindows } from '@shared/limits'
 import { mergeAccountModels, parseAccountModels, type AccountModel } from '@shared/claude-models'
 import { SIDE_READ_ONLY } from '../side-chat'
+import { askRule, DISMISSED, NOBODY_WATCHING, parseQuestions } from '../ask-user'
 
 type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
 let sdkModule: Promise<SdkModule> | undefined
@@ -79,7 +80,7 @@ const LIMIT_LABELS: Record<string, string> = {
   overage: 'Extra'
 }
 
-const APPEND_PROMPT = `You are running inside Jolty, a desktop app. The AskUserQuestion tool is unavailable: ask questions in plain text instead. ${LANGUAGE_RULE} ${WRITING_RULES} ${PLAN_RULES} ${STEER_RULE} ${COPY_RULE}`
+const APPEND_PROMPT = `You are running inside Jolty, a desktop app. ${LANGUAGE_RULE} ${WRITING_RULES} ${PLAN_RULES} ${STEER_RULE} ${COPY_RULE}`
 
 function percent(u: number | null | undefined): number | undefined {
   if (u == null || !Number.isFinite(u) || u < 0) return undefined
@@ -410,9 +411,10 @@ class ClaudeSession implements EngineSession {
       // a backup before every edit, so any message can be undone with rewind()
       enableFileCheckpointing: true,
       settingSources: ['user', 'project', 'local'],
-      systemPrompt: { type: 'preset', preset: 'claude_code', append: [APPEND_PROMPT, JOLTY_TOOLS_PROMPT, this.meta.temporary || loadSettings().learningLoop === false ? '' : learnNowRule('claude'), this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' ') },
+      systemPrompt: { type: 'preset', preset: 'claude_code', append: [APPEND_PROMPT, this.unattended ? NOBODY_WATCHING : askRule('AskUserQuestion'), JOLTY_TOOLS_PROMPT, this.meta.temporary || loadSettings().learningLoop === false ? '' : learnNowRule('claude'), this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' ') },
       mcpServers: this.mcpServers(),
-      disallowedTools: ['AskUserQuestion', ...BROWSER_BLOCKED_TOOLS.map((t) => `mcp__${BROWSER_SERVER}__${t}`)],
+      // a scheduled run or a job of a lead session has nobody to answer: it decides on its own
+      disallowedTools: [...(this.unattended ? ['AskUserQuestion'] : []), ...BROWSER_BLOCKED_TOOLS.map((t) => `mcp__${BROWSER_SERVER}__${t}`)],
       settings: {
         ...(this.meta.mcpOff?.length ? { deniedMcpServers: this.meta.mcpOff.map((serverName) => ({ serverName })) } : {}),
         permissions: {
@@ -657,9 +659,25 @@ class ClaudeSession implements EngineSession {
     this.host.emit({ type: 'draft', sessionId: this.meta.id, toolId: d.id, name: d.name, path, content: content ?? '', done })
   }
 
+  private get unattended(): boolean {
+    return Boolean(this.meta.parentId || this.meta.scheduled)
+  }
+
+  /** AskUserQuestion: the card in the chat, its answers go back as the tool's `answers` */
+  private async question(input: Record<string, unknown>, signal: AbortSignal): Promise<PermissionResult> {
+    const questions = parseQuestions(input)
+    if (this.unattended || !this.host.askUser) return { behavior: 'deny', message: NOBODY_WATCHING }
+    if (!questions) return { behavior: 'deny', message: 'Each question needs a question text and at least 2 options with a label.' }
+    const answers = await this.host.askUser(this.meta.id, questions, signal)
+    if (this.stopRequested) return { behavior: 'deny', message: tr("Cererea a fost anulată.") }
+    if (!answers) return { behavior: 'deny', message: DISMISSED }
+    return { behavior: 'allow', updatedInput: { ...input, answers } }
+  }
+
   private ask(toolName: string, input: Record<string, unknown>, opts: Parameters<CanUseTool>[2]): Promise<PermissionResult> {
     // a tool that Claude Code still asks about while Stop is winding the turn down does not run
     if (this.stopRequested) return Promise.resolve({ behavior: 'deny', message: tr("Cererea a fost anulată.") })
+    if (toolName === 'AskUserQuestion') return this.question(input, opts.signal)
     // "Ask before touching secret files" is off: a session started while it was on still has the rules, so they are answered here.
     // In "No questions" nothing else can ask (bypassPermissions only stops for the rules), so a turned-off setting means no card.
     if (loadSettings().protectSecretFiles === false && (this.meta.permissionMode === 'full' || touchesSecretFile(input))) return Promise.resolve({ behavior: 'allow', updatedInput: input })

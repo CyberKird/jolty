@@ -96,7 +96,7 @@ function send(e: ChatEvent): void {
   const st = store.loadSettings()
   let head: string | undefined
   if (e.type === 'status' && e.status !== 'running' && st.notifyDone !== false) head = e.status === 'error' ? tr("Jolty: s-a oprit cu o eroare") : tr("Jolty: gata")
-  else if (e.type === 'permission' && st.notifyAttention !== false) head = e.request.plan ? tr("Jolty: planul așteaptă aprobarea ta") : tr("Jolty: are nevoie de acordul tău")
+  else if (e.type === 'permission' && st.notifyAttention !== false) head = e.request.plan ? tr("Jolty: planul așteaptă aprobarea ta") : e.request.questions ? tr("Jolty: are o întrebare pentru tine") : tr("Jolty: are nevoie de acordul tău")
   if (!head || (e.type !== 'status' && e.type !== 'permission')) return
   const title = jolty.sessions().find((s) => s.id === e.sessionId)?.title || tr("Conversație")
   const n = new Notification({ title: head, body: title, silent: st.notifySound === false })
@@ -323,7 +323,9 @@ function registerIpc(): void {
   handle('preview:draft', (rel: string, html: string | null) => {
     if (typeof rel === 'string' && (typeof html === 'string' || html === null)) preview.draft(rel, html)
   })
-  handle('sessions:respond', (id: string, requestId: string, decision) => jolty.respond(id, requestId, decision as never))
+  handle('sessions:respond', (id: string, requestId: string, decision, answers) =>
+    jolty.respond(id, requestId, decision as never, answers && typeof answers === 'object' ? (answers as Record<string, string>) : undefined)
+  )
   handle('sessions:handoff', (id: string, target: string, model?: string, effort?: string, fresh?: boolean) =>
     jolty.handoff(id, target, typeof model === 'string' ? model : undefined, typeof effort === 'string' ? effort : undefined, fresh === true)
   )

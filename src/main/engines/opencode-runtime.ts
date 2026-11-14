@@ -6,6 +6,7 @@ import type { PermissionMode } from '@shared/types'
 import { BROWSER_BLOCKED_TOOLS, BROWSER_READ_TOOLS, BROWSER_SERVER, browserPrompt } from '../browser'
 import { COMPUTER_ACT_TOOLS, COMPUTER_READ_TOOLS, COMPUTER_SERVER, computerPrompt } from '../computer/names'
 import { JOLTY_READ_TOOLS, JOLTY_SERVER, JOLTY_TOOLS_PROMPT } from '../jolty-tools'
+import { ASK_USER_TOOL, askRule } from '../ask-user'
 import { dataDir, loadSettings } from '../store'
 import { JsonRpcProcess } from './jsonrpc'
 import { installOpencode } from './opencode-install'
@@ -102,14 +103,16 @@ export function joltyRules(mode: PermissionMode): Record<string, Rule> {
   const acting: Rule = mode === 'ask' || mode === 'plan' ? 'ask' : 'allow'
   return {
     [`${JOLTY_SERVER}_*`]: acting,
-    ...Object.fromEntries(JOLTY_READ_TOOLS.map((t) => [`${JOLTY_SERVER}_${t}`, 'allow' as Rule]))
+    ...Object.fromEntries(JOLTY_READ_TOOLS.map((t) => [`${JOLTY_SERVER}_${t}`, 'allow' as Rule])),
+    // the question is itself the user's say: no approval before it, in any mode
+    [`${JOLTY_SERVER}_${ASK_USER_TOOL}`]: 'allow'
   }
 }
 
 /** opencode has no system prompt over ACP: the Jolty, browser and computer instructions go in as an instructions file. */
 function toolInstructions(browser: boolean, computer: boolean): string {
   const file = path.join(dataDir(), 'opencode-tools.md')
-  fs.writeFileSync(file, [LANGUAGE_RULE, COPY_RULE, JOLTY_TOOLS_PROMPT, browser ? browserPrompt() : '', computer ? computerPrompt() : ''].filter(Boolean).join('\n\n') + '\n')
+  fs.writeFileSync(file, [LANGUAGE_RULE, COPY_RULE, askRule(`${JOLTY_SERVER}_${ASK_USER_TOOL}`), JOLTY_TOOLS_PROMPT, browser ? browserPrompt() : '', computer ? computerPrompt() : ''].filter(Boolean).join('\n\n') + '\n')
   return file
 }
 

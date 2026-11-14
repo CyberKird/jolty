@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.31.0
+
+### New
+
+- Agents can ask you questions with choices. When a decision is open (two reasonable approaches, scope, a design choice, a costly step) and nothing in the request, the project or earlier chats settles it, the agent shows a card in the chat with numbered options, a short description for each and a field to type your own answer. Pick with the mouse or the number keys, Enter sends. "You decide" lets the agent choose and say what it picked. Works with Claude (its own question tool, now switched on), Codex, OpenCode and Gemini. Scheduled runs and the jobs of a lead session never ask: nobody is there to answer, so they decide on their own.
+- A Windows notification tells you when an agent has a question while Jolty is in the background.
+
 ## 0.30.1
 
 ### Improvements

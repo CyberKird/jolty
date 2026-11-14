@@ -1767,5 +1767,12 @@
  "Conectare claude.ai": "claude.ai से कनेक्ट करना",
  "Reset nou pe {name}": "{name} पर नया रीसेट",
  "{label}. Expiră {when}.": "{label}। {when} को समाप्त।",
- "Actualizează resetările": "रीसेट अपडेट करें"
+ "Actualizează resetările": "रीसेट अपडेट करें",
+ "Jolty: are o întrebare pentru tine": "Jolty: आपसे एक सवाल है",
+ "Întrebare": "सवाल",
+ "Decide tu": "आप तय करें",
+ "Trimite": "भेजें",
+ "Alege unul sau mai multe răspunsuri": "एक या अधिक जवाब चुनें",
+ "Alege un răspuns": "एक जवाब चुनें",
+ "Scrie alt răspuns...": "अपना जवाब लिखें..."
 }

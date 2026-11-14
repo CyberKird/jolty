@@ -1,5 +1,6 @@
 import type {
   AccountStatus,
+  AskQuestion,
   Attachment,
   ChatEvent,
   ChatItem,
@@ -18,6 +19,8 @@ export interface EngineHost {
   emit(e: ChatEvent): void
   recordUsage(u: TurnUsage): void
   recordLimits(s: RateLimitSnapshot): void
+  /** questions with choices for the user; undefined when dismissed or stopped */
+  askUser?(sessionId: string, questions: AskQuestion[], signal?: AbortSignal): Promise<Record<string, string> | undefined>
 }
 
 export interface EngineSession {

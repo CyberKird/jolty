@@ -5,6 +5,7 @@ import { COMPUTER_ACT_TOOLS, COMPUTER_READ_TOOLS, COMPUTER_RULES, COMPUTER_SERVE
 import { nativeComputer } from '../computer/native'
 import { nativeBrowser } from '../jbrowser/native'
 import { handleJoltyTools, JOLTY_READ_TOOLS, JOLTY_SERVER, JOLTY_TOOLS_PROMPT } from '../jolty-tools'
+import { ASK_USER_TOOL, askRule } from '../ask-user'
 import { loadSettings } from '../store'
 import type { GeminiTools } from './gemini-web'
 import type { ToolSet } from './gemini-tools'
@@ -34,8 +35,8 @@ const joltySet: ToolSet = {
   server: JOLTY_SERVER,
   mcp: { handle: (sid, msg) => handleJoltyTools(sid, msg) },
   expose: () => true,
-  kind: (n) => (JOLTY_READ_TOOLS.includes(n) ? 'read' : 'self'),
-  rules: JOLTY_TOOLS_PROMPT
+  kind: (n) => (JOLTY_READ_TOOLS.includes(n) || n === ASK_USER_TOOL ? 'read' : 'self'),
+  rules: `${askRule(ASK_USER_TOOL)} ${JOLTY_TOOLS_PROMPT}`
 }
 
 export const realTools: GeminiTools = {

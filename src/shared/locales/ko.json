@@ -1767,5 +1767,12 @@
  "Conectare claude.ai": "claude.ai 연결",
  "Reset nou pe {name}": "{name}의 새 초기화",
  "{label}. Expiră {when}.": "{label}. {when} 만료.",
- "Actualizează resetările": "초기화 새로고침"
+ "Actualizează resetările": "초기화 새로고침",
+ "Jolty: are o întrebare pentru tine": "Jolty: 질문이 있습니다",
+ "Întrebare": "질문",
+ "Decide tu": "알아서 결정",
+ "Trimite": "보내기",
+ "Alege unul sau mai multe răspunsuri": "하나 이상 선택하세요",
+ "Alege un răspuns": "하나를 선택하세요",
+ "Scrie alt răspuns...": "직접 답변 입력..."
 }

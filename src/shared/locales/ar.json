@@ -1767,5 +1767,12 @@
  "Conectare claude.ai": "الاتصال بـ claude.ai",
  "Reset nou pe {name}": "إعادة ضبط جديدة على {name}",
  "{label}. Expiră {when}.": "{label}. ينتهي {when}.",
- "Actualizează resetările": "تحديث إعادات الضبط"
+ "Actualizează resetările": "تحديث إعادات الضبط",
+ "Jolty: are o întrebare pentru tine": "Jolty: لديه سؤال لك",
+ "Întrebare": "سؤال",
+ "Decide tu": "قرّر أنت",
+ "Trimite": "إرسال",
+ "Alege unul sau mai multe răspunsuri": "اختر إجابة واحدة أو أكثر",
+ "Alege un răspuns": "اختر إجابة واحدة",
+ "Scrie alt răspuns...": "اكتب إجابتك..."
 }

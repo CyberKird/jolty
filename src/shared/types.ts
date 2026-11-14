@@ -250,6 +250,16 @@ export interface PermissionRequest {
   canAllowForSession: boolean
   /** replaces "Mereu în sesiune" when the approval covers less than the whole tool (a site) */
   sessionLabel?: string
+  /** a question with choices instead of an approval: answered with respond(..., answers) */
+  questions?: AskQuestion[]
+}
+
+export interface AskQuestion {
+  question: string
+  /** short tag shown above the question */
+  header?: string
+  options: { label: string; description?: string }[]
+  multiSelect?: boolean
 }
 
 export type PermissionDecision = 'allow' | 'allowSession' | 'deny'
@@ -649,7 +659,8 @@ export interface JoltyApi {
     compactAndWait(sessionId: string): Promise<{ before: number; after: number; failed?: boolean } | undefined>
     /** Claude only: the project's files go back to how they were before that user message */
     rewind(sessionId: string, itemId: string, dryRun?: boolean): Promise<{ files: string[]; insertions: number; deletions: number }>
-    respond(sessionId: string, requestId: string, decision: PermissionDecision): Promise<void>
+    /** `answers`: for a question card, the answer to each question, keyed by the question text */
+    respond(sessionId: string, requestId: string, decision: PermissionDecision, answers?: Record<string, string>): Promise<void>
     handoff(sessionId: string, targetProfileId: string, model?: string, effort?: string, fresh?: boolean): Promise<SessionMeta>
     /** a read-only review of the current changes by a model from the other family */
     review(sessionId: string): Promise<void>

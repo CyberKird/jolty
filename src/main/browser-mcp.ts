@@ -2,6 +2,7 @@
 // chat); the older modes run Playwright MCP as a child process. Jolty's own tools ride on the same local server.
 import { browserMode, browserServer, BROWSER_SERVER } from './browser'
 import { JOLTY_READ_TOOLS, JOLTY_SERVER } from './jolty-tools'
+import { ASK_USER_TOOL } from './ask-user'
 import { nativeBrowser } from './jbrowser/native'
 import { COMPUTER_ACT_TOOLS, COMPUTER_READ_TOOLS, COMPUTER_SERVER } from './computer/names'
 
@@ -56,8 +57,10 @@ export function claudeJoltyServer(sid: string): Record<string, { type: 'http'; u
 export function codexJoltyServer(sid: string, manual: boolean): Record<string, Record<string, unknown>> {
   const c = nativeBrowser.toolsMcp(sid)
   if (!c) return {}
-  const tools = manual ? {} : Object.fromEntries(JOLTY_READ_TOOLS.map((t) => [t, { approval_mode: 'approve' }]))
-  return { [JOLTY_SERVER]: { url: c.url, http_headers: c.headers, tool_timeout_sec: 120, tools } }
+  // ask_user is itself the user's say, so it never waits for an approval first
+  const tools = Object.fromEntries([...(manual ? [] : JOLTY_READ_TOOLS), ASK_USER_TOOL].map((t) => [t, { approval_mode: 'approve' }]))
+  // the user may answer a question long after it was asked
+  return { [JOLTY_SERVER]: { url: c.url, http_headers: c.headers, tool_timeout_sec: 3600, tools } }
 }
 
 /** Computer use for Claude Code; empty while the local server is not up. */

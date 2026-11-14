@@ -8,7 +8,7 @@ import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Pr
 import { hasJoltyBrowser, hasJoltyComputer, hasJoltyTools, isAcp } from '@shared/types'
 import { sameProvider } from '@shared/provider'
 import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, levelColor, resetIn, setCompactFirst, timeAgo, useStore } from '../store'
-import { ChatImage, MessageItem, PermissionCard } from './Messages'
+import { ChatImage, MessageItem, PermissionCard, QuestionCard } from './Messages'
 import { CopyButton } from './CopyField'
 import { useWindowedItems } from './useWindowedItems'
 import { FindBar } from './FindBar'
@@ -1063,7 +1063,11 @@ export function ChatView({ session }: { session: SessionMeta }) {
             />
           ))}
           {perms?.map((r) => (
-            <PermissionCard key={r.id} req={r} onDecide={(d) => void api.sessions.respond(session.id, r.id, d)} />
+            r.questions?.length ? (
+              <QuestionCard key={r.id} req={r} onAnswer={(answers) => void api.sessions.respond(session.id, r.id, answers ? 'allow' : 'deny', answers)} />
+            ) : (
+              <PermissionCard key={r.id} req={r} onDecide={(d) => void api.sessions.respond(session.id, r.id, d)} />
+            )
           ))}
         </div>
       </div>

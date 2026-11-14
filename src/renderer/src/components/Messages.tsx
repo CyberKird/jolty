@@ -1,7 +1,7 @@
 import { Paperclip } from 'lucide-react'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { ChatItem, PermissionDecision, PermissionRequest } from '@shared/types'
+import type { AskQuestion, ChatItem, PermissionDecision, PermissionRequest } from '@shared/types'
 import { splitQuote } from '@shared/quote'
 import { diffText, newContent } from '@shared/copy-values'
 import { CopyButton } from './CopyField'
@@ -352,6 +352,116 @@ export function PermissionCard({ req, onDecide: decideNow }: { req: PermissionRe
         <button className="btn ghost danger" onClick={() => onDecide('deny')}>
          {tr("Refuză")}
         </button>
+      </div>
+    </div>
+  )
+}
+
+/** A question with choices from the agent (AskUserQuestion, ask_user): options, a typed answer, dismiss or send. */
+export function QuestionCard({ req, onAnswer }: { req: PermissionRequest; onAnswer: (answers: Record<string, string> | undefined) => void }) {
+  const questions = req.questions || []
+  const [picked, setPicked] = useState<string[][]>(() => questions.map(() => []))
+  const [typed, setTyped] = useState<string[]>(() => questions.map(() => ''))
+  const [leaving, setLeaving] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const answerOf = (i: number): string => {
+    const text = typed[i].trim()
+    return [...picked[i], ...(text ? [text] : [])].join(', ')
+  }
+  const complete = questions.every((_, i) => answerOf(i))
+  const finish = (answers: Record<string, string> | undefined): void => {
+    if (leaving) return
+    setLeaving(true)
+    window.setTimeout(() => onAnswer(answers), exitMs() + 20)
+  }
+  const send = (): void => {
+    if (complete) finish(Object.fromEntries(questions.map((q, i) => [q.question, answerOf(i)])))
+  }
+  const choose = (i: number, label: string): void => {
+    const q = questions[i]
+    setPicked((all) => all.map((p, k) => (k !== i ? p : q.multiSelect ? (p.includes(label) ? p.filter((x) => x !== label) : [...p, label]) : p[0] === label ? [] : [label])))
+    // one choice or a typed answer: picking an option replaces what was typed
+    if (!q.multiSelect) setTyped((all) => all.map((t, k) => (k === i ? '' : t)))
+  }
+  const type = (i: number, text: string): void => {
+    setTyped((all) => all.map((t, k) => (k === i ? text : t)))
+    if (!questions[i].multiSelect && text) setPicked((all) => all.map((p, k) => (k === i ? [] : p)))
+  }
+  // number keys pick an option of the first question still open, Enter sends; never while typing elsewhere
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (leaving || e.ctrlKey || e.metaKey || e.altKey) return
+      const el = document.activeElement as HTMLElement | null
+      const inCard = Boolean(el && rootRef.current?.contains(el))
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && !(inCard && e.key === 'Enter')) return
+      if (el?.isContentEditable) return
+      if (e.key === 'Enter' && (inCard || !el || el === document.body)) {
+        if (!complete) return
+        e.preventDefault()
+        send()
+        return
+      }
+      const n = Number(e.key)
+      if (!Number.isInteger(n) || n < 1) return
+      const i = Math.max(0, questions.findIndex((_, k) => !answerOf(k)))
+      const opt = questions[i]?.options[n - 1]
+      if (opt) {
+        e.preventDefault()
+        choose(i, opt.label)
+      } else if (n === (questions[i]?.options.length || 0) + 1) {
+        e.preventDefault()
+        rootRef.current?.querySelectorAll<HTMLInputElement>('.question-own input')[i]?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+  return (
+    <div ref={rootRef} className="permission question" data-state={leaving ? 'closed' : 'open'} role="dialog" aria-label={tr("Întrebare")}>
+      <div className="question-kicker">{tr("Întrebare")}</div>
+      {questions.map((q, i) => (
+        <QuestionBlock key={q.question} q={q} picked={picked[i]} typed={typed[i]} onPick={(label) => choose(i, label)} onType={(t) => type(i, t)} />
+      ))}
+      <div className="row question-actions">
+        <button className="btn ghost" onClick={() => finish(undefined)}>
+          {tr("Decide tu")}
+        </button>
+        <div className="spacer" />
+        <button className="btn primary" disabled={!complete} onClick={send}>
+          {tr("Trimite")}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function QuestionBlock({ q, picked, typed, onPick, onType }: { q: AskQuestion; picked: string[]; typed: string; onPick: (label: string) => void; onType: (text: string) => void }) {
+  return (
+    <div className="question-block" role="group" aria-label={q.question}>
+      <div className="question-text">
+        {q.header && <span className="tag volt">{q.header}</span>}
+        <span>{q.question}</span>
+      </div>
+      <div className="question-hint">{q.multiSelect ? tr("Alege unul sau mai multe răspunsuri") : tr("Alege un răspuns")}</div>
+      <div className="question-options" role={q.multiSelect ? 'group' : 'radiogroup'}>
+        {q.options.map((o, k) => {
+          const on = picked.includes(o.label)
+          return (
+            <button key={o.label} type="button" className="question-option" role={q.multiSelect ? 'checkbox' : 'radio'} aria-checked={on} data-on={on || undefined} data-multi={q.multiSelect || undefined} onClick={() => onPick(o.label)}>
+              <span className="question-mark" aria-hidden />
+              <span className="question-body">
+                <span className="question-label">{o.label}</span>
+                {o.description && <span className="question-desc">{o.description}</span>}
+              </span>
+              <kbd>{k + 1}</kbd>
+            </button>
+          )
+        })}
+        <label className="question-option question-own" data-on={typed.trim() ? true : undefined} data-multi={q.multiSelect || undefined}>
+          <span className="question-mark" aria-hidden />
+          <input value={typed} maxLength={2000} placeholder={tr("Scrie alt răspuns...")} onChange={(e) => onType(e.target.value)} />
+          <kbd>{q.options.length + 1}</kbd>
+        </label>
       </div>
     </div>
   )

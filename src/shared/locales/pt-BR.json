@@ -1767,5 +1767,12 @@
  "Conectare claude.ai": "Conexão com o claude.ai",
  "Reset nou pe {name}": "Novo reset em {name}",
  "{label}. Expiră {when}.": "{label}. Expira {when}.",
- "Actualizează resetările": "Atualizar resets"
+ "Actualizează resetările": "Atualizar resets",
+ "Jolty: are o întrebare pentru tine": "Jolty: tem uma pergunta para você",
+ "Întrebare": "Pergunta",
+ "Decide tu": "Você decide",
+ "Trimite": "Enviar",
+ "Alege unul sau mai multe răspunsuri": "Escolha uma ou mais respostas",
+ "Alege un răspuns": "Escolha uma resposta",
+ "Scrie alt răspuns...": "Digite sua própria resposta..."
 }

@@ -5,6 +5,7 @@ import os from 'os'
 import path from 'path'
 import { Notification, powerSaveBlocker, shell } from 'electron'
 import type {
+  AskQuestion,
   AppSettings,
   AccountStatus,
   Attachment,
@@ -58,6 +59,7 @@ import * as store from './store'
 import { writeReference } from './reference'
 import { removeProfileFiles } from './profile-files'
 import { bindJoltyTools } from './jolty-tools'
+import { cleanAnswers } from './ask-user'
 import { accepts, fileKindsOf, readAskFiles, type AskInput, type AskProfile } from './ask-model'
 import { addWorktree, removeWorktree } from './workers'
 import * as trash from './trash'
@@ -174,6 +176,7 @@ export class Jolty {
   private awakeId?: number
   /** questions of the computer server waiting for the user's yes or no */
   private computerAsks = new Map<string, { sessionId: string; resolve: (d: PermissionDecision) => void }>()
+  private questionAsks = new Map<string, { sessionId: string; questions: AskQuestion[]; resolve: (a: Record<string, string> | undefined) => void }>()
   /** temporary chats: kept here only, never in sessions.json or transcripts/ */
   private temps = new Map<string, SessionMeta>()
   private trackedTemps = new Set<string>()
@@ -217,7 +220,8 @@ export class Jolty {
       waitIdle: (ids, ms, lead) => this.waitIdle(ids, ms, lead),
       sendTo: (lead, id, text) => this.sendToChild(lead, id, text),
       askable: () => this.askable(),
-      ask: (input) => this.askModel(input)
+      ask: (input) => this.askModel(input),
+      askUser: (sid, questions, signal) => this.askUser(sid, questions, signal)
     })
     // the list is cleaned at start, not only when the user refreshes it
     const all = store.loadSessions()
@@ -416,7 +420,8 @@ export class Jolty {
     return {
       emit: (e) => this.onEngineEvent(e),
       recordUsage: (u) => this.recordUsage(u),
-      recordLimits: (s) => this.recordLimits(s)
+      recordLimits: (s) => this.recordLimits(s),
+      askUser: (sid, questions, signal) => this.askUser(sid, questions, signal)
     }
   }
 
@@ -1294,7 +1299,31 @@ export class Jolty {
     return new Promise((resolve) => this.computerAsks.set(id, { sessionId, resolve }))
   }
 
+  /** Questions with choices, shown as a card in the chat; undefined when the user dismisses them or the turn stops. */
+  private askUser(sessionId: string, questions: AskQuestion[], signal?: AbortSignal): Promise<Record<string, string> | undefined> {
+    const id = randomUUID()
+    this.send({
+      type: 'permission',
+      sessionId,
+      request: { id, toolName: 'AskUserQuestion', title: questions[0].question, canAllowForSession: false, questions }
+    })
+    return new Promise((resolve) => {
+      this.questionAsks.set(id, { sessionId, questions, resolve })
+      signal?.addEventListener('abort', () => this.answerQuestion(id, undefined))
+    })
+  }
+
+  private answerQuestion(requestId: string, answers: unknown): boolean {
+    const q = this.questionAsks.get(requestId)
+    if (!q) return false
+    this.questionAsks.delete(requestId)
+    this.send({ type: 'permissionResolved', sessionId: q.sessionId, requestId })
+    q.resolve(cleanAnswers(q.questions, answers))
+    return true
+  }
+
   private denyComputerAsks(sessionId: string): void {
+    for (const [id, q] of this.questionAsks) if (q.sessionId === sessionId) this.answerQuestion(id, undefined)
     for (const [id, a] of this.computerAsks) {
       if (a.sessionId !== sessionId) continue
       this.computerAsks.delete(id)
@@ -1326,7 +1355,8 @@ export class Jolty {
     }
   }
 
-  respond(sessionId: string, requestId: string, decision: PermissionDecision): void {
+  respond(sessionId: string, requestId: string, decision: PermissionDecision, answers?: Record<string, string>): void {
+    if (this.answerQuestion(requestId, decision === 'deny' ? undefined : answers)) return
     const ask = this.computerAsks.get(requestId)
     if (ask) {
       this.computerAsks.delete(requestId)
