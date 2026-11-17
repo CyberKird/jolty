@@ -83,3 +83,15 @@ test('wrong keys, wrong bucket, wrong region and a dead address give a BackupErr
   await refused(s3.connect(cfg(A, { prefix: 'a/../b' }), open), /\.\./)
   await assert.rejects(s3.connect(wrong, open), (e: Error) => !e.message.includes('not-the-secret'))
 })
+
+test('incremental backups: named objects side by side, removed one by one, unsafe names refused', async () => {
+  await s3.put(cfg(A), Buffer.from('head'), 'jolty2-head')
+  await s3.put(cfg(A), Buffer.from('pack'), 'jolty2-p-0011223344556677')
+  assert.deepEqual(await s3.get(cfg(A), 'jolty2-p-0011223344556677'), Buffer.from('pack'))
+  assert.equal((await s3.find(cfg(A), 'jolty2-head'))?.bytes, 4)
+  await s3.remove(cfg(A), 'jolty2-p-0011223344556677')
+  assert.equal(await s3.find(cfg(A), 'jolty2-p-0011223344556677'), null)
+  await s3.remove(cfg(A), 'jolty2-p-0011223344556677')
+  assert.deepEqual(await s3.get(cfg(A), 'jolty2-head'), Buffer.from('head'))
+  await assert.rejects(s3.get(cfg(A), '../jolty2-head'), /bad object name/)
+})

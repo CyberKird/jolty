@@ -2,7 +2,7 @@
 // client: PKCE instead of an app secret. Microsoft rotates refresh tokens, which oauth.ts replaces as they arrive.
 import { tr } from '@shared/i18n'
 import { forgetToken, oauthConnect, oauthFetch, type OAuthSpec } from '../oauth'
-import { BackupError, FILE, mockBase, type Config, type Provider } from '../types'
+import { BackupError, objectName, mockBase, type Config, type Provider } from '../types'
 
 /** simple upload limit; bigger needs an upload session */
 const MAX_BYTES = 250 * 1000 * 1000
@@ -29,7 +29,7 @@ const spec = (cfg: Config): OAuthSpec => ({
   host: 'localhost'
 })
 
-const item = (): string => `${base().graph}/me/drive/special/approot:/${FILE}`
+const item = (name?: string): string => `${base().graph}/me/drive/special/approot:/${objectName(name)}`
 
 export const onedrive: Provider = {
   id: 'onedrive',
@@ -54,21 +54,21 @@ export const onedrive: Provider = {
     await forgetToken('onedrive')
   },
 
-  async find(cfg) {
-    const res = await oauthFetch(spec(cfg), item(), {}, [404])
+  async find(cfg, name) {
+    const res = await oauthFetch(spec(cfg), item(name), {}, [404])
     if (res.status === 404) return null
     const f = (await res.json()) as { size: number; lastModifiedDateTime: string }
     return { modifiedAt: Date.parse(f.lastModifiedDateTime), bytes: f.size }
   },
 
-  async put(cfg, data) {
+  async put(cfg, data, name) {
     if (data.length > MAX_BYTES) throw new BackupError(tr("Backup-ul e prea mare pentru {provider} (limita e {limit} MB).", { provider: 'OneDrive', limit: 250 }))
-    await oauthFetch(spec(cfg), `${item()}:/content`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(data) })
+    await oauthFetch(spec(cfg), `${item(name)}:/content`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(data) })
   },
 
   /** /content answers with a redirect to a pre-authenticated address: followed by hand so the token never goes along. */
-  async get(cfg) {
-    const url = `${item()}:/content`
+  async get(cfg, name) {
+    const url = `${item(name)}:/content`
     const res = await oauthFetch(spec(cfg), url, { redirect: 'manual' }, [302, 404])
     if (res.status === 404) throw new BackupError(tr("Nu există niciun backup în acest loc."))
     if (res.status !== 302) return Buffer.from(await res.arrayBuffer())
@@ -77,5 +77,9 @@ export const onedrive: Provider = {
     const file = await fetch(new URL(to, url))
     if (!file.ok) throw new BackupError(tr("{provider} a răspuns cu eroarea {code}.", { provider: 'OneDrive', code: file.status }))
     return Buffer.from(await file.arrayBuffer())
+  },
+
+  async remove(cfg, name) {
+    await oauthFetch(spec(cfg), item(name), { method: 'DELETE' }, [404])
   }
 }

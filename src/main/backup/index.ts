@@ -1,51 +1,37 @@
 // Backup of the whole personalization to a storage the user owns (Google Drive, OneDrive, Dropbox, Box, GitHub,
 // WebDAV, S3, a folder). Several can be connected at once; each keeps one account at a time and its own backup, so
-// nothing mixes between accounts. What goes up is the full pack of share-pack.ts (skills, commands, instructions,
-// settings, accounts without keys, schedules, MCP servers), encrypted here with a password: the storage only ever
-// holds ciphertext. Restore opens the decrypted pack in the same review screen as an import (share-pack.ts), which
-// keeps a copy of what it replaces.
+// nothing mixes between accounts. Backups are incremental (vault*.ts): chats, settings, profiles, schedules, notes,
+// the engines' history and the pack of skills, commands, instructions and MCP servers, encrypted here with a
+// password, so the storage only ever holds ciphertext, and only what changed travels. A run starts by itself after
+// changes (auto.ts) unless the user turned that off. Restore brings a new PC back to where the old one stopped
+// (vault-ops.ts). A backup made by older versions (one file, the pack alone) still opens in the import review.
 import { shell } from 'electron'
-import type { BackupEntry, BackupResult, BackupStatus, ProviderId, RemoteBackup } from '@shared/backup'
+import type { BackupEntry, BackupResult, BackupStatus, RemoteBackup } from '@shared/backup'
 import type { ImportPreview } from '@shared/skills'
 import { tr } from '@shared/i18n'
-import { getSecret, loadBackupAccounts, loadBackupConfig, saveBackupAccounts, saveBackupConfig, setSecret, type AccountMeta } from '../store'
-import { backupKeys, buildPack, discard, openPackBuffer } from '../share-pack'
-import { mergeTime, takeTime, withTime } from '../use-time'
+import { getSecret, loadBackupAccounts, loadBackupConfig, saveBackupAccounts, saveBackupConfig, setSecret } from '../store'
+import { discard, openPackBuffer } from '../share-pack'
+import { mergeTime, takeTime } from '../use-time'
 import { decryptBackup, encryptBackup } from './crypto'
-import { PROVIDERS, provider as lookup } from './providers'
-import { BackupError, type Config, type Opener, type Provider } from './types'
+import { PROVIDERS } from './providers'
+import { BackupError, FILE, type Opener, type Provider } from './types'
+import { account, config, passKey, patchMeta, pick, secretKey } from './common'
+import { kick } from './auto'
+import { forgetCache, forgetKeys, storeOf } from './vault'
+import { HEAD } from './vault-format'
+import { running, runVault } from './vault-ops'
 
 export { decryptBackup, encryptBackup }
 export { BackupError }
+export { compactNow as compact, dismissReport, finishRestore, inspect, report, restoreAll, restoreProgress as progress } from './vault-ops'
+export { finalRun, startAuto } from './auto'
 
 const PASSWORD_MIN = 8
 const FIELD_MAX = 2000
-const secretKey = (id: ProviderId, field: string): string => `backup:${id}:field:${field}`
-const passKey = (id: ProviderId, sub: string): string => `backup:${id}:pass:${sub}`
-
-function pick(id: string): Provider {
-  const p = lookup(id)
-  if (!p) throw new BackupError(tr("Locul de backup nu există."))
-  return p
-}
-
-/** The filled fields, secrets included: what a provider works with. */
-function config(p: Provider): Config {
-  const saved = loadBackupConfig()[p.id] ?? {}
-  const cfg: Config = {}
-  for (const f of p.info().fields) cfg[f.key] = (f.secret ? getSecret(secretKey(p.id, f.key)) : saved[f.key]) ?? ''
-  return cfg
-}
 
 const configured = (p: Provider): boolean => {
   const cfg = config(p)
   return p.info().fields.every((f) => f.optional || cfg[f.key]?.trim())
-}
-
-function account(p: Provider): AccountMeta {
-  const m = loadBackupAccounts()[p.id]
-  if (!m) throw new BackupError(tr("Contul nu e conectat."))
-  return m
 }
 
 function statusOf(p: Provider): BackupStatus {
@@ -55,7 +41,23 @@ function statusOf(p: Provider): BackupStatus {
     configured: configured(p),
     connected: !!m,
     hasPassword: !!m && !!getSecret(passKey(p.id, m.sub)),
-    ...(m ? { label: m.label, name: m.name, picture: m.picture, lastBackupAt: m.lastBackupAt, lastBackupBytes: m.lastBackupBytes, lastBackupItems: m.lastBackupItems } : {})
+    autoUpdate: !!m && m.autoUpdate !== false,
+    ...(running() === p.id ? { running: true } : {}),
+    ...(m
+      ? {
+          label: m.label,
+          name: m.name,
+          picture: m.picture,
+          lastBackupAt: m.lastBackupAt,
+          lastBackupBytes: m.lastBackupBytes,
+          lastBackupItems: m.lastBackupItems,
+          lastError: m.lastError,
+          lastErrorAt: m.lastErrorAt,
+          usedBytes: m.usedBytes,
+          lastUploadBytes: m.lastUploadBytes,
+          waitingFor: m.waitingFor
+        }
+      : {})
   }
 }
 
@@ -101,9 +103,17 @@ export async function connect(id: string, open: Opener = (u) => shell.openExtern
   const all = loadBackupAccounts()
   const prev = all[p.id]
   // another account: nothing of the first one stays here (its backup stays in its own storage)
-  if (prev && prev.sub !== who.sub) setSecret(passKey(p.id, prev.sub), undefined)
-  all[p.id] = prev?.sub === who.sub ? { ...prev, label: who.label, name: who.name, picture: who.picture } : { sub: who.sub, label: who.label, name: who.name, picture: who.picture }
+  if (prev && prev.sub !== who.sub) {
+    setSecret(passKey(p.id, prev.sub), undefined)
+    forgetCache(p.id)
+  }
+  // a new connection backs up by itself from now on (the user can turn that off)
+  all[p.id] =
+    prev?.sub === who.sub
+      ? { ...prev, label: who.label, name: who.name, picture: who.picture }
+      : { sub: who.sub, label: who.label, name: who.name, picture: who.picture, autoUpdate: true }
   saveBackupAccounts(all)
+  if (getSecret(passKey(p.id, who.sub))) kick(p.id)
   return statusOf(p)
 }
 
@@ -137,7 +147,11 @@ export async function disconnect(id: string): Promise<BackupStatus> {
   const all = loadBackupAccounts()
   const m = all[p.id]
   await p.disconnect?.(config(p)).catch(() => undefined)
-  if (m) setSecret(passKey(p.id, m.sub), undefined)
+  if (m) {
+    setSecret(passKey(p.id, m.sub), undefined)
+    forgetKeys(`${p.id}:${m.sub}`)
+  }
+  forgetCache(p.id)
   delete all[p.id]
   saveBackupAccounts(all)
   return statusOf(p)
@@ -148,33 +162,39 @@ export function setPassword(id: string, password: string): BackupStatus {
   const m = account(p)
   if (typeof password !== 'string' || password.length < PASSWORD_MIN || password.length > 200) throw new BackupError(tr("Parola de backup are cel puțin {n} caractere.", { n: PASSWORD_MIN }))
   setSecret(passKey(p.id, m.sub), password)
+  forgetKeys(`${p.id}:${m.sub}`)
+  // the first backup starts now (it waits if the storage already holds another PC's backup)
+  if (m.autoUpdate !== false) kick(p.id)
   return statusOf(p)
 }
 
-export async function remote(id: string): Promise<RemoteBackup | null> {
-  const p = pick(id)
-  account(p)
-  return p.find(config(p))
-}
-
-export async function run(id: string): Promise<BackupResult> {
+/** The "Update automatically" switch of one storage. */
+export function setAuto(id: string, on: boolean): BackupStatus {
   const p = pick(id)
   const m = account(p)
-  const password = getSecret(passKey(p.id, m.sub))
-  if (!password) throw new BackupError(tr("Alege mai întâi o parolă de backup."))
-  const { buf, result } = buildPack({ keys: backupKeys(), name: 'Jolty backup', author: m.label.slice(0, 100), note: m.sub }, true)
-  const blob = encryptBackup(withTime(buf), password)
-  await p.put(config(p), blob)
-  const at = Date.now()
-  const all = loadBackupAccounts()
-  all[p.id] = { ...m, lastBackupAt: at, lastBackupBytes: blob.length, lastBackupItems: result.items }
-  saveBackupAccounts(all)
-  return { at, items: result.items, bytes: blob.length, skipped: result.skipped.length }
+  patchMeta(p.id, m.sub, { autoUpdate: on === true })
+  if (on === true) kick(p.id)
+  return statusOf(p)
+}
+
+/** What the storage holds: the time of the newest incremental version (or of an old single-file backup). */
+export async function remote(id: string): Promise<RemoteBackup | null> {
+  const p = pick(id)
+  const m = account(p)
+  const store = storeOf(p, config(p))
+  const head = await store.find(HEAD)
+  if (head) return { modifiedAt: head.modifiedAt, bytes: m.usedBytes ?? head.bytes }
+  return store.find(FILE)
+}
+
+/** A backup by hand: also the way to start backing up this PC into a storage that holds another PC's backup. */
+export async function run(id: string): Promise<BackupResult> {
+  return (await runVault(id, false))!
 }
 
 /**
- * Downloads the backup, decrypts it with `password` (the saved one when none is given) and opens it for review, like
- * an imported pack. A backup made by another account is refused, whatever its password.
+ * An old single-file backup: downloads it, decrypts it with `password` (the saved one when none is given) and opens
+ * it for review, like an imported pack. A backup made by another account is refused, whatever its password.
  */
 export async function restore(id: string, password?: string): Promise<ImportPreview> {
   const p = pick(id)

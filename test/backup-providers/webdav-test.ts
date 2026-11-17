@@ -71,3 +71,15 @@ test('bad credentials, a missing folder and plain http over the internet are ref
   for (const ok of ['http://localhost:1/x/', 'http://127.0.0.1:1/x/', 'http://[::1]:1/x/'])
     await assert.rejects(webdav.connect({ ...cfgA, url: ok }, open), (e) => e instanceof BackupError && !/https/.test(e.message), ok)
 })
+
+test('incremental backups: named objects side by side, removed one by one, unsafe names refused', async () => {
+  await webdav.connect(cfgA, open)
+  await webdav.put(cfgA, Buffer.from('head'), 'jolty2-head')
+  await webdav.put(cfgA, Buffer.from('pack'), 'jolty2-p-0011223344556677')
+  assert.deepEqual(await webdav.get(cfgA, 'jolty2-p-0011223344556677'), Buffer.from('pack'))
+  assert.equal((await webdav.find(cfgA, 'jolty2-head'))?.bytes, 4)
+  await webdav.remove(cfgA, 'jolty2-p-0011223344556677')
+  assert.equal(await webdav.find(cfgA, 'jolty2-p-0011223344556677'), null)
+  await webdav.remove(cfgA, 'jolty2-p-0011223344556677')
+  await assert.rejects(webdav.get(cfgA, 'jolty2-x/../../secret'), /bad object name/)
+})

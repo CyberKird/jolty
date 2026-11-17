@@ -1,7 +1,7 @@
 // WebDAV (Nextcloud, ownCloud, Synology, pCloud, Koofr...): the backup is one file in a folder the user points at,
 // with HTTP Basic auth (an app password).
 import { tr } from '@shared/i18n'
-import { BackupError, FILE, type Config, type Provider, type Who } from '../types'
+import { BackupError, objectName, type Config, type Provider, type Who } from '../types'
 
 export const PRIVATE_HOST = /^(localhost|\[::1\]|127\.[\d.]+|10\.[\d.]+|192\.168\.[\d.]+|172\.(1[6-9]|2\d|3[01])\.[\d.]+|[^/]+\.local)$/i
 
@@ -70,21 +70,25 @@ export const webdav: Provider = {
     return { sub: `${(u.origin + u.pathname).toLowerCase()}|${user.toLowerCase()}`, label: `${user}@${u.host}`, name: user }
   },
 
-  async find(cfg) {
-    const res = await propfind(cfg, new URL(FILE, folderUrl(cfg)).href)
+  async find(cfg, name) {
+    const res = await propfind(cfg, new URL(objectName(name), folderUrl(cfg)).href)
     if (res.status === 404) return null
     const xml = await res.text()
     const at = Date.parse(prop(xml, 'getlastmodified') ?? '')
     return { modifiedAt: Number.isNaN(at) ? Date.now() : at, bytes: Number(prop(xml, 'getcontentlength') ?? 0) }
   },
 
-  async put(cfg, data) {
-    await dav(cfg, new URL(FILE, folderUrl(cfg)).href, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(data) })
+  async put(cfg, data, name) {
+    await dav(cfg, new URL(objectName(name), folderUrl(cfg)).href, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(data) })
   },
 
-  async get(cfg) {
-    const res = await dav(cfg, new URL(FILE, folderUrl(cfg)).href, { method: 'GET' }, [404])
+  async get(cfg, name) {
+    const res = await dav(cfg, new URL(objectName(name), folderUrl(cfg)).href, { method: 'GET' }, [404])
     if (res.status === 404) throw new BackupError(tr("Nu există niciun backup în acest loc."))
     return Buffer.from(await res.arrayBuffer())
+  },
+
+  async remove(cfg, name) {
+    await dav(cfg, new URL(objectName(name), folderUrl(cfg)).href, { method: 'DELETE' }, [404])
   }
 }

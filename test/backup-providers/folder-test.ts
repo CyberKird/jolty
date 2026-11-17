@@ -101,3 +101,19 @@ test('a folder or a link named like the backup is never replaced or read', async
   await refused(folder.get({ path: dir2 }), /fișier obișnuit/)
   assert.equal(fs.readFileSync(secret, 'utf8'), 'do not touch')
 })
+
+test('incremental backups: named objects side by side, removed one by one, unsafe names refused', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-folder-named-'))
+  try {
+    const c = { path: dir }
+    await folder.put(c, Buffer.from('head'), 'jolty2-head')
+    await folder.put(c, Buffer.from('pack'), 'jolty2-p-0011223344556677')
+    assert.deepEqual(fs.readdirSync(dir).sort(), ['jolty2-head', 'jolty2-p-0011223344556677'])
+    await folder.remove(c, 'jolty2-p-0011223344556677')
+    await folder.remove(c, 'jolty2-p-0011223344556677')
+    assert.deepEqual(fs.readdirSync(dir), ['jolty2-head'])
+    await assert.rejects(folder.get(c, '..\secret'), /bad object name/)
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})

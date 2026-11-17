@@ -7,7 +7,7 @@ import http from 'node:http'
 export const A = { sub: '111', email: 'ana@gmail.example', name: 'Ana' }
 export const B = { sub: '222', email: 'bob@gmail.example', name: 'Bob' }
 
-/** `state.next` is the account the next sign-in returns; `state.fail401` refuses that many Drive calls; `drive` is sub -> {id, data, modified}. */
+/** `state.next` is the account the next sign-in returns; `state.fail401` refuses that many Drive calls; `drive` is sub -> name -> {id, data, modified}. */
 export async function startGoogleMock() {
   const codes = new Map()
   const tokens = new Map()
@@ -49,29 +49,43 @@ export async function startGoogleMock() {
     const acct = tokens.get((req.headers.authorization || '').replace('Bearer ', ''))
     if (!acct || (state.fail401 > 0 && u.pathname.startsWith('/drive') && state.fail401--)) return send(401, { error: 'unauth' })
     if (u.pathname === '/userinfo') return send(200, acct)
-    const mine = () => drive.get(acct.sub)
+    if (!drive.has(acct.sub)) drive.set(acct.sub, new Map())
+    const mine = drive.get(acct.sub)
+    const byId = (id) => [...mine.values()].find((f) => f.id === id)
     if (u.pathname === '/drive/v3/files' && req.method === 'GET') {
       assert.equal(u.searchParams.get('spaces'), 'appDataFolder')
-      const f = mine()
+      const name = /name='([^']+)'/.exec(u.searchParams.get('q') || '')?.[1]
+      const f = name && mine.get(name)
       return send(200, { files: f ? [{ id: f.id, modifiedTime: f.modified, size: String(f.data.length) }] : [] })
     }
     if (u.pathname.startsWith('/drive/v3/files/') && u.searchParams.get('alt') === 'media') {
-      const f = mine()
-      if (!f || f.id !== u.pathname.split('/').pop()) return send(404, {})
+      const f = byId(u.pathname.split('/').pop())
+      if (!f) return send(404, {})
       return void res.writeHead(200).end(f.data)
+    }
+    if (u.pathname.startsWith('/drive/v3/files/') && req.method === 'DELETE') {
+      const f = byId(u.pathname.split('/').pop())
+      if (!f) return send(404, {})
+      mine.delete(f.name)
+      return void res.writeHead(204).end()
     }
     if (u.pathname.startsWith('/upload/drive/v3/files') && u.searchParams.get('uploadType') === 'resumable') {
       const id = u.pathname.split('/')[5]
-      if (req.method === 'POST') assert.deepEqual(JSON.parse(body.toString()).parents, ['appDataFolder'])
-      if (req.method === 'PATCH') assert.equal(id, mine()?.id)
+      let name = byId(id)?.name
+      if (req.method === 'POST') {
+        const meta = JSON.parse(body.toString())
+        assert.deepEqual(meta.parents, ['appDataFolder'])
+        name = meta.name
+      }
+      if (req.method === 'PATCH') assert.ok(byId(id))
       const session = randomUUID()
-      sessions.set(session, { sub: acct.sub, id })
+      sessions.set(session, { sub: acct.sub, id, name })
       return void res.writeHead(200, { location: `http://127.0.0.1:${server.address().port}/session/${session}` }).end()
     }
     if (u.pathname.startsWith('/session/') && req.method === 'PUT') {
       const s = sessions.get(u.pathname.split('/')[2])
       assert.equal(s.sub, acct.sub)
-      drive.set(s.sub, { id: s.id || `file-${s.sub}`, data: body, modified: new Date().toISOString() })
+      drive.get(s.sub).set(s.name, { id: s.id || `file-${randomUUID()}`, name: s.name, data: body, modified: new Date().toISOString() })
       return send(200, {})
     }
     send(404, {})

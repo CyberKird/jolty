@@ -614,7 +614,7 @@ export interface SystemCheck {
 }
 
 import type { ExportRequest, ExportResult, ImportDecision, ImportPreview, ImportResult, PackItem, SkillInfo, SkillSource } from './skills'
-import type { BackupEntry, BackupResult, BackupStatus, ProviderId, RemoteBackup, UseStats } from './backup'
+import type { BackupEntry, BackupResult, BackupStatus, ProviderId, RemoteBackup, RestoreInfo, RestoreProgress, RestoreReport, UseStats } from './backup'
 import type { MergeAction, MergeCheck, MergeStatus } from './merge'
 
 export interface JoltyApi {
@@ -724,6 +724,20 @@ export interface JoltyApi {
     remote(id: ProviderId): Promise<RemoteBackup | null>
     /** opens the backup for review like an imported pack; `password` only when it is not the saved one */
     restore(id: ProviderId, password?: string): Promise<ImportPreview>
+    /** the "Update automatically" switch of one storage */
+    setAuto(id: ProviderId, on: boolean): Promise<BackupStatus>
+    /** the versions in the storage and what the newest holds; `password` when the saved one is missing */
+    inspect(id: ProviderId, password?: string): Promise<RestoreInfo>
+    /** downloads a version (the newest when none is given); applied when Jolty starts again (relaunch) */
+    restoreAll(id: ProviderId, version?: string, password?: string): Promise<void>
+    progress(): Promise<RestoreProgress | null>
+    /** rewrites packs that are mostly old data; returns the storage used before and after */
+    compact(id: ProviderId): Promise<{ before: number; after: number }>
+    /** what the last restore did, until dismissed */
+    report(): Promise<RestoreReport | null>
+    dismissReport(): Promise<void>
+    /** restarts Jolty once a restore is downloaded */
+    relaunch(): Promise<void>
   }
   usage: {
     /** how long Jolty was used, and a few counts */

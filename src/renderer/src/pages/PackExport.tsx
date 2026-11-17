@@ -26,7 +26,8 @@ const PERSONAL = (): Record<PersonalKind, string> => ({
   password: tr("parole scrise în text")
 })
 
-export const fmtSize = (n: number): string => (n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`)
+export const fmtSize = (n: number): string =>
+  n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : n < 1073741824 ? `${(n / 1048576).toFixed(1)} MB` : `${(n / 1073741824).toFixed(2)} GB`
 
 /** Pick what goes into a pack and save it as one file. Keys, tokens and cookies never go in. */
 export function PackExport() {

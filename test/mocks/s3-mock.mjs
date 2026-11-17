@@ -1,4 +1,4 @@
-// Just enough of S3 for the backup tests: path-style HEAD bucket and HEAD/PUT/GET object, with the SigV4 Authorization
+// Just enough of S3 for the backup tests: path-style HEAD bucket and HEAD/PUT/GET/DELETE object, with the SigV4 Authorization
 // header of every request recomputed here with an implementation of its own (not src/main/backup/sigv4.ts), so a
 // signer bug fails the tests instead of being copied into the mock. Used by test/backup-providers/s3-test.ts.
 import crypto from 'node:crypto'
@@ -89,6 +89,11 @@ export async function startS3Mock() {
     if (req.method === 'PUT') {
       objects.set(id, { data: body, modified: new Date(Math.floor(Date.now() / 1000) * 1000) })
       return send(200, { etag: `"${H('md5', body, 'hex')}"` })
+    }
+    // S3 answers 204 whether the key was there or not
+    if (req.method === 'DELETE') {
+      objects.delete(id)
+      return send(204)
     }
     const o = objects.get(id)
     if (!o) return send(404, {}, '<Error><Code>NoSuchKey</Code></Error>')

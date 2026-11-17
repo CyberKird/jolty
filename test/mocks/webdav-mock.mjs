@@ -1,4 +1,4 @@
-// Just enough of a WebDAV server (Nextcloud layout) for the backup tests: Basic auth, PROPFIND Depth 0, MKCOL, PUT, GET.
+// Just enough of a WebDAV server (Nextcloud layout) for the backup tests: Basic auth, PROPFIND Depth 0, MKCOL, PUT, GET, DELETE.
 // Two users, each only inside /dav/files/<user>/. Ana's answers use the d: prefix, Bob's a default namespace, because
 // real servers differ. Used by test/backup-providers/webdav-test.ts.
 import assert from 'node:assert/strict'
@@ -52,6 +52,7 @@ export async function startWebdavMock() {
       const f = files.get(path)
       return f ? void res.writeHead(200).end(f.data) : void res.writeHead(404).end()
     }
+    if (req.method === 'DELETE') return void res.writeHead(files.delete(path) ? 204 : 404).end()
     res.writeHead(405).end()
   })
   await new Promise((r) => server.listen(0, '127.0.0.1', r))

@@ -39,6 +39,19 @@ export interface BackupStatus {
   lastBackupAt?: number
   lastBackupBytes?: number
   lastBackupItems?: number
+  /** back up by itself after changes (on unless the user turned it off) */
+  autoUpdate: boolean
+  /** a backup of this storage is running now */
+  running?: boolean
+  /** the last automatic or manual run failed: shown calmly, retried with a growing pause */
+  lastError?: string
+  lastErrorAt?: number
+  /** everything the backup keeps in the storage (all kept versions) */
+  usedBytes?: number
+  /** bytes the last run sent */
+  lastUploadBytes?: number
+  /** the storage holds a backup from another PC and this PC has not chosen yet: no automatic run until it does */
+  waitingFor?: { host: string; at: number }
 }
 
 /** One storage as the Account tab shows it. `values` holds the fields that are not secret. */
@@ -62,6 +75,56 @@ export interface BackupResult {
   bytes: number
   /** files left out (a program over 20 MB, for example) */
   skipped: number
+  /** nothing changed since the last version: nothing was sent */
+  unchanged?: boolean
+  /** everything the backup keeps in the storage */
+  used?: number
+}
+
+/** One kept version of an incremental backup. */
+export interface BackupVersion {
+  name: string
+  at: number
+  /** the PC it was made on */
+  host: string
+  files: number
+  /** plain size of everything in it */
+  raw: number
+}
+
+/** What a restore would bring back, shown before anything changes. */
+export interface RestoreInfo {
+  /** newest first */
+  versions: BackupVersion[]
+  /** details of the newest version */
+  chats: number
+  profiles: number
+  /** skills, commands, instructions or MCP servers are in it */
+  personal: boolean
+  app?: string
+  /** a backup made before incremental backups (one file, restored through the import review) */
+  legacy?: RemoteBackup
+  used: number
+}
+
+export interface RestoreProgress {
+  id: ProviderId
+  phase: 'download' | 'ready' | 'error'
+  done: number
+  total: number
+  error?: string
+}
+
+/** What the last restore did, shown once after Jolty restarts. */
+export interface RestoreReport {
+  at: number
+  versionAt: number
+  host: string
+  files: number
+  previous?: string
+  missing: string[]
+  /** skills and the rest outside the data folder that were put back */
+  personal?: number
 }
 
 /** The set of numbers on the Account tab. Times are milliseconds. */

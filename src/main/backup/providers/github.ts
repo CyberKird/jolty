@@ -1,7 +1,7 @@
 // GitHub: the backup is one file in the root of a private repository the user created, written through the contents
 // API with a fine-grained token that can only touch that repository.
 import { tr } from '@shared/i18n'
-import { BackupError, pictureOf, FILE, mockBase, type Config, type Provider } from '../types'
+import { BackupError, pictureOf, objectName, mockBase, type Config, type Provider } from '../types'
 
 /** The contents API takes files up to 100 MB. */
 const MAX_BYTES = 100 * 1024 * 1024
@@ -38,7 +38,7 @@ const repoOf = (cfg: Config): string => {
   return repo
 }
 const branchOf = (cfg: Config): string => (cfg.branch ?? '').trim()
-const fileUrl = (cfg: Config): string => `/repos/${repoOf(cfg)}/contents/${FILE}`
+const fileUrl = (cfg: Config, name?: string): string => `/repos/${repoOf(cfg)}/contents/${objectName(name)}`
 /** the branch as a query parameter, empty for the default branch */
 const refQ = (cfg: Config, name: string, first: boolean): string => (branchOf(cfg) ? `${first ? '?' : '&'}${name}=${encodeURIComponent(branchOf(cfg))}` : '')
 
@@ -47,8 +47,8 @@ interface Entry {
   size: number
 }
 
-async function entry(cfg: Config): Promise<Entry | null> {
-  const res = await gh(cfg, `${fileUrl(cfg)}${refQ(cfg, 'ref', true)}`, {}, [404])
+async function entry(cfg: Config, name?: string): Promise<Entry | null> {
+  const res = await gh(cfg, `${fileUrl(cfg, name)}${refQ(cfg, 'ref', true)}`, {}, [404])
   if (res.status === 404) return null
   const f = (await res.json()) as Partial<Entry>
   // an array (a folder with this name) has no sha
@@ -81,13 +81,13 @@ export const github: Provider = {
     return { sub: `${user.id}:${repo.toLowerCase()}`, label: `${user.login} / ${repo}`, name: user.login, ...(await pictureOf(user.avatar_url)) }
   },
 
-  async find(cfg) {
-    const f = await entry(cfg)
+  async find(cfg, name) {
+    const f = await entry(cfg, name)
     if (!f) return null
     // the file itself has no date, the last commit that touched it does
     let modifiedAt = Date.now()
     try {
-      const list = (await (await gh(cfg, `/repos/${repoOf(cfg)}/commits?path=${FILE}&per_page=1${refQ(cfg, 'sha', false)}`)).json()) as { commit?: { committer?: { date?: string } } }[]
+      const list = (await (await gh(cfg, `/repos/${repoOf(cfg)}/commits?path=${objectName(name)}&per_page=1${refQ(cfg, 'sha', false)}`)).json()) as { commit?: { committer?: { date?: string } } }[]
       const at = Date.parse(list[0]?.commit?.committer?.date ?? '')
       if (!Number.isNaN(at)) modifiedAt = at
     } catch {
@@ -96,21 +96,32 @@ export const github: Provider = {
     return { modifiedAt, bytes: f.size }
   },
 
-  async put(cfg, data) {
+  async put(cfg, data, name) {
     if (data.length > MAX_BYTES) throw new BackupError(tr("Backup-ul depășește 100 MB, limita GitHub."))
     const content = data.toString('base64')
     // the sha of the current file is fetched right before each try; a 409/422 means someone wrote in between
     for (let attempt = 0; ; attempt++) {
-      const sha = (await entry(cfg))?.sha
+      const sha = (await entry(cfg, name))?.sha
       const body = JSON.stringify({ message: 'Jolty backup', content, ...(sha ? { sha } : {}), ...(branchOf(cfg) ? { branch: branchOf(cfg) } : {}) })
-      const res = await gh(cfg, fileUrl(cfg), { method: 'PUT', body }, attempt === 0 ? [409, 422] : [])
+      const res = await gh(cfg, fileUrl(cfg, name), { method: 'PUT', body }, attempt === 0 ? [409, 422] : [])
       if (res.ok) return
     }
   },
 
-  async get(cfg) {
-    const res = await gh(cfg, `${fileUrl(cfg)}${refQ(cfg, 'ref', true)}`, { accept: 'application/vnd.github.raw+json' }, [404])
+  async get(cfg, name) {
+    const res = await gh(cfg, `${fileUrl(cfg, name)}${refQ(cfg, 'ref', true)}`, { accept: 'application/vnd.github.raw+json' }, [404])
     if (res.status === 404) throw new BackupError(tr("Nu există niciun backup în acest loc."))
     return Buffer.from(await res.arrayBuffer())
+  },
+
+  /** a delete is a commit too; the bytes stay in the repository's history */
+  async remove(cfg, name) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const sha = (await entry(cfg, name))?.sha
+      if (!sha) return
+      const body = JSON.stringify({ message: 'Jolty backup', sha, ...(branchOf(cfg) ? { branch: branchOf(cfg) } : {}) })
+      const res = await gh(cfg, fileUrl(cfg, name), { method: 'DELETE', body }, [404, 409, 422])
+      if (res.ok || res.status === 404) return
+    }
   }
 }

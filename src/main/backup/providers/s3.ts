@@ -2,7 +2,7 @@
 // {endpoint}/{bucket}/{prefix}jolty-backup.enc, every request signed with SigV4. The backup is already encrypted.
 import { tr } from '@shared/i18n'
 import { encodeKey, signV4, uriEncode } from '../sigv4'
-import { BackupError, FILE, type Config, type Provider } from '../types'
+import { BackupError, objectName, type Config, type Provider } from '../types'
 
 const TIMEOUT = 5 * 60_000
 
@@ -32,10 +32,10 @@ function target(cfg: Config): Target {
 }
 
 /** The request goes out as-is: a redirect (wrong region or endpoint) must reach us as a status, not be followed. */
-async function call(cfg: Config, method: 'HEAD' | 'PUT' | 'GET', withKey: boolean, body?: Buffer): Promise<Response> {
+async function call(cfg: Config, method: 'HEAD' | 'PUT' | 'GET' | 'DELETE', withKey: boolean, body?: Buffer, name?: string): Promise<Response> {
   const t = target(cfg)
   const root = t.base.pathname.replace(/\/+$/, '')
-  const url = new URL(`${t.base.origin}${root}/${uriEncode(t.bucket)}${withKey ? '/' + encodeKey(t.prefix + FILE) : ''}`)
+  const url = new URL(`${t.base.origin}${root}/${uriEncode(t.bucket)}${withKey ? '/' + encodeKey(t.prefix + objectName(name)) : ''}`)
   const signed = signV4({ method, url, body, headers: body ? { 'content-type': 'application/octet-stream' } : {}, region: t.region, accessKeyId: t.accessKeyId, secretAccessKey: t.secretAccessKey, date: new Date() })
   try {
     return await fetch(url, { method, headers: signed.headers, body: body ? new Uint8Array(body) : undefined, redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT) })
@@ -76,22 +76,27 @@ export const s3: Provider = {
     return { sub: `${t.base.href.replace(/\/+$/, '')}|${t.bucket}|${t.prefix}|${t.accessKeyId}`, label: `${t.bucket} (${t.base.host})` }
   },
 
-  async find(cfg) {
-    const res = await call(cfg, 'HEAD', true)
+  async find(cfg, name) {
+    const res = await call(cfg, 'HEAD', true, undefined, name)
     if (res.status === 404) return null
     if (res.status !== 200) fail(res)
     return { modifiedAt: Date.parse(res.headers.get('last-modified') ?? '') || Date.now(), bytes: Number(res.headers.get('content-length')) }
   },
 
-  async put(cfg, data) {
-    const res = await call(cfg, 'PUT', true, data)
+  async put(cfg, data, name) {
+    const res = await call(cfg, 'PUT', true, data, name)
     if (!res.ok) fail(res)
   },
 
-  async get(cfg) {
-    const res = await call(cfg, 'GET', true)
+  async get(cfg, name) {
+    const res = await call(cfg, 'GET', true, undefined, name)
     if (res.status === 404) throw new BackupError(tr("Nu există niciun backup în acest loc."))
     if (!res.ok) fail(res)
     return Buffer.from(await res.arrayBuffer())
+  },
+
+  async remove(cfg, name) {
+    const res = await call(cfg, 'DELETE', true, undefined, name)
+    if (!res.ok && res.status !== 404) fail(res)
   }
 }

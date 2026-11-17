@@ -143,7 +143,17 @@ function FoundModels({ profile, model, models, onDone }: { profile: Profile; mod
   )
 }
 
-type Way = 'free' | 'key' | 'claude' | 'codex' | 'gemini'
+type Way = 'free' | 'key' | 'claude' | 'codex' | 'gemini' | 'restore'
+
+/** A new PC of someone who already uses Jolty: Settings > Account, where a storage is connected and restored. */
+function openRestore(): void {
+  try {
+    localStorage.setItem('jolty.settingsTab', 'account')
+  } catch {
+    // the tab is only a convenience
+  }
+  useStore.getState().setPage('settings')
+}
 
 /** Shown instead of the new-chat screen while there are no profiles: the shortest way to a first answer. */
 export function Welcome() {
@@ -232,7 +242,8 @@ export function Welcome() {
     { way: 'key', title: tr("Am o cheie API"), text: tr("DeepSeek, OpenRouter sau NanoGPT: te duc la pagina cheii, o lipești, o testez.") },
     { way: 'claude', title: tr("Abonament Claude"), text: tr("Te conectezi cu contul tău claude.ai.") },
     { way: 'codex', title: tr("Abonament ChatGPT"), text: tr("Te conectezi cu contul ChatGPT, prin Codex.") },
-    { way: 'gemini', title: tr("Abonament Gemini"), text: tr("Folosești abonamentul Google direct din browserul Jolty, fără cheie.") }
+    { way: 'gemini', title: tr("Abonament Gemini"), text: tr("Folosești abonamentul Google direct din browserul Jolty, fără cheie.") },
+    { way: 'restore', title: tr("Am Jolty pe alt PC"), text: tr("Conectezi locul backup-ului și scrii parola: conversațiile, setările și profilurile revin exact cum le-ai lăsat.") }
   ]
   return (
     <div className="welcome">
@@ -261,7 +272,7 @@ export function Welcome() {
       ) : (
         <div className="starts">
           {choices.map((c) => (
-            <button key={c.way} className="start" onClick={() => (c.way === 'key' ? setWay('key') : void run(c.way))}>
+            <button key={c.way} className="start" onClick={() => (c.way === 'key' ? setWay('key') : c.way === 'restore' ? openRestore() : void run(c.way))}>
               <span>
                 <b style={{ color: 'var(--white)', fontWeight: 500 }}>{c.title}</b>
                 <br />

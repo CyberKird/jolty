@@ -1,31 +1,51 @@
-import { ChevronDown, ChevronRight, CloudDownload, CloudUpload, Link2, Loader2, LogOut } from 'lucide-react'
+import { ChevronDown, ChevronRight, CloudDownload, CloudUpload, Link2, Loader2, LogOut, Minimize2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { BackupEntry, RemoteBackup } from '@shared/backup'
+import type { BackupEntry, BackupStatus } from '@shared/backup'
 import type { ImportPreview } from '@shared/skills'
 import { tr } from '@shared/i18n'
-import { api, errMsg, timeAgo, useStore } from '../store'
+import { api, errMsg, useStore } from '../store'
 import { fmtSize } from './PackExport'
 import { PackImport } from './PackImport'
+import { ago, RestorePanel, RestoreReportCard } from './BackupRestore'
 import { useShallow } from 'zustand/shallow'
 
-/** One storage: the fields to fill, the sign-in, and once connected the backup and the restore. */
+/** One calm line: running, the last update and the space used, or the last failure (retried by itself). */
+function StatusLine({ status }: { status: BackupStatus }) {
+  const failed = !!status.lastErrorAt && (!status.lastBackupAt || status.lastErrorAt > status.lastBackupAt)
+  if (status.running)
+    return (
+      <span className="backup-status small" role="status">
+        <Loader2 size={13} className="spin" /> {tr("Se actualizează backup-ul...")}
+      </span>
+    )
+  const used = status.usedBytes ? ` · ${tr("{size} folosiți", { size: fmtSize(status.usedBytes) })}` : ''
+  return (
+    <div className="stack" style={{ gap: 4 }}>
+      <span className="backup-status small">
+        <span className={`dot ${status.lastBackupAt ? 'good' : ''}`} />
+        {status.lastBackupAt ? `${tr("Ultima actualizare: {when}", { when: ago(status.lastBackupAt) })}${used}` : tr("Încă nu ai făcut backup de pe acest PC.")}
+      </span>
+      {failed && (
+        <span className="backup-status small faint">
+          <span className="dot warn" />
+          {tr("Ultima încercare ({when}) n-a mers: {error} Reîncerc singur.", { when: ago(status.lastErrorAt!), error: status.lastError ?? '' })}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** One storage: the fields to fill, the sign-in, and once connected the automatic backup, the status and the restore. */
 function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Promise<void> }) {
   const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const { info, status } = entry
   const [open, setOpen] = useState(status.connected)
   const [values, setValues] = useState<Record<string, string>>(entry.values)
-  const [busy, setBusy] = useState<'connect' | 'backup' | 'restore' | 'password'>()
-  const [remote, setRemote] = useState<RemoteBackup | null>()
+  const [busy, setBusy] = useState<'connect' | 'backup' | 'password' | 'compact' | 'auto'>()
   const [password, setPassword] = useState('')
-  const [restorePass, setRestorePass] = useState('')
-  const [askPass, setAskPass] = useState(false)
+  const [restoring, setRestoring] = useState(false)
   const [preview, setPreview] = useState<ImportPreview>()
   const connected = status.connected
-
-  useEffect(() => {
-    setRemote(undefined)
-    if (connected) void api.backup.remote(info.id).then(setRemote).catch(() => setRemote(null))
-  }, [connected, info.id, status.lastBackupAt])
 
   const run = async (kind: NonNullable<typeof busy>, fn: () => Promise<void>): Promise<void> => {
     setBusy(kind)
@@ -33,9 +53,9 @@ function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Pro
       await fn()
     } catch (e) {
       toast(errMsg(e), true)
-      if (kind === 'restore') setAskPass(true)
     } finally {
       setBusy(undefined)
+      await reload().catch(() => undefined)
     }
   }
   const filled = info.fields.every((f) => f.optional || values[f.key]?.trim() || entry.saved.includes(f.key))
@@ -73,7 +93,6 @@ function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Pro
                     void run('connect', async () => {
                       await api.backup.setConfig(info.id, values)
                       await api.backup.connect(info.id)
-                      await reload()
                     })
                   }
                 >
@@ -104,7 +123,7 @@ function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Pro
                     void run('connect', async () => {
                       await api.backup.disconnect(info.id)
                       setPreview(undefined)
-                      await reload()
+                      setRestoring(false)
                     })
                   }
                 >
@@ -112,10 +131,10 @@ function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Pro
                 </button>
               </div>
 
-              {!status.hasPassword ? (
+              {!status.hasPassword && (
                 <div className="stack" style={{ gap: 8 }}>
                   <p className="small" style={{ margin: 0 }}>
-                    {tr("Alege o parolă de backup (minimum 8 caractere). Fără ea backup-ul nu se poate citi și nu o poți recupera.")}
+                    {tr("Alege o parolă de backup (minimum 8 caractere). Fără ea backup-ul nu se poate citi și nu o poți recupera. Pe un PC nou scrie parola pe care ai ales-o deja.")}
                   </p>
                   <div className="row">
                     <input className="input" type="password" value={password} placeholder={tr("Parola de backup")} onChange={(e) => setPassword(e.target.value)} />
@@ -126,7 +145,6 @@ function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Pro
                         void run('password', async () => {
                           await api.backup.setPassword(info.id, password)
                           setPassword('')
-                          await reload()
                         })
                       }
                     >
@@ -134,53 +152,77 @@ function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Pro
                     </button>
                   </div>
                 </div>
-              ) : (
-                <span className="faint small">{tr("Parola de backup e salvată pe acest PC.")}</span>
               )}
 
-              <div className="faint small">
-                {status.lastBackupAt
-                  ? tr("Ultimul backup de pe acest PC: {when}, {n} elemente, {size}.", { when: timeAgo(status.lastBackupAt), n: status.lastBackupItems ?? 0, size: fmtSize(status.lastBackupBytes ?? 0) })
-                  : tr("Încă nu ai făcut backup de pe acest PC.")}
-                <br />
-                {remote === undefined ? '' : remote ? tr("În {place}: {when}, {size}.", { place: info.name, when: timeAgo(remote.modifiedAt), size: fmtSize(remote.bytes) }) : tr("În {place} nu e încă niciun backup.", { place: info.name })}
-              </div>
+              <label className="backup-auto">
+                <input
+                  type="checkbox"
+                  checked={status.autoUpdate}
+                  disabled={busy === 'auto'}
+                  onChange={(e) => void run('auto', async () => void (await api.backup.setAuto(info.id, e.target.checked)))}
+                />
+                <span className="backup-auto-text">
+                  <span>{tr("Actualizează automat")}</span>
+                  <span className="faint small">{tr("După ce schimbi ceva, cel mult o dată la 10 minute și la închidere. Se trimite doar ce s-a schimbat, criptat.")}</span>
+                </span>
+              </label>
+
+              {status.hasPassword && <StatusLine status={status} />}
+
+              {status.waitingFor && !restoring && (
+                <div className="backup-note small">
+                  {tr("În {place} e deja backup-ul de pe {host}, făcut {when}. Restaurează-l pe acest PC sau pornește backup-ul acestui PC alături de el; până alegi, actualizarea automată așteaptă.", {
+                    place: info.name,
+                    host: status.waitingFor.host,
+                    when: ago(status.waitingFor.at)
+                  })}
+                </div>
+              )}
 
               {preview ? (
                 <PackImport initial={preview} onImported={() => undefined} onClose={() => setPreview(undefined)} />
+              ) : restoring ? (
+                <RestorePanel
+                  entry={entry}
+                  onClose={() => setRestoring(false)}
+                  onLegacy={(p) => {
+                    setRestoring(false)
+                    setPreview(p)
+                  }}
+                />
               ) : (
-                <>
-                  <div className="row" style={{ flexWrap: 'wrap' }}>
+                <div className="row" style={{ flexWrap: 'wrap' }}>
+                  <button
+                    className="btn primary"
+                    disabled={!status.hasPassword || !!busy || status.running}
+                    onClick={() =>
+                      void run('backup', async () => {
+                        const r = await api.backup.run(info.id)
+                        toast(r.unchanged ? tr("Nimic nou de trimis: backup-ul e la zi.") : tr("Backup actualizat: {size} trimiși.", { size: fmtSize(r.bytes) }))
+                      })
+                    }
+                  >
+                    {busy === 'backup' ? <Loader2 size={14} className="spin" /> : <CloudUpload size={14} />} {tr("Fă backup acum")}
+                  </button>
+                  <button className="btn" disabled={!!busy || status.running} onClick={() => setRestoring(true)}>
+                    <CloudDownload size={14} /> {tr("Restaurează pe acest PC")}
+                  </button>
+                  {!!status.usedBytes && (
                     <button
-                      className="btn primary"
-                      disabled={!status.hasPassword || !!busy}
+                      className="btn ghost"
+                      title={tr("Rescrie pachetele care conțin mai ales date vechi. Descarcă și reîncarcă doar acele pachete.")}
+                      disabled={!!busy || status.running}
                       onClick={() =>
-                        void run('backup', async () => {
-                          const r = await api.backup.run(info.id)
-                          await reload()
-                          toast(r.skipped ? tr("Backup făcut: {n} elemente. {s} fișiere prea mari au rămas pe loc.", { n: r.items, s: r.skipped }) : tr("Backup făcut: {n} elemente.", { n: r.items }))
+                        void run('compact', async () => {
+                          const r = await api.backup.compact(info.id)
+                          toast(r.after < r.before ? tr("Compactat: de la {before} la {after}.", { before: fmtSize(r.before), after: fmtSize(r.after) }) : tr("Nu era nimic de compactat."))
                         })
                       }
                     >
-                      {busy === 'backup' ? <Loader2 size={14} className="spin" /> : <CloudUpload size={14} />} {tr("Fă backup acum")}
+                      {busy === 'compact' ? <Loader2 size={14} className="spin" /> : <Minimize2 size={14} />} {tr("Compactează")}
                     </button>
-                    <button
-                      className="btn"
-                      disabled={!!busy || remote === null || (!status.hasPassword && !restorePass)}
-                      onClick={() =>
-                        void run('restore', async () => {
-                          setPreview(await api.backup.restore(info.id, restorePass || undefined))
-                          await reload()
-                        })
-                      }
-                    >
-                      {busy === 'restore' ? <Loader2 size={14} className="spin" /> : <CloudDownload size={14} />} {tr("Restaurează din {place}", { place: info.name })}
-                    </button>
-                  </div>
-                  {(askPass || !status.hasPassword) && (
-                    <input className="input" type="password" value={restorePass} placeholder={tr("Parola backup-ului salvat")} onChange={(e) => setRestorePass(e.target.value)} />
                   )}
-                </>
+                </div>
               )}
             </>
           )}
@@ -196,19 +238,27 @@ export function BackupSettings() {
   const setBackups = useStore((s) => s.setBackups)
   const { toast } = useStore(useShallow(({ toast }) => ({ toast })))
   const reload = (): Promise<void> => api.backup.list().then(setBackups)
+  const running = !!entries?.some((e) => e.status.running)
   useEffect(() => {
     void reload().catch((e) => toast(errMsg(e), true))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  // automatic runs happen in main: the status follows them, often while one runs
+  useEffect(() => {
+    const t = setInterval(() => void reload().catch(() => undefined), running ? 3000 : 30000)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running])
   if (!entries) return null
   // connected storages first, in the usual order after them
   const sorted = [...entries].sort((a, b) => Number(b.status.connected) - Number(a.status.connected))
   return (
     <div style={{ marginBottom: 14 }}>
+      <RestoreReportCard />
       <div className="stack" style={{ gap: 4, marginBottom: 10 }}>
         <b>{tr("Backup și conturi")}</b>
         <p className="muted small" style={{ margin: 0 }}>
-          {tr("Backup complet al personalizării (skilluri, comenzi, instrucțiuni, setări, conturi fără chei, sarcini programate, servere MCP) în locul ales de tine, criptat cu o parolă. Cheile API și login-urile nu se încarcă. Poți conecta mai multe locuri deodată.")}
+          {tr("Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.")}
         </p>
       </div>
       {sorted.map((e) => (

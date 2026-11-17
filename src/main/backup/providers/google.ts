@@ -2,7 +2,7 @@
 // has a folder of its own.
 import { tr } from '@shared/i18n'
 import { forgetToken, oauthConnect, oauthFetch, type OAuthSpec } from '../oauth'
-import { BackupError, FILE, pictureOf, mockBase, type Config, type Provider } from '../types'
+import { BackupError, objectName, pictureOf, mockBase, type Config, type Provider } from '../types'
 
 const base = (): { auth: string; token: string; userinfo: string; revoke: string; drive: string; upload: string } => {
   const m = mockBase()
@@ -41,8 +41,8 @@ interface DriveFile {
   size: string
 }
 
-async function findFile(cfg: Config): Promise<DriveFile | undefined> {
-  const q = encodeURIComponent(`name='${FILE}' and trashed=false`)
+async function findFile(cfg: Config, name?: string): Promise<DriveFile | undefined> {
+  const q = encodeURIComponent(`name='${objectName(name)}' and trashed=false`)
   const res = await oauthFetch(spec(cfg), `${base().drive}/files?spaces=appDataFolder&q=${q}&fields=files(id,modifiedTime,size)&orderBy=modifiedTime%20desc&pageSize=1`)
   return ((await res.json()) as { files?: DriveFile[] }).files?.[0]
 }
@@ -75,27 +75,32 @@ export const google: Provider = {
     await forgetToken('google', base().revoke)
   },
 
-  async find(cfg) {
-    const f = await findFile(cfg)
+  async find(cfg, name) {
+    const f = await findFile(cfg, name)
     return f ? { modifiedAt: Date.parse(f.modifiedTime), bytes: Number(f.size) } : null
   },
 
   /** Resumable upload in two calls: the first names the file and gets an address, the second sends the bytes. */
-  async put(cfg, data) {
-    const existing = (await findFile(cfg))?.id
+  async put(cfg, data, name) {
+    const existing = (await findFile(cfg, name))?.id
     const init = await oauthFetch(spec(cfg), `${base().upload}/files${existing ? `/${existing}` : ''}?uploadType=resumable`, {
       method: existing ? 'PATCH' : 'POST',
       headers: { 'content-type': 'application/json; charset=UTF-8', 'x-upload-content-type': 'application/octet-stream', 'x-upload-content-length': String(data.length) },
-      body: JSON.stringify(existing ? {} : { name: FILE, parents: ['appDataFolder'] })
+      body: JSON.stringify(existing ? {} : { name: objectName(name), parents: ['appDataFolder'] })
     })
     const to = init.headers.get('location')
     if (!to) throw new BackupError(tr("Nu am primit adresa de încărcare."))
     await oauthFetch(spec(cfg), to, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(data) })
   },
 
-  async get(cfg) {
-    const f = await findFile(cfg)
+  async get(cfg, name) {
+    const f = await findFile(cfg, name)
     if (!f) throw new BackupError(tr("Nu există niciun backup în acest loc."))
     return Buffer.from(await (await oauthFetch(spec(cfg), `${base().drive}/files/${f.id}?alt=media`)).arrayBuffer())
+  },
+
+  async remove(cfg, name) {
+    const f = await findFile(cfg, name)
+    if (f) await oauthFetch(spec(cfg), `${base().drive}/files/${f.id}`, { method: 'DELETE' }, [404])
   }
 }

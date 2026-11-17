@@ -352,6 +352,15 @@ export interface AccountMeta {
   lastBackupAt?: number
   lastBackupBytes?: number
   lastBackupItems?: number
+  /** false only when the user turned automatic backup off */
+  autoUpdate?: boolean
+  lastError?: string
+  lastErrorAt?: number
+  usedBytes?: number
+  lastUploadBytes?: number
+  /** this PC backed up here or restored from here: automatic runs may write versions */
+  linked?: boolean
+  waitingFor?: { host: string; at: number }
 }
 
 export const loadBackupAccounts = (): Record<string, AccountMeta> => readJson<Record<string, AccountMeta>>('backup-accounts.json', {})

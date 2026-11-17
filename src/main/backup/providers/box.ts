@@ -2,7 +2,7 @@
 // refresh tokens are single use, which oauth.ts handles by storing the new one that comes with every refresh.
 import { tr } from '@shared/i18n'
 import { forgetToken, oauthConnect, oauthFetch, type OAuthSpec } from '../oauth'
-import { BackupError, FILE, mockBase, type Config, type Provider } from '../types'
+import { BackupError, objectName, mockBase, type Config, type Provider } from '../types'
 
 /** Box needs the redirect registered exactly, so the port is fixed. */
 const PORT = 53683
@@ -38,11 +38,12 @@ interface BoxEntry {
 }
 
 /** The file in the root folder (id 0), looked up by name through every page of the listing. */
-async function findFile(cfg: Config): Promise<BoxEntry | undefined> {
+async function findFile(cfg: Config, name?: string): Promise<BoxEntry | undefined> {
+  const want = objectName(name)
   for (let offset = 0; ; ) {
     const res = await oauthFetch(spec(cfg), `${base().api}/folders/0/items?fields=id,name,size,modified_at&limit=1000&offset=${offset}`)
     const page = (await res.json()) as { entries?: BoxEntry[]; total_count?: number }
-    const hit = page.entries?.find((e) => e.type === 'file' && e.name === FILE)
+    const hit = page.entries?.find((e) => e.type === 'file' && e.name === want)
     offset += page.entries?.length ?? 0
     if (hit || !page.entries?.length || offset >= (page.total_count ?? 0)) return hit
   }
@@ -73,24 +74,25 @@ export const box: Provider = {
     await forgetToken('box')
   },
 
-  async find(cfg) {
-    const f = await findFile(cfg)
+  async find(cfg, name) {
+    const f = await findFile(cfg, name)
     return f ? { modifiedAt: Date.parse(f.modified_at), bytes: f.size } : null
   },
 
-  async put(cfg, data) {
+  async put(cfg, data, name) {
+    const file = objectName(name)
     if (data.length > MAX_BYTES) throw new BackupError(tr("Backup-ul e prea mare pentru {provider} (limita e {limit} MB).", { provider: 'Box', limit: 50 }))
-    const id = (await findFile(cfg))?.id
+    const id = (await findFile(cfg, name))?.id
     // the attributes part has to come before the file part
     const form = new FormData()
-    form.append('attributes', JSON.stringify(id ? { name: FILE } : { name: FILE, parent: { id: '0' } }))
-    form.append('file', new Blob([new Uint8Array(data)]), FILE)
+    form.append('attributes', JSON.stringify(id ? { name: file } : { name: file, parent: { id: '0' } }))
+    form.append('file', new Blob([new Uint8Array(data)]), file)
     await oauthFetch(spec(cfg), `${base().upload}/files/${id ? `${id}/` : ''}content`, { method: 'POST', body: form })
   },
 
   /** The download is a redirect to a temporary address (followed by hand, so the token stays here); 202 means "not ready yet, retry in a moment". */
-  async get(cfg) {
-    const f = await findFile(cfg)
+  async get(cfg, name) {
+    const f = await findFile(cfg, name)
     if (!f) throw new BackupError(tr("Nu există niciun backup în acest loc."))
     const url = `${base().api}/files/${f.id}/content`
     for (let wait = 0; wait < MAX_WAITS; wait++) {
@@ -106,5 +108,10 @@ export const box: Provider = {
       return Buffer.from(await file.arrayBuffer())
     }
     throw new BackupError(tr("{provider} a răspuns cu eroarea {code}.", { provider: 'Box', code: 202 }))
+  },
+
+  async remove(cfg, name) {
+    const f = await findFile(cfg, name)
+    if (f) await oauthFetch(spec(cfg), `${base().api}/files/${f.id}`, { method: 'DELETE' }, [404])
   }
 }

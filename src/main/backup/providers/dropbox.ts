@@ -2,13 +2,13 @@
 // A public client: PKCE instead of an app secret.
 import { tr } from '@shared/i18n'
 import { forgetToken, oauthConnect, oauthFetch, type OAuthSpec } from '../oauth'
-import { BackupError, pictureOf, FILE, mockBase, type Config, type Provider } from '../types'
+import { BackupError, pictureOf, objectName, mockBase, type Config, type Provider } from '../types'
 
 /** Dropbox only accepts the redirect that is registered letter for letter, so the port is fixed. */
 const PORT = 53682
 /** upload endpoint limit (150 MiB); bigger needs an upload session */
 const MAX_BYTES = 150 * 1024 * 1024
-const PATH = `/${FILE}`
+const pathOf = (name?: string): string => `/${objectName(name)}`
 
 const base = (): { auth: string; token: string; api: string; content: string } => {
   const m = mockBase()
@@ -59,25 +59,30 @@ export const dropbox: Provider = {
     await forgetToken('dropbox')
   },
 
-  async find(cfg) {
-    const res = await oauthFetch(spec(cfg), `${base().api}/files/get_metadata`, { method: 'POST', headers: rpc, body: JSON.stringify({ path: PATH }) }, [409])
+  async find(cfg, name) {
+    const res = await oauthFetch(spec(cfg), `${base().api}/files/get_metadata`, { method: 'POST', headers: rpc, body: JSON.stringify({ path: pathOf(name) }) }, [409])
     if (res.status === 409 && (await notFound(res))) return null
     const f = (await res.json()) as { size: number; server_modified: string }
     return { modifiedAt: Date.parse(f.server_modified), bytes: f.size }
   },
 
-  async put(cfg, data) {
+  async put(cfg, data, name) {
     if (data.length > MAX_BYTES) throw new BackupError(tr("Backup-ul e prea mare pentru {provider} (limita e {limit} MB).", { provider: 'Dropbox', limit: 150 }))
     await oauthFetch(spec(cfg), `${base().content}/files/upload`, {
       method: 'POST',
-      headers: { 'content-type': 'application/octet-stream', 'dropbox-api-arg': JSON.stringify({ path: PATH, mode: 'overwrite' }) },
+      headers: { 'content-type': 'application/octet-stream', 'dropbox-api-arg': JSON.stringify({ path: pathOf(name), mode: 'overwrite' }) },
       body: new Uint8Array(data)
     })
   },
 
-  async get(cfg) {
-    const res = await oauthFetch(spec(cfg), `${base().content}/files/download`, { method: 'POST', headers: { 'dropbox-api-arg': JSON.stringify({ path: PATH }) } }, [409])
+  async get(cfg, name) {
+    const res = await oauthFetch(spec(cfg), `${base().content}/files/download`, { method: 'POST', headers: { 'dropbox-api-arg': JSON.stringify({ path: pathOf(name) }) } }, [409])
     if (res.status === 409 && (await notFound(res))) throw new BackupError(tr("Nu există niciun backup în acest loc."))
     return Buffer.from(await res.arrayBuffer())
+  },
+
+  async remove(cfg, name) {
+    const res = await oauthFetch(spec(cfg), `${base().api}/files/delete_v2`, { method: 'POST', headers: rpc, body: JSON.stringify({ path: pathOf(name) }) }, [409])
+    if (res.status === 409) await notFound(res)
   }
 }
