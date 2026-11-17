@@ -166,7 +166,7 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
   const total = useMemo(() => NODES.reduce((a, n) => a + stats.count[n.id], 0), [stats.count])
   const speed = useThroughput(total)
   // the light runs to where the model works, but not while it waits for the user
-  const target = phase.on && !waiting ? stats.target : null
+  const target = waiting ? null : stats.target
   const pulses = usePulses({ target, counts: stats.count, speed })
   const tilt = useTilt()
   useOrbTheme()

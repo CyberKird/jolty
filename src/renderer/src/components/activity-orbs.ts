@@ -187,7 +187,7 @@ export function orb(state: OrbState, size: number): { back: string; front: strin
   const accent = hex(accentCss || '#ffffff')
   // how much light is inside: an obsidian orb shows it as a glow pooled at its base, glass and pearl can take more
   const k = m.dark && m.opacity === 1 ? 0.55 : 1
-  const glow = k * (state === 'on' ? 0.8 : state === 'wait' ? 0.55 : state === 'core-on' ? 0.6 : state === 'core-wait' ? 0.5 : state === 'core' ? 0.18 : 0)
+  const glow = k * (state === 'on' ? 0.8 : state === 'wait' ? 0.55 : state === 'core-on' ? 0.85 : state === 'core-wait' ? 0.5 : state === 'core' ? 0.18 : 0)
   // a used place is lit a little; idle ones are a shade darker
   const mm = state === 'idle' ? { ...m, body: m.body.map((v, i) => m.shade[i] + (v - m.shade[i]) * (m.dark ? 0.75 : 0.96)) as RGB } : m
   const out = { back: paint(px, mm, glow, accent, false).toDataURL(), front: paint(px, mm, glow, accent, true).toDataURL() }

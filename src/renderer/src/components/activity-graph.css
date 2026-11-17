@@ -59,6 +59,7 @@
 }
 .ag-fibre.lit {
   stroke: var(--ag-lit);
+  stroke-width: 1.3;
 }
 .ag-cv {
   position: absolute;
@@ -164,7 +165,7 @@
 }
 .ag-engine em {
   font-style: normal;
-  color: var(--grey-2);
+  color: var(--ag-caption);
   margin-left: 0.4em;
 }
 
@@ -175,7 +176,7 @@
   font-family: var(--label);
   font-size: max(10px, calc(var(--u) * 9.6));
   font-weight: 500;
-  color: var(--grey-2);
+  color: var(--ag-caption);
   white-space: nowrap;
 }
 
@@ -253,15 +254,8 @@
 .ag-node.on .ag-orb-glow,
 .actgraph.live-on .ag-core > .ag-orb-glow {
   opacity: 1;
-  animation: ag-glow 1.3s ease-in-out infinite alternate;
-}
-@keyframes ag-glow {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0.3;
-  }
+  /* set every frame while it breathes: a transition would keep the compositor busy at the screen's rate */
+  transition: none;
 }
 @media (hover: hover) {
   .ag-key:hover .ag-tile {
@@ -358,19 +352,11 @@
 }
 
 /* ---- the core at work: its light breathes, a highlight turns, each call sends a ripple out ---- */
+/* the core at work: its light is on (activity-pulses.ts makes it breathe in its 30 fps frames); each call sends a ripple out */
 .actgraph.live-on .ag-core-halo {
   opacity: 1;
-  animation: ag-breathe 2.4s ease-in-out infinite alternate;
-}
-@keyframes ag-breathe {
-  from {
-    transform: scale(calc(0.9 * var(--ag-g, 1)));
-    opacity: 0.55;
-  }
-  to {
-    transform: scale(calc(1.06 * var(--ag-g, 1)));
-    opacity: 1;
-  }
+  transform: scale(var(--ag-g, 1));
+  transition: none;
 }
 .ag-core-ripple {
   animation: ag-ripple 0.9s var(--e-out, ease-out);
@@ -434,10 +420,6 @@ html.reduce-motion .actgraph *::after {
 html.low-power .ag-stage,
 html.reduce-motion .ag-stage {
   transform: none !important;
-}
-html.low-power .actgraph.live-on .ag-core-halo,
-html.reduce-motion .actgraph.live-on .ag-core-halo {
-  transform: scale(var(--ag-g, 1));
 }
 .live.closed .actgraph * {
   animation-play-state: paused;

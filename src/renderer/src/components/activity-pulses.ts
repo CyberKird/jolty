@@ -48,7 +48,7 @@ export function usePulses(o: { target: Node | null; counts: Record<Node, number>
 } {
   const box = useRef<HTMLDivElement>(null)
   const cv = useRef<HTMLCanvasElement>(null)
-  const st = useRef({ raf: 0, last: 0, k: 1, packets: [] as Packet[], target: o.target, speed: o.speed, t0: performance.now(), seen: false, ink: '', head: '' })
+  const st = useRef({ raf: 0, last: 0, k: 1, packets: [] as Packet[], target: o.target, speed: o.speed, t0: performance.now(), seen: false, ink: '', head: '', glow: [] as HTMLElement[], g: 1 })
   st.current.target = o.target
   st.current.speed = o.speed
 
@@ -108,13 +108,29 @@ export function usePulses(o: { target: Node | null; counts: Record<Node, number>
       }
     }
     ctx.globalAlpha = 1
+    // the core's light breathes and the working orb glows in the same frames (30 a second), not at the screen's rate
+    if (s.target) {
+      const b = 0.5 + 0.5 * Math.sin(((now - s.t0) / 2400) * Math.PI * 2)
+      s.glow.forEach((el, i) => {
+        el.style.opacity = (i === 0 ? 0.55 + 0.45 * b : 0.35 + 0.65 * b).toFixed(3)
+        if (i === 0) el.style.transform = `scale(${(s.g * (0.9 + 0.16 * b)).toFixed(3)})`
+      })
+    }
     return s.packets.length > 0 || !!s.target
+  }
+  const rest = (): void => {
+    for (const el of st.current.glow) {
+      el.style.opacity = ''
+      el.style.transform = ''
+    }
+    st.current.glow = []
   }
 
   const run = (): void => {
     const s = st.current
     cancelAnimationFrame(s.raf)
     s.raf = 0
+    rest()
     const c = cv.current
     if (!c || !s.seen || document.hidden) return
     if (still()) {
@@ -126,6 +142,10 @@ export function usePulses(o: { target: Node | null; counts: Record<Node, number>
     const cs = getComputedStyle(c)
     s.ink = cs.getPropertyValue('--ag-pulse').trim() || '#ffffff'
     s.head = cs.getPropertyValue('--ag-pulse-head').trim() || '#ffffff'
+    s.g = Number(cs.getPropertyValue('--ag-g')) || 1
+    // the layers that breathe: the core's halo first, then the glow inside the working orbs
+    const box0 = box.current
+    if (box0 && s.target) s.glow = [box0.querySelector<HTMLElement>('.ag-core-halo'), ...box0.querySelectorAll<HTMLElement>('.ag-node.on .ag-orb-glow, .ag-core > .ag-orb-glow')].filter((e): e is HTMLElement => !!e)
     const tick = (now: number): void => {
       if (now - s.last < FRAME_MS - 2) {
         s.raf = requestAnimationFrame(tick)
@@ -134,6 +154,7 @@ export function usePulses(o: { target: Node | null; counts: Record<Node, number>
       s.last = now
       if (still()) return run()
       s.raf = paint(now) ? requestAnimationFrame(tick) : 0
+      if (!s.raf) rest()
     }
     s.raf = requestAnimationFrame(tick)
   }

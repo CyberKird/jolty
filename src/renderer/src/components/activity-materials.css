@@ -27,6 +27,8 @@
   --ag-cut: var(--s1);
   --ag-core-ink: var(--white);
   --ag-core-ink-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  /* the rows' names: quieter than the places' names, still 4.5:1 on the panel */
+  --ag-caption: var(--grey-2);
 }
 .actgraph.wait {
   --ag-accent: var(--warning);
@@ -36,7 +38,7 @@
 
 /* ---- Glass ---- */
 html[data-theme='glass'] .actgraph {
-  --ag-lit: rgba(var(--volt-rgb), 0.85);
+  --ag-lit: #e9e3ff;
   --ag-pulse-head: #ffffff;
   --ag-sheath: rgba(12, 10, 34, 0.55);
   --ag-fibre: rgba(255, 255, 255, 0.16);
@@ -51,6 +53,7 @@ html[data-theme='glass'] .actgraph {
   --ag-badge-ink: #1a1830;
   --ag-cut: rgba(20, 18, 44, 0.9);
   --ag-core-ink-shadow: 0 1px 2px rgba(8, 6, 30, 0.8);
+  --ag-caption: #c2c1d8;
 }
 
 /* ---- Frost ---- */
