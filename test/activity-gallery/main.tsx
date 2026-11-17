@@ -38,7 +38,7 @@ const phases = {
   approval: { key: 'approval', on: true, name: 'Așteaptă aprobarea ta' }
 }
 const mode = q.get('state')
-const scenes: { label: string; items: ChatItem[]; phase: (typeof phases)['idle'] }[] = mode
+const scenes: { label: string; items: ChatItem[]; phase: (typeof phases)['idle'] }[] = mode === 'liquid' ? [] : mode
   ? [{ label: mode, items: mode === 'idle' ? base : busy, phase: phases[mode as keyof typeof phases] }]
   : [
       { label: 'idle', items: base, phase: phases.idle },
@@ -47,6 +47,7 @@ const scenes: { label: string; items: ChatItem[]; phase: (typeof phases)['idle']
     ]
 
 function Gallery() {
+  if (mode === 'blank') return <aside className="live" style={{ width: w, maxWidth: 'none', minHeight: '100vh' }} />
   return (
     <div style={{ display: 'flex', gap: 0, minHeight: '100vh' }}>
       <aside className="live" style={{ width: w, maxWidth: 'none' }}>
@@ -56,14 +57,14 @@ function Gallery() {
             <div className="state-name">{s.phase.name}</div>
           </div>
         ))}
-        <div className="live-section" data-scene="liquid" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        {(!mode || mode === 'liquid') && (<div className="live-section" data-scene="liquid" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
           {[0, 12, 41, 78, 92].map((p) => (
-            <Liquid key={p} pct={p} size={21} high={p >= 80} />
+            <Liquid key={p} pct={p} size={21} high={p >= 80} calm={q.has('calm')} />
           ))}
           {[41, 92].map((p) => (
-            <Liquid key={`b${p}`} pct={p} size={64} high={p >= 80} />
+            <Liquid key={`b${p}`} pct={p} size={64} high={p >= 80} calm={q.has('calm')} />
           ))}
-        </div>
+        </div>)}
       </aside>
     </div>
   )

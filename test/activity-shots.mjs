@@ -51,12 +51,14 @@ if (mode === 'shots') {
   for (const t of THEMES)
     for (const w of sizes) jobs.push({ url: `${page}?theme=${t}&w=${w}`, w, h: 1180, out: path.join(shots, `${label}-${t}-${w}.png`) })
   for (const t of THEMES) jobs.push({ url: `${page}?theme=${t}&w=372&lp=1`, w: 372, h: 1180, out: path.join(shots, `${label}-${t}-lowpower.png`) })
+  // the first page of a fresh process paints late (fonts): give it longer
+  if (jobs[0]) jobs[0].wait = 4000
   await run({ JOBS: JSON.stringify(jobs), DSF: process.env.DSF || '2' })
   console.log('shots in', shots)
 } else {
   const results = []
   for (const t of (process.env.THEMES || 'volt').split(','))
-    for (const state of ['idle', 'run']) {
+    for (const state of (process.env.STATES || 'blank,idle,run').split(',')) {
       const out = await run({ PERF: JSON.stringify({ url: `${page}?theme=${t}&w=372&state=${state}`, w: 420, h: 520, seconds: Number(process.env.SECONDS || 10), label: `${t}-${state}` }), DSF: '1.5' })
       const line = out.split('\n').find((l) => l.startsWith('PERF '))
       if (line) results.push(JSON.parse(line.slice(5)))
