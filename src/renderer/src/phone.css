@@ -175,13 +175,13 @@
     max-width: none;
   }
 
-  /* the thinking levels fit the menu's width */
+  /* the thinking levels fill the menu's width and wrap like on the PC (styles.css), each a full thumb's height */
   html.remote .picker-foot .segmented {
     width: 100%;
   }
   html.remote .picker-foot .segmented button {
-    flex: 1;
-    padding: 0 2px;
+    min-height: 44px;
+    padding: 0 8px;
     letter-spacing: 0.04em;
     font-size: 11px;
   }

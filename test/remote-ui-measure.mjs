@@ -57,6 +57,8 @@ export function measurePhone() {
     const s = getComputedStyle(e)
     const hides = (s.overflowX !== 'visible' && s.overflowX !== 'auto' && s.overflowX !== 'scroll')
     if (hides && e.scrollWidth > e.clientWidth + 2 && s.textOverflow !== 'ellipsis' && !s.webkitLineClamp?.match(/\d/)) out.clipped.push(`${name(e)} ${e.scrollWidth} > ${e.clientWidth}`)
+    // a label that does not fit and is not clipped runs into whatever sits next to it (a word over the next button)
+    if (!hides && s.whiteSpace.startsWith('nowrap') && e.matches('button, [role="radio"], [role="tab"], .chip, .tag') && e.scrollWidth > e.clientWidth + 1) out.clipped.push(`${name(e)} spills ${e.scrollWidth} > ${e.clientWidth}`)
     if (hides && e.scrollHeight > e.clientHeight + 3 && s.webkitLineClamp === 'none' && s.overflowY !== 'auto' && s.overflowY !== 'scroll' && s.textOverflow !== 'ellipsis') out.clipped.push(`${name(e)} h ${e.scrollHeight} > ${e.clientHeight}`)
   }
   // 4. tap targets: 44 px on both sides (a link inside running text is exempt, as WCAG 2.5.8 allows)

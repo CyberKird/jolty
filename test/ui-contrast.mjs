@@ -8,6 +8,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { _electron as electron } from 'playwright-core'
 import { realContrast } from './remote-ui-contrast.mjs'
+import { measurePhone } from './remote-ui-measure.mjs'
 
 const out = path.resolve(process.env.SHOTS || 'shots-remote')
 fs.mkdirSync(path.join(out, 'desktop'), { recursive: true })
@@ -18,8 +19,8 @@ const items = [
   { kind: 'user', id: 'u1', text: 'Make the bridge deck longer' },
   { kind: 'assistant', id: 'a1', text: 'Done. The deck is now **12 m** long. See [the notes](https://example.com).\n\n```py\nbpy.data.objects["Deck"].scale.x = 1.5\n```\n\n> A quoted line\n\n| Part | Length |\n|---|---|\n| Deck | 12 m |' }
 ]
-fs.writeFileSync(path.join(data, 'profiles.json'), JSON.stringify([{ id: 'p1', name: 'Tools', engine: 'claude', auth: 'subscription', color: '#d97757' }]))
-fs.writeFileSync(path.join(data, 'sessions.json'), JSON.stringify([{ id: 's1', profileId: 'p1', engine: 'claude', cwd: data, title: 'Blender bridge', permissionMode: 'ask', createdAt: 1, updatedAt: 100 }, ...Array.from({ length: 6 }, (_, i) => ({ id: `o${i}`, profileId: 'p1', engine: 'claude', cwd: data, title: `Older ${i}`, permissionMode: 'ask', createdAt: 1, updatedAt: 50 - i }))]))
+fs.writeFileSync(path.join(data, 'profiles.json'), JSON.stringify([{ id: 'p1', name: 'Tools', engine: 'claude', auth: 'subscription', color: '#d97757' }, { id: 'p2', name: 'NanoGPT', engine: 'claude', auth: 'endpoint', baseUrl: 'https://nano-gpt.com/api', models: ['zai-org/glm-5'], color: '#7aa2ff' }]))
+fs.writeFileSync(path.join(data, 'sessions.json'), JSON.stringify([{ id: 's1', profileId: 'p2', model: 'zai-org/glm-5', engine: 'claude', cwd: data, title: 'Blender bridge', permissionMode: 'ask', createdAt: 1, updatedAt: 100 }, ...Array.from({ length: 6 }, (_, i) => ({ id: `o${i}`, profileId: 'p1', engine: 'claude', cwd: data, title: `Older ${i}`, permissionMode: 'ask', createdAt: 1, updatedAt: 50 - i }))]))
 fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ language: 'en', lastCwd: data }))
 fs.mkdirSync(path.join(data, 'transcripts'))
 fs.writeFileSync(path.join(data, 'transcripts', 's1.json'), JSON.stringify(items))
@@ -54,6 +55,17 @@ try {
       await win.locator('.new-chat').first().click()
       await win.waitForTimeout(800)
     },
+    // the narrowest PC window with the live panel open: the model menu of a model with every thinking level (7 buttons at its foot)
+    thinking: async () => {
+      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(960, 700))
+      await win.locator('.session-item').first().click({ position: { x: 12, y: 12 } })
+      await win.waitForSelector('.msg-assistant .md')
+      await win.locator('.composer-bar .picker > .picker-btn').first().click()
+      await win.waitForSelector('.picker-foot .segmented')
+      // the pointer off the list, so no row's tooltip lies over the others
+      await win.mouse.move(2, 2)
+      await win.waitForTimeout(400)
+    },
     settings: nav('Settings'),
     accounts: nav('Accounts'),
     usage: nav('Usage'),
@@ -70,11 +82,20 @@ try {
       await win.keyboard.press('Escape').catch(() => undefined)
       await go()
       await settle()
-      await win.mouse.move(2, 300)
+      if (id !== 'thinking') await win.mouse.move(2, 300)
       if (id === 'sidebar-hover') await win.locator('.session-item:not(.active)').first().hover()
       // a hover cross-fades the time and the row buttons: measured once it has settled
       await win.waitForTimeout(400)
       const bad = await realContrast(win)
+      if (id === 'thinking') {
+        const m = await win.evaluate(measurePhone)
+        // the strip's buttons: none over another, no word running out of its button
+        bad.push(...m.overlap.filter((o) => o.includes('picker') || o.includes('button')), ...m.clipped.filter((c) => c.includes('spills') || c.includes('segmented')))
+        await win.screenshot({ path: path.join(out, 'desktop', `${t}-thinking-960.png`) })
+        await win.keyboard.press('Escape')
+        await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1440, 900))
+        await win.waitForTimeout(400)
+      }
       await win.screenshot({ path: path.join(out, 'desktop', `${t}-${id}.png`) })
       const low = bad.map((b) => Number(b.match(/ ([\d.]+) < /)?.[1])).filter(Number.isFinite)
       report.push({ theme: t, screen: id, lowest: low.length ? Math.min(...low) : null, bad })

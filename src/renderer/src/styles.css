@@ -2923,15 +2923,32 @@ html:is([data-theme='glass'], [data-theme='frost']) .question-option kbd {
   text-transform: uppercase;
   color: var(--grey-2);
 }
-/* the effort row takes the menu width and shares it between the buttons, so it never sticks out */
+/* the effort row takes the menu width: each level is as wide as its word (never narrower, so no label runs into the next), the
+   spare width is shared out, and in a narrow menu the levels go on to a second row. The lines between them are each button's own
+   end and bottom edge, pulled 1 px under the next one; the row's frame trims the outer ones, so a wrapped row keeps a clean grid. */
 .picker-foot .segmented {
   flex: 1 1 100%;
   min-width: 0;
+  flex-wrap: wrap;
+  overflow: hidden;
 }
 .picker-foot .segmented button {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 0 4px;
+  flex: 1 1 auto;
+  min-width: max-content;
+  padding: 0 10px;
+  border-inline-end: 1px solid var(--line);
+  border-block-end: 1px solid var(--line);
+  margin-inline-end: -1px;
+  margin-block-end: -1px;
+}
+/* Glass and Frost draw the levels as separate pills: a small gap between them instead of the grid lines */
+html:is([data-theme='glass'], [data-theme='frost']) .picker-foot .segmented {
+  gap: 4px;
+  padding: 3px;
+}
+html:is([data-theme='glass'], [data-theme='frost']) .picker-foot .segmented button {
+  border: 0;
+  margin: 0;
 }
 .picker-foot .segmented button:focus-visible {
   outline: 1px solid var(--volt);

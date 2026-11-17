@@ -14,8 +14,8 @@ const items = [
 
 export async function openPhone({ port, prefix = 'jolty-remote-phone-', lang = 'en', size = [390, 844] }) {
   const data = fs.mkdtempSync(path.join(os.tmpdir(), prefix))
-  fs.writeFileSync(path.join(data, 'profiles.json'), JSON.stringify([{ id: 'p1', name: 'Tools', engine: 'claude', auth: 'subscription', color: '#d97757' }]))
-  fs.writeFileSync(path.join(data, 'sessions.json'), JSON.stringify([{ id: 's1', profileId: 'p1', engine: 'claude', cwd: data, title: long, permissionMode: 'ask', createdAt: 1, updatedAt: 100 }, ...Array.from({ length: 6 }, (_, i) => ({ id: `o${i}`, profileId: 'p1', engine: 'claude', cwd: data, title: `Older ${i}`, permissionMode: 'ask', createdAt: 1, updatedAt: 50 - i }))]))
+  fs.writeFileSync(path.join(data, 'profiles.json'), JSON.stringify([{ id: 'p1', name: 'Tools', engine: 'claude', auth: 'subscription', color: '#d97757' }, { id: 'p2', name: 'NanoGPT', engine: 'claude', auth: 'endpoint', baseUrl: 'https://nano-gpt.com/api', models: ['zai-org/glm-5'], color: '#7aa2ff' }]))
+  fs.writeFileSync(path.join(data, 'sessions.json'), JSON.stringify([{ id: 's1', profileId: 'p2', model: 'zai-org/glm-5', engine: 'claude', cwd: data, title: long, permissionMode: 'ask', createdAt: 1, updatedAt: 100 }, ...Array.from({ length: 6 }, (_, i) => ({ id: `o${i}`, profileId: 'p1', engine: 'claude', cwd: data, title: `Older ${i}`, permissionMode: 'ask', createdAt: 1, updatedAt: 50 - i }))]))
   fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ language: lang, lastCwd: data }))
   fs.writeFileSync(path.join(data, 'remote.json'), JSON.stringify({ enabled: true, port, devices: [] }))
   fs.mkdirSync(path.join(data, 'transcripts'))
@@ -105,7 +105,19 @@ export async function openPhone({ port, prefix = 'jolty-remote-phone-', lang = '
         await openChat()
         await drawer(false)
         await phone.locator('.composer-bar .picker > .picker-btn').first().click()
+        await phone.mouse.move(1, 1)
         await phone.waitForTimeout(500)
+      },
+      // the model menu of a model with every thinking level: the level strip at its foot (7 buttons) must not run into itself
+      thinking: async () => {
+        await openChat()
+        await drawer(false)
+        await phone.locator('.composer-bar .picker > .picker-btn').first().click()
+        await phone.waitForSelector('.picker-foot .segmented')
+        await phone.locator('.picker-foot').scrollIntoViewIfNeeded()
+        // a finger leaves no pointer resting on a row (a mouse there would open the row's tooltip over the list)
+        await phone.mouse.move(1, 1)
+        await phone.waitForTimeout(400)
       },
       folders: async () => {
         await newChat()
