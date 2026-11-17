@@ -1,0 +1,103 @@
+/* What each theme makes of the activity board (layout in activity-graph.css). One idea in three materials:
+   - Volt: a hardware panel. Matte black keys with a machined top edge and a lime indicator light, a brushed-metal puck for the core,
+     hairline traces in a dark groove, like a circuit board.
+   - Glass: glass pucks with a lit rim over the aurora, a clear glass sphere for the core, the lavender light inside the fibres.
+   - Frost: white enamel keys with a soft drop shadow in daylight, a milky sphere, coral light.
+   Everything is painted once; nothing here animates. Colours come from the theme tokens where a token exists. */
+
+/* ---- Volt (the base) ---- */
+.actgraph {
+  --ag-accent: var(--volt);
+  --ag-glow-rgb: var(--volt-rgb);
+  --ag-arc: var(--volt);
+  --ag-lit: rgba(var(--volt-rgb), 0.7);
+  --ag-pulse: var(--volt);
+  --ag-pulse-head: #fbffe6;
+  --ag-sheath: #121318;
+  --ag-fibre: #262931;
+  --ag-fibre-used: #3d414b;
+  --ag-tick: #2c3038;
+  --ag-track: #1b1e24;
+  --ag-r: calc(var(--u) * 3.5);
+  --ag-key: linear-gradient(180deg, #1b1e24 0%, #121418 100%);
+  --ag-key-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.075), inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 -2px 0 rgba(0, 0, 0, 0.45), 0 1px 0 #000, 0 calc(var(--u) * 4) calc(var(--u) * 7) calc(var(--u) * -3) rgba(0, 0, 0, 0.9);
+  --ag-key-on: inset 0 1px 0 rgba(255, 255, 255, 0.09), inset 0 0 0 1px rgba(var(--volt-rgb), 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.45), 0 1px 0 #000, 0 calc(var(--u) * 4) calc(var(--u) * 7) calc(var(--u) * -3) rgba(0, 0, 0, 0.9);
+  --ag-icon: #6f737d;
+  --ag-icon-used: #d6d8dc;
+  --ag-icon-on: var(--volt);
+  --ag-led-off: #262a31;
+  --ag-led-off-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+  --ag-badge: #2a2e36;
+  --ag-badge-ink: #eceef1;
+  --ag-cut: var(--s1);
+  /* the core: a dark puck of brushed metal, a glint on its top edge */
+  --ag-core-body: radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 42%), repeating-conic-gradient(from 8deg, rgba(255, 255, 255, 0.035) 0 3deg, rgba(0, 0, 0, 0.05) 3deg 6deg), radial-gradient(circle at 50% 40%, #23262d, #0b0c0f 78%);
+  --ag-core-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 -3px 6px rgba(0, 0, 0, 0.6), 0 calc(var(--u) * 5) calc(var(--u) * 10) calc(var(--u) * -3) rgba(0, 0, 0, 0.9);
+  --ag-core-spec: conic-gradient(from 300deg, transparent 0deg, rgba(255, 255, 255, 0.13) 30deg, transparent 70deg, transparent 180deg, rgba(var(--volt-rgb), 0.12) 210deg, transparent 250deg);
+  --ag-core-ink: var(--white);
+}
+.actgraph.wait {
+  --ag-accent: var(--warning);
+  --ag-arc: var(--warning);
+  --ag-glow-rgb: 250, 178, 25;
+}
+
+/* ---- Glass ---- */
+html[data-theme='glass'] .actgraph {
+  --ag-lit: rgba(var(--volt-rgb), 0.85);
+  --ag-pulse-head: #ffffff;
+  --ag-sheath: rgba(12, 10, 34, 0.55);
+  --ag-fibre: rgba(255, 255, 255, 0.16);
+  --ag-fibre-used: rgba(255, 255, 255, 0.34);
+  --ag-tick: rgba(255, 255, 255, 0.22);
+  --ag-track: rgba(255, 255, 255, 0.1);
+  --ag-r: calc(var(--u) * 9);
+  --ag-key: radial-gradient(120% 90% at 28% 8%, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.05) 52%, rgba(255, 255, 255, 0.02)), rgba(28, 24, 58, 0.6);
+  --ag-key-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 1.5px 0.5px -0.5px rgba(255, 255, 255, 0.8), inset 0 -1.5px 1px -1px rgba(255, 255, 255, 0.3), inset 2px 0 3px -2px rgba(80, 220, 255, 0.45), inset -2px 0 3px -2px rgba(255, 120, 200, 0.4), 0 calc(var(--u) * 5) calc(var(--u) * 9) calc(var(--u) * -3) rgba(4, 2, 20, 0.7);
+  --ag-key-on: inset 0 0 0 1px rgba(var(--volt-rgb), 0.75), inset 0 1.5px 0.5px -0.5px rgba(255, 255, 255, 0.85), inset 0 0 calc(var(--u) * 8) rgba(var(--volt-rgb), 0.28), 0 calc(var(--u) * 5) calc(var(--u) * 9) calc(var(--u) * -3) rgba(4, 2, 20, 0.7);
+  --ag-icon: rgba(244, 243, 252, 0.5);
+  --ag-icon-used: #f4f3fc;
+  --ag-icon-on: #ffffff;
+  --ag-led-off: rgba(255, 255, 255, 0.14);
+  --ag-led-off-shadow: none;
+  --ag-badge: rgba(244, 243, 252, 0.92);
+  --ag-badge-ink: #1a1830;
+  --ag-cut: rgba(20, 18, 44, 0.9);
+  /* the core: a clear glass sphere, a hard highlight top left, the light pooled at the bottom, a lit rim */
+  --ag-core-body: radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.9) 0 4%, rgba(255, 255, 255, 0.28) 13%, rgba(255, 255, 255, 0) 34%), radial-gradient(circle at 55% 88%, rgba(var(--volt-rgb), 0.55), rgba(var(--volt-rgb), 0) 55%), radial-gradient(circle at 50% 50%, rgba(40, 32, 90, 0.35), rgba(16, 12, 40, 0.8) 72%);
+  --ag-core-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32), inset 0 -4px 7px -2px rgba(150, 220, 255, 0.35), inset 3px 0 5px -3px rgba(80, 220, 255, 0.55), inset -3px 0 5px -3px rgba(255, 120, 200, 0.5), 0 calc(var(--u) * 6) calc(var(--u) * 12) calc(var(--u) * -3) rgba(4, 2, 20, 0.75);
+  --ag-core-spec: conic-gradient(from 200deg, transparent 0deg, rgba(255, 255, 255, 0.32) 24deg, transparent 60deg, transparent 200deg, rgba(120, 220, 255, 0.22) 226deg, transparent 260deg);
+  --ag-core-ink-shadow: 0 1px 2px rgba(8, 6, 30, 0.7);
+}
+
+/* ---- Frost ---- */
+html[data-theme='frost'] .actgraph {
+  --ag-arc: var(--volt);
+  --ag-lit: rgba(var(--volt-rgb), 0.85);
+  --ag-pulse-head: #fff6f3;
+  --ag-sheath: rgba(255, 255, 255, 0.85);
+  --ag-fibre: #c5cad8;
+  --ag-fibre-used: #9097ad;
+  --ag-tick: rgba(30, 36, 70, 0.22);
+  --ag-track: rgba(30, 36, 70, 0.1);
+  --ag-r: calc(var(--u) * 9);
+  --ag-key: linear-gradient(180deg, #ffffff 0%, #f1f3f8 100%);
+  --ag-key-shadow: inset 0 1px 0 #fff, inset 0 -1.5px 0 rgba(30, 36, 70, 0.07), 0 0 0 1px rgba(30, 36, 70, 0.07), 0 calc(var(--u) * 1) calc(var(--u) * 1.5) rgba(40, 50, 100, 0.08), 0 calc(var(--u) * 5) calc(var(--u) * 9) calc(var(--u) * -3) rgba(40, 50, 100, 0.3);
+  --ag-key-on: inset 0 1px 0 #fff, inset 0 0 0 1px rgba(var(--volt-rgb), 0.7), inset 0 0 calc(var(--u) * 7) rgba(var(--volt-rgb), 0.16), 0 calc(var(--u) * 5) calc(var(--u) * 10) calc(var(--u) * -3) rgba(var(--volt-rgb), 0.45);
+  --ag-icon: #8a8fa4;
+  --ag-icon-used: #2a2d3e;
+  --ag-icon-on: #c8402e;
+  --ag-led-off: #e3e6ee;
+  --ag-led-off-shadow: inset 0 1px 1px rgba(30, 36, 70, 0.18);
+  --ag-badge: #e2e5ee;
+  --ag-badge-ink: #23263a;
+  --ag-cut: #eef0f6;
+  /* the core: a milky enamel sphere, soft daylight from the top left, a warm glow low inside */
+  --ag-core-body: radial-gradient(circle at 36% 26%, #ffffff 0 10%, rgba(255, 255, 255, 0) 42%), radial-gradient(circle at 55% 92%, rgba(var(--volt-rgb), 0.28), rgba(var(--volt-rgb), 0) 50%), radial-gradient(circle at 50% 45%, #fbfbfe, #dfe2ec 80%);
+  --ag-core-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), inset 0 -3px 6px rgba(30, 36, 70, 0.12), 0 0 0 1px rgba(30, 36, 70, 0.06), 0 calc(var(--u) * 6) calc(var(--u) * 12) calc(var(--u) * -3) rgba(40, 50, 100, 0.35);
+  --ag-core-spec: conic-gradient(from 200deg, transparent 0deg, rgba(255, 255, 255, 0.9) 26deg, transparent 64deg, transparent 200deg, rgba(var(--volt-rgb), 0.16) 226deg, transparent 262deg);
+  --ag-core-ink: #1c1e2c;
+}
+html[data-theme='frost'] .actgraph.wait {
+  --ag-arc: #c98a00;
+}

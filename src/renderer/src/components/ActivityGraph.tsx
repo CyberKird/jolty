@@ -4,15 +4,17 @@ import { tr } from '@shared/i18n'
 import { toolKind } from './Messages'
 import { dragShield } from '../dragShield'
 import type { Phase } from './LivePanel'
-import { useCables } from './activity-cables'
-import { BOTTOM_Y, CORE, H, LANES, NODES, TOP_Y, W, type Node } from './activity-geometry'
+import { usePulses, travelMs } from './activity-pulses'
+import { CORE, H, NODES, TOP_Y, BOTTOM_Y, W, WIRES, tileY, type Node } from './activity-geometry'
+import { ActivityCore } from './ActivityCore'
+import { useTilt } from './activity-tilt'
 
-// What the model is doing, drawn like the data board of the reference video: the model as a burst of light, a bundle
-// of four glitter cables leaving it, rising and falling in an S, then peeling off to dark tiles, one for each place it reaches. Where the
-// model is working right now, a warm rope of three strands runs straight from the light to that tile, and moving somewhere else plays the
-// transfer of the video (activity-canvas.ts). A red dot counts the commands that failed. The cables are painted on canvases and twinkle by
-// opacity, so it all runs on the graphics chip; with low-power mode or reduced motion it holds still and shows the same state. The board
-// scales with its width, which the user drags (the grip, bottom right).
+// What the model is doing, as a small control surface: the model is the core on the left (its ring is the context used), fibres fan out
+// of it into one flat bus and turn off to a tile for every place it reaches. Every call sends one packet of light down the fibre to the
+// place it used, and that tile's count ticks as it lands; where the model works right now, light runs steadily down that route, faster
+// when it works faster. A red badge counts the commands that failed. The look comes from the theme (activity-materials.css): keys on a
+// hardware panel in Volt, glass pucks in Glass, white enamel in Frost. Idle, nothing moves and nothing is drawn; with low-power mode or
+// reduced motion it holds still and shows the same state. The board scales with its width, which the user drags (the grip, bottom right).
 
 export function nodeOf(name: string): Node {
   if (/browser|playwright/i.test(name)) return 'browser'
@@ -30,7 +32,7 @@ interface Stats {
   count: Record<Node, number>
   failed: Record<Node, number>
   active: Set<Node>
-  /** where the live rope goes: the place of the newest running tool, else the model while it thinks */
+  /** where the light runs: the place of the newest running tool, else the model while it thinks */
   target: Node | null
 }
 
@@ -58,25 +60,6 @@ export function statsOf(items: ChatItem[], phase: { key: string }): Stats {
   if (!target && active.has('model')) target = 'model'
   return { count, failed, active, target }
 }
-
-// ---- the burst: dots and rays placed once, the same every time ----
-const rnd = (() => {
-  let s = 7
-  return (): number => ((s = (s * 16807) % 2147483647) - 1) / 2147483646
-})()
-const DOT_COLORS = ['#ffffff', '#d6e6ff', '#ffbfd6', '#ffdca4', '#bcb0ff']
-const DOTS = Array.from({ length: 150 }, (_, i) => {
-  const a = rnd() * Math.PI * 2
-  const r = 5 + Math.pow(rnd(), 0.75) * 34
-  // no outline round the cloud: the sparks thin out and dim towards the edge, like light
-  const o = 1 - Math.pow(r / 40, 2) * 0.85
-  return { x: CORE.x + Math.cos(a) * r, y: CORE.y + Math.sin(a) * r, r: 0.45 + rnd() * 1.05, c: DOT_COLORS[Math.floor(rnd() * DOT_COLORS.length)], g: i % 4, o }
-})
-const RAYS = Array.from({ length: 84 }, () => {
-  const a = rnd() * Math.PI * 2
-  const l = 16 + rnd() * 24
-  return { x: CORE.x + Math.cos(a) * l, y: CORE.y + Math.sin(a) * l, o: 0.22 + rnd() * 0.4 }
-})
 
 const GRID_KEY = 'jolty.activityWidth'
 const savedWidth = (): number | undefined => {
@@ -154,20 +137,24 @@ export function ActivitySizer() {
   )
 }
 
-// The burst grows with the model: more stars and rays and a bigger light for a smarter model (intelligence 0..65 of the
-// leaderboard), and a higher thinking level turns it faster and makes it twinkle quicker. Stars come and go by opacity only.
-const IQ_TOP = 65
-const EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max']
-function galaxy(iq: number | undefined, effort: string | undefined): { stars: number; rays: number; vars: CSSProperties } {
-  const q = Math.min(1, Math.max(0, (iq ?? 40) / IQ_TOP))
-  const e = EFFORTS.indexOf((effort || 'high').toLowerCase())
-  const lvl = (e < 0 ? 3 : e) / 5
-  return {
-    stars: Math.round(26 + q * (DOTS.length - 26)),
-    rays: Math.round(12 + q * (RAYS.length - 12)),
-    vars: { '--ag-g': (0.68 + q * 0.5).toFixed(3), '--ag-spin': `${Math.round(170 - lvl * 120)}s`, '--ag-tw': (1.5 - lvl * 0.75).toFixed(3), '--ag-ray': (0.5 + lvl * 0.5).toFixed(3) } as CSSProperties
-  }
+// how busy the model is: calls in the last 12 seconds make the light run faster (1 to 2.2 times)
+function useThroughput(total: number): number {
+  const times = useRef<number[]>([])
+  const last = useRef(total)
+  const [speed, setSpeed] = useState(1)
+  useEffect(() => {
+    const now = performance.now()
+    const more = total - last.current
+    last.current = total
+    for (let i = 0; i < Math.min(8, more); i++) times.current.push(now)
+    times.current = times.current.filter((t) => now - t < 12000)
+    setSpeed(1 + Math.min(1.2, times.current.length / 6))
+  }, [total])
+  return speed
 }
+
+const EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max']
+const IQ_TOP = 65
 
 export function ActivityGraph({ items, phase, engine, model, context, iq, effort }: { items: ChatItem[]; phase: Phase; engine: string; model?: string; context?: number; iq?: number; effort?: string }) {
   const stats = useMemo(() => statsOf(items, { key: phase.key }), [items, phase.key])
@@ -175,14 +162,35 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
   const pct = context === undefined ? undefined : Math.round(context)
   const [width, setWidth] = useState<number | undefined>(savedWidth)
   const wrap = useRef<HTMLDivElement>(null)
-  const cables = useCables(stats.target)
-  const gx = useMemo(() => galaxy(iq, effort), [iq, effort])
-  // the bar above the tabs sets the size too
+  const total = useMemo(() => NODES.reduce((a, n) => a + stats.count[n.id], 0), [stats.count])
+  const speed = useThroughput(total)
+  // the light runs to where the model works, but not while it waits for the user
+  const target = phase.on && !waiting ? stats.target : null
+  const pulses = usePulses({ target, counts: stats.count, speed })
+  const tilt = useTilt()
+  // no ticks and no shakes for what was already there when the board opened
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 400)
+    return () => clearTimeout(t)
+  }, [])
+  // the place the work just moved to lifts its tile once
+  const [arriving, setArriving] = useState<Node | null>(null)
+  useEffect(() => {
+    if (!target) return
+    setArriving(target)
+    const t = setTimeout(() => setArriving(null), 700)
+    return () => clearTimeout(t)
+  }, [target])
   useEffect(() => {
     const on = (e: Event): void => setWidth((e as CustomEvent<number | undefined>).detail)
     window.addEventListener(SIZE_EVENT, on)
     return () => window.removeEventListener(SIZE_EVENT, on)
   }, [])
+  // a smarter model makes a brighter core; a higher thinking level turns its light faster
+  const q = Math.min(1, Math.max(0, (iq ?? 40) / IQ_TOP))
+  const lvl = Math.max(0, EFFORTS.indexOf((effort || 'high').toLowerCase())) / 5
+  const vars = { '--ag-g': (0.55 + q * 0.45).toFixed(3), '--ag-spin': `${Math.round(14 - lvl * 9)}s` } as CSSProperties
 
   // the grip: the board scales with its width; a double click goes back to the size that fits the panel
   const drag = (e: ReactPointerEvent<HTMLButtonElement>): void => {
@@ -193,14 +201,13 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
     grip.setPointerCapture(e.pointerId)
     const start = { x: e.clientX, y: e.clientY, w: el.getBoundingClientRect().width }
     const max = (el.parentElement?.clientWidth ?? 480) - 2
-    const move = (ev: PointerEvent): void => setWidth(Math.round(Math.min(max, Math.max(200, start.w + (ev.clientX - start.x + ((ev.clientY - start.y) * W) / H) / 2))))
+    const move = (ev: PointerEvent): void => setWidth(Math.round(Math.min(max, Math.max(MIN_W, start.w + (ev.clientX - start.x + ((ev.clientY - start.y) * W) / H) / 2))))
     const up = (): void => {
       grip.removeEventListener('pointermove', move)
       grip.removeEventListener('pointerup', up)
       grip.removeEventListener('pointercancel', up)
       try {
-        const w = el.getBoundingClientRect().width
-        localStorage.setItem(GRID_KEY, String(Math.round(w)))
+        localStorage.setItem(GRID_KEY, String(Math.round(el.getBoundingClientRect().width)))
       } catch {
         // a convenience only
       }
@@ -224,55 +231,63 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
       {text}
     </span>
   )
+  const lit = (nodes: Node[]): boolean => !!target && nodes.includes(target)
+  const engineName = engine ? engine[0].toUpperCase() + engine.slice(1) : ''
   return (
     <div ref={wrap} className="ag-wrap" style={width ? ({ '--agw': `${width}px` } as CSSProperties) : undefined}>
-      <div ref={cables.box} className={`actgraph ${phase.on ? 'live-on' : ''} ${waiting ? 'wait' : ''}`} style={gx.vars} role="img" aria-label={phase.name}>
-        {/* the burst: rays and dots twinkling in four groups, fading out towards the edge */}
-        <svg className="ag-layer ag-rays" viewBox={`0 0 ${W} ${H}`} aria-hidden>
-          {RAYS.map((r, i) => (
-            <line key={i} x1={CORE.x} y1={CORE.y} x2={r.x} y2={r.y} strokeOpacity={r.o} style={{ opacity: i < gx.rays ? 1 : 0 }} />
-          ))}
-        </svg>
-        {[0, 1, 2, 3].map((g) => (
-          <svg key={g} className={`ag-layer ag-dots g${g}`} viewBox={`0 0 ${W} ${H}`} aria-hidden>
-            {DOTS.map((d, i) => ({ d, i }))
-              .filter(({ d }) => d.g === g)
-              .map(({ d, i }) => (
-              <circle key={i} cx={d.x} cy={d.y} r={d.r} fill={d.c} fillOpacity={d.o} style={{ opacity: i < gx.stars ? 1 : 0 }} />
+      <div
+        ref={pulses.box}
+        className={`actgraph ${phase.on ? 'live-on' : ''} ${waiting ? 'wait' : ''} ${ready ? 'ready' : ''}`}
+        style={vars}
+        role="img"
+        aria-label={phase.name}
+        onPointerMove={tilt.move}
+        onPointerLeave={tilt.leave}
+      >
+        <div ref={tilt.stage} className="ag-stage">
+          <svg className="ag-wires" viewBox={`0 0 ${W} ${H}`} aria-hidden>
+            {WIRES.map((w) => (
+              <path key={`s${w.id}`} className="ag-sheath" d={w.d} />
+            ))}
+            {WIRES.map((w) => (
+              <path key={w.id} className={`ag-fibre ${lit(w.nodes) ? 'lit' : ''} ${w.nodes.some((n) => stats.count[n] > 0) ? 'used' : ''}`} d={w.d} />
             ))}
           </svg>
-        ))}
+          <canvas ref={pulses.cv} className="ag-cv" aria-hidden />
 
-        {/* the glitter cables (activity-gl.ts) */}
-        <canvas ref={cables.cv} className="ag-cv" aria-hidden />
+          <ActivityCore style={at(CORE.x, CORE.y)} pct={pct} total={total} />
+          <span className="ag-engine" style={at(CORE.x, CORE.y + 36)}>
+            {engineName}
+            {pct === undefined && model ? <em>{model.length > 10 ? `${model.slice(0, 9)}…` : model}</em> : null}
+          </span>
 
-        {/* the light at the heart of the burst, and what it is */}
-        <i className="ag-glow" style={at(CORE.x, CORE.y)} />
-        <span className="ag-pill" style={at(CORE.x, CORE.y)}>
-          <b>{engine.toUpperCase()}</b>
-          {pct !== undefined ? <em>{pct}%</em> : model ? <em>{model.length > 9 ? `${model.slice(0, 8)}…` : model}</em> : null}
-        </span>
+          {caption(tr("Context"), 185, TOP_Y)}
+          {caption(tr("Unelte"), 140, BOTTOM_Y)}
 
-        {caption(tr("Context"), 198, TOP_Y)}
-        {caption(tr("Unelte"), 154, BOTTOM_Y)}
-
-        {NODES.map((n) => {
-          const on = stats.active.has(n.id)
-          const used = stats.count[n.id] > 0
-          const Icon = n.icon
-          return (
-            <div key={n.id} className={`ag-node ${on ? 'on' : ''} ${used ? 'used' : ''} ${cables.arriving === n.id ? 'arrive' : ''}`} style={{ ...at(n.x, n.row === 'top' ? TOP_Y : BOTTOM_Y), '--c': LANES[n.lane].color } as CSSProperties}>
-              <span className="ag-tile">
-                <Icon className="ag-icon" size={15} strokeWidth={1.7} />
-                {used && <span className="ag-count">{stats.count[n.id]}</span>}
-                {stats.failed[n.id] > 0 && <span className="ag-fail">{stats.failed[n.id]}</span>}
-              </span>
-              <span className={`ag-label ${n.row}`}>{n.label()}</span>
-            </div>
-          )
-        })}
-        {/* the sparks a place gathers from when the work moves there */}
-        <canvas ref={cables.fx} className="ag-cv" aria-hidden />
+          {NODES.map((n) => {
+            const on = stats.active.has(n.id)
+            const count = stats.count[n.id]
+            const failed = stats.failed[n.id]
+            const Icon = n.icon
+            return (
+              <div key={n.id} className={`ag-node ${n.row} ${on ? 'on' : ''} ${count > 0 ? 'used' : ''} ${arriving === n.id ? 'arrive' : ''}`} style={at(n.x, tileY(n))}>
+                <span key={failed} className={`ag-key ${failed > 0 ? 'shake' : ''}`} title={`${n.label()}: ${count}`}>
+                  <span className="ag-tile">
+                    <Icon className="ag-icon" size={15} strokeWidth={1.75} />
+                    <i className="ag-led" />
+                  </span>
+                  {count > 0 && (
+                    <span key={count} className="ag-count" style={{ animationDelay: `${Math.round(travelMs(n.id, speed))}ms` }}>
+                      {count}
+                    </span>
+                  )}
+                  {failed > 0 && <span className="ag-fail">{failed}</span>}
+                </span>
+                <span className="ag-label">{n.label()}</span>
+              </div>
+            )
+          })}
+        </div>
       </div>
       <button className="ag-grip" onPointerDown={drag} onDoubleClick={reset} aria-label={tr("Mărime")} title={tr("Trage ca să schimbi mărimea. Dublu clic: mărimea potrivită.")}>
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
