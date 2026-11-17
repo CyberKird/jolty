@@ -8,12 +8,21 @@ import '../../src/renderer/src/theme-glass.css'
 import '../../src/renderer/src/lowpower.css'
 import '../../src/renderer/src/components/activity-graph.css'
 import type { ChatItem } from '@shared/types'
+import { addLocales, setLang } from '@shared/i18n'
 
 const q = new URLSearchParams(location.search)
 document.documentElement.dataset.theme = q.get('theme') || 'volt'
 if (q.get('lp')) document.documentElement.classList.add('low-power')
 if (q.get('rm')) document.documentElement.classList.add('reduce-motion')
 const w = Number(q.get('w') || 372)
+// ?lang=fr: the board in another language (long names)
+const lang = q.get('lang')
+if (lang && lang !== 'ro') {
+  const dicts = import.meta.glob<Record<string, string>>('../../src/shared/locales/*.json', { import: 'default' })
+  const load = dicts[`../../src/shared/locales/${lang}.json`]
+  if (load) addLocales({ [lang]: await load() })
+  setLang(lang)
+}
 
 const { ActivityGraph } = await import('../../src/renderer/src/components/ActivityGraph')
 const { Liquid } = await import('../../src/renderer/src/components/Liquid')

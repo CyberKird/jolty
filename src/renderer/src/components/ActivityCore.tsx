@@ -26,6 +26,7 @@ export function ActivityCore({ style, pct, total, sprite }: { style: CSSProperti
       </svg>
       <i className="ag-orb-back" />
       <i className="ag-orb-glow" />
+      <i className="ag-orb-front" />
       {total !== first.current && <i key={total} className="ag-core-ripple" />}
       {pct !== undefined && (
         <span className="ag-core-val">
@@ -33,7 +34,6 @@ export function ActivityCore({ style, pct, total, sprite }: { style: CSSProperti
           <small>%</small>
         </span>
       )}
-      <i className="ag-orb-front" />
     </div>
   )
 }

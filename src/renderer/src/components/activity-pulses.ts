@@ -11,7 +11,7 @@ import { NODES, ROUTES, W, sample, type Node, type P } from './activity-geometry
 const FRAME_MS = 1000 / 30
 const BASE_SPEED = 120 // board units a second
 const TRAIN_GAP = 52
-const TAIL = 20
+const TAIL = 26
 
 interface Route {
   pts: P[]
@@ -65,36 +65,25 @@ export function usePulses(o: { target: Node | null; counts: Record<Node, number>
     const v = BASE_SPEED * s.speed
     s.packets = s.packets.filter((p) => (now - p.at) / 1000 * v < routeOf(p.node).len + TAIL)
     const pulse = (r: Route, d: number, back: boolean, alpha: number): void => {
-      // a bright head and a tail that thins and fades behind it, along the fibre
+      // a streak of light along the fibre: a bright short head and a tail that thins and fades behind it, no dot and no halo
       const dir = back ? -1 : 1
       const head = back ? r.len - d : d
-      const steps = 7
+      const steps = 8
       for (let i = 0; i < steps; i++) {
-        const a0 = head - dir * (TAIL * (i + 1)) / steps
-        const a1 = head - dir * (TAIL * i) / steps
+        const a0 = head - (dir * (TAIL * (i + 1))) / steps
+        const a1 = head - (dir * (TAIL * i)) / steps
         if ((a0 < 0 && a1 < 0) || (a0 > r.len && a1 > r.len)) continue
         const p0 = at(r, Math.max(0, Math.min(r.len, a0)))
         const p1 = at(r, Math.max(0, Math.min(r.len, a1)))
-        ctx.globalAlpha = alpha * (1 - i / steps) * 0.9
-        ctx.lineWidth = 1.5 * (1 - i / (steps * 1.4))
-        ctx.strokeStyle = s.ink
+        const f = 1 - i / steps
+        ctx.globalAlpha = alpha * f * f
+        ctx.lineWidth = 0.8 + 0.9 * f
+        ctx.strokeStyle = i === 0 ? s.head : s.ink
         ctx.beginPath()
         ctx.moveTo(p0.x, p0.y)
         ctx.lineTo(p1.x, p1.y)
         ctx.stroke()
       }
-      if (head < 0 || head > r.len) return
-      const h = at(r, head)
-      ctx.globalAlpha = alpha * 0.22
-      ctx.fillStyle = s.ink
-      ctx.beginPath()
-      ctx.arc(h.x, h.y, 3.6, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.globalAlpha = alpha
-      ctx.fillStyle = s.head
-      ctx.beginPath()
-      ctx.arc(h.x, h.y, 1.25, 0, Math.PI * 2)
-      ctx.fill()
     }
     for (const p of s.packets) pulse(routeOf(p.node), ((now - p.at) / 1000) * v, p.back, 1)
     if (s.target) {
