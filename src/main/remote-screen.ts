@@ -4,6 +4,7 @@
 // the phone's answers (remote-screen-adapt.ts). Input goes through the same native helper that computer use drives.
 // Nothing here starts unless the user switched "screen from phone" on at the PC, and the kill key stops every viewer.
 import crypto from 'crypto'
+import fs from 'fs'
 import os from 'os'
 import type { DisplayInfo } from './computer/geometry'
 import type { Ev } from './computer/plan'
@@ -61,6 +62,8 @@ export interface ScreenVideo {
   stop(): void
   /** the next picture is a whole one: a phone that lost some can start again from it */
   keyframe(): void
+  /** ms this encoder usually takes to deliver a whole picture once asked (an ffmpeg restart takes longer) */
+  keyDelay?(): number
   configure(c: EncoderConfig): void
   onVideo(cb: (c: VideoChunk) => void): void
   onAudio(cb: (c: { ts: number; data: Buffer }) => void): void
@@ -94,6 +97,8 @@ interface Viewer {
   wantsAudio: boolean
   /** a picture was dropped for this phone: it gets none until the next whole one */
   needKey: boolean
+  /** when it started waiting for a whole picture */
+  keySince: number
   adapt: Adapt
   seq: number
   last: string
@@ -196,6 +201,7 @@ export class RemoteScreen {
         return viewer.adapt.report({ fps: num(m.fps, 0, 500), dec: num(m.dec, 0, 500), decMs: num(m.decMs, 0, 10_000), q: num(m.q, 0, 1000) } satisfies PhoneReport)
       case 'keyframe':
         // the phone's decoder lost its place: the next picture is a whole one (asked for at most so often)
+        if (!viewer.needKey) viewer.keySince = Date.now()
         viewer.needKey = true
         if (viewer.adapt.askKey(Date.now())) this.video?.keyframe()
         return
@@ -226,6 +232,7 @@ export class RemoteScreen {
       wantsVideo: video && Boolean(this.video?.available()),
       wantsAudio: audio,
       needKey: false,
+      keySince: 0,
       adapt: new Adapt(Date.now(), this.opts.startLevel),
       seq: 0,
       last: '',
@@ -262,6 +269,7 @@ export class RemoteScreen {
       }
       v.mode = 'video'
       v.needKey = true
+      v.keySince = Date.now()
       this.video.keyframe()
       this.reconfigure()
     } catch (e) {
@@ -304,12 +312,13 @@ export class RemoteScreen {
       if (v.mode !== 'video' || v.display !== this.videoOn) continue
       // dropped for this phone: nothing until a whole picture, so what it decodes is never torn (asked for again when allowed)
       if (v.needKey && !c.key) {
-        v.adapt.lost(now)
+        v.adapt.skipped(now, now - v.keySince, this.video?.keyDelay?.() ?? 300)
         if (!v.adapt.step.keyOnly && v.adapt.askKey(now)) this.video?.keyframe()
         continue
       }
       if (!v.adapt.canSend(size, now) || v.client.backlog() > BACKLOG_HARD) {
         // it does not fit in what the link carries now: dropped, and a whole picture follows when there is room
+        if (!v.needKey) v.keySince = now
         v.needKey = true
         if (!v.adapt.step.keyOnly && v.adapt.askKey(now)) this.video?.keyframe()
         continue
@@ -381,6 +390,7 @@ export class RemoteScreen {
       if (this.ticks % Math.max(1, Math.round(1000 / tickMs)) === 0) {
         for (const v of this.viewers.values()) {
           const c = v.mode === 'video' ? (JSON.parse(this.config || '{}') as Partial<EncoderConfig>) : undefined
+          if (process.env.JOLTY_DEBUG_ENC) fs.appendFileSync(process.env.JOLTY_DEBUG_ENC, `adapt ${v.client.id} ${JSON.stringify({ ...v.adapt.debug(now), floor: v.adapt.floor, phone: v.adapt.lastReport })}` + String.fromCharCode(10))
           v.client.send({ t: 'screen', op: 'net', mode: v.mode, ...v.adapt.stats(now), fps: v.adapt.step.fps, height: c?.height ?? 0, busy: this.load.floor > 0 })
         }
       }

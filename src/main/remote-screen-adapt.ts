@@ -99,6 +99,8 @@ export class Adapt {
   private cutUntil = -Infinity
   private overload = 0
   private lastKeyAsk = -Infinity
+  /** the phone's last word on itself */
+  lastReport: PhoneReport = {}
   private refusals: number[] = []
   private queued = 0
   private cutStepped = false
@@ -171,6 +173,7 @@ export class Adapt {
     const frame = 1000 / this.step.fps
     const slow = (r.dec ?? 0) > 0 && (r.decMs ?? 0) > frame * 0.85
     this.overload = slow || (r.q ?? 0) > 3 ? this.overload + 1 : 0
+    this.lastReport = r
   }
 
   /** May a chunk of `bytes` go now? Nothing in the air: always. Otherwise only inside the window. */
@@ -186,7 +189,7 @@ export class Adapt {
     const due = this.base(now) + this.allowance(now) + 50 + first.bytes / rate
     const ok = this.firstAck >= 0 && now - first.at <= due && this.inflight + bytes <= this.window(now)
     // a picture that does not fit is a picture the phone loses: that is congestion too, even when latency looks fine
-    if (!ok) this.lost(now)
+    if (!ok) this.refused(now)
     return ok
   }
 
@@ -238,7 +241,8 @@ export class Adapt {
       this.lastDecay = now
     }
     if (this.level < this.floor) return this.set(this.floor, now)
-    if (congested && !(cut && this.cutStepped) && now - this.lastDown >= clamp(lat * 1.2, 700, 3000)) {
+    if (congested && !(cut && this.cutStepped) && now - this.lastDown >= clamp(lat * 1.5, 1000, 3000)) {
+      this.why = this.queued >= 2 ? 'queue' : refusing ? 'dropped' : overloaded ? 'phone' : cut ? 'cut' : 'stall'
       let target = this.level + 1
       // the link was kept busy, so what got through is what it can carry: go straight to a step that fits
       const gp = this.goodput(now, 1000)
@@ -268,8 +272,11 @@ export class Adapt {
   }
 
   /** the controller's insides, for tests and JOLTY_DEBUG_ENC */
-  debug(now: number): Record<string, number> {
-    return { level: this.level, med: Math.round(this.median(now)), base: Math.round(this.base(now)), stall: Math.round(this.oldest(now)), refusals: this.refusals.length, window: this.window(now), inflight: this.inflight, gp: Math.round(this.goodput(now) / 1000), hold: this.upHold }
+  /** why the step last went down (queue, dropped, phone, cut, stall) */
+  why = ''
+
+  debug(now: number): Record<string, number | string> {
+    return { why: this.why, overload: this.overload, level: this.level, med: Math.round(this.median(now)), base: Math.round(this.base(now)), stall: Math.round(this.oldest(now)), refusals: this.refusals.length, window: this.window(now), inflight: this.inflight, gp: Math.round(this.goodput(now) / 1000), hold: this.upHold }
   }
 
   stats(now: number): AdaptStats {
@@ -317,10 +324,17 @@ export class Adapt {
     return Math.max(3000, Math.round((1.5 * s.bps) / 8 / s.fps))
   }
 
-  /** A picture the phone will not get (waiting for a whole one): counted like a refused one. */
-  lost(now: number): void {
-    // except during a cut and just after it, while the phone waits for a whole picture: that is the cut's doing
-    // and only while answers still come: a full link answers slowly, a link that went silent may be cut (told apart later)
+  /** A picture that did not fit in the window: counted toward congestion. (Pictures skipped afterwards while the
+   *  phone waits for a whole one are not counted again: with ffmpeg a whole picture takes a restart, up to 1.8 s.) */
+  /** A picture skipped while the phone waits for a whole one, `waiting` ms after that began. Within the encoder's own
+   *  delay for a whole picture (`grace`) it is expected; past it, the link is not carrying the step. */
+  skipped(now: number, waiting: number, grace: number): void {
+    if (waiting > grace) this.refused(now)
+  }
+
+  private refused(now: number): void {
+    // not during a cut nor just after it (that is the cut's doing), and only while answers still come: a full link
+    // answers slowly, a link that went silent may be cut (told apart later)
     const answering = now - this.lastAckAt <= Math.max(500, 2 * this.base(now))
     if (answering && !this.inCut && now - this.cutUntil > 1000 + this.base(now)) this.refusals.push(now)
   }

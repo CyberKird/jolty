@@ -226,6 +226,11 @@ export class FfmpegVideo {
     this.swap(250)
   }
 
+  /** a whole picture on demand means a new ffmpeg: up to the 1.5 s spacing plus its start */
+  keyDelay(): number {
+    return 2000
+  }
+
   keyframe(): void {
     // a fresh ffmpeg (or one that just made a whole picture) is about to give what is asked for anyway
     if (!this.keyed || Date.now() - this.lastKeyAt < 500) return
@@ -375,6 +380,10 @@ export class ScreenVideoAuto implements ScreenVideo {
     this.sound.stop()
     this.chrome.stop()
     this.using = undefined
+  }
+
+  keyDelay(): number {
+    return this.using === 'ff' ? this.ff.keyDelay() : 300
   }
 
   keyframe(): void {

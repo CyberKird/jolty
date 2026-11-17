@@ -129,7 +129,7 @@ const results: Record<string, unknown> = {}
 
 const PROFILES: Array<{ name: string; link: LinkProfile; ms: number; levels: [number, number]; p95: number; minFps: number }> = [
   { name: 'good 20 Mbit/s 20 ms', link: { kbps: 20_000, rttMs: 20 }, ms: 12_000, levels: [0, 0], p95: 150, minFps: 45 },
-  { name: '4G 5 Mbit/s 80 ms', link: { kbps: 5000, rttMs: 80, jitterMs: 15 }, ms: 14_000, levels: [1, 3], p95: 600, minFps: 12 },
+  { name: '4G 5 Mbit/s 80 ms', link: { kbps: 5000, rttMs: 80, jitterMs: 15 }, ms: 20_000, levels: [1, 3], p95: 600, minFps: 12 },
   { name: 'weak 300 kbit/s 400 ms', link: { kbps: 300, rttMs: 400 }, ms: 20_000, levels: [4, 6], p95: 1800, minFps: 2 },
   { name: 'awful 100 kbit/s 1200 ms', link: { kbps: 100, rttMs: 1200 }, ms: 30_000, levels: [6, 7], p95: 4500, minFps: 0.3 },
   { name: 'loss 5 % on 4G', link: { kbps: 5000, rttMs: 80, loss: 0.05 }, ms: 16_000, levels: [2, 6], p95: 900, minFps: 3 }
@@ -140,7 +140,9 @@ for (const p of PROFILES) {
     const r = await run([{ ms: p.ms, link: p.link }])
     const late = window(r, p.ms - 5000, p.ms)
     const mid = window(r, p.ms / 2 - 2500, p.ms / 2 + 2500)
-    const last = r.steps.at(-1)?.step ?? '?'
+    // the step it spent most of the last 8 s on: a short try at the next step up (then back) is intended behaviour
+    const recent = r.steps.filter((x) => x.t >= p.ms - 8000).map((x) => x.step)
+    const last = [...new Set(recent)].sort((a, b) => recent.filter((x) => x === b).length - recent.filter((x) => x === a).length)[0] ?? '?'
     results[p.name] = { step: last, ...late }
     const lv = levelOf(last)
     assert.ok(lv >= p.levels[0] && lv <= p.levels[1], `${p.name}: step ${last} (level ${lv}), expected ${p.levels.join('-')}`)

@@ -36,6 +36,7 @@ function simulate(phases: Array<{ ms: number; link: Link }>, seed = 1): Run {
   const acks: Array<{ seq: number; at: number }> = []
   let seq = 0
   let needKey = true
+  let keySince = 0
   let keyAsked = false
   let nextFrame = 0
   let lastKey = -1e9
@@ -62,10 +63,12 @@ function simulate(phases: Array<{ ms: number; link: Link }>, seed = 1): Run {
         run.keys++
       }
       if (needKey && !key) {
-        // waits for a whole picture, and asks again when allowed (as remote-screen.ts does)
-        a.lost(t)
+        // waits for a whole picture, and asks again when allowed (as remote-screen.ts does); skipped pictures count once
+        // this encoder (one that answers at its next picture) had time to send one
+        a.skipped(t, t - keySince, 300)
         if (!s.keyOnly && a.askKey(t)) keyAsked = true
       } else if (!a.canSend(bytes, t)) {
+        if (!needKey) keySince = t
         needKey = true
         if (!s.keyOnly && a.askKey(t)) keyAsked = true
       } else {

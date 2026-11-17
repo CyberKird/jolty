@@ -78,7 +78,7 @@ try {
   const samples = []
   for (let i = 0; i < 4; i++) {
     await phone.waitForTimeout(1000)
-    samples.push(await phone.evaluate(() => { const r = document.querySelector('.pcs'); return { rx: Number(r.getAttribute('data-rx')), fps: Number(r.getAttribute('data-fps')), lat: Number(r.getAttribute('data-lat')), busy: r.getAttribute('data-busy') } }))
+    samples.push(await phone.evaluate(() => { const r = document.querySelector('.pcs'); return { rx: Number(r.getAttribute('data-rx')), fps: Number(r.getAttribute('data-fps')), lat: Number(r.getAttribute('data-lat')), busy: r.getAttribute('data-busy'), step: r.getAttribute('data-step') } }))
   }
   const fps = Math.round(samples.reduce((n, s) => n + s.fps, 0) / samples.length)
   const rx = Math.round(samples.reduce((n, s) => n + s.rx, 0) / samples.length)
