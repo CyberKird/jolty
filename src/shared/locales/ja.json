@@ -1782,5 +1782,8 @@
  "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "この画面に合わせて、すべてがなめらかに動きます ({hz} Hz)。",
  "Doar estompări scurte, nimic nu alunecă.": "短いフェードのみで、スライドはしません。",
  "Nimic nu se mișcă, totul apare pe loc.": "何も動かず、すべてがすぐに表示されます。",
- "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "このスマートフォンでの Jolty の動き方です。すぐに反映され、このスマートフォンにだけ保存されます。"
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "このスマートフォンでの Jolty の動き方です。すぐに反映され、このスマートフォンにだけ保存されます。",
+ "rapid": "高速",
+ "mediu": "中速",
+ "lent": "低速"
 }

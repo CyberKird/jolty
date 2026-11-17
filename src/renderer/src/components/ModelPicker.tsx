@@ -213,7 +213,7 @@ export function ModelPicker(p: {
                               {sc.measured ? `~${iq}` : iq}
                             </span>
                           )}
-                          {sc?.speed && <span className="picker-speed">{sc.speed}</span>}
+                          {sc?.speed && <span className="picker-speed">{sc.speed === 'rapid' ? tr("rapid") : sc.speed === 'mediu' ? tr("mediu") : tr("lent")}</span>}
                           {bucket && <span className="picker-badge included">{tr("INCLUS")}</span>}
                           {m.badge && <span className={`picker-badge ${m.badge}`}>{m.badge === 'new' ? tr("NOU") : tr("ACTUALIZAT")}</span>}
                         </span>

@@ -1782,5 +1782,8 @@
  "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "이 화면에 맞춰 모든 것이 부드럽게 움직입니다 ({hz} Hz).",
  "Doar estompări scurte, nimic nu alunecă.": "짧은 페이드만, 미끄러지는 움직임은 없습니다.",
  "Nimic nu se mișcă, totul apare pe loc.": "아무것도 움직이지 않고 모든 것이 바로 나타납니다.",
- "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "이 휴대폰에서 Jolty가 움직이는 방식입니다. 바로 적용되며 이 휴대폰에만 저장됩니다."
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "이 휴대폰에서 Jolty가 움직이는 방식입니다. 바로 적용되며 이 휴대폰에만 저장됩니다.",
+ "rapid": "빠름",
+ "mediu": "보통",
+ "lent": "느림"
 }

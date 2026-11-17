@@ -1782,5 +1782,8 @@
  "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "Alles bewegt sich flüssig, abgestimmt auf diesen Bildschirm ({hz} Hz).",
  "Doar estompări scurte, nimic nu alunecă.": "Nur kurze Überblendungen, nichts gleitet.",
  "Nimic nu se mișcă, totul apare pe loc.": "Nichts bewegt sich, alles erscheint sofort.",
- "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "Wie sich Jolty auf diesem Telefon bewegt. Gilt sofort und bleibt nur auf diesem Telefon."
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "Wie sich Jolty auf diesem Telefon bewegt. Gilt sofort und bleibt nur auf diesem Telefon.",
+ "rapid": "schnell",
+ "mediu": "mittel",
+ "lent": "langsam"
 }

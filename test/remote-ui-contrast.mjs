@@ -34,9 +34,18 @@ function collect(scope) {
   // the points of a box where this element is really on top (not under a floating header, a menu or the drawer's edge)
   const points = (e, r) => {
     const out = []
+    // only inside every box that clips it (a list that scrolls, a menu): a row scrolled out of its list is not on the screen
+    let [cl, ct, cr, cb] = [0, 0, W, H]
+    for (let p = e.parentElement; p && p !== document.body; p = p.parentElement) {
+      const ps = getComputedStyle(p)
+      if (ps.overflowX === 'visible' && ps.overflowY === 'visible') continue
+      const q = p.getBoundingClientRect()
+      ;[cl, ct, cr, cb] = [Math.max(cl, q.left), Math.max(ct, q.top), Math.min(cr, q.right), Math.min(cb, q.bottom)]
+    }
     const step = Math.max(2, Math.min(6, r.width / 12))
     for (let y = r.top + r.height * 0.25; y < r.bottom - r.height * 0.2; y += Math.max(2, r.height / 4)) {
       for (let x = r.left + 1; x < r.right - 1; x += step) {
+        if (x < cl || x > cr || y < ct || y > cb) continue
         const at = document.elementFromPoint(x, y)
         if (at && (e.contains(at) || at.contains(e))) out.push([x, y])
       }

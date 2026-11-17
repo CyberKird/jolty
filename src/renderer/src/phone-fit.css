@@ -168,6 +168,7 @@
   /* a sheet is solid in every theme: a see-through one over the dark scrim turned grey in Frost */
   html.remote .sheet {
     background: var(--glass-pop-solid, var(--s2));
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
   }
 }
 
@@ -264,4 +265,24 @@ html.remote:is([data-theme='glass'], [data-theme='frost']) .md pre {
   html.remote:is([data-theme='glass'], [data-theme='frost']) #root .main > .chat-header {
     inset-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right));
   }
+}
+
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  /* the skills table scrolls sideways in its own box: its columns take the width their headings need instead of being squeezed
+     until the heading buttons ran over each other */
+  html.remote .skills-table {
+    width: max-content;
+    min-width: 100%;
+  }
+}
+/* Glass on a phone: the aurora's orbs are sized to the screen, so on a small one an orb sits under most of the page; a little
+   softer there, so grey text on the panes keeps 4.5:1 and the sky still glows */
+html.remote[data-theme='glass'] body::before {
+  opacity: 0.72;
+}
+
+/* Glass and Frost menus on a phone: the backdrop is not bent and blurred there as on the PC (the SVG lens), so a see-through menu
+   showed the chat sharp behind its options. The same sheen and rim, on the theme's solid pop fill. */
+html.remote:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .picker-tip, .ctx, .mentions, .sel-popup) {
+  background: var(--glass-sheen), var(--glass-pop-solid);
 }

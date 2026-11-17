@@ -1782,5 +1782,8 @@
  "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "كل شيء يتحرك بسلاسة، بما يناسب هذه الشاشة ({hz} هرتز).",
  "Doar estompări scurte, nimic nu alunecă.": "تلاشٍ قصير فقط، لا شيء ينزلق.",
  "Nimic nu se mișcă, totul apare pe loc.": "لا شيء يتحرك، كل شيء يظهر فورًا.",
- "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "طريقة حركة Jolty على هذا الهاتف. يُطبَّق فورًا ويبقى على هذا الهاتف فقط."
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "طريقة حركة Jolty على هذا الهاتف. يُطبَّق فورًا ويبقى على هذا الهاتف فقط.",
+ "rapid": "سريع",
+ "mediu": "متوسط",
+ "lent": "بطيء"
 }

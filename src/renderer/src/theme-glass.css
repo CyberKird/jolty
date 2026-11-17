@@ -12,8 +12,8 @@ html:is([data-theme='glass'], [data-theme='frost']) {
   --line-2: rgba(255, 255, 255, 0.2);
   --line-3: rgba(255, 255, 255, 0.34);
   --white: #f4f3fc;
-  --grey: #bdbcd3;
-  --grey-2: #b6b5cc;
+  --grey: #c6c5da;
+  --grey-2: #b9b8ce;
   --volt: #c4b5ff;
   --volt-2: #a592f5;
   --volt-rgb: 196, 181, 255;
@@ -30,7 +30,8 @@ html:is([data-theme='glass'], [data-theme='frost']) {
   --glass-lens: url(#jolty-lens) blur(9px) saturate(1.9) brightness(1.08);
   --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), inset 0 0 24px rgba(255, 255, 255, 0.06);
   --glass-drop: 0 14px 36px -14px rgba(0, 0, 0, 0.6);
-  --glass-pop: rgba(26, 24, 44, 0.78);
+  /* dense enough that a bright orb behind a menu does not wash out its grey text, still blurred and lit */
+  --glass-pop: rgba(26, 24, 44, 0.86);
   /* the rim of a small pane, as on a thick slab of glass: a bright ring, a hard top highlight, glints on two corners, a soft glow inside */
   --glass-rim-hi: inset 0 0 0 1px rgba(255, 255, 255, 0.24), inset 0 2px 1px -1px rgba(255, 255, 255, 0.85), inset 0 -2px 1px -1px rgba(255, 255, 255, 0.32), inset 4px 4px 7px -4px rgba(255, 255, 255, 0.55), inset -4px -4px 7px -4px rgba(255, 255, 255, 0.3), inset 0 0 18px rgba(255, 255, 255, 0.09), 0 10px 22px -8px rgba(0, 0, 0, 0.5), 0 2px 5px rgba(0, 0, 0, 0.22);
   /* a big slab (sidebar, live panel): smoked clear glass, a thick lit edge with a cyan glint on one
@@ -424,7 +425,7 @@ html[data-theme='frost'] {
   --grey-2: #52566c;
   --volt: #f0604d;
   /* the coral as text (links, counters, tags): a deeper shade of it, so it reads on the pale panes */
-  --volt-ink: #b8392a;
+  --volt-ink: #a9321f;
   /* amber as a warning reads on dark; on the pale panes it takes a deeper amber */
   --warning: #9a5b00;
   --volt-2: #d94c3a;
@@ -480,8 +481,8 @@ html[data-theme='frost'] .msg-user {
   background: linear-gradient(135deg, rgba(var(--volt-rgb), 0.26), rgba(167, 139, 250, 0.16) 60%, rgba(255, 255, 255, 0.45));
 }
 html[data-theme='frost'] .btn.primary {
-  /* coral to rose like before, deep enough for the white label under the rim's highlight (5:1 at the light end) */
-  background: linear-gradient(135deg, #c43d2a, #b93160);
+  /* coral to rose like before, deep enough for the white label under the sheen's bright corner (4.5:1 there) */
+  background: linear-gradient(135deg, #b5361f, #ac2c58);
   color: #fff;
   box-shadow: var(--glass-rim-hi), 0 10px 26px -10px rgba(240, 96, 77, 0.7);
 }
@@ -511,6 +512,20 @@ html[data-theme='frost'] .tag.warn {
 html[data-theme='frost'] .tag.bad {
   color: #a3221b;
 }
-html[data-theme='frost'] :is(.nav-item.active, .page-tab.on) svg {
+html[data-theme='frost'] :is(.nav-item.active, .page-tab.on, .picker-opt.on) svg {
   color: var(--volt-ink);
+}
+
+/* Frost's panes are milky, not clear: dark ink keeps 4.5:1 where the pink and teal of the sky glow behind a card */
+html[data-theme='frost'] :is(.card, .composer, .tool, .permission, .plan, .tasks-bar, .theme-opt, .composer-notice, .attachment, .md pre, .md table) {
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.34);
+}
+/* the Frost sky a touch softer: where an orb is large (a small window, a phone) the faint grey ink still reads on it */
+html[data-theme='frost'] body::before {
+  opacity: 0.85;
+}
+/* small grey text right where a pane is brightest (the menu's lit top corner, the bare sky behind a turn's header): the regular grey */
+html:is([data-theme='glass'], [data-theme='frost']) .picker-legend,
+html[data-theme='frost'] .turn-head {
+  color: var(--grey);
 }
