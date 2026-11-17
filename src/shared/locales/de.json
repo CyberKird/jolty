@@ -1825,5 +1825,16 @@
  "Compactat: de la {before} la {after}.": "Komprimiert: von {before} auf {after}.",
  "Nu era nimic de compactat.": "Es gab nichts zu komprimieren.",
  "Compactează": "Komprimieren",
- "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "Ein vollständiges Backup, mit deinem Passwort verschlüsselt, an einem Ort deiner Wahl: Chats mit Verlauf, Einstellungen und Themes, Profile (ohne Schlüssel), geplante Aufgaben, Notizen, Skills, Befehle, Anweisungen und MCP-Server. Auf einem neuen PC ist Jolty nach der Wiederherstellung genau dort, wo du aufgehört hast. API-Schlüssel und Anmeldungen verlassen diesen PC nie."
+ "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "Ein vollständiges Backup, mit deinem Passwort verschlüsselt, an einem Ort deiner Wahl: Chats mit Verlauf, Einstellungen und Themes, Profile (ohne Schlüssel), geplante Aufgaben, Notizen, Skills, Befehle, Anweisungen und MCP-Server. Auf einem neuen PC ist Jolty nach der Wiederherstellung genau dort, wo du aufgehört hast. API-Schlüssel und Anmeldungen verlassen diesen PC nie.",
+ "Animații": "Animationen",
+ "Pornite": "An",
+ "Reduse": "Reduziert",
+ "Oprite": "Aus",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "Alles bewegt sich flüssig, abgestimmt auf diesen Bildschirm ({hz} Hz).",
+ "Doar estompări scurte, nimic nu alunecă.": "Nur kurze Überblendungen, nichts gleitet.",
+ "Nimic nu se mișcă, totul apare pe loc.": "Nichts bewegt sich, alles erscheint sofort.",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "Wie sich Jolty auf diesem Telefon bewegt. Gilt sofort und bleibt nur auf diesem Telefon.",
+ "rapid": "schnell",
+ "mediu": "mittel",
+ "lent": "langsam"
 }

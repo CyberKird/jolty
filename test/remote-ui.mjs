@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { _electron as electron } from 'playwright-core'
+import { measurePhone } from './remote-ui-measure.mjs'
 
 const shots = path.resolve(process.env.SHOTS || 'shots-remote')
 fs.mkdirSync(shots, { recursive: true })
@@ -35,12 +36,30 @@ try {
 
   const opened = app.waitForEvent('window')
   await app.evaluate(({ BrowserWindow }, url) => {
-    const w = new BrowserWindow({ width: 390, height: 844, show: true, webPreferences: { sandbox: true } })
+    const w = new BrowserWindow({ width: 390, height: 844, useContentSize: true, show: true, webPreferences: { sandbox: true } })
+    globalThis.__phone = w
     void w.loadURL(url)
   }, `http://127.0.0.1:${PORT}/#pair=${code}`)
   const phone = await opened
   phone.setDefaultTimeout(30000)
   await phone.waitForSelector('.brand-name', { timeout: 60000 })
+  // installable on Android and iOS: a manifest with a standalone display and both icon sizes that are really served, the iOS
+  // home-screen tags, and the browser bar coloured like the theme's page (it follows a theme change)
+  const install = await phone.evaluate(async () => {
+    const href = document.querySelector('link[rel="manifest"]')?.getAttribute('href')
+    const m = href ? await (await fetch(href)).json() : {}
+    const icons = await Promise.all((m.icons || []).map((i) => fetch(i.src).then((r) => `${i.sizes}:${r.status}`)))
+    const meta = (n) => document.querySelector(`meta[name="${n}"]`)?.getAttribute('content')
+    return { display: m.display, start: m.start_url, icons, ios: meta('apple-mobile-web-app-capable'), touch: Boolean(document.querySelector('link[rel="apple-touch-icon"]')), color: meta('theme-color'), page: getComputedStyle(document.documentElement).getPropertyValue('--black').trim(), viewport: meta('viewport') }
+  })
+  assert.equal(install.display, 'standalone')
+  assert.ok(install.start)
+  assert.deepEqual(install.icons.sort(), ['192x192:200', '512x512:200'])
+  assert.equal(install.ios, 'yes')
+  assert.ok(install.touch, 'an icon for the iOS home screen')
+  assert.match(install.viewport, /viewport-fit=cover/, 'the page reaches under the notch and the home bar (safe-area insets apply)')
+  assert.equal(install.color.toLowerCase(), install.page.toLowerCase(), 'the browser bar takes the page colour')
+
   // a phone starts with the sidebar closed, as a drawer: the button opens it
   assert.ok(await phone.evaluate(() => document.documentElement.classList.contains('remote')))
   assert.ok(await phone.evaluate(() => document.querySelector('.app')?.classList.contains('no-sidebar')))
@@ -84,7 +103,32 @@ try {
         .map((e) => `${e.tagName}.${e.className}`)
     )
     assert.deepEqual(cut, [], `${pages[i]}: nothing is cut off at the right`)
+    const m = await phone.evaluate(measurePhone)
+    assert.deepEqual({ scroll: m.scroll, small: m.small, overlap: m.overlap }, { scroll: [], small: [], overlap: [] }, `${pages[i]}: every control is a 44 px target`)
     await phone.screenshot({ path: path.join(shots, `phone-page-${i}.png`) })
+    // Settings on the phone: Animations, kept on the phone and applied at once, without a reload
+    if (pages[i].includes('Settings')) {
+      const card = phone.locator('.phone-motion')
+      assert.equal(await card.count(), 1, 'the phone offers its own Animations setting')
+      const mark = await phone.evaluate(() => (window.__noReload = Math.random()))
+      const root = () => phone.evaluate(() => ({ cls: document.documentElement.className, saved: localStorage.getItem('jolty-motion') }))
+      await card.locator('button', { hasText: 'Reduced' }).click()
+      let st = await root()
+      assert.ok(st.cls.includes('motion-reduced') && !st.cls.includes('motion-off') && st.saved === 'reduced', 'Reduced applies at once')
+      await card.locator('button', { hasText: 'Off' }).click()
+      st = await root()
+      assert.ok(st.cls.includes('motion-off') && st.cls.includes('reduce-motion') && st.saved === 'off', 'Off stops every animation')
+      await card.locator('button', { hasText: 'On' }).click()
+      st = await root()
+      assert.ok(!/motion-off|motion-reduced|reduce-motion/.test(st.cls) && st.saved === 'on', 'On brings them back')
+      assert.equal(await phone.evaluate(() => window.__noReload), mark, 'no reload')
+      assert.match(await phone.evaluate(() => document.documentElement.dataset.hz || ''), /^(30|60|90|120)$/, 'the refresh rate is measured and snapped')
+      // the system's reduce-motion switch (and Low Power Mode) does not stop the phone's animations: only this setting does
+      await phone.emulateMedia({ reducedMotion: 'reduce' })
+      const drawerMs = await phone.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.sidebar')).transitionDuration) * 1000)
+      assert.ok(drawerMs >= 150, `the drawer still slides with reduced motion asked by the system (${drawerMs} ms)`)
+      await phone.emulateMedia({ reducedMotion: null })
+    }
   }
   if (await phone.evaluate(() => document.querySelector('.app')?.classList.contains('no-sidebar'))) await phone.locator('.titlebar-btn').first().click()
   await phone.waitForSelector('.session-item')
@@ -144,6 +188,30 @@ try {
   )
   assert.deepEqual(wide, [], 'nothing reaches past the screen')
   assert.equal(await phone.evaluate(() => getComputedStyle(document.querySelector('.messages')).touchAction), 'pan-y pinch-zoom')
+
+  // every theme on the smallest phone, an iPhone and a phone on its side: nothing scrolls sideways or reaches past the screen, every tap
+  // target is 44 px and none covers another (test/remote-ui-matrix.mjs runs every screen at seven sizes)
+  const size = async (w, h) => {
+    await app.evaluate((_e, [w, h]) => globalThis.__phone.setContentSize(w, h), [w, h])
+    await phone.waitForFunction(([w, h]) => window.innerWidth === w && window.innerHeight === h, [w, h], { timeout: 5000 })
+    await phone.waitForTimeout(400)
+  }
+  for (const theme of ['volt', 'glass', 'frost']) {
+    await win.evaluate((t) => window.jolty.app.saveSettings({ theme: t }), theme)
+    await phone.evaluate(() => window.dispatchEvent(new Event('jolty:settings')))
+    await phone.waitForFunction((t) => document.documentElement.dataset.theme === t, theme)
+    assert.equal((await phone.evaluate(() => document.querySelector('meta[name="theme-color"]').content)).toLowerCase(), (await phone.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--black').trim())).toLowerCase(), `${theme}: the browser bar follows the theme`)
+    for (const [w, h] of [[320, 568], [390, 844], [844, 390]]) {
+      await size(w, h)
+      const m = await phone.evaluate(measurePhone)
+      assert.deepEqual({ scroll: m.scroll, edge: m.edge, small: m.small, overlap: m.overlap }, { scroll: [], edge: [], small: [], overlap: [] }, `${theme} ${w}x${h}: the chat fits and every control is reachable`)
+    }
+  }
+  await win.evaluate(() => window.jolty.app.saveSettings({ theme: 'volt' }))
+  await phone.evaluate(() => window.dispatchEvent(new Event('jolty:settings')))
+  await size(390, 844)
+  // a phone on its side is a phone too: the drawer layout, not the desktop's
+  assert.ok(await phone.evaluate(() => document.querySelector('.app').classList.contains('no-sidebar')), 'the drawer stays shut after the turns')
 
   // a finger moves the drawer: a swipe from the left edge opens it, a swipe to the left closes it, a short or low one does nothing
   const touch = await phone.context().newCDPSession(phone)

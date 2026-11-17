@@ -1,0 +1,288 @@
+/* The phone page fits every phone (test/remote-ui-matrix.mjs measures it on three themes and seven sizes): nothing wider than the
+   screen, and every control a thumb taps is at least 44 px. Where a control has to stay small to look right (an icon in a row of
+   them), a transparent ::before lays the 44 px around it; the rest simply grows. A phone on its side is short, not narrow: it gets
+   the phone layout too (the same query as phone.css). */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  /* the recent conversations on the welcome screen: one column that can shrink, so a long title ends in an ellipsis */
+  html.remote .starts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html.remote .start {
+    min-width: 0;
+    min-height: 52px;
+  }
+
+  /* a table keeps its words whole and scrolls inside its own box (overflow-wrap: anywhere is for prose, not for column heads) */
+  html.remote .md :is(th, td) {
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+  html.remote .md th {
+    white-space: nowrap;
+  }
+
+  /* ---- tap targets that simply grow ---- */
+  html.remote .titlebar-btn,
+  html.remote .pcs-icon {
+    width: 44px;
+    height: 44px;
+  }
+  html.remote :is(.page-tab, .sel-btn, .select, .input:not(textarea)) {
+    min-height: 44px;
+  }
+  html.remote .search {
+    min-height: 44px;
+  }
+  html.remote .side-head {
+    padding-inline-end: 8px;
+  }
+  html.remote .side-head .head-act {
+    width: 44px;
+    height: 44px;
+    margin-inline-start: 0;
+  }
+  html.remote :is(.btn.icon, .bug-btn) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  html.remote .search input {
+    min-height: 44px;
+  }
+  html.remote .lib-search {
+    height: auto;
+  }
+  html.remote .lib-search input {
+    min-height: 44px;
+  }
+  /* the usage figures: two to a row where three do not fit, and a figure is never broken in the middle */
+  html.remote .stat-strip {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  }
+  html.remote .stat {
+    min-width: 0;
+    padding: 14px 16px;
+  }
+  html.remote .stat .v {
+    font-size: clamp(32px, 10vw, 46px);
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+  /* the message tools sit in room the message keeps under itself: a full 44 px row of icons */
+  html.remote .msg-assistant {
+    padding-block-end: 46px;
+  }
+  html.remote .msgbar {
+    gap: 0;
+  }
+  html.remote .msgbar .cp {
+    height: 44px;
+    min-width: 44px;
+  }
+  html.remote .composer-bar .btn.icon {
+    width: 44px;
+    min-width: 44px;
+  }
+  html.remote .composer-bar .chrome-toggle {
+    min-width: 44px;
+    justify-content: center;
+  }
+  /* the row actions show where a hover would: each gets a full square at the end of the row */
+  html.remote .session-item :is(.row-act, .del) {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+  html.remote .session-item .del {
+    inset-inline-end: 0;
+  }
+  html.remote .session-item .row-act {
+    inset-inline-end: 44px;
+  }
+  html.remote .session-item .row-act + .row-act {
+    inset-inline-end: 88px;
+  }
+  html.remote .session-item:hover .title {
+    padding-inline-end: 124px;
+  }
+
+  /* ---- tap targets that keep their look and get a larger hit area ---- */
+  html.remote :is(.cb-head .cp, .tbl-acts .cp, .tool-acts .cp, .composer-bar .picker-btn, .composer-bar .chrome-toggle, .lib-chip, .meter-refresh, .th-sort, .lib-row-chat) {
+    position: relative;
+  }
+  html.remote :is(.cb-head .cp, .tbl-acts .cp, .tool-acts .cp, .composer-bar .picker-btn, .composer-bar .chrome-toggle, .lib-chip, .meter-refresh, .th-sort, .lib-row-chat)::before {
+    content: '';
+    position: absolute;
+    inset: min(0px, calc((100% - 44px) / 2));
+  }
+}
+
+/* Settings > Animations on the phone (pages/PhoneMotion.tsx): three equal choices across the card */
+.phone-motion {
+  display: grid;
+  gap: 12px;
+}
+.phone-motion-title {
+  margin-bottom: 4px;
+  color: var(--white);
+  font-weight: 500;
+}
+.phone-motion-seg {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+}
+.phone-motion-seg button {
+  height: 44px;
+  min-width: 0;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  /* Glass and Frost lay the sidebar beside the chat as a floating slab sized to the window (theme-glass.css); on a phone it is the
+     drawer: full drawer width, flush with the edge it comes from, rounded on the side that moves */
+  html.remote #root .app > .sidebar {
+    width: min(88vw, 360px);
+    margin: 0;
+    border-radius: 0;
+    border-start-end-radius: 28px;
+    border-end-end-radius: 28px;
+  }
+  html.remote[data-theme='volt'] #root .app > .sidebar {
+    border-radius: 0;
+  }
+
+  /* System check: the fix button goes under its line instead of squeezing the text beside it */
+  html.remote .check-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+    row-gap: 10px;
+  }
+  html.remote .check-row > .btn {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  /* a sheet is solid in every theme: a see-through one over the dark scrim turned grey in Frost */
+  html.remote .sheet {
+    background: var(--glass-pop-solid, var(--s2));
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  }
+}
+
+/* The PC screen is a dark stage in every theme: its bars and words keep light ink on it, also in Frost */
+html[data-theme='frost'] .pcs {
+  color-scheme: dark;
+  --white: #f4f3fc;
+  --grey: #c9c8db;
+  --grey-2: #a9a8bf;
+  --line: rgba(255, 255, 255, 0.12);
+  --line-2: rgba(255, 255, 255, 0.22);
+  --s1: rgba(255, 255, 255, 0.05);
+  --s2: rgba(255, 255, 255, 0.08);
+  --s3: rgba(255, 255, 255, 0.12);
+  color: var(--white);
+}
+
+/* The aurora behind Glass and Frost is drawn 20% past every edge (theme-glass.css). On a phone the body is fixed and moved by the
+   keyboard (phone.css), so it becomes the box the aurora is placed in, and those 20% made the body itself scroll sideways: the
+   whole app slid 10 px whenever something scrolled into view. Here it covers exactly the screen. */
+html.remote:is([data-theme='glass'], [data-theme='frost']) body::before {
+  inset: 0;
+}
+
+/* Glass and Frost clip a code block to its rounded pane (theme-glass.css), which on a phone cut long lines off with no way to
+   reach them: the pane keeps its corners and the code scrolls sideways inside it */
+html.remote:is([data-theme='glass'], [data-theme='frost']) .md pre {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* On a phone the drawer lies over the chat (on a PC the slab stands beside it, over the still aurora): a see-through slab let the
+   conversation show through its rows. It keeps the sheen and the lit rim, on the theme's solid bar fill. */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  html.remote:is([data-theme='glass'], [data-theme='frost']) #root .app > .sidebar {
+    background: var(--glass-sheen), var(--glass-bar-solid);
+  }
+}
+
+/* The PC screen's bottom bar: its five or six buttons share the width instead of each asking for 72 px, so they fit a 320 px phone */
+.pcs-bar .pcs-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  padding-inline: 2px;
+  text-align: center;
+  overflow-wrap: normal;
+}
+@media (max-width: 360px) {
+  .pcs-bar .pcs-btn {
+    letter-spacing: 0.03em;
+  }
+}
+
+/* Safari (iOS): it cannot bend the backdrop through the SVG lens (url(#jolty-lens)), and before iOS 18 it reads only the prefixed
+   property. Detected by a feature only WebKit on iOS has, not by the browser's name: there the panes get the plain blur, both ways. */
+@supports (-webkit-touch-callout: none) {
+  html:is([data-theme='glass'], [data-theme='frost']) {
+    --glass-lens: blur(9px) saturate(1.9) brightness(1.08);
+    --glass-lens-bar: blur(3px) saturate(1.5) brightness(1.1);
+  }
+  html:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .picker-tip, .ctx, .mentions, .sel-popup, .toast) {
+    -webkit-backdrop-filter: var(--glass-lens);
+  }
+  html:is([data-theme='glass'], [data-theme='frost']) #root .main > .chat-header {
+    -webkit-backdrop-filter: var(--glass-lens-bar);
+  }
+}
+
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  /* a short or narrow screen (a folded phone's cover, a phone on its side): the welcome screen scrolls and the message box stays in
+     view; the auto margin keeps it low when there is room, and lets the top stay reachable when there is not */
+  html.remote .welcome {
+    min-height: 0;
+    overflow-y: auto;
+    justify-content: flex-start;
+  }
+  html.remote .welcome > :first-child {
+    margin-top: auto;
+  }
+  /* a page's title and its buttons share a row while they fit and wrap when they do not */
+  html.remote .page-inner > .row:first-child {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  /* a phone on its side has the camera cutout at one end: the drawer's rows and the floating header keep clear of it */
+  html.remote .sidebar,
+  html.remote .app.no-sidebar .sidebar {
+    padding-inline-start: env(safe-area-inset-left);
+  }
+  html.remote #root .app > .sidebar {
+    width: calc(min(88vw, 360px) + env(safe-area-inset-left));
+  }
+  html.remote:is([data-theme='glass'], [data-theme='frost']) #root .main > .chat-header {
+    inset-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right));
+  }
+}
+
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  /* the skills table scrolls sideways in its own box: its columns take the width their headings need instead of being squeezed
+     until the heading buttons ran over each other */
+  html.remote .skills-table {
+    width: max-content;
+    min-width: 100%;
+  }
+}
+/* Glass on a phone: the aurora's orbs are sized to the screen, so on a small one an orb sits under most of the page; a little
+   softer there, so grey text on the panes keeps 4.5:1 and the sky still glows */
+html.remote[data-theme='glass'] body::before {
+  opacity: 0.72;
+}
+
+/* Glass and Frost menus on a phone: the backdrop is not bent and blurred there as on the PC (the SVG lens), so a see-through menu
+   showed the chat sharp behind its options. The same sheen and rim, on the theme's solid pop fill. */
+html.remote:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .picker-tip, .ctx, .mentions, .sel-popup) {
+  background: var(--glass-sheen), var(--glass-pop-solid);
+}

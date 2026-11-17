@@ -1,6 +1,6 @@
 /* The page on a phone: a browser paired through the phone link (html.remote, see remote/boot.ts) with a narrow screen.
    The desktop window never matches (its minimum width is 960 px). */
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
   /* --vvh is the visible height set by remote/phone.ts: with the keyboard open it ends above the keyboard */
   html.remote,
   html.remote #root {
@@ -175,13 +175,13 @@
     max-width: none;
   }
 
-  /* the thinking levels fit the menu's width */
+  /* the thinking levels fill the menu's width and wrap like on the PC (styles.css), each a full thumb's height */
   html.remote .picker-foot .segmented {
     width: 100%;
   }
   html.remote .picker-foot .segmented button {
-    flex: 1;
-    padding: 0 2px;
+    min-height: 44px;
+    padding: 0 8px;
     letter-spacing: 0.04em;
     font-size: 11px;
   }
@@ -324,7 +324,7 @@ html.remote .sheet-item .small {
 }
 
 /* ---- feel: presses answer at once, things arrive instead of appearing, nothing repaints more than it must ---- */
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
   /* the send button: bigger, it sinks and flashes under the finger, then a ring leaves it */
   html.remote .send-btn {
     position: relative;
@@ -421,14 +421,6 @@ html.remote .sheet-item .small {
     transform: translateY(-12px);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  html.remote *,
-  html.remote *::before,
-  html.remote *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
 
 /* The PC does not answer: the same screen as pairing, with the start button and a pulse while the PC wakes. */
 html.remote .offline-pulse {
@@ -478,7 +470,7 @@ html.remote .ghost-go {
 }
 
 /* The drawer: everything in it scrolls together, from the new conversation button down to the usage meters. */
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
   html.remote .sidebar,
   html.remote .app.no-sidebar .sidebar {
     overflow-x: hidden;
@@ -539,7 +531,7 @@ html.remote .link-pill i {
 }
 
 /* ---- the page never moves sideways: only what is made to (a code block, a table) scrolls that way ---- */
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
   html.remote,
   html.remote body {
     overflow-x: hidden;
@@ -588,7 +580,7 @@ html.remote .link-pill i {
 }
 
 /* ---- motion on a phone: more travel and a little spring, since a thumb sees movement a mouse pointer does not ---- */
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
   html.remote:not(.reduce-motion):not(.low-power) {
     --t-base: 260ms;
     --t-slow: 380ms;
@@ -687,7 +679,7 @@ html.remote .offline-over {
 }
 
 /* ---- thumbs: every row and button that is tapped is at least 44 px tall, and the drawer rows have room between them ---- */
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
   html.remote :is(.nav-item, .session-item, .meter-row, .session-more, .titlebar-btn, .btn) {
     min-height: 44px;
   }
@@ -715,7 +707,7 @@ html.remote .offline-over {
 .update-pill {
   white-space: nowrap;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
   .titlebar .update-pill:not(.quiet) {
     width: 32px;
     height: 32px;

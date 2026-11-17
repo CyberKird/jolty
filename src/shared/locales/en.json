@@ -1825,5 +1825,16 @@
  "Compactat: de la {before} la {after}.": "Compacted: from {before} to {after}.",
  "Nu era nimic de compactat.": "There was nothing to compact.",
  "Compactează": "Compact",
- "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "A full backup, encrypted with your password, in the place you choose: your chats with their history, settings and themes, profiles (without keys), scheduled tasks, notes, skills, commands, instructions and MCP servers. On a new PC, after a restore, Jolty is exactly where you left off. API keys and sign-ins never leave this PC."
+ "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "A full backup, encrypted with your password, in the place you choose: your chats with their history, settings and themes, profiles (without keys), scheduled tasks, notes, skills, commands, instructions and MCP servers. On a new PC, after a restore, Jolty is exactly where you left off. API keys and sign-ins never leave this PC.",
+ "Animații": "Animations",
+ "Pornite": "On",
+ "Reduse": "Reduced",
+ "Oprite": "Off",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "Everything moves smoothly, tuned to this screen ({hz} Hz).",
+ "Doar estompări scurte, nimic nu alunecă.": "Only short fades, nothing slides.",
+ "Nimic nu se mișcă, totul apare pe loc.": "Nothing moves, everything appears at once.",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "How Jolty moves on this phone. It applies at once and stays on this phone only.",
+ "rapid": "fast",
+ "mediu": "medium",
+ "lent": "slow"
 }

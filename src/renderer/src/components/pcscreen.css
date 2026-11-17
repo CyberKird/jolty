@@ -451,13 +451,6 @@
   overflow: hidden;
   clip-path: inset(50%);
 }
-@media (prefers-reduced-motion: reduce) {
-  .pcs,
-  .pcs * {
-    animation-duration: 0.01ms !important;
-  }
-}
-
 /* stream quality: the dot in the title toggles a small line with fps, delay and data rate (screen pipeline, kept apart) */
 .pcs-dotbtn {
   display: inline-flex;

@@ -1825,5 +1825,16 @@
  "Compactat: de la {before} la {after}.": "압축됨: {before}에서 {after}(으)로.",
  "Nu era nimic de compactat.": "압축할 것이 없었습니다.",
  "Compactează": "압축",
- "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "비밀번호로 암호화한 전체 백업을 원하는 곳에 저장합니다: 기록이 포함된 대화, 설정과 테마, 프로필(키 제외), 예약 작업, 메모, 스킬, 명령, 지침, MCP 서버. 새 PC에서도 복원하면 Jolty가 마지막 상태 그대로입니다. API 키와 로그인은 이 PC 밖으로 나가지 않습니다."
+ "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "비밀번호로 암호화한 전체 백업을 원하는 곳에 저장합니다: 기록이 포함된 대화, 설정과 테마, 프로필(키 제외), 예약 작업, 메모, 스킬, 명령, 지침, MCP 서버. 새 PC에서도 복원하면 Jolty가 마지막 상태 그대로입니다. API 키와 로그인은 이 PC 밖으로 나가지 않습니다.",
+ "Animații": "애니메이션",
+ "Pornite": "켜기",
+ "Reduse": "줄이기",
+ "Oprite": "끄기",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "이 화면에 맞춰 모든 것이 부드럽게 움직입니다 ({hz} Hz).",
+ "Doar estompări scurte, nimic nu alunecă.": "짧은 페이드만, 미끄러지는 움직임은 없습니다.",
+ "Nimic nu se mișcă, totul apare pe loc.": "아무것도 움직이지 않고 모든 것이 바로 나타납니다.",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "이 휴대폰에서 Jolty가 움직이는 방식입니다. 바로 적용되며 이 휴대폰에만 저장됩니다.",
+ "rapid": "빠름",
+ "mediu": "보통",
+ "lent": "느림"
 }

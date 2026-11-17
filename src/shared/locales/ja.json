@@ -1825,5 +1825,16 @@
  "Compactat: de la {before} la {after}.": "圧縮しました: {before} から {after} へ。",
  "Nu era nimic de compactat.": "圧縮するものはありませんでした。",
  "Compactează": "圧縮",
- "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "パスワードで暗号化した完全なバックアップを、選んだ場所に保存します: 履歴つきのチャット、設定とテーマ、プロファイル (キーなし)、スケジュール タスク、メモ、スキル、コマンド、指示、MCP サーバー。新しい PC でも、復元すれば Jolty は前回の続きから使えます。API キーとログインがこの PC の外に出ることはありません。"
+ "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "パスワードで暗号化した完全なバックアップを、選んだ場所に保存します: 履歴つきのチャット、設定とテーマ、プロファイル (キーなし)、スケジュール タスク、メモ、スキル、コマンド、指示、MCP サーバー。新しい PC でも、復元すれば Jolty は前回の続きから使えます。API キーとログインがこの PC の外に出ることはありません。",
+ "Animații": "アニメーション",
+ "Pornite": "オン",
+ "Reduse": "控えめ",
+ "Oprite": "オフ",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "この画面に合わせて、すべてがなめらかに動きます ({hz} Hz)。",
+ "Doar estompări scurte, nimic nu alunecă.": "短いフェードのみで、スライドはしません。",
+ "Nimic nu se mișcă, totul apare pe loc.": "何も動かず、すべてがすぐに表示されます。",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "このスマートフォンでの Jolty の動き方です。すぐに反映され、このスマートフォンにだけ保存されます。",
+ "rapid": "高速",
+ "mediu": "中速",
+ "lent": "低速"
 }

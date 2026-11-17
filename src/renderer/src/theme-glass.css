@@ -12,8 +12,8 @@ html:is([data-theme='glass'], [data-theme='frost']) {
   --line-2: rgba(255, 255, 255, 0.2);
   --line-3: rgba(255, 255, 255, 0.34);
   --white: #f4f3fc;
-  --grey: #bdbcd3;
-  --grey-2: #9c9bb4;
+  --grey: #c6c5da;
+  --grey-2: #b9b8ce;
   --volt: #c4b5ff;
   --volt-2: #a592f5;
   --volt-rgb: 196, 181, 255;
@@ -30,12 +30,14 @@ html:is([data-theme='glass'], [data-theme='frost']) {
   --glass-lens: url(#jolty-lens) blur(9px) saturate(1.9) brightness(1.08);
   --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.08), inset 0 0 24px rgba(255, 255, 255, 0.06);
   --glass-drop: 0 14px 36px -14px rgba(0, 0, 0, 0.6);
-  --glass-pop: rgba(26, 24, 44, 0.78);
+  /* dense enough that a bright orb behind a menu does not wash out its grey text, still blurred and lit */
+  --glass-pop: rgba(26, 24, 44, 0.86);
   /* the rim of a small pane, as on a thick slab of glass: a bright ring, a hard top highlight, glints on two corners, a soft glow inside */
   --glass-rim-hi: inset 0 0 0 1px rgba(255, 255, 255, 0.24), inset 0 2px 1px -1px rgba(255, 255, 255, 0.85), inset 0 -2px 1px -1px rgba(255, 255, 255, 0.32), inset 4px 4px 7px -4px rgba(255, 255, 255, 0.55), inset -4px -4px 7px -4px rgba(255, 255, 255, 0.3), inset 0 0 18px rgba(255, 255, 255, 0.09), 0 10px 22px -8px rgba(0, 0, 0, 0.5), 0 2px 5px rgba(0, 0, 0, 0.22);
   /* a big slab (sidebar, live panel): smoked clear glass, a thick lit edge with a cyan glint on one
      side and a pink one on the other, and a real shadow under it so it floats */
-  --slab-fill: rgba(255, 255, 255, 0.035);
+  /* tinted, not clear: the aurora still glows through, but a bright orb behind the sidebar no longer washes out its text (4.5:1) */
+  --slab-fill: rgba(16, 14, 36, 0.46);
   --glass-lens-bar: url(#jolty-lens) blur(3px) saturate(1.5) brightness(1.1);
   --glass-bar-fill: rgba(14, 12, 34, 0.28);
   --glass-bar-solid: rgba(20, 18, 40, 0.9);
@@ -319,6 +321,11 @@ html:is([data-theme='glass'], [data-theme='frost']) :is(.start, .stat, .search i
   box-shadow: var(--glass-rim);
   border-color: transparent;
 }
+/* a pane inside a pane (the figures in a usage card) keeps its rim but not a second sheen: two sheens stacked lit the corner
+   enough to wash out the grey labels on the dark glass */
+html[data-theme='glass'] .card .stat {
+  background: rgba(255, 255, 255, 0.03);
+}
 html:is([data-theme='glass'], [data-theme='frost']) .start:hover {
   box-shadow: var(--glass-rim-hi);
 }
@@ -415,8 +422,12 @@ html[data-theme='frost'] {
   --line-3: rgba(30, 36, 70, 0.3);
   --white: #1c1e2c;
   --grey: #4b4f66;
-  --grey-2: #666a82;
+  --grey-2: #52566c;
   --volt: #f0604d;
+  /* the coral as text (links, counters, tags): a deeper shade of it, so it reads on the pale panes */
+  --volt-ink: #a9321f;
+  /* amber as a warning reads on dark; on the pale panes it takes a deeper amber */
+  --warning: #9a5b00;
   --volt-2: #d94c3a;
   --volt-rgb: 240, 96, 77;
   --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.22) 38%, rgba(255, 255, 255, 0.08) 62%, rgba(255, 255, 255, 0.5) 100%);
@@ -428,7 +439,7 @@ html[data-theme='frost'] {
   --scroll-track: rgba(30, 36, 70, 0.05);
   --scroll-thumb: rgba(30, 36, 70, 0.25);
   --scroll-thumb-hover: rgba(var(--volt-rgb), 0.6);
-  --slab-fill: rgba(255, 255, 255, 0.16);
+  --slab-fill: rgba(255, 255, 255, 0.5);
   --on-accent: #fff;
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23555a73' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
   --glass-lens-bar: url(#jolty-lens) blur(3px) saturate(1.3);
@@ -470,7 +481,8 @@ html[data-theme='frost'] .msg-user {
   background: linear-gradient(135deg, rgba(var(--volt-rgb), 0.26), rgba(167, 139, 250, 0.16) 60%, rgba(255, 255, 255, 0.45));
 }
 html[data-theme='frost'] .btn.primary {
-  background: linear-gradient(135deg, #ff9a86, #ff6f91);
+  /* coral to rose like before, deep enough for the white label under the sheen's bright corner (4.5:1 there) */
+  background: linear-gradient(135deg, #b5361f, #ac2c58);
   color: #fff;
   box-shadow: var(--glass-rim-hi), 0 10px 26px -10px rgba(240, 96, 77, 0.7);
 }
@@ -480,4 +492,40 @@ html[data-theme='frost'] .btn.on {
 }
 html.low-power[data-theme='frost'] :is(.picker-pop, .ctx, .mentions, .sel-popup, .toast, .power-bar, .main > .chat-header, .main:has(> .messages) > .composer-wrap .composer) {
   background: #eef0f6;
+}
+
+/* Frost: coral text and the status tags in inks that read on the pale panes */
+html[data-theme='frost'] :is(.md a, .page-tab-count, .picker-score.hi, .tag.volt) {
+  color: var(--volt-ink);
+}
+html[data-theme='frost'] .lib-chip.on {
+  background: var(--volt-ink);
+  border-color: var(--volt-ink);
+  color: #fff;
+}
+html[data-theme='frost'] .tag.good {
+  color: #1d6b2a;
+}
+html[data-theme='frost'] .tag.warn {
+  color: #8a5300;
+}
+html[data-theme='frost'] .tag.bad {
+  color: #a3221b;
+}
+html[data-theme='frost'] :is(.nav-item.active, .page-tab.on, .picker-opt.on) svg {
+  color: var(--volt-ink);
+}
+
+/* Frost's panes are milky, not clear: dark ink keeps 4.5:1 where the pink and teal of the sky glow behind a card */
+html[data-theme='frost'] :is(.card, .composer, .tool, .permission, .plan, .tasks-bar, .theme-opt, .composer-notice, .attachment, .md pre, .md table) {
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.34);
+}
+/* the Frost sky a touch softer: where an orb is large (a small window, a phone) the faint grey ink still reads on it */
+html[data-theme='frost'] body::before {
+  opacity: 0.85;
+}
+/* small grey text right where a pane is brightest (the menu's lit top corner, the bare sky behind a turn's header): the regular grey */
+html:is([data-theme='glass'], [data-theme='frost']) .picker-legend,
+html[data-theme='frost'] .turn-head {
+  color: var(--grey);
 }

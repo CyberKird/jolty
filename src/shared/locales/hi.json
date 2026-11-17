@@ -1825,5 +1825,16 @@
  "Compactat: de la {before} la {after}.": "कॉम्पैक्ट किया गया: {before} से {after}।",
  "Nu era nimic de compactat.": "कॉम्पैक्ट करने को कुछ नहीं था।",
  "Compactează": "कॉम्पैक्ट करें",
- "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "आपके पासवर्ड से एन्क्रिप्ट किया गया पूरा बैकअप, आपकी चुनी जगह पर: इतिहास के साथ चैट, सेटिंग्स और थीम, प्रोफ़ाइल (कुंजियों के बिना), शेड्यूल किए गए काम, नोट्स, स्किल, कमांड, निर्देश और MCP सर्वर। नए PC पर रिस्टोर के बाद Jolty ठीक वहीं होता है जहां आपने छोड़ा था। API कुंजियां और लॉगिन कभी इस PC से बाहर नहीं जाते।"
+ "Backup complet, criptat cu parola ta, în locul ales de tine: conversațiile cu istoricul lor, setările și temele, profilurile (fără chei), sarcinile programate, notițele, skillurile, comenzile, instrucțiunile și serverele MCP. Pe un PC nou, după restaurare, Jolty e exact unde ai rămas. Cheile API și login-urile nu pleacă de pe acest PC.": "आपके पासवर्ड से एन्क्रिप्ट किया गया पूरा बैकअप, आपकी चुनी जगह पर: इतिहास के साथ चैट, सेटिंग्स और थीम, प्रोफ़ाइल (कुंजियों के बिना), शेड्यूल किए गए काम, नोट्स, स्किल, कमांड, निर्देश और MCP सर्वर। नए PC पर रिस्टोर के बाद Jolty ठीक वहीं होता है जहां आपने छोड़ा था। API कुंजियां और लॉगिन कभी इस PC से बाहर नहीं जाते।",
+ "Animații": "एनिमेशन",
+ "Pornite": "चालू",
+ "Reduse": "कम",
+ "Oprite": "बंद",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "सब कुछ सहजता से चलता है, इस स्क्रीन के अनुसार ({hz} Hz)।",
+ "Doar estompări scurte, nimic nu alunecă.": "केवल छोटे फ़ेड, कुछ भी खिसकता नहीं।",
+ "Nimic nu se mișcă, totul apare pe loc.": "कुछ भी नहीं चलता, सब कुछ तुरंत दिखता है।",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "इस फ़ोन पर Jolty कैसे चलता है। यह तुरंत लागू होता है और सिर्फ़ इसी फ़ोन पर रहता है।",
+ "rapid": "तेज़",
+ "mediu": "मध्यम",
+ "lent": "धीमा"
 }

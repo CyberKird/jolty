@@ -138,7 +138,8 @@ export function App() {
     void loadUsage()
     const applySettings = (): void =>
       void api.app.settings().then((s) => {
-        document.documentElement.classList.toggle('reduce-motion', Boolean(s.reduceMotion))
+        // a phone keeps its own choice (remote/motion.ts), the PC's does not reach it
+        if (!document.documentElement.classList.contains('remote')) document.documentElement.classList.toggle('reduce-motion', Boolean(s.reduceMotion))
         setLowPowerMode(s.lowPower)
         applyTheme(s.theme, s.glassClear)
         // without Windows' transparency effects the window stays solid, so the page must not thin out either

@@ -144,7 +144,7 @@ export function UsagePage() {
             if (!p) return null
             const idle = u.last30d.turns === 0 && !u.limits?.windows.length
             return (
-              <div className="card" key={u.profileId} style={{ opacity: idle ? 0.7 : 1 }}>
+              <div className={`card${idle ? ' usage-idle' : ''}`} key={u.profileId}>
                 <div className="row" style={{ marginBottom: 6 }}>
                   <ProfileDot profile={p} size={11} />
                   <b>{p.name}</b>
@@ -155,7 +155,7 @@ export function UsagePage() {
                 <div className="stat-strip">
                   {(
                     [
-                      ['Ultimele 24 h', u.last24h],
+                      [tr("Ultimele 24 de ore"), u.last24h],
                       [tr("Ultimele 7 zile"), u.last7d],
                       [tr("Ultimele 30 de zile"), u.last30d]
                     ] as const

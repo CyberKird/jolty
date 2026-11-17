@@ -1,0 +1,172 @@
+/* Motion on a phone (remote/motion.ts sets the classes and data-hz): the same language as the desktop (transitions.css tokens,
+   arrivals ease out, nothing bounces past where a finger expects it), with more travel for a thumb. Only transform and opacity move.
+   - data-hz: the measured refresh rate. 90 and 120 Hz draw a spring cleanly; at 30 Hz (iOS Low Power Mode) a spring looks like a
+     stutter, so moves are shorter, straight ease-outs, and the glow on the message box is dropped.
+   - .motion-reduced: short fades only. .motion-off: the desktop's reduce-motion switch, everything instant.
+   The system's reduced-motion setting is not read here on purpose: the phone's own setting decides. */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  html.remote {
+    --t-drawer: 400ms;
+    --t-enter: 500ms;
+    --e-drawer: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  html.remote[data-hz='60']:not(.reduce-motion):not(.low-power) {
+    --e-spring: cubic-bezier(0.34, 1.3, 0.5, 1);
+  }
+  html.remote:is([data-hz='90'], [data-hz='120']):not(.reduce-motion):not(.low-power) {
+    --e-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
+    --stagger: 32ms;
+  }
+  html.remote[data-hz='30']:not(.reduce-motion):not(.low-power) {
+    --t-base: 200ms;
+    --t-slow: 280ms;
+    --t-drawer: 300ms;
+    --t-enter: 340ms;
+    --stagger: 18ms;
+    --rise: 10px;
+    --e-spring: var(--e-out);
+  }
+
+  /* the drawer: its own length, or the one the finger left it with (remote/gestures.ts sets --drawer-t on release) */
+  html.remote .sidebar,
+  html.remote .app.no-sidebar .sidebar {
+    transition: transform var(--drawer-t, var(--t-drawer)) var(--e-drawer);
+  }
+  html.remote .app::after {
+    transition: opacity var(--drawer-t, var(--t-drawer)) var(--e-out);
+  }
+
+  /* the lengths phone.css wrote out now follow the rate */
+  html.remote:not(.reduce-motion) .app:not(.no-sidebar) .sidebar > * {
+    animation-duration: calc(var(--t-enter) * 1.1);
+  }
+  html.remote:not(.reduce-motion) .messages :is(.msg-row, .msg-assistant):nth-last-child(-n + 4),
+  html.remote:not(.reduce-motion) .page {
+    animation-duration: var(--t-enter);
+  }
+
+  /* the welcome screen rises in turn (a page rises as a whole, phone.css: its cards are glass panes, costly to lift one by one) */
+  html.remote:not(.reduce-motion) .welcome > * {
+    animation: m-rise var(--t-enter) var(--e-spring, var(--e-out)) both;
+  }
+  html.remote .welcome > :nth-child(2) { animation-delay: calc(var(--stagger) * 1.5); }
+  html.remote .welcome > :nth-child(3) { animation-delay: calc(var(--stagger) * 3); }
+  html.remote .welcome > :nth-child(n + 4) { animation-delay: calc(var(--stagger) * 4.5); }
+  html.remote:not(.reduce-motion) .starts .start:nth-child(-n + 6) {
+    animation: m-rise var(--t-enter) var(--e-spring, var(--e-out)) both;
+  }
+  html.remote .starts .start:nth-child(2) { animation-delay: calc(80ms + var(--stagger)); }
+  html.remote .starts .start:nth-child(3) { animation-delay: calc(80ms + var(--stagger) * 2); }
+  html.remote .starts .start:nth-child(4) { animation-delay: calc(80ms + var(--stagger) * 3); }
+  html.remote .starts .start:nth-child(n + 5) { animation-delay: calc(80ms + var(--stagger) * 4); }
+
+  /* every control answers the finger: it sinks a little and comes back with the press */
+  html.remote :is(.cp, .picker-btn, .chrome-toggle, .lib-chip, .page-tab, .sheet-item, .pcs-icon, .start, .picker-opt, .head-act, .row-act) {
+    transition: transform var(--t-fast) var(--e-out), background-color var(--t-fast) var(--e-move), color var(--t-fast) var(--e-move), border-color var(--t-fast) var(--e-move);
+  }
+  html.remote :is(.cp, .picker-btn, .chrome-toggle, .lib-chip, .page-tab, .sheet-item, .pcs-icon, .start, .picker-opt, .head-act, .row-act):active:not(:disabled) {
+    transform: scale(0.95);
+  }
+  html.remote :is(.sheet-item, .start, .picker-opt):active:not(:disabled) {
+    transform: scale(0.985);
+  }
+
+  /* a sheet's list arrives with the sheet */
+  html.remote:not(.reduce-motion) .sheet-item:nth-child(-n + 8) {
+    animation: m-rise var(--t-enter) var(--e-out) both;
+    animation-delay: calc(90ms + var(--stagger) * 0.5);
+  }
+
+  /* 30 Hz: the glow around the box is a repaint per frame, not worth it at that rate */
+  html.remote[data-hz='30'] .composer:focus-within {
+    box-shadow: 0 0 0 1px var(--volt-line);
+  }
+
+  /* ---- Reduced: short fades, nothing travels ---- */
+  html.remote.motion-reduced {
+    --t-fast: 90ms;
+    --t-base: 140ms;
+    --t-slow: 160ms;
+    --t-exit: 100ms;
+    --t-exit-slow: 120ms;
+    --t-enter: 160ms;
+    --stagger: 0ms;
+    --rise: 0px;
+  }
+  html.remote.motion-reduced :is(.page, .msg-row, .msg-assistant, .pending-turn, .toast, .picker-pop, .sheet, .sheet-scrim, .sidebar > *, .welcome > *, .page-inner > *, .start, .session-item, .sheet-item) {
+    animation-name: m-fade !important;
+    animation-duration: var(--t-enter) !important;
+    animation-delay: 0ms !important;
+    animation-timing-function: var(--e-out) !important;
+  }
+  html.remote.motion-reduced :is(button, .session-item, .nav-item, .start, .cp, .picker-btn, .lib-chip, .sheet-item):active {
+    transform: none !important;
+  }
+  /* the drawer fades in place, and moves out of the way only once it is invisible */
+  html.remote.motion-reduced .sidebar,
+  html.remote.motion-reduced .app.no-sidebar .sidebar {
+    opacity: 0;
+    transition: opacity var(--t-enter) var(--e-out), transform 0s linear var(--t-enter);
+  }
+  html.remote.motion-reduced .app:not(.no-sidebar) .sidebar {
+    opacity: 1;
+    transition: opacity var(--t-enter) var(--e-out), transform 0s;
+  }
+  html.remote.motion-reduced.drawer-drag .sidebar {
+    opacity: 1;
+  }
+}
+
+/* the theme changes: the old page colour lies over the new look for a moment and fades away */
+.theme-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  animation: m-veil var(--t-theme, 460ms) var(--e-out, ease-out) both;
+}
+html.motion-reduced .theme-veil {
+  --t-theme: 160ms;
+}
+
+@keyframes m-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes m-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise, 12px));
+  }
+}
+@keyframes m-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+@keyframes m-veil {
+  to {
+    opacity: 0;
+  }
+}
+
+/* your own message rises from where it was sent, growing from its corner: a slide in from the right pushed it past the screen's
+   edge while it moved, which made the chat wider than the screen for those frames */
+html.remote .messages .msg-row {
+  transform-origin: 100% 100%;
+}
+@keyframes msg-pop-user {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+}
+
+/* what is in the drawer arrives with the drawer's own curve: a spring overshot to the right of its place, past the drawer's edge */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  html.remote:not(.reduce-motion) .app:not(.no-sidebar) .sidebar > * {
+    animation-timing-function: var(--e-out);
+  }
+}

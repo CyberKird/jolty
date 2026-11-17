@@ -191,7 +191,8 @@ export const useStore = create<State>((set, get) => ({
   toasts: [],
   // on a narrow window the live panel floats over the chat, so it starts closed there
   power: { armed: false, plan: DEFAULT_PLAN },
-  liveOpen: window.innerWidth >= 1180,
+  // the same test as the CSS that turns the panel into a drawer (max-width: 1180px): at exactly 1180 px it opened as a drawer over the home screen
+  liveOpen: !window.matchMedia('(max-width: 1180px)').matches,
   sidebarOpen: true,
 
   setPage: (page) => {
