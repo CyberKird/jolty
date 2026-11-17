@@ -1,5 +1,8 @@
-/* The activity board of the Live panel (ActivityGraph.tsx): a burst of light, four glittering cables, dark tiles.
-   Everything that moves is its own layer and moves by opacity or transform (the graphics chip does it); the board scales with its width. */
+/* The activity board of the Live panel (ActivityGraph.tsx): a core, a ribbon of fibres, a row of keys above and one below.
+   Layout and motion live here; what each theme makes of it (materials, light, colour) is in activity-materials.css. Everything that
+   moves is its own layer and moves by transform or opacity; idle, nothing moves at all. The board scales with its width. */
+@import './activity-materials.css';
+
 .ag-wrap {
   position: relative;
   width: var(--agw, min(100%, 380px));
@@ -14,8 +17,22 @@
   width: 100%;
   aspect-ratio: 360 / 192;
   user-select: none;
+  perspective: 900px;
 }
-.ag-layer {
+/* the panel leans towards the pointer (activity-tilt.ts); the keys and the core stand off it */
+.ag-stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.7s var(--e-out, ease-out);
+}
+.ag-stage.tilting {
+  transition: transform 0.14s linear;
+  will-change: transform;
+}
+
+/* the fibres: a sheath and a thin core each, drawn once */
+.ag-wires {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -23,62 +40,27 @@
   overflow: visible;
   pointer-events: none;
 }
-.ag-layer path {
+.ag-wires path {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-
-/* the burst */
-.ag-rays line {
-  stroke: #dbe8ff;
-  stroke-width: 0.5;
+.ag-sheath {
+  stroke: var(--ag-sheath);
+  stroke-width: 3.4;
 }
-.ag-rays {
-  transform-origin: 12.8% 52.1%;
+.ag-fibre {
+  stroke: var(--ag-fibre);
+  stroke-width: 0.9;
+  transition: stroke 0.5s var(--e-move, ease);
 }
-.ag-dots circle,
-.ag-rays line {
-  transition: opacity 0.9s var(--e-out, ease-out);
+.ag-fibre.used {
+  stroke: var(--ag-fibre-used);
 }
-.ag-rays {
-  opacity: var(--ag-ray, 0.8);
-  transition: opacity 0.9s ease-out;
+.ag-fibre.lit {
+  stroke: var(--ag-lit);
+  stroke-width: 1.3;
 }
-.ag-glow {
-  position: absolute;
-  width: calc(var(--u) * 66);
-  height: calc(var(--u) * 66);
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff 0 5%, rgba(200, 222, 255, 0.9) 12%, rgba(130, 170, 255, 0.38) 30%, rgba(110, 150, 255, 0.1) 50%, transparent 70%);
-  pointer-events: none;
-}
-.ag-pill {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: inline-flex;
-  align-items: center;
-  gap: calc(var(--u) * 4);
-  padding: calc(var(--u) * 2.6) calc(var(--u) * 7);
-  border-radius: 999px;
-  background: rgba(8, 8, 12, 0.82);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
-  font-size: max(7px, calc(var(--u) * 8.6));
-  line-height: 1.2;
-  white-space: nowrap;
-}
-.ag-pill b {
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--white);
-}
-.ag-pill em {
-  font-style: normal;
-  color: var(--grey);
-}
-
-/* the cables: one canvas the graphics chip draws (activity-gl.ts), and one for the sparks of a transfer */
 .ag-cv {
   position: absolute;
   inset: 0;
@@ -86,127 +68,263 @@
   height: 100%;
   pointer-events: none;
 }
-/* the place the work moved to gathers out of the sparks, then its tile settles */
-.ag-node.arrive .ag-tile {
-  animation: ag-arrive 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+/* ---- the core ---- */
+.ag-core {
+  position: absolute;
+  width: calc(var(--u) * 64);
+  height: calc(var(--u) * 64);
+  transform: translate(-50%, -50%) translateZ(10px);
+  pointer-events: none;
 }
-@keyframes ag-arrive {
-  0%,
-  35% {
-    opacity: 0;
-    transform: scale(0.7);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-  }
+.ag-core > * {
+  position: absolute;
 }
-/* the dots twinkle in four groups, out of step; the rays turn very slowly; the light breathes */
-.ag-dots.g0 {
-  animation: ag-twinkle calc(3.1s * var(--ag-tw, 1)) ease-in-out infinite;
+.ag-core-ring {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-.ag-dots.g1 {
-  animation: ag-twinkle calc(3.7s * var(--ag-tw, 1)) ease-in-out -1.2s infinite;
+.ag-core-ticks line {
+  stroke: var(--ag-tick);
+  stroke-width: 0.7;
+  stroke-linecap: round;
 }
-.ag-dots.g2 {
-  animation: ag-twinkle calc(2.6s * var(--ag-tw, 1)) ease-in-out -0.5s infinite;
+.ag-core-track,
+.ag-core-arc {
+  fill: none;
+  stroke-width: 1.9;
 }
-.ag-dots.g3 {
-  animation: ag-twinkle calc(4.3s * var(--ag-tw, 1)) ease-in-out -2.4s infinite;
+.ag-core-track {
+  stroke: var(--ag-track);
 }
-@keyframes ag-twinkle {
-  50% {
-    opacity: 0.25;
-  }
+.ag-core-arc {
+  stroke: var(--ag-arc);
+  stroke-linecap: round;
+  transition: stroke-dasharray 1.2s var(--e-out, ease-out), stroke 0.4s;
 }
-.ag-rays {
-  animation: ag-turn var(--ag-spin, 120s) linear infinite;
+.ag-core.high .ag-core-arc {
+  stroke: var(--serious);
 }
-@keyframes ag-turn {
-  to {
-    transform: rotate(360deg);
-  }
+.ag-core-ripple,
+.ag-core > .ag-orb-glow {
+  inset: calc(var(--u) * 10.5);
+  border-radius: 50%;
 }
-.ag-glow {
-  animation: ag-breathe 3.6s ease-in-out infinite alternate;
+/* the sphere's two bitmaps (activity-orbs.ts): the sphere fills 80% of each, its centre at 46% of the height */
+.ag-core > .ag-orb-back,
+.ag-core > .ag-orb-front {
+  left: 8%;
+  top: 11.4%;
+  width: 84%;
+  height: 84%;
 }
-@keyframes ag-breathe {
-  from {
-    transform: translate(-50%, -50%) scale(calc(0.92 * var(--ag-g, 1)));
-  }
-  to {
-    transform: translate(-50%, -50%) scale(calc(1.1 * var(--ag-g, 1)));
-  }
+.ag-core-halo {
+  inset: calc(var(--u) * -4);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(var(--ag-glow-rgb), 0.32), rgba(var(--ag-glow-rgb), 0.1) 55%, transparent);
+  opacity: 0;
+  transition: opacity 0.6s var(--e-move, ease);
 }
-.actgraph.live-on .ag-glow {
-  animation-duration: 1.6s;
+.ag-core-ripple {
+  box-shadow: 0 0 0 1px rgba(var(--ag-glow-rgb), 0.9);
+  opacity: 0;
+}
+.ag-core-val {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  grid-auto-flow: column;
+  justify-content: center;
+  align-items: baseline;
+  align-content: center;
+  font-family: var(--label);
+  font-size: max(11px, calc(var(--u) * 13));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--ag-core-ink);
+  text-shadow: var(--ag-core-ink-shadow, none);
+}
+.ag-core-val small {
+  font-size: 0.56em;
+  font-weight: 500;
+  margin-left: 0.08em;
+  opacity: 0.8;
+}
+.ag-engine {
+  position: absolute;
+  transform: translate(-50%, 0);
+  font-family: var(--label);
+  font-size: max(10px, calc(var(--u) * 10));
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--grey);
+}
+.ag-engine em {
+  font-style: normal;
+  color: var(--ag-caption);
+  margin-left: 0.4em;
 }
 
-/* the rows' names, on the outer side of the first tile, like the board's captions */
+/* the rows' names, on the outer side of the first key */
 .ag-caption {
   position: absolute;
   transform: translateY(-50%);
   font-family: var(--label);
-  font-size: max(6.5px, calc(var(--u) * 7.2));
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--grey-2);
+  font-size: max(10px, calc(var(--u) * 9.6));
+  font-weight: 500;
+  color: var(--ag-caption);
   white-space: nowrap;
 }
 
-/* a place: a dark tile with its icon, the name beside the outer edge, how many times the conversation went there */
+/* ---- a place: a key with its icon and an indicator light, the count on its corner, the name outside ---- */
 .ag-node {
   position: absolute;
   width: 0;
   height: 0;
+  transform: translateZ(16px);
+  transform-style: preserve-3d;
 }
-.ag-tile {
+.ag-key {
   position: absolute;
+  transform-style: preserve-3d;
   left: calc(var(--u) * -14);
   top: calc(var(--u) * -14);
   width: calc(var(--u) * 28);
   height: calc(var(--u) * 28);
+}
+.ag-tile {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  border-radius: calc(var(--u) * 8);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 55%), var(--s2);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09), 0 4px 10px -4px rgba(0, 0, 0, 0.7);
-  color: var(--grey-2);
-  transition: box-shadow var(--t-base) var(--e-move), color var(--t-base) var(--e-move);
+  border-radius: 50%;
+  color: var(--ag-icon);
+  transform-style: preserve-3d;
+  transition: color 0.4s var(--e-move, ease), transform 0.25s var(--e-out, ease-out);
 }
-.ag-tile::after {
-  content: '';
+.ag-orb-back,
+.ag-orb-front {
   position: absolute;
-  inset: calc(var(--u) * -3);
-  border-radius: calc(var(--u) * 10);
-  box-shadow: 0 0 0 1px var(--c);
-  opacity: 0;
   pointer-events: none;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }
+.ag-orb-back {
+  background-image: var(--orb-back);
+}
+.ag-orb-front {
+  background-image: var(--orb-front);
+}
+.ag-tile > .ag-orb-back,
+.ag-tile > .ag-orb-front {
+  left: -12.5%;
+  top: -7.5%;
+  width: 125%;
+  height: 125%;
+}
+/* the icon floats inside the glass, a little nearer than the orb's back (parallax when the panel leans) */
 .ag-icon {
-  width: calc(var(--u) * 15);
-  height: calc(var(--u) * 15);
+  position: relative;
+  width: calc(var(--u) * 13);
+  height: calc(var(--u) * 13);
   fill: none;
   stroke: currentColor;
+  transform: translateZ(4px);
+  filter: var(--ag-icon-shadow, none);
+}
+/* the light inside an orb at work: its own layer, so pulsing it costs nothing */
+.ag-orb-glow {
+  position: absolute;
+  inset: 10%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(var(--ag-glow-rgb), 0.5), rgba(var(--ag-glow-rgb), 0.12) 60%, transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
 }
 .ag-node.used .ag-tile {
-  color: var(--c);
+  color: var(--ag-icon-used);
 }
 .ag-node.on .ag-tile {
-  color: var(--c);
-  box-shadow: inset 0 0 0 1px var(--c), 0 0 calc(var(--u) * 14) calc(var(--u) * -2) var(--c);
+  color: var(--ag-icon-on);
 }
-.ag-node.on .ag-tile::after {
-  animation: ag-halo 1.7s ease-out infinite;
+.ag-node.on .ag-orb-glow,
+.actgraph.live-on .ag-core > .ag-orb-glow {
+  opacity: 1;
+  /* set every frame while it breathes: a transition would keep the compositor busy at the screen's rate */
+  transition: none;
 }
-@keyframes ag-halo {
-  from {
-    transform: scale(0.9);
-    opacity: 0.75;
+@media (hover: hover) {
+  .ag-key:hover .ag-tile {
+    transform: translateY(calc(var(--u) * -1.2));
   }
-  to {
-    transform: scale(1.35);
-    opacity: 0;
+}
+.ag-node.arrive .ag-tile {
+  animation: ag-lift 0.65s var(--e-out, ease-out);
+}
+@keyframes ag-lift {
+  40% {
+    transform: translateY(calc(var(--u) * -3)) scale(1.06);
+  }
+}
+.actgraph.ready .ag-key.shake {
+  animation: ag-shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes ag-shake {
+  20%,
+  60% {
+    transform: translateX(calc(var(--u) * -1.6));
+  }
+  40%,
+  80% {
+    transform: translateX(calc(var(--u) * 1.6));
+  }
+}
+.ag-count,
+.ag-fail {
+  position: absolute;
+  z-index: 1;
+  min-width: calc(var(--u) * 13);
+  height: calc(var(--u) * 13);
+  padding: 0 calc(var(--u) * 3);
+  border-radius: 999px;
+  font-family: var(--label);
+  font-size: max(9px, calc(var(--u) * 8.6));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: calc(var(--u) * 13);
+  text-align: center;
+  box-shadow: 0 0 0 calc(var(--u) * 1.4) var(--ag-cut);
+}
+.ag-count {
+  right: calc(var(--u) * -5.5);
+  bottom: calc(var(--u) * -5.5);
+  background: var(--ag-badge);
+  color: var(--ag-badge-ink);
+}
+.ag-fail {
+  z-index: 2;
+  right: calc(var(--u) * -5.5);
+  top: calc(var(--u) * -5.5);
+  background: var(--critical);
+  color: #fff;
+}
+/* the count ticks when the packet of light reaches the key (the delay is set from the route's length) */
+.actgraph.ready .ag-count {
+  animation: ag-tick 0.5s var(--e-out, ease-out) both;
+}
+@keyframes ag-tick {
+  0% {
+    transform: none;
+  }
+  35% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: none;
   }
 }
 .ag-label {
@@ -214,54 +332,48 @@
   left: calc(var(--u) * -30);
   width: calc(var(--u) * 60);
   text-align: center;
-  font-size: max(7px, calc(var(--u) * 8.4));
+  font-family: var(--label);
+  font-size: max(9.5px, calc(var(--u) * 9.4));
   font-weight: 500;
+  letter-spacing: -0.005em;
   color: var(--grey);
   white-space: nowrap;
-  transition: color var(--t-base) var(--e-move);
+  transition: color 0.4s var(--e-move, ease);
 }
-.ag-label.top {
-  top: calc(var(--u) * -29);
+.ag-node.top .ag-label {
+  bottom: calc(var(--u) * 19);
 }
-.ag-label.bottom {
-  top: calc(var(--u) * 18);
+.ag-node.bottom .ag-label {
+  top: calc(var(--u) * 19);
 }
 .ag-node.on .ag-label,
 .ag-node.used .ag-label {
   color: var(--white);
 }
-.ag-count {
-  position: absolute;
-  right: calc(var(--u) * -4);
-  bottom: calc(var(--u) * -4);
-  min-width: calc(var(--u) * 11);
-  height: calc(var(--u) * 11);
-  padding: 0 calc(var(--u) * 3);
-  border-radius: 999px;
-  background: var(--s3);
-  box-shadow: 0 0 0 1px var(--line-2);
-  font-family: var(--label);
-  font-size: max(6px, calc(var(--u) * 6.8));
-  line-height: calc(var(--u) * 11);
-  text-align: center;
-  color: var(--grey);
+
+/* ---- the core at work: its light breathes, a highlight turns, each call sends a ripple out ---- */
+/* the core at work: its light is on (activity-pulses.ts makes it breathe in its 30 fps frames); each call sends a ripple out */
+.actgraph.live-on .ag-core-halo {
+  opacity: 1;
+  transform: scale(var(--ag-g, 1));
+  transition: none;
 }
-.ag-fail {
-  position: absolute;
-  z-index: 2;
-  right: calc(var(--u) * -5);
-  top: calc(var(--u) * -5);
-  min-width: calc(var(--u) * 12);
-  height: calc(var(--u) * 12);
-  padding: 0 calc(var(--u) * 3);
-  border-radius: 999px;
-  background: var(--critical);
-  font-family: var(--label);
-  font-size: max(6.5px, calc(var(--u) * 7.2));
-  font-weight: 600;
-  line-height: calc(var(--u) * 12);
-  text-align: center;
-  color: #fff;
+.ag-core-ripple {
+  animation: ag-ripple 0.9s var(--e-out, ease-out);
+}
+@keyframes ag-ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+.actgraph.wait .ag-core-halo {
+  opacity: 0.8;
+  animation: none;
 }
 
 /* the grip that resizes the board */
@@ -297,7 +409,7 @@
   opacity: 1;
 }
 
-/* a weak PC, or motion switched off: the board holds still and shows the same state (the glitter shows both layers, half each) */
+/* a weak PC, or motion switched off: the board holds still, flat, and shows the same state */
 html.low-power .actgraph *,
 html.low-power .actgraph *::after,
 html.reduce-motion .actgraph *,
@@ -305,17 +417,12 @@ html.reduce-motion .actgraph *::after {
   animation: none !important;
   transition: none !important;
 }
-html.low-power .ag-node.on .ag-tile::after,
-html.reduce-motion .ag-node.on .ag-tile::after {
-  opacity: 0.6;
+html.low-power .ag-stage,
+html.reduce-motion .ag-stage {
+  transform: none !important;
 }
 .live.closed .actgraph * {
   animation-play-state: paused;
-}
-/* still, the light keeps the size of the model */
-html.low-power .ag-glow,
-html.reduce-motion .ag-glow {
-  transform: translate(-50%, -50%) scale(var(--ag-g, 1));
 }
 
 /* the bar above the Live tabs that sizes the board: no room of its own, a thin line that lights under the pointer */

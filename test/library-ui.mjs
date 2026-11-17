@@ -108,8 +108,8 @@ try {
   await win.locator('.session-item').first().click()
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('jolty:event', { type: 'context', sessionId: 's1', used: 170000, window: 200000 }))
   await win.waitForSelector('.actgraph')
-  // the transfer: the rope reaches the running place spread out and closes up while the place gathers out of sparks
-  for (const name of ['transfer-a', 'transfer-b', 'transfer-c', 'transfer-d', 'transfer-e']) await win.locator('.actgraph').screenshot({ path: path.join(shots, `${name}.png`) })
+  // the light runs down the route to the running place (a few frames of it)
+  for (const name of ['pulse-a', 'pulse-b', 'pulse-c']) await win.locator('.actgraph').screenshot({ path: path.join(shots, `${name}.png`) })
   assert.equal(await win.locator('.ag-node.on').count(), 1, 'the running tool lights one place')
   assert.match(await win.locator('.ag-node.on .ag-label').textContent(), /Network/i)
   assert.equal(await win.locator('.ag-fail').count(), 1, 'the failed command is counted')
@@ -117,10 +117,16 @@ try {
   assert.equal(await win.locator('.liquid.high').count(), 1, 'over 80% the liquid turns')
   await win.waitForTimeout(1600)
   await win.locator('.actgraph').screenshot({ path: path.join(shots, 'actgraph.png') })
-  // the glitter flows: two shots a tenth of a second apart (measured by the caller)
-  await win.locator('.actgraph').screenshot({ path: path.join(shots, 'flow-a.png') })
+  assert.equal(await win.locator('.ag-fibre.lit').count(), 1, 'the route to the running place is lit')
+  // the panel leans towards the pointer and settles back when it leaves
+  const g = await win.locator('.actgraph').boundingBox()
+  await win.mouse.move(g.x + g.width * 0.95, g.y + g.height * 0.1, { steps: 4 })
+  await win.waitForTimeout(300)
+  assert.match(await win.locator('.ag-stage').evaluate((el) => el.style.transform), /rotateX/, 'the board tilts under the pointer')
+  await win.locator('.actgraph').screenshot({ path: path.join(shots, 'actgraph-tilt.png') })
+  await win.mouse.move(g.x - 40, g.y - 40)
   await win.waitForTimeout(100)
-  await win.locator('.actgraph').screenshot({ path: path.join(shots, 'flow-b.png') })
+  assert.equal(await win.locator('.ag-stage').evaluate((el) => el.style.transform), '', 'and settles when it leaves')
   await win.screenshot({ path: path.join(shots, 'chat-map.png') })
   // the bar above the Live tabs makes the board bigger when dragged down
   const w0 = (await win.locator('.ag-wrap').boundingBox()).width

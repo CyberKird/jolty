@@ -1,0 +1,80 @@
+/* What each theme makes of the activity board (layout in activity-graph.css; the orbs themselves are shaded in activity-orbs.ts).
+   One idea in three materials:
+   - Volt: obsidian and chrome spheres on a black panel, hairline traces in a dark groove like a circuit board, lime light.
+   - Glass: clear glass spheres over the aurora, light pooled at their base, lavender light in the fibres.
+   - Frost: frosted pearl in daylight with a soft contact shadow, coral light.
+   Everything here is painted once; nothing animates. Colours come from the theme tokens where a token exists. */
+
+/* ---- Volt (the base) ---- */
+.actgraph {
+  --ag-accent: var(--volt);
+  --ag-glow-rgb: var(--volt-rgb);
+  --ag-arc: var(--volt);
+  --ag-lit: rgba(var(--volt-rgb), 0.7);
+  --ag-pulse: var(--volt);
+  --ag-pulse-head: #fbffe6;
+  --ag-sheath: #121318;
+  --ag-fibre: #262931;
+  --ag-fibre-used: #3d414b;
+  --ag-tick: #2c3038;
+  --ag-track: #1b1e24;
+  --ag-icon: #7c808a;
+  --ag-icon-used: #e2e4e8;
+  --ag-icon-on: #ffffff;
+  --ag-icon-shadow: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8));
+  --ag-badge: #2a2e36;
+  --ag-badge-ink: #eceef1;
+  --ag-cut: var(--s1);
+  --ag-core-ink: var(--white);
+  --ag-core-ink-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  /* the rows' names: quieter than the places' names, still 4.5:1 on the panel */
+  --ag-caption: var(--grey-2);
+}
+.actgraph.wait {
+  --ag-accent: var(--warning);
+  --ag-arc: var(--warning);
+  --ag-glow-rgb: 250, 178, 25;
+}
+
+/* ---- Glass ---- */
+html[data-theme='glass'] .actgraph {
+  --ag-lit: #e9e3ff;
+  --ag-pulse-head: #ffffff;
+  --ag-sheath: rgba(12, 10, 34, 0.55);
+  --ag-fibre: rgba(255, 255, 255, 0.16);
+  --ag-fibre-used: rgba(255, 255, 255, 0.34);
+  --ag-tick: rgba(255, 255, 255, 0.22);
+  --ag-track: rgba(255, 255, 255, 0.1);
+  --ag-icon: rgba(244, 243, 252, 0.55);
+  --ag-icon-used: #f4f3fc;
+  --ag-icon-on: #ffffff;
+  --ag-icon-shadow: drop-shadow(0 1px 1.5px rgba(8, 4, 30, 0.8));
+  --ag-badge: rgba(244, 243, 252, 0.92);
+  --ag-badge-ink: #1a1830;
+  --ag-cut: rgba(20, 18, 44, 0.9);
+  --ag-core-ink-shadow: 0 1px 2px rgba(8, 6, 30, 0.8);
+  --ag-caption: #c2c1d8;
+}
+
+/* ---- Frost ---- */
+html[data-theme='frost'] .actgraph {
+  --ag-lit: rgba(var(--volt-rgb), 0.85);
+  --ag-pulse-head: #fff6f3;
+  --ag-sheath: rgba(255, 255, 255, 0.85);
+  --ag-fibre: #c5cad8;
+  --ag-fibre-used: #9097ad;
+  --ag-tick: rgba(30, 36, 70, 0.22);
+  --ag-track: rgba(30, 36, 70, 0.1);
+  --ag-icon: #8a8fa4;
+  --ag-icon-used: #2a2d3e;
+  --ag-icon-on: #c8402e;
+  --ag-icon-shadow: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9));
+  --ag-badge: #e2e5ee;
+  --ag-badge-ink: #23263a;
+  --ag-cut: #eef0f6;
+  --ag-core-ink: #1c1e2c;
+  --ag-core-ink-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+html[data-theme='frost'] .actgraph.wait {
+  --ag-arc: #c98a00;
+}
