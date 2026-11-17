@@ -410,7 +410,8 @@ function registerIpc(): void {
   // after a restore was downloaded: the next start applies it
   handle('backup:relaunch', () => {
     if (backup.progress()?.phase !== 'ready') return
-    app.relaunch()
+    // automated runs start the app again themselves (a relaunched process would escape the test)
+    if (!process.env.JOLTY_TEST) app.relaunch()
     app.quit()
   })
   handle('usage:time', () => useTime.stats())

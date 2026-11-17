@@ -10,6 +10,7 @@ import { connect, decryptBackup, disconnect, encryptBackup, finishRestore, inspe
 import { apply, backupKeys, buildPack, openPackBuffer } from '../src/main/share-pack'
 import { config, pick } from '../src/main/backup/common'
 import { applyPendingRestore } from '../src/main/backup/vault-apply'
+import { runVault } from '../src/main/backup/vault-ops'
 import { withTime } from '../src/main/use-time'
 import { encodePack, FORMAT } from '../src/main/share-pack-format'
 import { undoImport } from '../src/main/share-pack-apply'
@@ -147,7 +148,14 @@ test('connect, back up incrementally, restore everything on another PC', async (
   assert.equal(status('google').hasPassword, false)
   await assert.rejects(inspect('google'), /parol/i)
   await assert.rejects(inspect('google', 'wrong password'), /Parola/)
-  await restoreHere('google', two, 'correct horse battery')
+  // the password typed first: an automatic run must not put this empty PC over the backup
+  setPassword('google', 'correct horse battery')
+  const before = new Map([...objects(A.sub)].map(([n, f]) => [n, f.data.length]))
+  assert.equal(await runVault('google', true), null)
+  assert.equal(status('google').waitingFor?.host, os.hostname())
+  assert.deepEqual(new Map([...objects(A.sub)].map(([n, f]) => [n, f.data.length])), before, 'nothing written')
+  await restoreHere('google', two)
+  assert.equal(status('google').waitingFor, undefined, 'restored: automatic runs may write again')
   assert.equal(status('google').hasPassword, true, 'a password typed on the new PC is kept')
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(two.data, 'use-time.json'), 'utf8')), { since: 1000, appMs: 7000, aiMs: 5000, estimatedMs: 0 })
   assert.equal(JSON.parse(fs.readFileSync(path.join(two.data, 'transcripts', 's1.json'), 'utf8'))[0].text, 'hello from the old PC')

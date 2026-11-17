@@ -19,6 +19,9 @@ import { writeVersion, type LocalCache, type Source, type WriteResult } from './
 const OUTSIDE = new Set(['skills', 'commands', 'instructions', 'mcp'])
 export const PACK_PATH = 'pack/personal'
 
+/** The home folder; JOLTY_BACKUP_HOME points UI tests at a fake one (Electron needs the real USERPROFILE to open a window). */
+export const homeDir = (): string => process.env.JOLTY_BACKUP_HOME || os.homedir()
+
 export const storeOf = (p: Provider, cfg: Config): Store => ({
   put: (name, data) => p.put(cfg, data, name),
   get: (name) => p.get(cfg, name),
@@ -73,7 +76,7 @@ export function origin(): Origin {
   } catch {
     // tests
   }
-  return { host: os.hostname(), platform: process.platform, home: os.homedir(), data: dataDir(), app: version }
+  return { host: os.hostname(), platform: process.platform, home: homeDir(), data: dataDir(), app: version }
 }
 
 /** The pack of skills and the rest outside the data folder; its "time" is a fingerprint of those items. */
@@ -93,10 +96,11 @@ function personalPack(): Source | null {
 export async function sources(): Promise<Source[]> {
   const profiles = new Map(loadProfiles().map((p) => [p.id, p]))
   const chats = loadSessions().map((s) => ({ engine: s.engine, engineSessionId: s.engineSessionId, defaultDir: !!profiles.get(s.profileId)?.isDefaultDir }))
-  const list = await listScope({ data: dataDir(), home: os.homedir(), chats })
+  const list = await listScope({ data: dataDir(), home: homeDir(), chats })
   let pack: Source | null = null
   try {
-    pack = personalPack()
+    // skills and the rest are read from the real home folder: a test with a fake one leaves them out
+    if (!process.env.JOLTY_BACKUP_HOME) pack = personalPack()
   } catch {
     // nothing outside the data folder to add
   }

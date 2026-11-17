@@ -1,7 +1,6 @@
 // The incremental backup as the Account tab and the automatic runs use it: one run, the restore screen's facts, the
 // restore itself (download now, applied at the next start), compaction, and the report shown after the restart.
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
 import type { BackupResult, ProviderId, RestoreInfo, RestoreProgress, RestoreReport } from '@shared/backup'
 import { tr } from '@shared/i18n'
@@ -30,8 +29,9 @@ function open(id: string): { p: ReturnType<typeof pick>; m: ReturnType<typeof ac
 const message = (e: unknown): string => (e instanceof BackupError ? e.message : tr("Locul de backup nu a răspuns. Încerc din nou mai târziu."))
 
 /**
- * One run. `auto` runs never write over a storage that holds another PC's backup until this PC chose (restored from
- * it, or backed up by hand): an empty new PC must not become the newest version.
+ * One run. `auto` runs never write to a storage that already holds versions until this PC chose (restored from it,
+ * or backed up by hand): an empty new PC, or Windows reinstalled under the same PC name, must not become the newest
+ * version.
  */
 export async function runVault(id: string, auto = false, signal?: AbortSignal): Promise<BackupResult | null> {
   const { p, m, store, slot } = open(id)
@@ -44,11 +44,10 @@ export async function runVault(id: string, auto = false, signal?: AbortSignal): 
   runningId = p.id
   try {
     const keys = (await keysFor(slot, store, pass, true))!
-    if (!m.linked) {
-      const head = await readHead(store, keys)
-      const other = head?.snaps.filter((s) => s.host !== os.hostname()).pop()
-      if (auto && other && !head!.snaps.some((s) => s.host === os.hostname())) {
-        patchMeta(p.id, m.sub, { waitingFor: { host: other.host, at: other.at } })
+    if (auto && !m.linked) {
+      const newest = (await readHead(store, keys))?.snaps.at(-1)
+      if (newest) {
+        patchMeta(p.id, m.sub, { waitingFor: { host: newest.host, at: newest.at } })
         return null
       }
     }
