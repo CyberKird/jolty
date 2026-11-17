@@ -5,9 +5,10 @@ import { toolKind } from './Messages'
 import { dragShield } from '../dragShield'
 import type { Phase } from './LivePanel'
 import { usePulses, travelMs } from './activity-pulses'
-import { CORE, H, NODES, TOP_Y, BOTTOM_Y, W, WIRES, tileY, type Node } from './activity-geometry'
+import { CORE, H, NODES, ROUTES, TOP_Y, BOTTOM_Y, W, WIRES, tileY, type Node } from './activity-geometry'
 import { ActivityCore } from './ActivityCore'
 import { useTilt } from './activity-tilt'
+import { orb, useOrbTheme, type OrbState } from './activity-orbs'
 
 // What the model is doing, as a small control surface: the model is the core on the left (its ring is the context used), fibres fan out
 // of it into one flat bus and turn off to a tile for every place it reaches. Every call sends one packet of light down the fibre to the
@@ -168,6 +169,11 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
   const target = phase.on && !waiting ? stats.target : null
   const pulses = usePulses({ target, counts: stats.count, speed })
   const tilt = useTilt()
+  useOrbTheme()
+  const sprite = (st: OrbState): CSSProperties => {
+    const o = orb(st, 64)
+    return { '--orb-back': `url(${o.back})`, '--orb-front': `url(${o.front})` } as CSSProperties
+  }
   // no ticks and no shakes for what was already there when the board opened
   const [ready, setReady] = useState(false)
   useEffect(() => {
@@ -231,7 +237,6 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
       {text}
     </span>
   )
-  const lit = (nodes: Node[]): boolean => !!target && nodes.includes(target)
   const engineName = engine ? engine[0].toUpperCase() + engine.slice(1) : ''
   return (
     <div ref={wrap} className="ag-wrap" style={width ? ({ '--agw': `${width}px` } as CSSProperties) : undefined}>
@@ -250,12 +255,14 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
               <path key={`s${w.id}`} className="ag-sheath" d={w.d} />
             ))}
             {WIRES.map((w) => (
-              <path key={w.id} className={`ag-fibre ${lit(w.nodes) ? 'lit' : ''} ${w.nodes.some((n) => stats.count[n] > 0) ? 'used' : ''}`} d={w.d} />
+              <path key={w.id} className={`ag-fibre ${w.nodes.some((n) => stats.count[n] > 0) ? 'used' : ''}`} d={w.d} />
             ))}
+            {/* the route to where the model works, lit from the core to that key only */}
+            {target && <path key={target} className="ag-fibre lit" d={ROUTES[target]} />}
           </svg>
           <canvas ref={pulses.cv} className="ag-cv" aria-hidden />
 
-          <ActivityCore style={at(CORE.x, CORE.y)} pct={pct} total={total} />
+          <ActivityCore style={at(CORE.x, CORE.y)} pct={pct} total={total} sprite={sprite(waiting ? 'core-wait' : phase.on ? 'core-on' : 'core')} />
           <span className="ag-engine" style={at(CORE.x, CORE.y + 36)}>
             {engineName}
             {pct === undefined && model ? <em>{model.length > 10 ? `${model.slice(0, 9)}…` : model}</em> : null}
@@ -272,9 +279,11 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
             return (
               <div key={n.id} className={`ag-node ${n.row} ${on ? 'on' : ''} ${count > 0 ? 'used' : ''} ${arriving === n.id ? 'arrive' : ''}`} style={at(n.x, tileY(n))}>
                 <span key={failed} className={`ag-key ${failed > 0 ? 'shake' : ''}`} title={`${n.label()}: ${count}`}>
-                  <span className="ag-tile">
+                  <span className="ag-tile" style={sprite(on ? (waiting ? 'wait' : 'on') : count > 0 ? 'used' : 'idle')}>
+                    <i className="ag-orb-back" />
+                    <i className="ag-orb-glow" />
                     <Icon className="ag-icon" size={15} strokeWidth={1.75} />
-                    <i className="ag-led" />
+                    <i className="ag-orb-front" />
                   </span>
                   {count > 0 && (
                     <span key={count} className="ag-count" style={{ animationDelay: `${Math.round(travelMs(n.id, speed))}ms` }}>

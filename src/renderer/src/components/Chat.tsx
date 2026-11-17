@@ -714,7 +714,7 @@ function ContextMeter({ sessionId, running }: { sessionId: string; running: bool
         void api.sessions.compact(sessionId).then(() => toast(tr("Compactez conversația…"))).catch((e) => toast(errMsg(e), true))
       }}
     >
-      <Liquid pct={pct ?? 0} size={21} high={pct !== undefined && pct >= 80} />
+      <Liquid pct={pct ?? 0} size={21} high={pct !== undefined && pct >= 80} calm={!running} />
       {pct !== undefined ? `${Math.round(pct)}%` : k(ctx.used)}
     </button>
   )

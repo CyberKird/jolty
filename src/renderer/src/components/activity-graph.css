@@ -106,19 +106,18 @@
 .ag-core.high .ag-core-arc {
   stroke: var(--serious);
 }
-.ag-core-body,
-.ag-core-spec,
-.ag-core-ripple {
+.ag-core-ripple,
+.ag-core > .ag-orb-glow {
   inset: calc(var(--u) * 10.5);
   border-radius: 50%;
 }
-.ag-core-body {
-  background: var(--ag-core-body);
-  box-shadow: var(--ag-core-shadow);
-}
-.ag-core-spec {
-  background: var(--ag-core-spec);
-  opacity: var(--ag-spec-o, 1);
+/* the sphere's two bitmaps (activity-orbs.ts): the sphere fills 80% of each, its centre at 46% of the height */
+.ag-core > .ag-orb-back,
+.ag-core > .ag-orb-front {
+  left: 8%;
+  top: 11.4%;
+  width: 84%;
+  height: 84%;
 }
 .ag-core-halo {
   inset: calc(var(--u) * -4);
@@ -186,9 +185,11 @@
   width: 0;
   height: 0;
   transform: translateZ(16px);
+  transform-style: preserve-3d;
 }
 .ag-key {
   position: absolute;
+  transform-style: preserve-3d;
   left: calc(var(--u) * -14);
   top: calc(var(--u) * -14);
   width: calc(var(--u) * 28);
@@ -199,56 +200,67 @@
   inset: 0;
   display: grid;
   place-items: center;
-  border-radius: var(--ag-r);
-  background: var(--ag-key);
-  box-shadow: var(--ag-key-shadow);
+  border-radius: 50%;
   color: var(--ag-icon);
-  transition: color 0.4s var(--e-move, ease), box-shadow 0.4s var(--e-move, ease), transform 0.25s var(--e-out, ease-out);
+  transform-style: preserve-3d;
+  transition: color 0.4s var(--e-move, ease), transform 0.25s var(--e-out, ease-out);
 }
+.ag-orb-back,
+.ag-orb-front {
+  position: absolute;
+  pointer-events: none;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.ag-orb-back {
+  background-image: var(--orb-back);
+}
+.ag-orb-front {
+  background-image: var(--orb-front);
+}
+.ag-tile > .ag-orb-back,
+.ag-tile > .ag-orb-front {
+  left: -12.5%;
+  top: -7.5%;
+  width: 125%;
+  height: 125%;
+}
+/* the icon floats inside the glass, a little nearer than the orb's back (parallax when the panel leans) */
 .ag-icon {
-  width: calc(var(--u) * 14);
-  height: calc(var(--u) * 14);
+  position: relative;
+  width: calc(var(--u) * 13);
+  height: calc(var(--u) * 13);
   fill: none;
   stroke: currentColor;
+  transform: translateZ(4px);
+  filter: var(--ag-icon-shadow, none);
 }
-.ag-led {
+/* the light inside an orb at work: its own layer, so pulsing it costs nothing */
+.ag-orb-glow {
   position: absolute;
-  top: calc(var(--u) * 3.6);
-  right: calc(var(--u) * 3.6);
-  width: calc(var(--u) * 2.8);
-  height: calc(var(--u) * 2.8);
+  inset: 10%;
   border-radius: 50%;
-  background: var(--ag-led-off);
-  box-shadow: var(--ag-led-off-shadow, none);
-}
-/* the light of a key at work: its own layer, so blinking it costs nothing */
-.ag-led::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: var(--ag-accent);
-  box-shadow: 0 0 calc(var(--u) * 4) rgba(var(--ag-glow-rgb), 0.9);
+  background: radial-gradient(closest-side, rgba(var(--ag-glow-rgb), 0.5), rgba(var(--ag-glow-rgb), 0.12) 60%, transparent);
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.4s;
 }
 .ag-node.used .ag-tile {
   color: var(--ag-icon-used);
 }
 .ag-node.on .ag-tile {
   color: var(--ag-icon-on);
-  box-shadow: var(--ag-key-on);
 }
-.ag-node.on .ag-led::after {
+.ag-node.on .ag-orb-glow,
+.actgraph.live-on .ag-core > .ag-orb-glow {
   opacity: 1;
-  animation: ag-blink 1.1s ease-in-out infinite alternate;
+  animation: ag-glow 1.3s ease-in-out infinite alternate;
 }
-@keyframes ag-blink {
+@keyframes ag-glow {
   from {
     opacity: 1;
   }
   to {
-    opacity: 0.35;
+    opacity: 0.3;
   }
 }
 @media (hover: hover) {
@@ -358,14 +370,6 @@
   to {
     transform: scale(calc(1.06 * var(--ag-g, 1)));
     opacity: 1;
-  }
-}
-.actgraph.live-on .ag-core-spec {
-  animation: ag-turn var(--ag-spin, 10s) linear infinite;
-}
-@keyframes ag-turn {
-  to {
-    transform: rotate(360deg);
   }
 }
 .ag-core-ripple {

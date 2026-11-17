@@ -11,21 +11,8 @@
   overflow: hidden;
   isolation: isolate;
   contain: layout paint size;
-  background: var(--lq-empty);
-  /* the material matches the activity board's core (activity-materials.css): a dark puck in Volt, glass in Glass, enamel in Frost */
-  --lq-empty: radial-gradient(circle at 50% 30%, #23262d, #0b0c0f 80%);
-  --lq-rim: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 -2px 4px rgba(0, 0, 0, 0.5);
-  --lq-shine: radial-gradient(ellipse 52% 30% at 50% 14%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 100%);
-}
-html[data-theme='glass'] .liquid {
-  --lq-empty: radial-gradient(circle at 50% 50%, rgba(40, 32, 90, 0.35), rgba(16, 12, 40, 0.8) 72%);
-  --lq-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.3), inset 2px 0 3px -2px rgba(80, 220, 255, 0.6), inset -2px 0 3px -2px rgba(255, 120, 200, 0.55), inset 0 -3px 5px -2px rgba(150, 220, 255, 0.3);
-  --lq-shine: radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.95) 0 5%, rgba(255, 255, 255, 0.3) 14%, rgba(255, 255, 255, 0) 34%);
-}
-html[data-theme='frost'] .liquid {
-  --lq-empty: radial-gradient(circle at 50% 42%, #fbfbfe, #dfe2ec 80%);
-  --lq-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(30, 36, 70, 0.14), 0 0 0 1px rgba(30, 36, 70, 0.08);
-  --lq-shine: radial-gradient(circle at 36% 24%, rgba(255, 255, 255, 0.95) 0 8%, rgba(255, 255, 255, 0) 38%);
+  /* the sphere fills 80% of its bitmap, its centre at 46% of the height (activity-orbs.ts) */
+  background: var(--orb-back) 50% 30% / 125% 125% no-repeat;
 }
 .liquid.high {
   --lc: var(--serious);
@@ -69,14 +56,23 @@ html[data-theme='frost'] .liquid {
     transform: translateX(-50%);
   }
 }
-/* glass over it: a highlight at the top left, a soft edge light below, a thin rim */
+/* the sphere's highlights and rim over the liquid */
 .liquid-shine {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
-  background: var(--lq-shine);
-  box-shadow: var(--lq-rim);
+  background: var(--orb-front) 50% 30% / 125% 125% no-repeat;
+}
+
+/* nothing working: the surface rests where it is (paused, not removed, so it does not jump) */
+.liquid.calm .liquid-wave {
+  animation-play-state: paused;
+  will-change: auto;
+}
+/* pearl on a pale page needs an edge to sit on */
+html[data-theme='frost'] .liquid {
+  box-shadow: 0 0 0 1px rgba(30, 36, 70, 0.1), 0 1px 2px rgba(30, 36, 70, 0.12);
 }
 
 /* a weak PC, or motion switched off: the same sphere, still */
