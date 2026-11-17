@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { tr } from '@shared/i18n'
-import { BackupError, FILE, type Config, type Provider } from '../types'
+import { BackupError, objectName, type Config, type Provider } from '../types'
 
 /** Runs a filesystem step; anything that is not already ours becomes a message the user can read. */
 async function io<T>(step: () => Promise<T>): Promise<T> {
@@ -29,11 +29,12 @@ async function folderOf(cfg: Config): Promise<string> {
 
 /** The backup file itself, which must be a plain file: a link or a folder with that name is not ours to follow. */
 async function plainFile(file: string): Promise<boolean> {
+  const name = path.basename(file)
   const st = await fs.lstat(file).catch((e: NodeJS.ErrnoException) => {
     if (e.code === 'ENOENT') return null
     throw e
   })
-  if (st && !st.isFile()) throw new BackupError(tr("«{file}» din folder nu e un fișier obișnuit.", { file: FILE }))
+  if (st && !st.isFile()) throw new BackupError(tr("«{file}» din folder nu e un fișier obișnuit.", { file: name }))
   return st !== null
 }
 
@@ -56,18 +57,18 @@ export const folder: Provider = {
       return { sub: process.platform === 'win32' ? dir.toLowerCase() : dir, label: dir }
     }),
 
-  find: (cfg) =>
+  find: (cfg, name) =>
     io(async () => {
-      const file = path.join(await folderOf(cfg), FILE)
+      const file = path.join(await folderOf(cfg), objectName(name))
       if (!(await plainFile(file))) return null
       const st = await fs.stat(file)
       return { modifiedAt: st.mtimeMs, bytes: st.size }
     }),
 
   /** Written beside the target and renamed over it, so a crash or a full disk never leaves half a backup. */
-  put: (cfg, data) =>
+  put: (cfg, data, name) =>
     io(async () => {
-      const file = path.join(await folderOf(cfg), FILE)
+      const file = path.join(await folderOf(cfg), objectName(name))
       await plainFile(file)
       const tmp = `${file}.${randomBytes(6).toString('hex')}.tmp`
       try {
@@ -85,10 +86,16 @@ export const folder: Provider = {
       }
     }),
 
-  get: (cfg) =>
+  get: (cfg, name) =>
     io(async () => {
-      const file = path.join(await folderOf(cfg), FILE)
+      const file = path.join(await folderOf(cfg), objectName(name))
       if (!(await plainFile(file))) throw new BackupError(tr("Nu există niciun backup în acest loc."))
       return fs.readFile(file)
+    }),
+
+  remove: (cfg, name) =>
+    io(async () => {
+      const file = path.join(await folderOf(cfg), objectName(name))
+      if (await plainFile(file)) await fs.unlink(file)
     })
 }
