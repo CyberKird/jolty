@@ -84,8 +84,16 @@ export class Link {
   private lastPing = 0
   /** connection tries in a row that ran out of time (each next one waits longer) */
   private slowTries = 0
+  /** the PC said this key is not to be used: no more tries from this link */
+  private stopped = false
+  private started = false
+  /** when the system froze the page (Android Chrome's Page Lifecycle), to judge the line when it comes back */
+  private frozenAt = 0
   /** smoothed round trip of a ping (ms) */
   private rtt = 0
+  /** when the current connection try started, and how long the last one took to be accepted */
+  private opened = 0
+  private connectMs = 0
   /** the PC's run and the number of the last event received from it */
   private epoch?: string
   private seq = 0
@@ -113,11 +121,35 @@ export class Link {
     net?.addEventListener?.('change', wake)
     // the browser says the network is gone: the next try waits for it to come back ('online') instead of piling up failures
     window.addEventListener('offline', () => (this.delay = Math.max(this.delay, 2000)))
+    // Android Chrome freezes a page in the background (Doze, battery saver, a tab not in view) without closing its socket; after a
+    // long freeze the line is gone for sure and is remade at once instead of waiting for a ping to fail
+    document.addEventListener('freeze', () => (this.frozenAt = Date.now()))
+    document.addEventListener('resume', () => {
+      const long = this.frozenAt && Date.now() - this.frozenAt > SILENT_MS
+      this.frozenAt = 0
+      if (long && this.ws) this.drop(this.ws)
+      else wake()
+    })
+    // leaving the page (both systems): the socket is closed so the browser can keep the page whole for the back button; 'pageshow' remakes it
+    window.addEventListener('pagehide', (e) => {
+      if (!(e as PageTransitionEvent).persisted || !this.ws) return
+      const ws = this.ws
+      ws.onclose = null
+      this.lost(ws, 1001, '')
+      clearTimeout(this.retryTimer)
+      this.retryTimer = undefined
+      try {
+        ws.close(1000)
+      } catch {
+        // already closed
+      }
+    })
     setInterval(() => this.beat(), 4000)
   }
 
   /** Resolves when the PC accepted the key for the first time. */
   start(): Promise<void> {
+    this.started = true
     return new Promise((resolve, reject) => {
       this.open(resolve, reject)
     })
@@ -131,6 +163,7 @@ export class Link {
     this.fail = fail ?? this.fail
     clearTimeout(this.retryTimer)
     this.retryTimer = undefined
+    this.opened = Date.now()
     const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`)
     this.ws = ws
     ws.binaryType = 'arraybuffer'
@@ -187,6 +220,7 @@ export class Link {
 
   private up(ws: WebSocket, m: Msg): void {
     clearTimeout(this.helloTimer)
+    this.connectMs = Date.now() - this.opened
     const back = this.everReady
     const sameRun = m.epoch !== undefined && m.epoch === this.epoch
     screenBus.attach((msg) => ws.readyState === 1 && ws.send(JSON.stringify(msg)))
@@ -255,12 +289,14 @@ export class Link {
       // revoked at the PC: the one way a phone is unpaired; what it kept of the PC goes with the key
       for (const k of Object.keys(localStorage)) if (k.startsWith(SNAP)) localStorage.removeItem(k)
       const forgot = dropKey()
+      this.stopped = true
       if (!this.everReady || this.optimistic) return this.fail?.(new Error('This phone is no longer paired. Open the pairing link from Jolty again.'))
       void forgot.then(() => location.reload())
       return
     }
     if (code === 4401 && !this.everReady) {
       // the PC does not know the key now: the pairing screen is offered, and the key is kept and tried again behind it (boot.ts)
+      this.stopped = true
       return this.fail?.(new Error('unknown key'))
     }
     // the PC does not answer (off, asleep, no Tailscale): the page says so and offers to start it, the tries go on behind it
@@ -284,7 +320,8 @@ export class Link {
       this.probe(ws)
       return
     }
-    if (!ws && this.retryTimer) {
+    // no line and none on its way (closed for the back-forward cache, or a timer the system froze): made now
+    if (!ws && this.started && !this.stopped) {
       this.delay = 400
       this.open()
     } else if (ws && ws.readyState === WebSocket.CONNECTING) {
@@ -322,6 +359,11 @@ export class Link {
 
   private whenReady(): Promise<void> {
     return this.ready ? Promise.resolve() : new Promise((resolve) => this.waiters.push(resolve))
+  }
+
+  /** A far or slow line (round trip measured by pings, or guessed from how long connecting took: about three round trips). */
+  slow(): boolean {
+    return Math.max(this.rtt, this.connectMs / 3) > 300
   }
 
   call = <T>(channel: string, ...args: unknown[]): Promise<T> => this.issue<T>(channel, args, true)

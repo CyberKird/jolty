@@ -44,6 +44,10 @@ const PHONE_HEAD = [
   '<meta name="theme-color" content="#060709" />'
 ].join('')
 
+/** the bar of the app with its bolt (as remote/pair-screen.ts draws it), shown until the scripts are in */
+const BOOT_SHELL =
+  '<header class="titlebar boot-shell"><div class="titlebar-brand"><svg class="bolt" width="4.7" height="17" viewBox="0 0 205 740" aria-hidden="true"><polygon points="52,0 170,0 118,300 205,284 56,740 84,408 0,426"/></svg></div></header>'
+
 /** the dictionary chunks of the interface languages (named like "de-AbCd1234.js"): a phone keeps only its own */
 const LOCALE_CHUNK = /^(ar|de|en|es|fr|hi|id|it|ja|ko|pt-BR)-[\w-]{8}\.js$/
 /** what a phone never runs: the 3D character, its physics, the desktop's quick entry box, and the old font format */
@@ -220,5 +224,8 @@ export class PhoneFiles {
       .replace("connect-src 'self' blob:", `connect-src 'self' blob: wss://${host} ws://${host}${this.agentOrigin()}`)
       .replace('<head>', `<head><script src="/lang.js"></script>${PHONE_HEAD}`)
       .replace('</head>', `${this.preloads()}</head>`)
+      // the app's bar, drawn as soon as the page and its styles are in: on a slow line the scripts take a while, and a blank
+      // screen looks broken. React replaces it with the real app on its first render.
+      .replace('<div id="root"></div>', `<div id="root">${BOOT_SHELL}</div>`)
   }
 }
