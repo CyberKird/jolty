@@ -10,7 +10,7 @@ export const nativeScreenSource: ScreenSource = {
     const p = screen.getCursorScreenPoint()
     return process.platform === 'win32' ? screen.dipToScreenPoint(p) : p
   },
-  async frame(display, maxEdge) {
+  async frame(display, maxEdge, quality = 68) {
     const scale = Math.min(1, maxEdge / Math.max(display.w, display.h))
     const w = Math.max(2, Math.round(display.w * scale))
     const h = Math.max(2, Math.round(display.h * scale))
@@ -18,7 +18,7 @@ export const nativeScreenSource: ScreenSource = {
     const src = sources.find((s) => s.display_id === String(display.id)) || sources[display.index]
     if (!src || src.thumbnail.isEmpty()) throw new Error('The screen could not be captured (is it locked or asleep?).')
     const size = src.thumbnail.getSize()
-    return { jpeg: src.thumbnail.toJPEG(68), width: size.width, height: size.height }
+    return { jpeg: src.thumbnail.toJPEG(Math.round(Math.min(90, Math.max(30, quality)))), width: size.width, height: size.height }
   }
 }
 

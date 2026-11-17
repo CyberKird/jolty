@@ -2,9 +2,9 @@
 // H.264 (a whole picture, then changes) and Opus. A browser without WebCodecs gets JPEG pictures instead (the page asks for
 // video only when `canPlayVideo` says it can).
 
-export const BIN_JPEG = 1
-export const BIN_VIDEO = 2
-export const BIN_AUDIO = 3
+import type { Feedback } from './screen-feedback'
+
+export { BIN_AUDIO, BIN_JPEG, BIN_VIDEO } from './screen-feedback'
 
 let audioCtx: AudioContext | undefined
 
@@ -19,10 +19,78 @@ export function audioContext(): AudioContext | undefined {
   return audioCtx
 }
 
-/** Whether this browser has the pieces; whether it decodes the stream is found out when it does, and the page falls back to pictures if not. */
+/** What this phone decodes, told to the PC so it encodes only what plays here. */
+export interface VideoCaps {
+  /** H.264 profiles that decode, best first */
+  profiles: Array<'high' | 'main' | 'baseline'>
+  /** the largest picture edge and rate that decode (from the highest level that does) */
+  maxEdge: number
+  maxFps: number
+  /** the decoder runs on the phone's video hardware at the best level */
+  hardware: boolean
+}
+
+const PROFILE_IDC: Record<VideoCaps['profiles'][number], string> = { high: '6400', main: '4D40', baseline: '42E0' }
+/** H.264 levels from the best down, with what each carries (a step of the PC's ladder must fit) */
+const LEVELS: Array<{ hex: string; edge: number; fps: number; w: number; h: number }> = [
+  { hex: '2A', edge: 1920, fps: 60, w: 1920, h: 1080 },
+  { hex: '28', edge: 1920, fps: 30, w: 1920, h: 1080 },
+  { hex: '20', edge: 1280, fps: 60, w: 1280, h: 720 },
+  { hex: '1F', edge: 1280, fps: 30, w: 1280, h: 720 },
+  { hex: '1E', edge: 854, fps: 30, w: 854, h: 480 }
+]
+
+/** The codec string for a profile and level, as the PC's encoders name it. */
+export const avcCodec = (profile: VideoCaps['profiles'][number], levelHex: string): string => `avc1.${PROFILE_IDC[profile]}${levelHex}`
+
+/**
+ * Asks the browser, with the exact codec strings, what it decodes: low-end Android decoders stop at Baseline or at 720p,
+ * Safari has WebCodecs from iOS 16.4 only. Hardware is preferred; software counts only up to 720p30 (a phone's processor
+ * cannot keep 1080p60 smooth). Undefined: nothing usable, the page asks for pictures. A call that throws counts as "no".
+ */
+export async function videoCaps(dec: { isConfigSupported(c: VideoDecoderConfig): Promise<VideoDecoderSupport> } | undefined = typeof VideoDecoder === 'undefined' ? undefined : VideoDecoder): Promise<VideoCaps | undefined> {
+  if (!dec || typeof EncodedVideoChunk === 'undefined') return undefined
+  const ok = async (codec: string, w: number, h: number, hardwareAcceleration: HardwareAcceleration): Promise<boolean> => {
+    try {
+      const r = await dec.isConfigSupported({ codec, codedWidth: w, codedHeight: h, hardwareAcceleration, optimizeForLatency: true })
+      return r.supported === true
+    } catch {
+      return false
+    }
+  }
+  const profiles: VideoCaps['profiles'] = []
+  let best: (typeof LEVELS)[number] | undefined
+  let hardware = false
+  for (const p of ['high', 'main', 'baseline'] as const) {
+    for (const l of LEVELS) {
+      const hw = await ok(avcCodec(p, l.hex), l.w, l.h, 'prefer-hardware')
+      const sw = !hw && l.edge <= 1280 && l.fps <= 30 && (await ok(avcCodec(p, l.hex), l.w, l.h, 'no-preference'))
+      if (!hw && !sw) continue
+      profiles.push(p)
+      if (!best || l.edge * l.fps > best.edge * best.fps) {
+        best = l
+        hardware = hw
+      }
+      break
+    }
+  }
+  if (!best || !profiles.length) return undefined
+  return { profiles, maxEdge: best.edge, maxFps: best.fps, hardware }
+}
+
+let capsOnce: Promise<VideoCaps | undefined> | undefined
+
+/** videoCaps, asked once per page (the answer does not change while the page lives). */
+export function videoCapsOnce(): Promise<VideoCaps | undefined> {
+  capsOnce ??= videoCaps()
+  return capsOnce
+}
+
+/** Whether this phone should ask for video (a failure is remembered for a day, then video is tried again). */
 export async function canPlayVideo(): Promise<boolean> {
   try {
-    return localStorage.getItem('jolty-screen-novideo') !== '1' && typeof VideoDecoder !== 'undefined' && typeof EncodedVideoChunk !== 'undefined'
+    const no = Number(localStorage.getItem('jolty-screen-novideo') || 0)
+    return !(no > 0 && Date.now() - no < 86_400_000) && typeof VideoDecoder !== 'undefined' && typeof EncodedVideoChunk !== 'undefined'
   } catch {
     return false
   }
@@ -100,6 +168,8 @@ export async function canPlayAudio(): Promise<boolean> {
   }
 }
 
+const sameBytes = (a: Uint8Array, b: Uint8Array): boolean => a.length === b.length && a.every((x, i) => x === b[i])
+
 /** Draws decoded pictures on a canvas, the newest one at each screen refresh; what arrived too late is thrown away, not queued. */
 export class VideoPlayer {
   private decoder?: VideoDecoder
@@ -107,24 +177,28 @@ export class VideoPlayer {
   private raf = 0
   private gotKey = false
   private ctx: CanvasRenderingContext2D | null
-  /** pictures decoded in the last second */
+  /** pictures drawn in the last second */
   fps = 0
-  private decoded = 0
+  private drawnNow = 0
   private clock = setInterval(() => {
-    this.fps = this.decoded
-    this.decoded = 0
+    this.fps = this.drawnNow
+    this.drawnNow = 0
   }, 1000)
 
   private config?: { description: Uint8Array; codec: string }
   private errors = 0
   private born = Date.now()
+  /** when each picture went into the decoder, by its timestamp */
+  private inAt = new Map<number, number>()
 
   constructor(
     private canvas: HTMLCanvasElement,
     /** the decoder lost its place: ask the PC for a whole picture */
     private needKey: () => void,
     /** this browser cannot decode the stream: the page asks for pictures instead */
-    private failed: () => void
+    private failed: () => void,
+    /** decode times and drawn pictures go to the PC */
+    private fb?: Feedback
   ) {
     this.ctx = canvas.getContext('2d', { alpha: false, desynchronized: true })
   }
@@ -132,10 +206,14 @@ export class VideoPlayer {
   private open(): void {
     if (!this.config) return
     this.gotKey = false
-    this.decoder = new VideoDecoder({
+    this.inAt.clear()
+    const decoder = new VideoDecoder({
       output: (frame) => {
         this.errors = 0
-        this.decoded++
+        const at = this.inAt.get(frame.timestamp)
+        this.inAt.delete(frame.timestamp)
+        this.fb?.decodedOne(at === undefined ? 0 : performance.now() - at, decoder.decodeQueueSize)
+        // only the newest picture is drawn: one that was waiting is replaced, never queued behind
         this.pending?.close()
         this.pending = frame
         if (!this.raf) this.raf = requestAnimationFrame(() => this.draw())
@@ -148,44 +226,54 @@ export class VideoPlayer {
         this.reopen()
       }
     })
+    this.decoder = decoder
     try {
-      this.decoder.configure({ codec: this.config.codec, description: this.config.description, optimizeForLatency: true, hardwareAcceleration: 'prefer-hardware' })
+      decoder.configure({ codec: this.config.codec, description: this.config.description, optimizeForLatency: true, hardwareAcceleration: 'prefer-hardware' })
     } catch {
       this.failed()
     }
   }
 
-  private reopen(): void {
+  private close1(): void {
     try {
       this.decoder?.close()
     } catch {
       // already closed
     }
+  }
+
+  private reopen(): void {
+    this.close1()
     this.open()
     this.needKey()
   }
 
   feed(key: boolean, ts: number, annexb: Uint8Array): void {
     const nals = splitNals(annexb)
-    // the first whole picture carries what the decoder needs to be set up
-    if (key && !this.config) {
-      this.config = avcDescription(nals)
-      if (!this.config) return
-      this.open()
+    // a whole picture carries what the decoder needs; new parameters (the PC changed the picture size) mean a new decoder
+    if (key) {
+      const cfg = avcDescription(nals)
+      if (cfg && (!this.config || !sameBytes(cfg.description, this.config.description))) {
+        this.config = cfg
+        this.close1()
+        this.open()
+      }
     }
     const d = this.decoder
     if (!d || d.state !== 'configured') return
     // nothing can be shown before a whole picture
     if (!this.gotKey && !key) return
-    const data = toAvcc(nals)
-    // a phone that cannot keep up must not fall behind more and more: it starts again from the next whole picture
-    if (d.decodeQueueSize > 10) {
-      this.reopen()
+    // a phone that cannot keep up must not fall behind more and more: it skips to the next whole picture
+    if (!key && d.decodeQueueSize > 3) {
+      this.gotKey = false
+      this.needKey()
       return
     }
     if (key) this.gotKey = true
+    if (this.inAt.size > 64) this.inAt.clear()
+    this.inAt.set(ts, performance.now())
     try {
-      d.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: ts, data }))
+      d.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: ts, data: toAvcc(nals) }))
     } catch {
       this.reopen()
     }
@@ -202,17 +290,15 @@ export class VideoPlayer {
     }
     this.ctx.drawImage(f, 0, 0)
     f.close()
+    this.drawnNow++
+    this.fb?.drawnOne()
   }
 
   close(): void {
     clearInterval(this.clock)
     if (this.raf) cancelAnimationFrame(this.raf)
     this.pending?.close()
-    try {
-      this.decoder?.close()
-    } catch {
-      // already closed
-    }
+    this.close1()
   }
 }
 

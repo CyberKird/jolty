@@ -1,16 +1,22 @@
 // The PC's screen on a paired phone, with the phone's touches as mouse and keyboard on the PC.
-// A phone that can decode video gets the screen as H.264 with sound (remote-video.ts encodes it on the PC's graphics chip);
-// any other gets JPEG pictures. Input goes through the same native helper that computer use drives.
+// A phone that can decode video gets the screen as H.264 with sound (remote-video.ts / remote-ffmpeg.ts encode it on the
+// PC's graphics chip); any other gets JPEG pictures. How much it gets follows its link and the phone itself, measured from
+// the phone's answers (remote-screen-adapt.ts). Input goes through the same native helper that computer use drives.
 // Nothing here starts unless the user switched "screen from phone" on at the PC, and the kill key stops every viewer.
 import crypto from 'crypto'
+import fs from 'fs'
+import os from 'os'
 import type { DisplayInfo } from './computer/geometry'
-import { parseCombo, type Ev } from './computer/plan'
+import type { Ev } from './computer/plan'
+import { Adapt, LADDER, LoadWatch, type PhoneReport } from './remote-screen-adapt'
+import { ANY_PHONE, avcCodecFor, avcLevel, capsFloor, commonProfile, parseCaps, type PhoneCaps, type Profile } from './remote-screen-caps'
+import { ScreenInputs } from './remote-screen-input'
 
 /** What the screen is read from. The app brings Electron's desktopCapturer; tests bring a fake. */
 export interface ScreenSource {
   displays(): DisplayInfo[]
-  /** one picture of `display`, no wider or taller than `maxEdge` pixels */
-  frame(display: DisplayInfo, maxEdge: number): Promise<{ jpeg: Buffer; width: number; height: number } | undefined>
+  /** one picture of `display`, no wider or taller than `maxEdge` pixels, at JPEG `quality` (0-100) */
+  frame(display: DisplayInfo, maxEdge: number, quality?: number): Promise<{ jpeg: Buffer; width: number; height: number } | undefined>
   /** the pointer, in physical pixels of the desktop */
   cursor(): { x: number; y: number }
 }
@@ -34,14 +40,31 @@ export interface VideoStart {
   audio: boolean
 }
 
+/** What the encoder is asked to make; it changes while it runs, as the link changes. */
+export interface EncoderConfig {
+  width: number
+  height: number
+  fps: number
+  bps: number
+  gopSec: number
+  /** every picture whole (the slideshow floor) */
+  keyOnly: boolean
+  /** H.264 profile every watching phone decodes, the level for this size and rate ("4.2"), and both as a codec string */
+  profile: Profile
+  level: string
+  codec: string
+}
+
 /** The screen as video: one encoder, on one display at a time, for every phone that can play it. */
 export interface ScreenVideo {
   available(): boolean
-  start(display: DisplayInfo, opts: { audio: boolean }): Promise<VideoStart>
+  start(display: DisplayInfo, opts: { audio: boolean; config: EncoderConfig }): Promise<VideoStart>
   stop(): void
   /** the next picture is a whole one: a phone that lost some can start again from it */
   keyframe(): void
-  bitrate(bps: number): void
+  /** ms this encoder usually takes to deliver a whole picture once asked (an ffmpeg restart takes longer) */
+  keyDelay?(): number
+  configure(c: EncoderConfig): void
   onVideo(cb: (c: VideoChunk) => void): void
   onAudio(cb: (c: { ts: number; data: Buffer }) => void): void
 }
@@ -55,10 +78,16 @@ export interface ScreenClient {
   backlog(): number
 }
 
-// binary messages to the phone start with what they are
+// binary messages to the phone start with what they are, and each carries a number the phone answers with (ack)
+//   video: [2][flags: 1 = whole picture][timestamp f64 LE, microseconds][seq u32 LE] data      (14 byte head)
+//   sound: [3][timestamp f64 LE][seq u32 LE] data                                              (13 byte head)
+//   JPEG:  [1][cursor x u16][cursor y u16][seq u32 LE] data   (65535 = pointer elsewhere)      (9 byte head)
 export const BIN_JPEG = 1
 export const BIN_VIDEO = 2
 export const BIN_AUDIO = 3
+export const HEAD_VIDEO = 14
+export const HEAD_AUDIO = 13
+export const HEAD_JPEG = 9
 
 interface Viewer {
   client: ScreenClient
@@ -68,25 +97,32 @@ interface Viewer {
   wantsAudio: boolean
   /** a picture was dropped for this phone: it gets none until the next whole one */
   needKey: boolean
-  /** JPEG: a frame was sent and the phone has not answered yet */
-  waiting: boolean
-  sentAt: number
+  /** when it started waiting for a whole picture */
+  keySince: number
+  adapt: Adapt
+  seq: number
   last: string
-  /** JPEG: the phone's frames get smaller while its link is slow */
-  edge: number
   lastCursor: string
+  cursorAt: number
+  /** what the phone decodes (undefined: an older page, taken to play anything) */
+  caps?: PhoneCaps
+}
+
+export interface RemoteScreenOptions {
+  /** the PC's processor times (os.cpus()); tests pass a calm machine */
+  cpus?: () => ReturnType<typeof os.cpus>
+  /** how often the link is judged, ms */
+  tickMs?: number
+  /** the step a new phone starts at (tests) */
+  startLevel?: number
 }
 
 const MIN_GAP = 70
 const IDLE_GAP = 400
 const MAX_EDGE = 1920
-const MIN_EDGE = 960
-const BUTTONS = new Set(['l', 'r', 'm'])
-const START_BPS = 6_000_000
-const MAX_BPS = 12_000_000
-const MIN_BPS = 1_200_000
-/** bytes waiting for one phone before pictures are dropped for it */
-const BACKLOG_VIDEO = 450_000
+/** bytes waiting in the socket itself before pictures are dropped, whatever the acks say */
+const BACKLOG_HARD = 1_500_000
+const even = (n: number): number => Math.max(2, Math.round(n / 2) * 2)
 
 const num = (v: unknown, lo: number, hi: number): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : undefined)
 
@@ -94,25 +130,25 @@ export class RemoteScreen {
   private viewers = new Map<string, Viewer>()
   private timer?: NodeJS.Timeout
   private busy = false
-  private chain: Promise<unknown> = Promise.resolve()
-  private pendingMove?: { x: number; y: number }
-  /** the PC's input was used: only then is there anything to let go of */
-  private touched = false
+  private inputs: ScreenInputs
   /** the display the encoder is on, while it runs */
   private videoOn?: number
-  private bps = START_BPS
-  private drops = 0
-  private calm = 0
-  private adapt?: NodeJS.Timeout
+  private started?: VideoStart
+  private config = ''
+  private loop?: NodeJS.Timeout
   private cursors?: NodeJS.Timeout
+  private ticks = 0
+  private load = new LoadWatch()
 
   constructor(
     private source: ScreenSource,
-    private input: () => Promise<ScreenInput>,
+    input: () => Promise<ScreenInput>,
     private allowed: () => boolean,
     private onChange: () => void = () => undefined,
-    private video?: ScreenVideo
+    private video?: ScreenVideo,
+    private opts: RemoteScreenOptions = {}
   ) {
+    this.inputs = new ScreenInputs(input)
     video?.onVideo((c) => this.fanVideo(c))
     video?.onAudio((c) => this.fanAudio(c))
   }
@@ -126,7 +162,7 @@ export class RemoteScreen {
   stopAll(reason = 'stopped'): void {
     for (const v of this.viewers.values()) v.client.send({ t: 'screen', op: 'ended', reason })
     this.viewers.clear()
-    this.release()
+    this.inputs.release()
     this.halt()
     this.settle()
     this.onChange()
@@ -134,7 +170,7 @@ export class RemoteScreen {
 
   drop(client: ScreenClient): void {
     if (!this.viewers.delete(client.id)) return
-    this.release()
+    if (!this.viewers.size) this.inputs.release()
     if (!this.viewers.size) this.halt()
     this.settle()
     this.onChange()
@@ -142,40 +178,49 @@ export class RemoteScreen {
 
   handle(client: ScreenClient, m: Record<string, unknown>): void {
     const op = m.op
-    if (op === 'start') return void this.start(client, num(m.display, 0, 64), m.video === true, m.audio === true)
+    if (op === 'start') return void this.start(client, num(m.display, 0, 64), m.video === true, m.audio === true, parseCaps(m.caps))
     const viewer = this.viewers.get(client.id)
     if (!viewer) return
     if (!this.allowed()) return this.stopAll('off')
+    this.inputs.alive()
     switch (op) {
       case 'stop':
         return this.drop(client)
       case 'ack': {
-        viewer.waiting = false
-        // a quick answer lets the pictures grow back, a slow one makes them smaller
-        const rtt = Date.now() - viewer.sentAt
-        if (rtt > 450) viewer.edge = Math.max(MIN_EDGE, Math.round(viewer.edge * 0.85))
-        else if (rtt < 150) viewer.edge = Math.min(MAX_EDGE, Math.round(viewer.edge * 1.06))
+        const seq = num(m.seq, 0, 2 ** 32)
+        // an old phone page answers without a number: everything sent so far counts as arrived
+        viewer.adapt.acked(seq ?? viewer.seq, Date.now())
+        // a phone on pictures gets the next one as soon as it has shown this one
+        if (viewer.mode === 'jpeg' && !this.busy) {
+          this.halt()
+          this.timer = setTimeout(() => void this.tick(), MIN_GAP)
+        }
         return
       }
+      case 'stats':
+        return viewer.adapt.report({ fps: num(m.fps, 0, 500), dec: num(m.dec, 0, 500), decMs: num(m.decMs, 0, 10_000), q: num(m.q, 0, 1000) } satisfies PhoneReport)
       case 'keyframe':
-        // the phone's decoder lost its place: the next picture is a whole one
+        // the phone's decoder lost its place: the next picture is a whole one (asked for at most so often)
+        if (!viewer.needKey) viewer.keySince = Date.now()
         viewer.needKey = true
-        return this.video?.keyframe()
+        if (viewer.adapt.askKey(Date.now())) this.video?.keyframe()
+        return
       case 'display': {
         const index = num(m.index, 0, 64)
         if (index === undefined || !this.source.displays()[index]) return
         viewer.display = index
         viewer.last = ''
-        viewer.waiting = false
+        // the picture of the other display goes at once, whatever was in the air for this one
+        viewer.adapt.forget()
         if (!viewer.wantsVideo) return this.info(viewer)
         return void this.pick(viewer).then(() => this.info(viewer))
       }
       default:
-        return this.act(viewer, m)
+        return this.inputs.act(this.source.displays()[viewer.display], m)
     }
   }
 
-  private async start(client: ScreenClient, display?: number, video = false, audio = false): Promise<void> {
+  private async start(client: ScreenClient, display?: number, video = false, audio = false, caps?: PhoneCaps): Promise<void> {
     if (!this.allowed()) return client.send({ t: 'screen', op: 'denied', reason: 'off' })
     const displays = this.source.displays()
     if (!displays.length) return client.send({ t: 'screen', op: 'denied', reason: 'none' })
@@ -187,14 +232,17 @@ export class RemoteScreen {
       wantsVideo: video && Boolean(this.video?.available()),
       wantsAudio: audio,
       needKey: false,
-      waiting: false,
-      sentAt: 0,
+      keySince: 0,
+      adapt: new Adapt(Date.now(), this.opts.startLevel),
+      seq: 0,
       last: '',
-      edge: 1600,
-      lastCursor: ''
+      lastCursor: '',
+      cursorAt: 0,
+      caps
     }
     this.viewers.set(client.id, viewer)
     this.onChange()
+    this.spin()
     // the picture mode is settled before the phone is told, so what it is told is true (a phone with no video needs no wait)
     if (viewer.wantsVideo) {
       await this.pick(viewer)
@@ -214,15 +262,16 @@ export class RemoteScreen {
     try {
       if (this.videoOn !== v.display) {
         const d = this.source.displays()[v.display]
-        this.started = await this.video.start(d, { audio: [...this.viewers.values()].some((o) => o.wantsAudio) })
+        const config = this.encoderConfig(v.display, [v])
+        this.started = await this.video.start(d, { audio: [...this.viewers.values()].some((o) => o.wantsAudio), config })
         this.videoOn = v.display
-        this.bps = START_BPS
-        this.video.bitrate(this.bps)
-        this.spin()
+        this.config = JSON.stringify(config)
       }
       v.mode = 'video'
       v.needKey = true
+      v.keySince = Date.now()
       this.video.keyframe()
+      this.reconfigure()
     } catch (e) {
       // no hardware encoder, or the capture was refused: this phone gets pictures instead
       v.mode = 'jpeg'
@@ -230,8 +279,6 @@ export class RemoteScreen {
     }
     this.settle()
   }
-
-  private started?: VideoStart
 
   private info(v: Viewer): void {
     const displays = this.source.displays()
@@ -247,85 +294,142 @@ export class RemoteScreen {
     })
   }
 
+  /** Sends one binary chunk with the next number, and counts it as in the air. */
+  private emit(v: Viewer, head: Buffer, seqAt: number, data: Buffer): void {
+    v.seq = (v.seq + 1) >>> 0
+    head.writeUInt32LE(v.seq, seqAt)
+    const out = Buffer.concat([head, data])
+    v.adapt.sent(v.seq, out.length, Date.now())
+    v.client.sendBinary(out)
+  }
+
   // ------------------------------------------------------------------ video
 
   private fanVideo(c: VideoChunk): void {
-    const head = Buffer.alloc(10)
-    head.writeUInt8(BIN_VIDEO, 0)
-    head.writeUInt8(c.key ? 1 : 0, 1)
-    head.writeDoubleLE(c.ts, 2)
-    let out: Buffer | undefined
+    const now = Date.now()
+    const size = HEAD_VIDEO + c.data.length
     for (const v of this.viewers.values()) {
       if (v.mode !== 'video' || v.display !== this.videoOn) continue
-      // dropped for this phone: nothing until a whole picture, so what it decodes is never torn
-      if (v.needKey && !c.key) continue
-      if (!c.key && v.client.backlog() > BACKLOG_VIDEO) {
+      // dropped for this phone: nothing until a whole picture, so what it decodes is never torn (asked for again when allowed)
+      if (v.needKey && !c.key) {
+        v.adapt.skipped(now, now - v.keySince, this.video?.keyDelay?.() ?? 300)
+        if (!v.adapt.step.keyOnly && v.adapt.askKey(now)) this.video?.keyframe()
+        continue
+      }
+      if (!v.adapt.canSend(size, now) || v.client.backlog() > BACKLOG_HARD) {
+        // it does not fit in what the link carries now: dropped, and a whole picture follows when there is room
+        if (!v.needKey) v.keySince = now
         v.needKey = true
-        this.drops++
-        this.video?.keyframe()
+        if (!v.adapt.step.keyOnly && v.adapt.askKey(now)) this.video?.keyframe()
         continue
       }
       v.needKey = false
-      out ??= Buffer.concat([head, c.data])
-      v.client.sendBinary(out)
+      const head = Buffer.alloc(HEAD_VIDEO)
+      head.writeUInt8(BIN_VIDEO, 0)
+      head.writeUInt8(c.key ? 1 : 0, 1)
+      head.writeDoubleLE(c.ts, 2)
+      this.emit(v, head, 10, c.data)
     }
   }
 
   private fanAudio(c: { ts: number; data: Buffer }): void {
-    const head = Buffer.alloc(9)
-    head.writeUInt8(BIN_AUDIO, 0)
-    head.writeDoubleLE(c.ts, 1)
-    let out: Buffer | undefined
+    const now = Date.now()
     for (const v of this.viewers.values()) {
-      if (v.mode !== 'video' || !v.wantsAudio || v.client.backlog() > BACKLOG_VIDEO * 2) continue
-      out ??= Buffer.concat([head, c.data])
-      v.client.sendBinary(out)
+      // the sound goes first when the link is short: it is never sent at the lower steps nor when it would not fit
+      if (v.mode !== 'video' || !v.wantsAudio || !v.adapt.step.audio) continue
+      if (!v.adapt.canSend(HEAD_AUDIO + c.data.length, now) || v.client.backlog() > BACKLOG_HARD / 2) continue
+      const head = Buffer.alloc(HEAD_AUDIO)
+      head.writeUInt8(BIN_AUDIO, 0)
+      head.writeDoubleLE(c.ts, 1)
+      this.emit(v, head, 9, c.data)
     }
   }
 
-  /** The encoder runs while a phone watches in video, and its bitrate follows the link: down when a phone falls behind, up when it keeps up. */
+  /** What the encoder should make: the step of the phone with the worst link among those watching this display. */
+  private encoderConfig(display: number, list: Viewer[]): EncoderConfig {
+    const level = Math.max(...list.map((v) => v.adapt.level))
+    const s = LADDER[level]
+    const d = this.source.displays()[display]
+    // never more than the weakest decoder watching takes
+    const edge = Math.min(s.edge, ...list.map((v) => (v.caps ?? ANY_PHONE).maxEdge))
+    const fps = Math.min(s.fps, ...list.map((v) => (v.caps ?? ANY_PHONE).maxFps))
+    const k = Math.min(1, edge / Math.max(d.w, d.h))
+    const width = even(d.w * k)
+    const height = even(d.h * k)
+    const profile = commonProfile(list.map((v) => v.caps))
+    return { width, height, fps, bps: s.bps, gopSec: s.gopSec, keyOnly: Boolean(s.keyOnly), profile, level: avcLevel(width, height, fps).name, codec: avcCodecFor(profile, width, height, fps) }
+  }
+
+  private reconfigure(): void {
+    if (this.videoOn === undefined || !this.video) return
+    const list = [...this.viewers.values()].filter((v) => v.mode === 'video' && v.display === this.videoOn)
+    if (!list.length || !this.source.displays()[this.videoOn]) return
+    const c = this.encoderConfig(this.videoOn, list)
+    const key = JSON.stringify(c)
+    if (key === this.config) return
+    this.config = key
+    this.video.configure(c)
+  }
+
+  /** The link judge and the pointer run while anyone watches. */
   private spin(): void {
-    if (!this.adapt) {
-      this.adapt = setInterval(() => {
-        if (this.drops > 0) {
-          this.bps = Math.max(MIN_BPS, Math.round(this.bps * 0.7))
-          this.video?.bitrate(this.bps)
-          this.calm = 0
-        } else if (++this.calm >= 4 && this.bps < MAX_BPS) {
-          this.bps = Math.min(MAX_BPS, Math.round(this.bps * 1.12))
-          this.video?.bitrate(this.bps)
-        }
-        this.drops = 0
-      }, 1000)
-    }
-    if (!this.cursors) {
-      // the pointer is not in the video: it travels beside it, and the phone draws it
-      this.cursors = setInterval(() => {
-        const cur = this.source.cursor()
+    const tickMs = this.opts.tickMs ?? 250
+    this.loop ??= setInterval(() => {
+      const now = Date.now()
+      // the PC's own load is looked at every 2 s: when it is busy, 60 fps goes first
+      // (JOLTY_SCREEN_IGNORE_LOAD=1: measurements of the ceiling only)
+      if (this.ticks++ % Math.max(1, Math.round(2000 / tickMs)) === 0 && !process.env.JOLTY_SCREEN_IGNORE_LOAD) this.load.sample((this.opts.cpus ?? os.cpus)())
+      let changed = false
+      for (const v of this.viewers.values()) {
+        // a busy PC gives up 60 fps first; a phone whose decoder stops lower never climbs past what it plays
+        v.adapt.floor = v.mode === 'video' ? Math.max(this.load.floor, capsFloor(v.caps)) : 0
+        if (v.adapt.tick(now)) changed = true
+      }
+      if (changed) this.reconfigure()
+      // once a second each phone is told what it gets and how its link looks (the small indicator shows it)
+      if (this.ticks % Math.max(1, Math.round(1000 / tickMs)) === 0) {
         for (const v of this.viewers.values()) {
-          if (v.mode !== 'video') continue
-          const d = this.source.displays()[v.display]
-          if (!d) continue
-          const inside = cur.x >= d.x && cur.y >= d.y && cur.x < d.x + d.w && cur.y < d.y + d.h
-          const x = inside ? (cur.x - d.x) / d.w : -1
-          const y = inside ? (cur.y - d.y) / d.h : -1
-          const key = `${x.toFixed(4)},${y.toFixed(4)}`
-          if (key === v.lastCursor) continue
-          v.lastCursor = key
-          v.client.send({ t: 'screen', op: 'cursor', x, y })
+          const c = v.mode === 'video' ? (JSON.parse(this.config || '{}') as Partial<EncoderConfig>) : undefined
+          if (process.env.JOLTY_DEBUG_ENC) fs.appendFileSync(process.env.JOLTY_DEBUG_ENC, `adapt ${v.client.id} ${JSON.stringify({ ...v.adapt.debug(now), floor: v.adapt.floor, phone: v.adapt.lastReport })}` + String.fromCharCode(10))
+          v.client.send({ t: 'screen', op: 'net', mode: v.mode, ...v.adapt.stats(now), fps: v.adapt.step.fps, height: c?.height ?? 0, busy: this.load.floor > 0 })
         }
-      }, 33)
-    }
+      }
+    }, tickMs)
+    this.loop.unref?.()
+    // the pointer is not in the video: it travels beside it, as often as the phone's step allows, and the phone draws it
+    this.cursors ??= setInterval(() => {
+      const list = [...this.viewers.values()].filter((v) => v.mode === 'video')
+      if (!list.length) return
+      const cur = this.source.cursor()
+      const now = Date.now()
+      for (const v of list) {
+        if (now - v.cursorAt < 1000 / v.adapt.step.cursorHz - 2) continue
+        const d = this.source.displays()[v.display]
+        if (!d) continue
+        const inside = cur.x >= d.x && cur.y >= d.y && cur.x < d.x + d.w && cur.y < d.y + d.h
+        const x = inside ? (cur.x - d.x) / d.w : -1
+        const y = inside ? (cur.y - d.y) / d.h : -1
+        const key = `${x.toFixed(4)},${y.toFixed(4)}`
+        if (key === v.lastCursor) continue
+        v.lastCursor = key
+        v.cursorAt = now
+        v.client.send({ t: 'screen', op: 'cursor', x, y })
+      }
+    }, 16)
+    this.cursors.unref?.()
   }
 
-  /** Stops the encoder and its timers when no phone watches in video any more. */
+  /** Stops the encoder when no phone watches in video any more, and the timers when nobody watches at all. */
   private settle(): void {
+    if (!this.viewers.size) {
+      if (this.loop) clearInterval(this.loop)
+      if (this.cursors) clearInterval(this.cursors)
+      this.loop = this.cursors = undefined
+    }
     if ([...this.viewers.values()].some((v) => v.mode === 'video')) return
     if (this.videoOn !== undefined) this.video?.stop()
     this.videoOn = undefined
-    if (this.adapt) clearInterval(this.adapt)
-    if (this.cursors) clearInterval(this.cursors)
-    this.adapt = this.cursors = undefined
+    this.config = ''
   }
 
   // ------------------------------------------------------------------ JPEG frames
@@ -347,21 +451,25 @@ export class RemoteScreen {
     if (!jpeg.length) return
     this.busy = true
     let changed = false
+    let gap = IDLE_GAP
     try {
       if (!this.allowed()) return this.stopAll('off')
       const wanted = new Map<number, Viewer[]>()
+      const now = Date.now()
       for (const v of jpeg) {
         // a phone that has not taken the last picture, or whose link is backed up, waits
-        if (v.waiting && Date.now() - v.sentAt < 4000) continue
-        if (v.client.backlog() > 600_000) continue
+        // pictures go one at a time: the next leaves when the phone has shown the last (or it was lost long ago)
+        if (v.adapt.oldest(now) > 4000) v.adapt.forget()
+        if (v.adapt.inFlight > 0 || v.client.backlog() > 600_000) continue
         wanted.set(v.display, [...(wanted.get(v.display) || []), v])
       }
       for (const [index, list] of wanted) {
         const d = this.source.displays()[index]
         if (!d) continue
-        // one capture per display, at the largest size any of its viewers takes
-        const edge = Math.max(...list.map((v) => v.edge))
-        const shot = await this.source.frame(d, edge)
+        // one capture per display, at the largest size and best quality any of its viewers takes
+        const edge = Math.min(MAX_EDGE, Math.max(...list.map((v) => v.adapt.step.edge)))
+        const quality = Math.max(...list.map((v) => v.adapt.step.jpegQ))
+        const shot = await this.source.frame(d, edge, quality)
         if (!shot) continue
         const hash = crypto.createHash('md5').update(shot.jpeg).digest('hex')
         const cur = this.source.cursor()
@@ -370,21 +478,18 @@ export class RemoteScreen {
         const out = cur.x >= d.x && cur.y >= d.y && cur.x < d.x + d.w && cur.y < d.y + d.h
         for (const v of list) {
           // the cursor moves without the picture changing: the picture is only resent when it did, the cursor always rides along
-          const same = hash === v.last
-          if (same && !v.waiting) {
+          if (hash === v.last) {
             v.client.send({ t: 'screen', op: 'cursor', x: out ? cx / 65534 : -1, y: out ? cy / 65534 : -1 })
             continue
           }
-          if (same) continue
           v.last = hash
-          v.waiting = true
-          v.sentAt = Date.now()
-          const head = Buffer.alloc(5)
+          const head = Buffer.alloc(HEAD_JPEG)
           head.writeUInt8(BIN_JPEG, 0)
           head.writeUInt16LE(out ? cx : 65535, 1)
           head.writeUInt16LE(out ? cy : 65535, 3)
-          v.client.sendBinary(Buffer.concat([head, shot.jpeg]))
+          this.emit(v, head, 5, shot.jpeg)
           changed = true
+          gap = Math.min(gap, Math.max(MIN_GAP, 1000 / Math.min(15, v.adapt.step.fps)))
         }
       }
     } catch (e) {
@@ -392,119 +497,7 @@ export class RemoteScreen {
       for (const v of jpeg) v.client.send({ t: 'screen', op: 'warn', message: e instanceof Error ? e.message : String(e) })
     } finally {
       this.busy = false
-      if ([...this.viewers.values()].some((v) => v.mode === 'jpeg')) this.timer = setTimeout(() => void this.tick(), changed ? MIN_GAP : IDLE_GAP)
+      if ([...this.viewers.values()].some((v) => v.mode === 'jpeg')) this.timer = setTimeout(() => void this.tick(), changed ? gap : IDLE_GAP)
     }
-  }
-
-  // ------------------------------------------------------------------ input
-
-  private point(v: Viewer, m: Record<string, unknown>): { x: number; y: number } | undefined {
-    const d = this.source.displays()[v.display]
-    const nx = num(m.x, 0, 1)
-    const ny = num(m.y, 0, 1)
-    if (!d || nx === undefined || ny === undefined) return undefined
-    return { x: Math.round(d.x + nx * (d.w - 1)), y: Math.round(d.y + ny * (d.h - 1)) }
-  }
-
-  private play(events: Ev[]): void {
-    this.chain = this.chain.then(async () => (await this.input()).play(events)).catch(() => undefined)
-  }
-
-  private act(v: Viewer, m: Record<string, unknown>): void {
-    const op = m.op
-    this.touched = true
-    const button = typeof m.button === 'string' && BUTTONS.has(m.button) ? (m.button as 'l' | 'r' | 'm') : 'l'
-    switch (op) {
-      case 'move': {
-        const p = this.point(v, m)
-        if (!p) return
-        // moves arrive faster than the helper takes them: only the newest one waits its turn
-        const queued = this.pendingMove
-        this.pendingMove = p
-        if (queued) return
-        this.chain = this.chain.then(async () => {
-          const at = this.pendingMove
-          this.pendingMove = undefined
-          if (at) await (await this.input()).play([['m', 0, at.x, at.y]])
-        }).catch(() => undefined)
-        return
-      }
-      case 'down':
-      case 'up': {
-        const p = this.point(v, m)
-        this.play([...(p ? ([['m', 0, p.x, p.y]] as Ev[]) : []), ['b', p ? 6 : 0, button, op === 'down' ? 1 : 0]])
-        return
-      }
-      case 'click': {
-        const p = this.point(v, m)
-        const count = Math.min(3, Math.max(1, Math.round(num(m.count, 1, 3) ?? 1)))
-        const evs: Ev[] = p ? [['m', 0, p.x, p.y]] : []
-        let t = p ? 8 : 0
-        for (let i = 0; i < count; i++) {
-          evs.push(['b', t, button, 1], ['b', t + 28, button, 0])
-          t += 90
-        }
-        this.play(evs)
-        return
-      }
-      case 'wheel': {
-        const n = Math.round(num(m.notches, -40, 40) ?? 0)
-        if (!n) return
-        const evs: Ev[] = []
-        for (let i = 0; i < Math.abs(n); i++) evs.push(['w', i * 6, n < 0 ? 120 : -120, m.horizontal === true ? 1 : 0])
-        this.play(evs)
-        return
-      }
-      case 'text': {
-        const text = typeof m.text === 'string' ? m.text.slice(0, 2000) : ''
-        if (!text) return
-        const evs: Ev[] = []
-        let t = 0
-        for (const ch of text) {
-          if (ch === '\n') evs.push(['k', t, 0x0d, 1, 0], ['k', t + 8, 0x0d, 0, 0])
-          else if (ch === '\t') evs.push(['k', t, 0x09, 1, 0], ['k', t + 8, 0x09, 0, 0])
-          else evs.push(['c', t, ch.codePointAt(0) as number, 8])
-          t += 14
-        }
-        this.play(evs)
-        return
-      }
-      case 'key': {
-        let vks: number[]
-        try {
-          vks = parseCombo(typeof m.combo === 'string' ? m.combo : '')
-        } catch {
-          return
-        }
-        this.keys(vks)
-        return
-      }
-    }
-  }
-
-  private keys(vks: number[]): void {
-    const mods = new Set([0x10, 0x11, 0x12, 0x5b])
-    const ext = new Set([0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2c, 0x2d, 0x2e, 0x5b, 0x5d, 0x90])
-    const evs: Ev[] = []
-    let t = 0
-    for (const k of vks.filter((x) => mods.has(x))) (evs.push(['k', t, k, 1, ext.has(k) ? 1 : 0]), (t += 8))
-    for (const k of vks.filter((x) => !mods.has(x))) (evs.push(['k', t, k, 1, ext.has(k) ? 1 : 0], ['k', t + 14, k, 0, ext.has(k) ? 1 : 0]), (t += 28))
-    for (const k of vks.filter((x) => mods.has(x)).reverse()) (evs.push(['k', t, k, 0, ext.has(k) ? 1 : 0]), (t += 8))
-    this.play(evs)
-  }
-
-  // ------------------------------------------------------------------ release
-
-  /** Buttons held down by a phone that vanished must not stay down on the PC. */
-  private release(): void {
-    if (this.viewers.size || !this.touched) return
-    this.touched = false
-    this.pendingMove = undefined
-    this.play([
-      ['b', 0, 'l', 0],
-      ['b', 0, 'r', 0],
-      ['b', 0, 'm', 0],
-      ...[0x11, 0x10, 0x12, 0x5b].map((k) => ['k', 0, k, 0, k === 0x5b ? 1 : 0] as Ev)
-    ])
   }
 }

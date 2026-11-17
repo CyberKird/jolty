@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { DisplayInfo } from '../src/main/computer/geometry'
 import type { Ev } from '../src/main/computer/plan'
-import { BIN_AUDIO, BIN_JPEG, BIN_VIDEO, RemoteScreen, type ScreenClient, type ScreenSource, type ScreenVideo, type VideoChunk } from '../src/main/remote-screen'
+import { avcLevel, capsFloor, parseCaps } from '../src/main/remote-screen-caps'
+import { BIN_AUDIO, BIN_JPEG, BIN_VIDEO, HEAD_AUDIO, HEAD_JPEG, HEAD_VIDEO, RemoteScreen, type EncoderConfig, type ScreenClient, type ScreenSource, type ScreenVideo, type VideoChunk } from '../src/main/remote-screen'
 
 // the phone's screen: who may look, what is sent, how touches become input, and that everything lets go when it ends
 const displays: DisplayInfo[] = [
@@ -23,6 +24,7 @@ function phone(id: string): Phone {
   return { id, json, bin, send: (m) => json.push(m as Record<string, unknown>), sendBinary: (b) => bin.push(b), backlog: () => 0 }
 }
 
+const calm = () => [{ model: '', speed: 0, times: { idle: 1e9, user: 0, nice: 0, sys: 0, irq: 0 } }]
 const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const until = async (f: () => boolean): Promise<void> => {
   for (let i = 0; i < 100 && !f(); i++) await wait(20)
@@ -56,10 +58,11 @@ test('start tells the displays, then sends frames with the cursor, and waits for
   await until(() => p.bin.length === 1)
   assert.equal(p.bin[0][0], BIN_JPEG, 'a JPEG picture')
   assert.equal(p.bin[0].readUInt16LE(1), Math.round(0.5 * 65534), 'cursor x in the header')
-  assert.match(p.bin[0].subarray(5).toString(), /^frame-0-/)
+  assert.match(p.bin[0].subarray(HEAD_JPEG).toString(), /^frame-0-/)
+  assert.equal(p.bin[0].readUInt32LE(5), 1, 'numbered for the ack')
   await wait(150)
   assert.equal(p.bin.length, 1, 'no second picture before the phone answers, and it did not change anyway')
-  screen.handle(p, { t: 'screen', op: 'ack' })
+  screen.handle(p, { t: 'screen', op: 'ack', seq: 1 })
   screen.stopAll()
 })
 
@@ -71,7 +74,7 @@ test('switching display sends that display, and a display that does not exist is
   screen.handle(p, { t: 'screen', op: 'display', index: 1 })
   assert.equal(lastInfo(p).display, 1)
   await until(() => p.bin.length === 2)
-  assert.match(p.bin[1].subarray(5).toString(), /^frame-1-/)
+  assert.match(p.bin[1].subarray(HEAD_JPEG).toString(), /^frame-1-/)
   screen.handle(p, { t: 'screen', op: 'display', index: 9 })
   assert.equal(lastInfo(p).display, 1)
   screen.stopAll()
@@ -151,7 +154,7 @@ test('switching the setting off at the PC ends an open view at the next message'
 // ---------------------------------------------------------------- video
 
 function fakeVideo(over: { fail?: boolean } = {}) {
-  const log = { starts: [] as number[], stops: 0, keys: 0, rates: [] as number[] }
+  const log = { starts: [] as number[], stops: 0, keys: 0, configs: [] as EncoderConfig[] }
   let onV: (c: VideoChunk) => void = () => undefined
   let onA: (c: { ts: number; data: Buffer }) => void = () => undefined
   const video: ScreenVideo = {
@@ -159,20 +162,21 @@ function fakeVideo(over: { fail?: boolean } = {}) {
     start: async (d, opts) => {
       if (over.fail) throw new Error('no encoder')
       log.starts.push(d.index)
+      log.configs.push(opts.config)
       return { codec: 'avc1.64002A', width: 1920, height: 1080, audio: opts.audio }
     },
     stop: () => void log.stops++,
     keyframe: () => void log.keys++,
-    bitrate: (b) => void log.rates.push(b),
+    configure: (c) => void log.configs.push(c),
     onVideo: (cb) => (onV = cb),
     onAudio: (cb) => (onA = cb)
   }
   return { video, log, video$: (c: VideoChunk) => onV(c), audio$: (c: { ts: number; data: Buffer }) => onA(c) }
 }
 
-function withVideo(v: ScreenVideo) {
+function withVideo(v: ScreenVideo, startLevel?: number) {
   const played: Ev[][] = []
-  const screen = new RemoteScreen(source, async () => ({ play: async (e) => void played.push(e) }), () => true, () => undefined, v)
+  const screen = new RemoteScreen(source, async () => ({ play: async (e) => void played.push(e) }), () => true, () => undefined, v, { startLevel, cpus: calm })
   return { screen, played }
 }
 
@@ -180,7 +184,8 @@ const chunk = (key: boolean, text: string): VideoChunk => ({ key, ts: 1000, data
 
 test('a phone that can play video gets the stream: the codec in info, whole pictures first, sound if asked', async () => {
   const f = fakeVideo()
-  const { screen } = withVideo(f.video)
+  // at the top step: the sound is the first thing a weak link loses, so a phone starting low gets it a moment later
+  const { screen } = withVideo(f.video, 0)
   const p = phone('a')
   screen.handle(p, { t: 'screen', op: 'start', video: true, audio: true })
   await until(() => p.json.some((j) => j.op === 'info'))
@@ -191,15 +196,23 @@ test('a phone that can play video gets the stream: the codec in info, whole pict
   f.video$(chunk(false, 'delta-before-key'))
   assert.equal(p.bin.length, 0, 'no delta before the first whole picture')
   f.video$(chunk(true, 'KEY'))
+  f.video$(chunk(false, 'not-yet'))
+  assert.equal(p.bin.length, 1, 'before the first answer: one chunk at a time')
+  screen.handle(p, { t: 'screen', op: 'ack', seq: 1 })
+  f.video$(chunk(true, 'KEY'))
+  screen.handle(p, { t: 'screen', op: 'ack', seq: 2 })
+  p.bin.splice(1, 1)
   f.video$(chunk(false, 'delta'))
   f.audio$({ ts: 5, data: Buffer.from('opus') })
   assert.equal(p.bin.length, 3)
   assert.equal(p.bin[0][0], BIN_VIDEO)
   assert.equal(p.bin[0][1], 1, 'flagged as a whole picture')
   assert.equal(p.bin[0].readDoubleLE(2), 1000)
-  assert.equal(p.bin[0].subarray(10).toString(), 'KEY')
+  assert.equal(p.bin[0].readUInt32LE(10), 1, 'numbered')
+  assert.equal(p.bin[0].subarray(HEAD_VIDEO).toString(), 'KEY')
   assert.equal(p.bin[2][0], BIN_AUDIO)
-  assert.equal(p.bin[2].subarray(9).toString(), 'opus')
+  assert.equal(p.bin[2].readUInt32LE(9), 4, 'one count for pictures and sound')
+  assert.equal(p.bin[2].subarray(HEAD_AUDIO).toString(), 'opus')
   screen.stopAll()
   assert.equal(f.log.stops, 1, 'the encoder stops with the last viewer')
 })
@@ -222,7 +235,7 @@ test('a phone that cannot play video, or asks for no sound, gets what it can use
   screen.stopAll()
 })
 
-test('a phone that falls behind loses pictures until the next whole one, and the bitrate goes down', async () => {
+test('a phone that falls behind loses pictures until the next whole one', async () => {
   const f = fakeVideo()
   const { screen } = withVideo(f.video)
   let backlog = 0
@@ -230,7 +243,8 @@ test('a phone that falls behind loses pictures until the next whole one, and the
   screen.handle(p, { t: 'screen', op: 'start', video: true })
   await until(() => p.json.some((j) => j.op === 'info'))
   f.video$(chunk(true, 'K1'))
-  backlog = 900_000
+  screen.handle(p, { t: 'screen', op: 'ack', seq: 1 })
+  backlog = 2_000_000
   const keysBefore = f.log.keys
   f.video$(chunk(false, 'lost'))
   assert.equal(p.bin.length, 1, 'the late picture was dropped')
@@ -241,8 +255,26 @@ test('a phone that falls behind loses pictures until the next whole one, and the
   f.video$(chunk(true, 'K2'))
   f.video$(chunk(false, 'ok'))
   assert.equal(p.bin.length, 3)
-  await wait(1100)
-  assert.ok(f.log.rates.at(-1)! < 6_000_000, 'the bitrate came down after the drop')
+  screen.stopAll()
+})
+
+test('a link that stops answering gets a smaller step, and the encoder is told', async () => {
+  const f = fakeVideo()
+  const played: Ev[][] = []
+  const screen = new RemoteScreen(source, async () => ({ play: async (e) => void played.push(e) }), () => true, () => undefined, f.video, { tickMs: 50, cpus: calm })
+  const p = phone('a')
+  screen.handle(p, { t: 'screen', op: 'start', video: true })
+  await until(() => p.json.some((j) => j.op === 'info'))
+  const first = f.log.configs[0]
+  f.video$(chunk(true, 'K'))
+  // no ack ever comes: the chunk in the air grows old, which is latency
+  await until(() => f.log.configs.length > 1)
+  const later = f.log.configs.at(-1)!
+  assert.ok(later.bps < first.bps, `bitrate down (${first.bps} -> ${later.bps})`)
+  await until(() => p.json.some((j) => j.op === 'net'))
+  const n = p.json.find((j) => j.op === 'net') as { lat: number; step: string; mode: string }
+  assert.equal(n.mode, 'video')
+  assert.ok(n.lat > 0 && typeof n.step === 'string', 'the phone is told how its link looks')
   screen.stopAll()
 })
 
@@ -268,4 +300,48 @@ test('video phones get the pointer beside the picture', async () => {
   assert.equal(c.x, 0.5)
   assert.equal(c.y, 0.5)
   screen.stopAll()
+})
+
+// ---------------------------------------------------------------- what each phone decodes
+
+test('the encoder makes only what every watching phone decodes: profile, size and rate', async () => {
+  const f = fakeVideo()
+  const { screen } = withVideo(f.video, 0)
+  // a low-end Android: Main and Baseline, up to 720p30
+  const weak = phone('android')
+  screen.handle(weak, { t: 'screen', op: 'start', video: true, caps: { profiles: ['main', 'baseline', 'nonsense'], maxEdge: 1280, maxFps: 30 } })
+  await until(() => weak.json.some((j) => j.op === 'info'))
+  const c = f.log.configs.at(-1)!
+  assert.equal(c.profile, 'main')
+  assert.ok(c.width <= 1280 && c.fps <= 30, `capped (${c.width}x${c.height}@${c.fps})`)
+  assert.equal(c.level, '3.1')
+  assert.equal(c.codec, 'avc1.4D401F')
+  screen.stopAll()
+})
+
+test('two phones: the weaker decoder sets the profile; a phone that sends no caps is taken to play anything', async () => {
+  const f = fakeVideo()
+  const { screen } = withVideo(f.video, 0)
+  const old = phone('old-page')
+  screen.handle(old, { t: 'screen', op: 'start', video: true })
+  await until(() => old.json.some((j) => j.op === 'info'))
+  assert.equal(f.log.configs.at(-1)!.profile, 'high')
+  assert.equal(f.log.configs.at(-1)!.codec, 'avc1.64002A', '1080p60 is level 4.2')
+  const base = phone('baseline-only')
+  screen.handle(base, { t: 'screen', op: 'start', video: true, caps: { profiles: ['baseline'], maxEdge: 1920, maxFps: 60 } })
+  await until(() => base.json.some((j) => j.op === 'info'))
+  await until(() => f.log.configs.at(-1)!.profile === 'baseline')
+  screen.stopAll()
+})
+
+test('caps from a phone are checked at the door', () => {
+  assert.equal(parseCaps(undefined), undefined)
+  assert.equal(parseCaps({ profiles: ['x'] }), undefined, 'no known profile')
+  assert.deepEqual(parseCaps({ profiles: ['baseline'], maxEdge: 99999, maxFps: -5 }), { profiles: ['baseline'], maxEdge: 1920, maxFps: 1 })
+  assert.equal(avcLevel(1920, 1080, 60).name, '4.2')
+  assert.equal(avcLevel(1920, 1080, 30).name, '4.0')
+  assert.equal(avcLevel(1280, 720, 30).name, '3.1')
+  assert.equal(avcLevel(640, 360, 10).name, '3.0')
+  assert.equal(avcLevel(3840, 2160, 30).name, '5.1')
+  assert.equal(capsFloor({ profiles: ['main'], maxEdge: 1280, maxFps: 30 }), 2, '30/720p is the best step it plays')
 })

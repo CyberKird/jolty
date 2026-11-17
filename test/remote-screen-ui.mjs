@@ -12,7 +12,7 @@ import { WebSocket } from 'ws'
 const shots = path.resolve(process.env.SHOTS || 'shots-remote')
 fs.mkdirSync(shots, { recursive: true })
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-screen-ui-'))
-const PORT = 47824
+const PORT = Number(process.env.SCREEN_UI_PORT || 47824)
 fs.writeFileSync(path.join(data, 'profiles.json'), JSON.stringify([{ id: 'p1', name: 'Tools', engine: 'claude', auth: 'subscription', color: '#d97757' }]))
 fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ language: 'en' }))
 fs.writeFileSync(path.join(data, 'remote.json'), JSON.stringify({ enabled: true, port: PORT, devices: [] }))
@@ -33,7 +33,14 @@ try {
   }, `http://127.0.0.1:${PORT}/#pair=${code}`)
   const phone = await opened
   phone.setDefaultTimeout(30000)
-  await phone.waitForSelector('.brand-name', { timeout: 60000 })
+  phone.on('console', (m) => m.type() === 'error' && console.log('phone error:', m.text()))
+  phone.on('pageerror', (e) => console.log('phone page error:', e.message))
+  await phone.waitForSelector('.brand-name', { timeout: 60000 }).catch(async (e) => {
+    // what the phone shows instead, so a failure here says why
+    console.log('phone page:', phone.url(), JSON.stringify((await phone.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 400)))
+    await phone.screenshot({ path: path.join(shots, 'screen-phone-failed.png') }).catch(() => undefined)
+    throw e
+  })
   phone.on('console', (m) => /decoder|screen/i.test(m.text()) && console.log('phone:', m.text()))
   await phone.locator('.titlebar-btn').first().click()
   await phone.locator('.pc-screen-btn').click()
@@ -61,9 +68,23 @@ try {
     void w.loadURL('data:text/html,<body style="margin:0;background:#111"><div id=b style="position:absolute;top:0;width:90px;height:100%;background:#d4ff00"></div><script>let x=0;function f(){x=(x+9)%560;b.style.left=x+"px";requestAnimationFrame(f)}f()</script>')
     globalThis.__mover = w
   })
-  await phone.waitForTimeout(3500)
-  const fps = Number(await phone.evaluate(() => document.querySelector('.pcs').getAttribute('data-fps')))
-  console.log('video fps on the phone:', fps)
+  // the stream starts low and climbs while the link (here loopback) answers quickly: it must reach its top step
+  const climbT0 = Date.now()
+  await phone.waitForFunction(() => document.querySelector('.pcs').getAttribute('data-step') === '60/1080p', null, { timeout: 30000 }).catch(() => undefined)
+  const step = await phone.evaluate(() => document.querySelector('.pcs').getAttribute('data-step'))
+  console.log(`step ${step} after ${Date.now() - climbT0} ms`)
+  await phone.waitForTimeout(1500)
+  // measured on the phone: chunks received and pictures drawn, per second, over 4 s
+  const samples = []
+  for (let i = 0; i < 4; i++) {
+    await phone.waitForTimeout(1000)
+    samples.push(await phone.evaluate(() => { const r = document.querySelector('.pcs'); return { rx: Number(r.getAttribute('data-rx')), fps: Number(r.getAttribute('data-fps')), lat: Number(r.getAttribute('data-lat')), busy: r.getAttribute('data-busy'), step: r.getAttribute('data-step') } }))
+  }
+  const fps = Math.round(samples.reduce((n, s) => n + s.fps, 0) / samples.length)
+  const rx = Math.round(samples.reduce((n, s) => n + s.rx, 0) / samples.length)
+  // which encoder ran: an ffmpeg under the app is the 60 fps path
+  const ffmpeg = (await import('node:child_process')).execFileSync('powershell', ['-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter "Name='ffmpeg.exe'" | Where-Object { $_.CommandLine -match 'ddagrab' }).Count`]).toString().trim()
+  console.log('phone side:', JSON.stringify({ step, drawnFps: fps, receivedPerSec: rx, samples, ffmpegProcesses: ffmpeg }))
   assert.ok(fps >= 18, `the video keeps up with motion (${fps} fps)`)
   await phone.screenshot({ path: path.join(shots, 'screen-video.png') })
   await app.evaluate(() => globalThis.__mover?.destroy())

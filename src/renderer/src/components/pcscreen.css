@@ -457,3 +457,35 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+/* stream quality: the dot in the title toggles a small line with fps, delay and data rate (screen pipeline, kept apart) */
+.pcs-dotbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: -10px -8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.pcs-stats {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--white);
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+.pcs-state.over {
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}

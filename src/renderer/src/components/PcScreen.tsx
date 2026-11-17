@@ -2,7 +2,9 @@ import { ChevronUp, Command, Hand, Keyboard, Maximize2, Monitor, MousePointer2, 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { tr } from '@shared/i18n'
 import { screenBus, useScreenUi } from '../remote/screen-bus'
-import { audioContext, AudioPlayer, BIN_AUDIO, BIN_JPEG, BIN_VIDEO, canPlayAudio, canPlayVideo, VideoPlayer } from '../remote/screen-video'
+import { useBackGuard, useNoBrowserGestures } from '../remote/screen-hooks'
+import { BIN_AUDIO, BIN_JPEG, BIN_VIDEO, Feedback, parseChunk } from '../remote/screen-feedback'
+import { audioContext, AudioPlayer, canPlayAudio, canPlayVideo, VideoPlayer, videoCapsOnce } from '../remote/screen-video'
 import './pcscreen.css'
 
 // The PC's screen on the phone, TeamViewer style, with touches made for a finger: one finger moves the pointer like a touchpad
@@ -18,7 +20,19 @@ interface Info {
   video?: { codec: string; width: number; height: number; audio: boolean }
 }
 
-type Phase = 'connecting' | 'live' | 'off' | 'ended'
+/** `reconnecting`: the link to the PC dropped; the stream comes back by itself when it is up again */
+type Phase = 'connecting' | 'live' | 'off' | 'ended' | 'reconnecting'
+
+/** What the PC says about the stream once a second (main/remote-screen.ts, op 'net'). */
+interface Net {
+  lat: number
+  kbps: number
+  fps: number
+  height: number
+  step: string
+  mode: 'jpeg' | 'video'
+  busy: boolean
+}
 type Mode = 'touchpad' | 'direct'
 
 const MODS = ['ctrl', 'alt', 'shift', 'win'] as const
@@ -55,6 +69,14 @@ function Screen() {
   const [muted, setMuted] = useState(() => localStorage.getItem('jolty-screen-muted') === '1')
   const mutedRef = useRef(muted)
   mutedRef.current = muted
+  // the small line with pictures per second, delay and data rate; off unless asked for
+  const [showStats, setShowStats] = useState(() => localStorage.getItem('jolty-screen-stats') === '1')
+  const [statsText, setStatsText] = useState('')
+  /** no word from the PC for a few seconds while watching: the picture is shown as waiting */
+  const [stalled, setStalled] = useState(false)
+  const fb = useRef<Feedback | undefined>(undefined)
+  const net = useRef<{ at: number; n?: Net }>({ at: Date.now() })
+  const vrx = useRef(0)
 
   const stage = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
@@ -137,35 +159,42 @@ function Screen() {
   // ------------------------------------------------------------------ connection
   const start = useCallback((display?: number): void => {
     setPhase((p) => (p === 'live' ? p : 'connecting'))
-    void Promise.all([canPlayVideo(), canPlayAudio()]).then(([video, audio]) => {
-      screenBus.send({ op: 'start', display: display ?? Number(localStorage.getItem('jolty-screen-display') || NaN), video, audio: video && audio })
-    })
+    void (async () => {
+      // what this phone's decoder plays (profile, size, rate), asked with the exact codec strings; nothing: pictures
+      const caps = (await canPlayVideo()) ? await videoCapsOnce() : undefined
+      const audio = caps ? await canPlayAudio() : false
+      screenBus.send({ op: 'start', display: display ?? Number(localStorage.getItem('jolty-screen-display') || NaN), video: Boolean(caps), audio, caps })
+    })()
   }, [])
 
   useEffect(() => {
     let last = ''
+    // every chunk is answered (by number) so the PC can fit the stream to this link
+    const feedback = new Feedback((m) => screenBus.send(m))
+    fb.current = feedback
     const offFrame = screenBus.onFrame((buf) => {
       // a picture that was already on its way when the PC ended the view must not bring the screen back
       if (phaseRef.current === 'ended' || phaseRef.current === 'off') return
-      const head = new DataView(buf)
-      const kind = head.getUint8(0)
-      if (kind === BIN_VIDEO) {
-        vplayer.current?.feed(head.getUint8(1) === 1, head.getFloat64(2, true), new Uint8Array(buf, 10))
+      const c = parseChunk(buf)
+      if (!c) return
+      if (c.kind === BIN_VIDEO) {
+        vrx.current++
+        feedback.got(c.seq, buf.byteLength, c.key)
+        vplayer.current?.feed(c.key, c.ts, c.data)
         if (phaseRef.current !== 'live') setPhase('live')
         return
       }
-      if (kind === BIN_AUDIO) {
-        aplayer.current?.feed(head.getFloat64(1, true), new Uint8Array(buf, 9))
+      if (c.kind === BIN_AUDIO) {
+        feedback.got(c.seq, buf.byteLength)
+        aplayer.current?.feed(c.ts, c.data)
         return
       }
-      if (kind !== BIN_JPEG) return
-      const cx = head.getUint16(1, true)
-      const cy = head.getUint16(3, true)
+      if (c.kind !== BIN_JPEG) return
       if (Date.now() - cur.current.touched > 450) {
-        cur.current.x = cx === 65535 ? -1 : cx / 65534
-        cur.current.y = cy === 65535 ? -1 : cy / 65534
+        cur.current.x = c.cx
+        cur.current.y = c.cy
       }
-      const url = URL.createObjectURL(new Blob([buf.slice(5)], { type: 'image/jpeg' }))
+      const url = URL.createObjectURL(new Blob([c.data as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }))
       const el = img.current
       if (!el) return URL.revokeObjectURL(url)
       el.onload = () => {
@@ -174,7 +203,9 @@ function Screen() {
         paint()
         if (phaseRef.current === 'ended' || phaseRef.current === 'off') return
         setPhase('live')
-        screenBus.send({ op: 'ack' })
+        // shown: the next picture may come
+        feedback.got(c.seq, buf.byteLength, true)
+        feedback.drawnOne()
       }
       el.src = url
     })
@@ -183,6 +214,8 @@ function Screen() {
         const i = m as unknown as Info
         infoRef.current = i
         setInfo(i)
+        feedback.reset()
+        net.current.at = Date.now()
         // the screen comes as video (new decoder for these dimensions) or as pictures
         vplayer.current?.close()
         aplayer.current?.close()
@@ -193,10 +226,11 @@ function Screen() {
             () => screenBus.send({ op: 'keyframe' }),
             () => {
               // this browser cannot decode it: pictures from now on, and the choice is remembered
-              localStorage.setItem('jolty-screen-novideo', '1')
+              localStorage.setItem('jolty-screen-novideo', String(Date.now()))
               screenBus.send({ op: 'stop' })
               start()
-            }
+            },
+            feedback
           )
           const ctx = i.video.audio ? audioContext() : undefined
           if (ctx) aplayer.current = new AudioPlayer(ctx, mutedRef.current)
@@ -207,28 +241,66 @@ function Screen() {
         cur.current.x = Number(m.x)
         cur.current.y = Number(m.y)
         paint()
+      } else if (m.op === 'net') {
+        net.current = { at: Date.now(), n: m as unknown as Net }
+        setStalled(false)
       } else if (m.op === 'denied') setPhase('off')
-      else if (m.op === 'ended') setPhase(m.reason === 'off' ? 'off' : 'ended')
+      // the link dropped (not the PC): the page waits and the stream comes back by itself
+      else if (m.op === 'ended') setPhase(m.reason === 'off' ? 'off' : m.reason === 'link' ? 'reconnecting' : 'ended')
     })
     start()
     const onVisible = (): void => (document.hidden ? screenBus.send({ op: 'stop' }) : start())
     document.addEventListener('visibilitychange', onVisible)
+    // the connection to the PC is back (remote/boot.ts): resume where it was, from a whole picture, without a reload
+    const onBack = (): void => {
+      if (phaseRef.current === 'reconnecting' && !document.hidden) start(infoRef.current?.display)
+    }
+    window.addEventListener('jolty:resync', onBack)
     return () => {
       offFrame()
       offMsg()
       document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('jolty:resync', onBack)
       screenBus.send({ op: 'stop' })
       if (last) URL.revokeObjectURL(last)
       vplayer.current?.close()
       aplayer.current?.close()
+      feedback.close()
     }
   }, [layout, paint, start])
 
-  // pictures shown per second, for whoever measures (the tests do)
+  // once a second: pictures shown (tests read data-*), the indicator, and whether the PC still answers
   useEffect(() => {
-    const t = setInterval(() => root.current?.setAttribute('data-fps', String(vplayer.current?.fps ?? 0)), 1000)
+    const t = setInterval(() => {
+      const el = root.current
+      const local = fb.current?.local
+      const n = net.current.n
+      const fps = vplayer.current?.fps ?? local?.fps ?? 0
+      el?.setAttribute('data-fps', String(fps))
+      // video pictures received in the last second (sound chunks not counted)
+      el?.setAttribute('data-rx', String(vrx.current))
+      vrx.current = 0
+      if (n) {
+        el?.setAttribute('data-lat', String(n.lat))
+        el?.setAttribute('data-step', n.step)
+        el?.setAttribute('data-busy', String(n.busy))
+      }
+      setStalled(phaseRef.current === 'live' && Date.now() - net.current.at > 3500)
+      const parts = [`${fps} fps`, n ? `${n.lat} ms` : '', `${local?.kbps ?? 0} kbps`, n?.height ? `${n.height}p` : '', local?.decMs ? `dec ${local.decMs} ms` : '']
+      setStatsText(parts.filter(Boolean).join(' · '))
+    }, 1000)
     return () => clearInterval(t)
   }, [])
+
+  const toggleStats = (): void => {
+    const next = !showStats
+    setShowStats(next)
+    localStorage.setItem('jolty-screen-stats', next ? '1' : '0')
+  }
+
+  // Back does not leave by accident; the browser's own pinch and rubber band do not take the fingers (screen-hooks.ts)
+  const backHint = useBackGuard(useCallback(() => setOpen(false), [setOpen]))
+  useNoBrowserGestures(stage)
 
   // the screen stays on while it is being watched
   useEffect(() => {
@@ -498,7 +570,7 @@ function Screen() {
   const display = info?.displays.find((d) => d.index === info.display)
 
   return (
-    <div ref={root} className={`pcs ${closing ? 'closing' : ''} ${hud ? '' : 'hud-off'}`} role="dialog" aria-label={tr("Ecran PC")} onPointerDown={() => audioContext()}>
+    <div ref={root} className={`pcs ${closing ? 'closing' : ''} ${hud ? '' : 'hud-off'}`} role="dialog" aria-label={tr("Ecran PC")} onPointerDown={() => audioContext()} onPointerUp={() => audioContext()} onTouchEnd={() => audioContext()} onClick={() => audioContext()}>
       <header className="pcs-top" ref={topBar}>
         <button className="pcs-icon" onClick={close} aria-label={tr("Închide ecranul PC")}>
           <X size={20} />
@@ -506,7 +578,9 @@ function Screen() {
         <div className="pcs-title">
           <Monitor size={14} />
           <span>{tr("Ecran PC")}</span>
-          <i className={`pcs-dot ${phase === 'live' ? 'ok' : phase}`} />
+          <button className="pcs-dotbtn" onClick={toggleStats} aria-pressed={showStats} aria-label={tr("Calitatea conexiunii")} title={tr("Calitatea conexiunii")}>
+            <i className={`pcs-dot ${phase === 'live' && !stalled ? 'ok' : phase === 'live' ? 'connecting' : phase === 'reconnecting' ? 'connecting' : phase}`} />
+          </button>
         </div>
         <div className="pcs-displays" role="tablist">
           {(info?.displays || []).map((d) => (
@@ -542,14 +616,19 @@ function Screen() {
           </div>
         </div>
 
-        {phase === 'connecting' && (
-          <div className="pcs-state">
+        {showStats && phase === 'live' && statsText && (
+          <div className="pcs-stats" aria-live="off">
+            {statsText}
+          </div>
+        )}
+        {(phase === 'connecting' || phase === 'reconnecting' || (phase === 'live' && stalled)) && (
+          <div className={`pcs-state ${phase === 'live' ? 'over' : ''}`}>
             <div className="pcs-pulse">
               <svg width={(34 * 205) / 740} height={34} viewBox="0 0 205 740" aria-hidden>
                 <polygon points="52,0 170,0 118,300 205,284 56,740 84,408 0,426" />
               </svg>
             </div>
-            <p>{tr("Se conectează la ecran…")}</p>
+            <p>{phase === 'connecting' ? tr("Se conectează la ecran…") : tr("Se reconectează…")}</p>
           </div>
         )}
         {(phase === 'off' || phase === 'ended') && (
@@ -562,7 +641,8 @@ function Screen() {
             </button>
           </div>
         )}
-        {hint && phase === 'live' && <div className="pcs-hint">{tr("Un deget mișcă cursorul, atingerea face clic, două degete derulează sau fac zoom, apăsarea lungă trage.")}</div>}
+        {backHint && <div className="pcs-hint">{tr("Apasă din nou Înapoi ca să închizi ecranul PC")}</div>}
+        {hint && !backHint && phase === 'live' && <div className="pcs-hint">{tr("Un deget mișcă cursorul, atingerea face clic, două degete derulează sau fac zoom, apăsarea lungă trage.")}</div>}
       </div>
 
       <div className="pcs-bottom" ref={bottomBar}>

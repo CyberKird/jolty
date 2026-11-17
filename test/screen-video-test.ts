@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { avcDescription, splitNals, toAvcc } from '../src/renderer/src/remote/screen-video'
+import { avcCodec, avcDescription, splitNals, toAvcc, videoCaps } from '../src/renderer/src/remote/screen-video'
 
 // the stream from the PC is Annex B; browsers want lengths in front of each unit and the parameter sets in a description
 const b = (...n: number[]): Uint8Array => Uint8Array.from(n)
@@ -41,4 +41,55 @@ test('the picture units get 4 byte lengths and the parameter sets and delimiters
   assert.deepEqual(Array.from(out), [0, 0, 0, IDR.length, ...IDR])
   const two = toAvcc(splitNals(annexb(DELTA, b(0x41, 0x01))))
   assert.deepEqual(Array.from(two), [0, 0, 0, 4, ...DELTA, 0, 0, 0, 2, 0x41, 0x01])
+})
+
+// ---------------------------------------------------------------- what a phone decodes (Android low end, iOS Safari)
+// The browser is asked with the exact codec strings; these fakes stand for the answers real phones give.
+
+type Cfg = { codec: string; codedWidth?: number; hardwareAcceleration?: string }
+const fakeDecoder = (answer: (c: Cfg) => boolean | 'throw') => ({
+  isConfigSupported: async (c: Cfg) => {
+    const a = answer(c)
+    if (a === 'throw') throw new TypeError('Unsupported codec')
+    return { supported: a, config: c }
+  }
+})
+;(globalThis as { EncodedVideoChunk?: unknown }).EncodedVideoChunk ??= class {}
+
+test('a phone that decodes everything in hardware gets High, 1080p60', async () => {
+  const caps = await videoCaps(fakeDecoder(() => true) as never)
+  assert.deepEqual(caps, { profiles: ['high', 'main', 'baseline'], maxEdge: 1920, maxFps: 60, hardware: true })
+})
+
+test('a low-end Android decoder (Main and Baseline, up to 720p30, hardware) is told as such', async () => {
+  const caps = await videoCaps(fakeDecoder((c) => c.hardwareAcceleration === 'prefer-hardware' && !c.codec.startsWith('avc1.6400') && ['1F', '1E'].includes(c.codec.slice(-2))) as never)
+  assert.deepEqual(caps, { profiles: ['main', 'baseline'], maxEdge: 1280, maxFps: 30, hardware: true })
+})
+
+test('software decoding only: never more than 720p30', async () => {
+  const caps = await videoCaps(fakeDecoder((c) => c.hardwareAcceleration !== 'prefer-hardware') as never)
+  assert.equal(caps?.maxEdge, 1280)
+  assert.equal(caps?.maxFps, 30)
+  assert.equal(caps?.hardware, false)
+})
+
+test('isConfigSupported saying no, or throwing, means pictures (JPEG), not a broken video', async () => {
+  assert.equal(await videoCaps(fakeDecoder(() => false) as never), undefined)
+  assert.equal(await videoCaps(fakeDecoder(() => 'throw') as never), undefined)
+  assert.equal(await videoCaps(undefined), undefined, 'no WebCodecs at all (iOS before 16.4)')
+})
+
+test('a decoder that throws on High (an older Safari) still plays Main and Baseline', async () => {
+  const caps = await videoCaps(fakeDecoder((c) => (c.codec.startsWith('avc1.6400') ? 'throw' : true)) as never)
+  assert.deepEqual(caps?.profiles, ['main', 'baseline'])
+  assert.equal(caps?.maxFps, 60)
+})
+
+test('codec strings are the ones the PC encoders name', () => {
+  assert.equal(avcCodec('high', '2A'), 'avc1.64002A')
+  assert.equal(avcCodec('main', '28'), 'avc1.4D4028')
+  assert.equal(avcCodec('baseline', '1F'), 'avc1.42E01F')
+  // AMF writes Constrained Baseline as 42 40 1F: the phone builds its decoder from the stream's own parameter set
+  const sps = b(0x67, 0x42, 0x40, 0x1f, 0xda, 0x01)
+  assert.equal(avcDescription(splitNals(annexb(sps, PPS, IDR)))?.codec, 'avc1.42401f')
 })
