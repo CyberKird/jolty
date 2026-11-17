@@ -71,11 +71,12 @@
 .ag-pill b {
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: var(--white);
+  /* the pill is dark in every theme, so its ink is light in every theme (the light theme's --white is dark) */
+  color: #f4f3fc;
 }
 .ag-pill em {
   font-style: normal;
-  color: var(--grey);
+  color: #b9b8ca;
 }
 
 /* the cables: one canvas the graphics chip draws (activity-gl.ts), and one for the sparks of a transfer */
