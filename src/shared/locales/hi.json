@@ -1774,5 +1774,13 @@
  "Trimite": "भेजें",
  "Alege unul sau mai multe răspunsuri": "एक या अधिक जवाब चुनें",
  "Alege un răspuns": "एक जवाब चुनें",
- "Scrie alt răspuns...": "अपना जवाब लिखें..."
+ "Scrie alt răspuns...": "अपना जवाब लिखें...",
+ "Animații": "एनिमेशन",
+ "Pornite": "चालू",
+ "Reduse": "कम",
+ "Oprite": "बंद",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "सब कुछ सहजता से चलता है, इस स्क्रीन के अनुसार ({hz} Hz)।",
+ "Doar estompări scurte, nimic nu alunecă.": "केवल छोटे फ़ेड, कुछ भी खिसकता नहीं।",
+ "Nimic nu se mișcă, totul apare pe loc.": "कुछ भी नहीं चलता, सब कुछ तुरंत दिखता है।",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "इस फ़ोन पर Jolty कैसे चलता है। यह तुरंत लागू होता है और सिर्फ़ इसी फ़ोन पर रहता है।"
 }

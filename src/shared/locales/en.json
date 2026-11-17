@@ -1774,5 +1774,13 @@
  "Trimite": "Submit",
  "Alege unul sau mai multe răspunsuri": "Select one or more answers",
  "Alege un răspuns": "Select one answer",
- "Scrie alt răspuns...": "Type your own answer..."
+ "Scrie alt răspuns...": "Type your own answer...",
+ "Animații": "Animations",
+ "Pornite": "On",
+ "Reduse": "Reduced",
+ "Oprite": "Off",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "Everything moves smoothly, tuned to this screen ({hz} Hz).",
+ "Doar estompări scurte, nimic nu alunecă.": "Only short fades, nothing slides.",
+ "Nimic nu se mișcă, totul apare pe loc.": "Nothing moves, everything appears at once.",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "How Jolty moves on this phone. It applies at once and stays on this phone only."
 }

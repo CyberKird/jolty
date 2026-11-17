@@ -1774,5 +1774,13 @@
  "Trimite": "送信",
  "Alege unul sau mai multe răspunsuri": "1つ以上選択してください",
  "Alege un răspuns": "1つ選択してください",
- "Scrie alt răspuns...": "自分の回答を入力..."
+ "Scrie alt răspuns...": "自分の回答を入力...",
+ "Animații": "アニメーション",
+ "Pornite": "オン",
+ "Reduse": "控えめ",
+ "Oprite": "オフ",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "この画面に合わせて、すべてがなめらかに動きます ({hz} Hz)。",
+ "Doar estompări scurte, nimic nu alunecă.": "短いフェードのみで、スライドはしません。",
+ "Nimic nu se mișcă, totul apare pe loc.": "何も動かず、すべてがすぐに表示されます。",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "このスマートフォンでの Jolty の動き方です。すぐに反映され、このスマートフォンにだけ保存されます。"
 }

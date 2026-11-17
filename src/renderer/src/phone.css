@@ -421,14 +421,6 @@ html.remote .sheet-item .small {
     transform: translateY(-12px);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  html.remote *,
-  html.remote *::before,
-  html.remote *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
 
 /* The PC does not answer: the same screen as pairing, with the start button and a pulse while the PC wakes. */
 html.remote .offline-pulse {

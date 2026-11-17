@@ -1,6 +1,7 @@
 import { flushSync } from 'react-dom'
 import { useStore } from '../store'
 import { useScreenUi } from './screen-bus'
+import { onFrames } from './motion'
 
 // The finger moves the drawer: a swipe from the left edge (or a rightward swipe on the chat) pulls the sidebar out under it, a swipe
 // to the left pushes it back. The drawer follows the finger one to one and, on release, goes where the finger was heading
@@ -148,11 +149,18 @@ export function setupGestures(): void {
     // speed beats position: a quick flick opens or closes even when it did not get halfway
     const open = Math.abs(d.v) > 0.4 ? d.v > 0 : d.p > 0.5
     const changed = open !== (d.mode === 'close')
+    // the drawer leaves the finger at the finger's speed: the curve starts about 4.5 times steeper than its average, so the time that
+    // matches the speed is 4.5 x distance / speed, kept between a quick snap and the normal length and rounded to whole frames
+    const left = (open ? 1 - d.p : d.p) * d.width
+    const ms = onFrames(Math.min(400, Math.max(160, (4.5 * left) / Math.max(Math.abs(d.v), 0.6))))
+    if (el) el.app.style.setProperty('--drawer-t', `${Math.round(ms)}ms`)
     flushSync(() => useStore.setState({ sidebarOpen: open }))
     root.classList.remove('drawer-drag')
     if (el) {
       el.side.style.removeProperty('transform')
       el.app.style.removeProperty('--scrim')
+      const app = el.app
+      setTimeout(() => app.style.removeProperty('--drawer-t'), ms + 50)
     }
     if (changed) navigator.vibrate?.(8)
   }

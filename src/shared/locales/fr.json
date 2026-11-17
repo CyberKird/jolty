@@ -1774,5 +1774,13 @@
  "Trimite": "Envoyer",
  "Alege unul sau mai multe răspunsuri": "Choisissez une ou plusieurs réponses",
  "Alege un răspuns": "Choisissez une réponse",
- "Scrie alt răspuns...": "Écrivez votre propre réponse..."
+ "Scrie alt răspuns...": "Écrivez votre propre réponse...",
+ "Animații": "Animations",
+ "Pornite": "Activées",
+ "Reduse": "Réduites",
+ "Oprite": "Désactivées",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "Tout bouge avec fluidité, adapté à cet écran ({hz} Hz).",
+ "Doar estompări scurte, nimic nu alunecă.": "Seulement de brefs fondus, rien ne glisse.",
+ "Nimic nu se mișcă, totul apare pe loc.": "Rien ne bouge, tout apparaît immédiatement.",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "La façon dont Jolty bouge sur ce téléphone. S’applique tout de suite et reste sur ce téléphone uniquement."
 }

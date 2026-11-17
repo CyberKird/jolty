@@ -9,6 +9,7 @@ import './lowpower.css'
 import './windowed.css'
 import './phone.css'
 import './phone-fit.css'
+import './phone-motion.css'
 import { setLowPowerMode } from './lowpower'
 import { applySavedTheme } from './theme'
 import { addLocales, getLang } from '@shared/i18n'
@@ -27,6 +28,7 @@ if (load) addLocales({ [lang]: await load() })
 if (!(window as unknown as { jolty?: unknown }).jolty) {
   await (await import('./remote/boot')).connectRemote()
   ;(await import('./remote/phone')).setupPhone()
+  ;(await import('./remote/motion')).setupMotion()
 }
 
 // a throw while rendering unmounts the whole tree, which is a black window: reload instead, at most twice a minute

@@ -5,6 +5,7 @@ import { tr } from '@shared/i18n'
 import { api, errMsg } from '../store'
 import { QrCode } from '../components/QrCode'
 import { WakeSetup } from './WakeSetup'
+import { PhoneMotion } from './PhoneMotion'
 import './phone-settings.css'
 
 interface Pairing {
@@ -56,6 +57,8 @@ export function PhoneSettings() {
     return () => clearTimeout(t)
   }, [st, pairing])
 
+  // on the phone itself this card is about the phone: how it moves (the link is managed from the PC)
+  if (document.documentElement.classList.contains('remote')) return <PhoneMotion />
   if (hidden || !st) return null
 
   const run = async (job: () => Promise<RemoteStatus | void>): Promise<void> => {

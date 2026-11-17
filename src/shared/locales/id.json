@@ -1774,5 +1774,13 @@
  "Trimite": "Kirim",
  "Alege unul sau mai multe răspunsuri": "Pilih satu atau beberapa jawaban",
  "Alege un răspuns": "Pilih satu jawaban",
- "Scrie alt răspuns...": "Tulis jawabanmu sendiri..."
+ "Scrie alt răspuns...": "Tulis jawabanmu sendiri...",
+ "Animații": "Animasi",
+ "Pornite": "Aktif",
+ "Reduse": "Dikurangi",
+ "Oprite": "Mati",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "Semua bergerak mulus, disesuaikan dengan layar ini ({hz} Hz).",
+ "Doar estompări scurte, nimic nu alunecă.": "Hanya pudar singkat, tidak ada yang bergeser.",
+ "Nimic nu se mișcă, totul apare pe loc.": "Tidak ada yang bergerak, semuanya langsung muncul.",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "Cara Jolty bergerak di ponsel ini. Langsung berlaku dan hanya tersimpan di ponsel ini."
 }

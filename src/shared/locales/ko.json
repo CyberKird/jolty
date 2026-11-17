@@ -1774,5 +1774,13 @@
  "Trimite": "보내기",
  "Alege unul sau mai multe răspunsuri": "하나 이상 선택하세요",
  "Alege un răspuns": "하나를 선택하세요",
- "Scrie alt răspuns...": "직접 답변 입력..."
+ "Scrie alt răspuns...": "직접 답변 입력...",
+ "Animații": "애니메이션",
+ "Pornite": "켜기",
+ "Reduse": "줄이기",
+ "Oprite": "끄기",
+ "Totul se mișcă fluid, potrivit ecranului ({hz} Hz).": "이 화면에 맞춰 모든 것이 부드럽게 움직입니다 ({hz} Hz).",
+ "Doar estompări scurte, nimic nu alunecă.": "짧은 페이드만, 미끄러지는 움직임은 없습니다.",
+ "Nimic nu se mișcă, totul apare pe loc.": "아무것도 움직이지 않고 모든 것이 바로 나타납니다.",
+ "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "이 휴대폰에서 Jolty가 움직이는 방식입니다. 바로 적용되며 이 휴대폰에만 저장됩니다."
 }
