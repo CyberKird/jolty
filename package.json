@@ -91,6 +91,7 @@
     "test:screen-video": "esbuild test/screen-video-test.ts --bundle --platform=node --format=cjs --outfile=out-test/screen-video-test.cjs --log-level=warning && node --test out-test/screen-video-test.cjs",
     "test:screen-adapt": "esbuild test/screen-adapt-test.ts --bundle --platform=node --format=cjs --outfile=out-test/screen-adapt-test.cjs --log-level=warning && node --test out-test/screen-adapt-test.cjs",
     "test:remote": "esbuild test/remote-test.ts --bundle --platform=node --format=cjs --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --external:ws --outfile=out-test/remote-test.cjs --log-level=warning && node --test out-test/remote-test.cjs",
+    "test:screen-link": "esbuild test/screen-link-test.ts --bundle --platform=node --format=cjs --external:ws --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --outfile=out-test/screen-link-test.cjs --log-level=warning && node --test --test-concurrency=1 out-test/screen-link-test.cjs",
     "test:remote-screen-ui": "electron-vite build && node test/remote-screen-ui.mjs",
     "test:remote-ui": "electron-vite build && node test/remote-ui.mjs",
     "test:updater": "esbuild test/updater-test.ts --bundle --platform=node --format=cjs --alias:electron=./test/updater-stubs.ts --alias:electron-updater=./test/updater-stubs.ts --alias:@shared=./src/shared --outfile=out-test/updater-test.cjs --log-level=warning && node --test out-test/updater-test.cjs",
