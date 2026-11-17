@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.32.0
+
+### New
+
+- Backup that keeps itself up to date. Each connected storage has its own Update automatically switch, on by default once you connect it. Only what changed is uploaded (a small change sends about 1 KB), old versions are cleaned up, and Compact shrinks the storage. On a new PC choose I have Jolty on another PC in the welcome screen (or Settings, Backup), sign in, enter your backup password and Jolty opens where you left off: chats, settings, memory, skills, schedules. Sign-ins and keys are not included.
+- The PC screen on the phone follows your connection. It steps between 60, 30, 20 and 10 frames per second and smaller pictures when the link is weak, keeps the cursor responsive, drops stale frames instead of piling them up and climbs back on its own when the link recovers. A tap on the status dot shows frames per second, delay and data rate. With ffmpeg on the PC (found automatically, or set JOLTY_FFMPEG) the screen reaches 60 frames per second; without it the screen stays near 30. Android and iPhone each get the video they can decode.
+- Animations setting on the phone: On, Reduced or Off. Motion is on by default on every phone, whatever the system's reduce-motion switch says, and is timed to the phone's refresh rate (60, 90 or 120 Hz).
+- The activity map is redrawn: lit fibres on a flat bus, a shaded core with the context percentage inside, glass, obsidian or pearl orbs per theme, and light packets that travel to the tool that is running. It draws nothing when idle.
+
+### Improvements
+
+- The phone app opens faster and works on weak connections: scripts are preloaded and precompressed, long tool output is trimmed, images are sent as smaller copies, streaming is batched, and after a drop the phone resumes from the last event instead of reloading. It reconnects at once when the network changes or the phone wakes up.
+- Text is easier to read on the Glass and Frost themes, in the sidebar, in settings and on the phone. Every screen is checked for overflow, overlaps and 44 px tap targets on small and large phones, in landscape and with the keyboard open.
+
+### Fixed
+
+- The phone no longer gets unpaired by itself. The device list is written safely, kept in a backup copy and never replaced by a half-read file; only a revoke from the PC unpairs a phone.
+- Thinking levels in the model picker no longer overlap in a narrow window.
+- The home screen no longer runs into the Live panel when Jolty starts in a window.
+
 ## 0.31.0
 
 ### New
