@@ -83,6 +83,21 @@ const remote = new Remote(() => win && !win.isDestroyed() && win.webContents.sen
 const screenVideo = new EncoderHost()
 remote.useScreen(new RemoteScreen(nativeScreenSource, nativeScreenInput, () => store.loadSettings().remoteScreen === true, () => win && !win.isDestroyed() && win.webContents.send('remote:changed'), screenVideo))
 nativeComputer.onKill(() => remote.stopScreen())
+remote.useImages(shrinkForPhone)
+
+/** A picture of a conversation, at most 1600 px on its long side for a phone; PNG only when it has see-through parts. */
+function shrinkForPhone(data: Buffer, mime: string): { data: Buffer; mime: string } | undefined {
+  const img = nativeImage.createFromBuffer(data)
+  if (img.isEmpty()) return undefined
+  const { width, height } = img.getSize()
+  const scale = Math.min(1, 1600 / Math.max(width, height))
+  const small = scale < 1 ? img.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'good' }) : img
+  if (mime === 'image/png') {
+    const px = small.toBitmap()
+    for (let i = 3; i < px.length; i += 4) if (px[i] < 255) return { data: small.toPNG(), mime: 'image/png' }
+  }
+  return { data: small.toJPEG(80), mime: 'image/jpeg' }
+}
 
 function send(e: ChatEvent): void {
   background.track(e)
@@ -532,6 +547,8 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => background.reveal())
   app.whenReady().then(() => {
     jolty = new Jolty(send)
+    // tests stream fake engine events through the real path (transcript, desktop window, phones); never in a normal run
+    if (process.env.JOLTY_TEST) (globalThis as { joltyTestEvent?: (e: ChatEvent) => void }).joltyTestEvent = (e) => (jolty as unknown as { onEngineEvent(e: ChatEvent): void }).onEngineEvent(e)
     void nativeBrowser.start()
     jolty.scheduler.start()
     registerIpc()
