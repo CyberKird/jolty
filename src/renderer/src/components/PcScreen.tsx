@@ -75,6 +75,7 @@ function Screen() {
   const [stalled, setStalled] = useState(false)
   const fb = useRef<Feedback | undefined>(undefined)
   const net = useRef<{ at: number; n?: Net }>({ at: Date.now() })
+  const vrx = useRef(0)
 
   const stage = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
@@ -173,6 +174,7 @@ function Screen() {
       const c = parseChunk(buf)
       if (!c) return
       if (c.kind === BIN_VIDEO) {
+        vrx.current++
         feedback.got(c.seq, buf.byteLength, c.key)
         vplayer.current?.feed(c.key, c.ts, c.data)
         if (phaseRef.current !== 'live') setPhase('live')
@@ -271,9 +273,13 @@ function Screen() {
       const n = net.current.n
       const fps = vplayer.current?.fps ?? local?.fps ?? 0
       el?.setAttribute('data-fps', String(fps))
+      // video pictures received in the last second (sound chunks not counted)
+      el?.setAttribute('data-rx', String(vrx.current))
+      vrx.current = 0
       if (n) {
         el?.setAttribute('data-lat', String(n.lat))
         el?.setAttribute('data-step', n.step)
+        el?.setAttribute('data-busy', String(n.busy))
       }
       setStalled(phaseRef.current === 'live' && Date.now() - net.current.at > 3500)
       const parts = [`${fps} fps`, n ? `${n.lat} ms` : '', `${local?.kbps ?? 0} kbps`, n?.height ? `${n.height}p` : '', local?.decMs ? `dec ${local.decMs} ms` : '']

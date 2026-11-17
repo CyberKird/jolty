@@ -25,6 +25,11 @@ const run = (exe: string, args: string[], ms = 15_000): Promise<{ out: string; e
 
 const ENCODERS = ['h264_nvenc', 'h264_amf']
 
+/** JOLTY_DEBUG_ENC=<file>: which way the screen is encoded, and why ffmpeg was left, go to that file */
+const debug = (line: string): void => {
+  if (process.env.JOLTY_DEBUG_ENC) fs.appendFileSync(process.env.JOLTY_DEBUG_ENC, `${new Date().toISOString()} ${line}\n`)
+}
+
 let probing: Promise<FfmpegCaps | undefined> | undefined
 
 /** What this PC's ffmpeg can do, found once (a few hundred ms) the first time a phone asks for video. */
@@ -33,24 +38,37 @@ export function probeFfmpeg(): Promise<FfmpegCaps | undefined> {
     if (process.platform !== 'win32' || process.env.JOLTY_FFMPEG === 'off') return undefined
     const found = (await run('where', ['ffmpeg'], 5000)).out.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
     const candidates = [process.env.JOLTY_FFMPEG, ...found, 'C:\\ffmpeg\\bin\\ffmpeg.exe'].filter((p): p is string => Boolean(p) && fs.existsSync(p as string))
+    debug(`ffmpeg candidates: ${JSON.stringify(candidates)}`)
     for (const exe of [...new Set(candidates)]) {
       const filters = (await run(exe, ['-hide_banner', '-filters'])).out
-      if (!/\bddagrab\b/.test(filters) || !/\bscale_d3d11\b/.test(filters)) continue
+      if (!/\bddagrab\b/.test(filters) || !/\bscale_d3d11\b/.test(filters)) {
+        debug(`${exe}: no ddagrab or scale_d3d11 (${filters.length} bytes of filters)`)
+        continue
+      }
       const encoders = (await run(exe, ['-hide_banner', '-encoders'])).out
-      for (const encoder of ENCODERS.filter((e) => new RegExp(`\\b${e}\\b`).test(encoders))) {
+      const usable = ENCODERS.filter((e) => new RegExp(`\\b${e}\\b`).test(encoders))
+      debug(`${exe}: hardware encoders listed ${JSON.stringify(usable)}`)
+      for (const encoder of usable) {
         const outputs: FfmpegCaps['outputs'] = []
         for (let idx = 0; idx < 8; idx++) {
           // one small picture through the whole chain: the encoder must really open on this chip, not just be listed
           const r = await run(exe, ['-hide_banner', '-loglevel', 'verbose', '-nostdin', '-init_hw_device', 'd3d11va', '-filter_complex', `ddagrab=output_idx=${idx}:framerate=5,scale_d3d11=width=320:height=180:format=nv12`, '-frames:v', '1', ...encoderArgs(encoder, { width: 320, height: 180, fps: 5, bps: 300_000, gopSec: 1, keyOnly: false }), '-f', 'null', '-'])
           const m = /Opened dxgi output \d+ with dimensions (\d+)x(\d+)/.exec(r.err)
-          if (!m || !r.ok) break
+          if (!m || !r.ok) {
+            if (idx === 0) debug(`${encoder} on output 0 failed: ${r.err.trim().split(/\r?\n/).slice(-3).join(' | ')}`)
+            break
+          }
           outputs.push({ idx, w: Number(m[1]), h: Number(m[2]) })
         }
         if (outputs.length) return { exe, encoder, outputs }
       }
     }
     return undefined
-  })()
+  })().then((caps) => {
+    // not found: looked for again a minute later (a probe can fail while the PC is very busy)
+    if (!caps) setTimeout(() => (probing = undefined), 60_000).unref?.()
+    return caps
+  })
   return probing
 }
 
@@ -60,7 +78,8 @@ export function outputFor(caps: FfmpegCaps, displays: DisplayInfo[], d: DisplayI
   const outs = caps.outputs.filter((o) => o.w === d.w && o.h === d.h)
   // as many outputs of that size as displays: the order is the same; otherwise it cannot be told which is which
   if (!outs.length || outs.length !== same.length) return undefined
-  return outs[same.indexOf(d)]?.idx
+  // by id: the list may be a fresh copy of the displays, not the objects `d` came from
+  return outs[same.findIndex((x) => x.id === d.id)]?.idx
 }
 
 export function encoderArgs(encoder: string, c: EncoderConfig): string[] {
@@ -251,7 +270,8 @@ export class FfmpegVideo {
       this.video?.({ key: ch.key, ts: Math.round(performance.now() * 1000), data: ch.data })
     })
     child.stdout?.on('data', (d: Buffer) => parse.push(d))
-    child.on('exit', () => {
+    child.on('exit', (code) => {
+      debug(`ffmpeg ${child.pid} exited ${code}: ${err.trim().split(/\r?\n/).pop() ?? ''}`)
       if (p === this.next) this.next = undefined
       if (p !== this.active) return
       this.active = undefined
@@ -307,7 +327,8 @@ export class ScreenVideoAuto implements ScreenVideo {
     this.chrome.onVideo((c) => this.using === 'chrome' && v(c))
     this.chrome.onAudio((c) => this.using === 'chrome' && a(c))
     this.sound.onAudio((c) => this.using === 'ff' && a(c))
-    this.ff.onFail(() => {
+    this.ff.onFail((why) => {
+      debug(`ffmpeg gave up (${why}), Chromium capture takes over`)
       // ffmpeg gave up while a phone watched: the same phone goes on with Chromium's capture
       if (this.using !== 'ff' || !this.last) return
       this.sound.stop()
@@ -331,17 +352,20 @@ export class ScreenVideoAuto implements ScreenVideo {
   async start(display: DisplayInfo, opts: { audio: boolean; config: EncoderConfig }): Promise<VideoStart> {
     this.stop()
     this.last = { display, opts }
-    if (await this.ff.canShow(this.displays(), display)) {
+    const can = await this.ff.canShow(this.displays(), display).catch((e) => (debug(`ffmpeg probe failed: ${e}`), false))
+    if (can) {
       try {
         this.using = 'ff'
         const started = await this.ff.start(opts.config)
-        const sound = opts.audio ? await this.sound.start(display, opts).catch(() => undefined) : undefined
+        const sound = opts.audio ? await this.sound.start(display, opts).catch((e) => (debug(`sound capture failed: ${e}`), undefined)) : undefined
+        debug(`ffmpeg video on display ${display.index}, sound ${Boolean(sound?.audio)}`)
         return { ...started, audio: Boolean(sound?.audio) }
-      } catch {
+      } catch (e) {
+        debug(`ffmpeg start failed: ${e}`)
         this.ff.stop()
         this.sound.stop()
       }
-    }
+    } else debug(`ffmpeg not usable for display ${display.index} (${display.w}x${display.h})`)
     this.using = 'chrome'
     return this.chrome.start(display, opts)
   }

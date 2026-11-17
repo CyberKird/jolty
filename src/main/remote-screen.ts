@@ -354,7 +354,8 @@ export class RemoteScreen {
     this.loop ??= setInterval(() => {
       const now = Date.now()
       // the PC's own load is looked at every 2 s: when it is busy, 60 fps goes first
-      if (this.ticks++ % Math.max(1, Math.round(2000 / tickMs)) === 0) this.load.sample((this.opts.cpus ?? os.cpus)())
+      // (JOLTY_SCREEN_IGNORE_LOAD=1: measurements of the ceiling only)
+      if (this.ticks++ % Math.max(1, Math.round(2000 / tickMs)) === 0 && !process.env.JOLTY_SCREEN_IGNORE_LOAD) this.load.sample((this.opts.cpus ?? os.cpus)())
       let changed = false
       for (const v of this.viewers.values()) {
         v.adapt.floor = v.mode === 'video' ? this.load.floor : 0

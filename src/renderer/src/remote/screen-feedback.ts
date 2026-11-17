@@ -43,6 +43,8 @@ export interface LocalStats {
   kbps: number
   /** average decode time, ms */
   decMs: number
+  /** chunks received */
+  rx: number
 }
 
 const ACK_GAP = 40
@@ -59,7 +61,8 @@ export class Feedback {
   private maxQ = 0
   private clock?: ReturnType<typeof setInterval>
   /** the last second, as measured here */
-  local: LocalStats = { fps: 0, kbps: 0, decMs: 0 }
+  local: LocalStats = { fps: 0, kbps: 0, decMs: 0, rx: 0 }
+  private rx = 0
 
   constructor(
     private send: (m: Record<string, unknown>) => void,
@@ -73,6 +76,7 @@ export class Feedback {
   /** A chunk arrived. `now`: answer at once (whole pictures, and pictures that were just shown). */
   got(seq: number, bytes: number, now = false): void {
     this.bytes += bytes
+    this.rx++
     if (seq > this.newest || this.newest - seq > 2 ** 31) this.newest = seq
     const t = this.now()
     if (now || t - this.lastAck >= ACK_GAP) return this.ack()
@@ -101,9 +105,9 @@ export class Feedback {
   /** Once a second: to the PC, and kept for the indicator. */
   report(): LocalStats {
     const decMs = this.decoded ? Math.round((this.decTotal / this.decoded) * 10) / 10 : 0
-    this.local = { fps: this.drawn, kbps: Math.round((this.bytes * 8) / 1000), decMs }
+    this.local = { fps: this.drawn, kbps: Math.round((this.bytes * 8) / 1000), decMs, rx: this.rx }
     this.send({ op: 'stats', fps: this.drawn, dec: this.decoded, decMs, q: this.maxQ })
-    this.bytes = this.drawn = this.decoded = this.decTotal = this.maxQ = 0
+    this.bytes = this.drawn = this.decoded = this.decTotal = this.maxQ = this.rx = 0
     return this.local
   }
 
