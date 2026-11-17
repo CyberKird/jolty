@@ -94,6 +94,8 @@
     "test:remote-ui": "electron-vite build && node test/remote-ui.mjs",
     "test:remote-ui-matrix": "electron-vite build && node test/remote-ui-matrix.mjs",
     "test:remote-ui-frames": "electron-vite build && node test/remote-ui-frames.mjs",
+    "test:ui-contrast": "electron-vite build && node test/ui-contrast.mjs",
+    "test:ui-layout": "electron-vite build && node test/ui-layout.mjs",
     "test:updater": "esbuild test/updater-test.ts --bundle --platform=node --format=cjs --alias:electron=./test/updater-stubs.ts --alias:electron-updater=./test/updater-stubs.ts --alias:@shared=./src/shared --outfile=out-test/updater-test.cjs --log-level=warning && node --test out-test/updater-test.cjs",
     "test:merge": "esbuild test/git-merge-test.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --outfile=out-test/git-merge-test.mjs --log-level=warning && node --test out-test/git-merge-test.mjs",
     "test:mcp-share": "esbuild test/mcp-share-test.ts --bundle --platform=node --format=cjs --outfile=out-test/mcp-share-test.cjs --log-level=warning && node --test out-test/mcp-share-test.cjs",

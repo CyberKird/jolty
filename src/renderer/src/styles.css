@@ -1987,9 +1987,11 @@ html:is([data-theme='glass'], [data-theme='frost']) .question-option kbd {
   color: var(--white);
   font-weight: 500;
 }
+/* two columns that may shrink below their longest title (1fr alone never goes under its content's width, so a long title pushed
+   the grid out of the chat column and under the Live panel); a title that does not fit ends in an ellipsis */
 .starts {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2px;
   margin-top: 30px;
 }
@@ -1998,6 +2000,7 @@ html:is([data-theme='glass'], [data-theme='frost']) .question-option kbd {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-width: 0;
   padding: 14px 16px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.015);
