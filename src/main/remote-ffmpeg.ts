@@ -52,7 +52,7 @@ export function probeFfmpeg(): Promise<FfmpegCaps | undefined> {
         const outputs: FfmpegCaps['outputs'] = []
         for (let idx = 0; idx < 8; idx++) {
           // one small picture through the whole chain: the encoder must really open on this chip, not just be listed
-          const r = await run(exe, ['-hide_banner', '-loglevel', 'verbose', '-nostdin', '-init_hw_device', 'd3d11va', '-filter_complex', `ddagrab=output_idx=${idx}:framerate=5,scale_d3d11=width=320:height=180:format=nv12`, '-frames:v', '1', ...encoderArgs(encoder, { width: 320, height: 180, fps: 5, bps: 300_000, gopSec: 1, keyOnly: false }), '-f', 'null', '-'])
+          const r = await run(exe, ['-hide_banner', '-loglevel', 'verbose', '-nostdin', '-init_hw_device', 'd3d11va', '-filter_complex', `ddagrab=output_idx=${idx}:framerate=5,scale_d3d11=width=320:height=180:format=nv12`, '-frames:v', '1', ...encoderArgs(encoder, { width: 320, height: 180, fps: 5, bps: 300_000, gopSec: 1, keyOnly: false, profile: 'baseline', level: '3.0', codec: '' }), '-f', 'null', '-'])
           const m = /Opened dxgi output \d+ with dimensions (\d+)x(\d+)/.exec(r.err)
           if (!m || !r.ok) {
             if (idx === 0) debug(`${encoder} on output 0 failed: ${r.err.trim().split(/\r?\n/).slice(-3).join(' | ')}`)
@@ -86,8 +86,8 @@ export function encoderArgs(encoder: string, c: EncoderConfig): string[] {
   const gop = c.keyOnly ? 1 : Math.max(1, Math.round(c.gopSec * c.fps))
   const bps = String(Math.round(c.bps))
   const common = ['-bf', '0', '-g', String(gop), '-b:v', bps, '-maxrate', String(Math.round(c.bps * 1.5)), '-bufsize', String(Math.round(c.bps / 2))]
-  if (encoder === 'h264_nvenc') return ['-c:v', 'h264_nvenc', '-preset', 'p1', '-tune', 'ull', '-zerolatency', '1', '-rc', 'cbr', '-delay', '0', '-profile:v', 'main', ...common]
-  return ['-c:v', 'h264_amf', '-usage', 'ultralowlatency', '-quality', 'speed', '-rc', 'vbr_peak', '-profile:v', 'main', ...common]
+  if (encoder === 'h264_nvenc') return ['-c:v', 'h264_nvenc', '-preset', 'p1', '-tune', 'ull', '-zerolatency', '1', '-rc', 'cbr', '-delay', '0', '-profile:v', c.profile, '-level', c.level, ...common]
+  return ['-c:v', 'h264_amf', '-usage', 'ultralowlatency', '-quality', 'speed', '-rc', 'vbr_peak', '-profile:v', c.profile === 'baseline' ? 'constrained_baseline' : c.profile, '-level', c.level, ...common]
 }
 
 /** FLV tags in, H.264 Annex B pictures out (parameter sets in front of every whole picture). */

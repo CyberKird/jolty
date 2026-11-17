@@ -46,16 +46,17 @@ async function start(o) {
   })
   const vt = stream.getVideoTracks()[0]
   const set = vt.getSettings()
-  const s = (st = { stream, vt, dead: false, key: true, lastKeyAt: 0, lastTs: -1e12, last: null, cfg: c, encW: 0, encH: 0, encBps: 0, encFps: 0 })
+  const s = (st = { stream, vt, dead: false, key: true, lastKeyAt: 0, lastTs: -1e12, last: null, cfg: c, encW: 0, encH: 0, encBps: 0, encFps: 0, encCodec: '' })
   const at = stream.getAudioTracks()[0]
   if (at) sound(s, at)
   if (o.videoOff) return { codec: '', width: 0, height: 0, audio: Boolean(at) }
 
-  const codecFor = (w, h) => (w * h > 1920 * 1088 ? 'avc1.640033' : 'avc1.64002A')
+  // the profile every watching phone decodes and the level for this size and rate, worked out by the PC (remote-screen-caps.ts)
+  const codecFor = () => s.cfg.codec || 'avc1.42E01F'
   // the encoder follows the pictures it is given (their size changes with the step) and the step's bitrate and rate;
   // a new size is a new stream (a whole picture), a new bitrate is not
   s.configure = async (w, h) => {
-    const cfg = { codec: codecFor(w, h), width: w, height: h, bitrate: s.cfg.bps, framerate: s.cfg.fps, latencyMode: 'realtime', bitrateMode: 'variable', avc: { format: 'annexb' }, hardwareAcceleration: 'prefer-hardware' }
+    const cfg = { codec: codecFor(), width: w, height: h, bitrate: s.cfg.bps, framerate: s.cfg.fps, latencyMode: 'realtime', bitrateMode: 'variable', avc: { format: 'annexb' }, hardwareAcceleration: 'prefer-hardware' }
     const hw = await VideoEncoder.isConfigSupported(cfg)
     if (!hw.supported) cfg.hardwareAcceleration = 'no-preference'
     if (w !== s.encW || h !== s.encH) s.key = true
@@ -64,6 +65,7 @@ async function start(o) {
     s.encH = h
     s.encBps = s.cfg.bps
     s.encFps = s.cfg.fps
+    s.encCodec = cfg.codec
   }
   s.venc = new VideoEncoder({
     output: (ch) => {
@@ -92,7 +94,7 @@ async function start(o) {
       if (early || s.venc.encodeQueueSize > 2) { s.n.skipped++; f.close(); continue }
       const w = even(f.displayWidth)
       const h = even(f.displayHeight)
-      if (w !== s.encW || h !== s.encH || s.cfg.bps !== s.encBps || s.cfg.fps !== s.encFps) {
+      if (w !== s.encW || h !== s.encH || s.cfg.bps !== s.encBps || s.cfg.fps !== s.encFps || codecFor() !== s.encCodec) {
         try { await s.configure(w, h) } catch { f.close(); continue }
       }
       if (s.venc.state !== 'configured') { s.n.skipped++; f.close(); continue }
@@ -107,7 +109,7 @@ async function start(o) {
       s.last = f
     }
   })()
-  return { codec: codecFor(width, height), width, height, audio: Boolean(at) }
+  return { codec: codecFor(), width, height, audio: Boolean(at) }
 }
 
 function sound(s, at) {

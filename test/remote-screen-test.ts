@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { DisplayInfo } from '../src/main/computer/geometry'
 import type { Ev } from '../src/main/computer/plan'
+import { avcLevel, capsFloor, parseCaps } from '../src/main/remote-screen-caps'
 import { BIN_AUDIO, BIN_JPEG, BIN_VIDEO, HEAD_AUDIO, HEAD_JPEG, HEAD_VIDEO, RemoteScreen, type EncoderConfig, type ScreenClient, type ScreenSource, type ScreenVideo, type VideoChunk } from '../src/main/remote-screen'
 
 // the phone's screen: who may look, what is sent, how touches become input, and that everything lets go when it ends
@@ -299,4 +300,48 @@ test('video phones get the pointer beside the picture', async () => {
   assert.equal(c.x, 0.5)
   assert.equal(c.y, 0.5)
   screen.stopAll()
+})
+
+// ---------------------------------------------------------------- what each phone decodes
+
+test('the encoder makes only what every watching phone decodes: profile, size and rate', async () => {
+  const f = fakeVideo()
+  const { screen } = withVideo(f.video, 0)
+  // a low-end Android: Main and Baseline, up to 720p30
+  const weak = phone('android')
+  screen.handle(weak, { t: 'screen', op: 'start', video: true, caps: { profiles: ['main', 'baseline', 'nonsense'], maxEdge: 1280, maxFps: 30 } })
+  await until(() => weak.json.some((j) => j.op === 'info'))
+  const c = f.log.configs.at(-1)!
+  assert.equal(c.profile, 'main')
+  assert.ok(c.width <= 1280 && c.fps <= 30, `capped (${c.width}x${c.height}@${c.fps})`)
+  assert.equal(c.level, '3.1')
+  assert.equal(c.codec, 'avc1.4D401F')
+  screen.stopAll()
+})
+
+test('two phones: the weaker decoder sets the profile; a phone that sends no caps is taken to play anything', async () => {
+  const f = fakeVideo()
+  const { screen } = withVideo(f.video, 0)
+  const old = phone('old-page')
+  screen.handle(old, { t: 'screen', op: 'start', video: true })
+  await until(() => old.json.some((j) => j.op === 'info'))
+  assert.equal(f.log.configs.at(-1)!.profile, 'high')
+  assert.equal(f.log.configs.at(-1)!.codec, 'avc1.64002A', '1080p60 is level 4.2')
+  const base = phone('baseline-only')
+  screen.handle(base, { t: 'screen', op: 'start', video: true, caps: { profiles: ['baseline'], maxEdge: 1920, maxFps: 60 } })
+  await until(() => base.json.some((j) => j.op === 'info'))
+  await until(() => f.log.configs.at(-1)!.profile === 'baseline')
+  screen.stopAll()
+})
+
+test('caps from a phone are checked at the door', () => {
+  assert.equal(parseCaps(undefined), undefined)
+  assert.equal(parseCaps({ profiles: ['x'] }), undefined, 'no known profile')
+  assert.deepEqual(parseCaps({ profiles: ['baseline'], maxEdge: 99999, maxFps: -5 }), { profiles: ['baseline'], maxEdge: 1920, maxFps: 1 })
+  assert.equal(avcLevel(1920, 1080, 60).name, '4.2')
+  assert.equal(avcLevel(1920, 1080, 30).name, '4.0')
+  assert.equal(avcLevel(1280, 720, 30).name, '3.1')
+  assert.equal(avcLevel(640, 360, 10).name, '3.0')
+  assert.equal(avcLevel(3840, 2160, 30).name, '5.1')
+  assert.equal(capsFloor({ profiles: ['main'], maxEdge: 1280, maxFps: 30 }), 2, '30/720p is the best step it plays')
 })

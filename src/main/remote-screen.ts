@@ -8,6 +8,7 @@ import os from 'os'
 import type { DisplayInfo } from './computer/geometry'
 import type { Ev } from './computer/plan'
 import { Adapt, LADDER, LoadWatch, type PhoneReport } from './remote-screen-adapt'
+import { ANY_PHONE, avcCodecFor, avcLevel, capsFloor, commonProfile, parseCaps, type PhoneCaps, type Profile } from './remote-screen-caps'
 import { ScreenInputs } from './remote-screen-input'
 
 /** What the screen is read from. The app brings Electron's desktopCapturer; tests bring a fake. */
@@ -47,6 +48,10 @@ export interface EncoderConfig {
   gopSec: number
   /** every picture whole (the slideshow floor) */
   keyOnly: boolean
+  /** H.264 profile every watching phone decodes, the level for this size and rate ("4.2"), and both as a codec string */
+  profile: Profile
+  level: string
+  codec: string
 }
 
 /** The screen as video: one encoder, on one display at a time, for every phone that can play it. */
@@ -94,6 +99,8 @@ interface Viewer {
   last: string
   lastCursor: string
   cursorAt: number
+  /** what the phone decodes (undefined: an older page, taken to play anything) */
+  caps?: PhoneCaps
 }
 
 export interface RemoteScreenOptions {
@@ -166,7 +173,7 @@ export class RemoteScreen {
 
   handle(client: ScreenClient, m: Record<string, unknown>): void {
     const op = m.op
-    if (op === 'start') return void this.start(client, num(m.display, 0, 64), m.video === true, m.audio === true)
+    if (op === 'start') return void this.start(client, num(m.display, 0, 64), m.video === true, m.audio === true, parseCaps(m.caps))
     const viewer = this.viewers.get(client.id)
     if (!viewer) return
     if (!this.allowed()) return this.stopAll('off')
@@ -207,7 +214,7 @@ export class RemoteScreen {
     }
   }
 
-  private async start(client: ScreenClient, display?: number, video = false, audio = false): Promise<void> {
+  private async start(client: ScreenClient, display?: number, video = false, audio = false, caps?: PhoneCaps): Promise<void> {
     if (!this.allowed()) return client.send({ t: 'screen', op: 'denied', reason: 'off' })
     const displays = this.source.displays()
     if (!displays.length) return client.send({ t: 'screen', op: 'denied', reason: 'none' })
@@ -223,7 +230,8 @@ export class RemoteScreen {
       seq: 0,
       last: '',
       lastCursor: '',
-      cursorAt: 0
+      cursorAt: 0,
+      caps
     }
     this.viewers.set(client.id, viewer)
     this.onChange()
@@ -333,8 +341,14 @@ export class RemoteScreen {
     const level = Math.max(...list.map((v) => v.adapt.level))
     const s = LADDER[level]
     const d = this.source.displays()[display]
-    const k = Math.min(1, s.edge / Math.max(d.w, d.h))
-    return { width: even(d.w * k), height: even(d.h * k), fps: s.fps, bps: s.bps, gopSec: s.gopSec, keyOnly: Boolean(s.keyOnly) }
+    // never more than the weakest decoder watching takes
+    const edge = Math.min(s.edge, ...list.map((v) => (v.caps ?? ANY_PHONE).maxEdge))
+    const fps = Math.min(s.fps, ...list.map((v) => (v.caps ?? ANY_PHONE).maxFps))
+    const k = Math.min(1, edge / Math.max(d.w, d.h))
+    const width = even(d.w * k)
+    const height = even(d.h * k)
+    const profile = commonProfile(list.map((v) => v.caps))
+    return { width, height, fps, bps: s.bps, gopSec: s.gopSec, keyOnly: Boolean(s.keyOnly), profile, level: avcLevel(width, height, fps).name, codec: avcCodecFor(profile, width, height, fps) }
   }
 
   private reconfigure(): void {
@@ -358,7 +372,8 @@ export class RemoteScreen {
       if (this.ticks++ % Math.max(1, Math.round(2000 / tickMs)) === 0 && !process.env.JOLTY_SCREEN_IGNORE_LOAD) this.load.sample((this.opts.cpus ?? os.cpus)())
       let changed = false
       for (const v of this.viewers.values()) {
-        v.adapt.floor = v.mode === 'video' ? this.load.floor : 0
+        // a busy PC gives up 60 fps first; a phone whose decoder stops lower never climbs past what it plays
+        v.adapt.floor = v.mode === 'video' ? Math.max(this.load.floor, capsFloor(v.caps)) : 0
         if (v.adapt.tick(now)) changed = true
       }
       if (changed) this.reconfigure()

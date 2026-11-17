@@ -19,10 +19,78 @@ export function audioContext(): AudioContext | undefined {
   return audioCtx
 }
 
-/** Whether this browser has the pieces; whether it decodes the stream is found out when it does, and the page falls back to pictures if not. */
+/** What this phone decodes, told to the PC so it encodes only what plays here. */
+export interface VideoCaps {
+  /** H.264 profiles that decode, best first */
+  profiles: Array<'high' | 'main' | 'baseline'>
+  /** the largest picture edge and rate that decode (from the highest level that does) */
+  maxEdge: number
+  maxFps: number
+  /** the decoder runs on the phone's video hardware at the best level */
+  hardware: boolean
+}
+
+const PROFILE_IDC: Record<VideoCaps['profiles'][number], string> = { high: '6400', main: '4D40', baseline: '42E0' }
+/** H.264 levels from the best down, with what each carries (a step of the PC's ladder must fit) */
+const LEVELS: Array<{ hex: string; edge: number; fps: number; w: number; h: number }> = [
+  { hex: '2A', edge: 1920, fps: 60, w: 1920, h: 1080 },
+  { hex: '28', edge: 1920, fps: 30, w: 1920, h: 1080 },
+  { hex: '20', edge: 1280, fps: 60, w: 1280, h: 720 },
+  { hex: '1F', edge: 1280, fps: 30, w: 1280, h: 720 },
+  { hex: '1E', edge: 854, fps: 30, w: 854, h: 480 }
+]
+
+/** The codec string for a profile and level, as the PC's encoders name it. */
+export const avcCodec = (profile: VideoCaps['profiles'][number], levelHex: string): string => `avc1.${PROFILE_IDC[profile]}${levelHex}`
+
+/**
+ * Asks the browser, with the exact codec strings, what it decodes: low-end Android decoders stop at Baseline or at 720p,
+ * Safari has WebCodecs from iOS 16.4 only. Hardware is preferred; software counts only up to 720p30 (a phone's processor
+ * cannot keep 1080p60 smooth). Undefined: nothing usable, the page asks for pictures. A call that throws counts as "no".
+ */
+export async function videoCaps(dec: { isConfigSupported(c: VideoDecoderConfig): Promise<VideoDecoderSupport> } | undefined = typeof VideoDecoder === 'undefined' ? undefined : VideoDecoder): Promise<VideoCaps | undefined> {
+  if (!dec || typeof EncodedVideoChunk === 'undefined') return undefined
+  const ok = async (codec: string, w: number, h: number, hardwareAcceleration: HardwareAcceleration): Promise<boolean> => {
+    try {
+      const r = await dec.isConfigSupported({ codec, codedWidth: w, codedHeight: h, hardwareAcceleration, optimizeForLatency: true })
+      return r.supported === true
+    } catch {
+      return false
+    }
+  }
+  const profiles: VideoCaps['profiles'] = []
+  let best: (typeof LEVELS)[number] | undefined
+  let hardware = false
+  for (const p of ['high', 'main', 'baseline'] as const) {
+    for (const l of LEVELS) {
+      const hw = await ok(avcCodec(p, l.hex), l.w, l.h, 'prefer-hardware')
+      const sw = !hw && l.edge <= 1280 && l.fps <= 30 && (await ok(avcCodec(p, l.hex), l.w, l.h, 'no-preference'))
+      if (!hw && !sw) continue
+      profiles.push(p)
+      if (!best || l.edge * l.fps > best.edge * best.fps) {
+        best = l
+        hardware = hw
+      }
+      break
+    }
+  }
+  if (!best || !profiles.length) return undefined
+  return { profiles, maxEdge: best.edge, maxFps: best.fps, hardware }
+}
+
+let capsOnce: Promise<VideoCaps | undefined> | undefined
+
+/** videoCaps, asked once per page (the answer does not change while the page lives). */
+export function videoCapsOnce(): Promise<VideoCaps | undefined> {
+  capsOnce ??= videoCaps()
+  return capsOnce
+}
+
+/** Whether this phone should ask for video (a failure is remembered for a day, then video is tried again). */
 export async function canPlayVideo(): Promise<boolean> {
   try {
-    return localStorage.getItem('jolty-screen-novideo') !== '1' && typeof VideoDecoder !== 'undefined' && typeof EncodedVideoChunk !== 'undefined'
+    const no = Number(localStorage.getItem('jolty-screen-novideo') || 0)
+    return !(no > 0 && Date.now() - no < 86_400_000) && typeof VideoDecoder !== 'undefined' && typeof EncodedVideoChunk !== 'undefined'
   } catch {
     return false
   }

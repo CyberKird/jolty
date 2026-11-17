@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { tr } from '@shared/i18n'
 import { screenBus, useScreenUi } from '../remote/screen-bus'
 import { BIN_AUDIO, BIN_JPEG, BIN_VIDEO, Feedback, parseChunk } from '../remote/screen-feedback'
-import { audioContext, AudioPlayer, canPlayAudio, canPlayVideo, VideoPlayer } from '../remote/screen-video'
+import { audioContext, AudioPlayer, canPlayAudio, canPlayVideo, VideoPlayer, videoCapsOnce } from '../remote/screen-video'
 import './pcscreen.css'
 
 // The PC's screen on the phone, TeamViewer style, with touches made for a finger: one finger moves the pointer like a touchpad
@@ -76,6 +76,7 @@ function Screen() {
   const fb = useRef<Feedback | undefined>(undefined)
   const net = useRef<{ at: number; n?: Net }>({ at: Date.now() })
   const vrx = useRef(0)
+  const [backHint, setBackHint] = useState(false)
 
   const stage = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
@@ -158,9 +159,12 @@ function Screen() {
   // ------------------------------------------------------------------ connection
   const start = useCallback((display?: number): void => {
     setPhase((p) => (p === 'live' ? p : 'connecting'))
-    void Promise.all([canPlayVideo(), canPlayAudio()]).then(([video, audio]) => {
-      screenBus.send({ op: 'start', display: display ?? Number(localStorage.getItem('jolty-screen-display') || NaN), video, audio: video && audio })
-    })
+    void (async () => {
+      // what this phone's decoder plays (profile, size, rate), asked with the exact codec strings; nothing: pictures
+      const caps = (await canPlayVideo()) ? await videoCapsOnce() : undefined
+      const audio = caps ? await canPlayAudio() : false
+      screenBus.send({ op: 'start', display: display ?? Number(localStorage.getItem('jolty-screen-display') || NaN), video: Boolean(caps), audio, caps })
+    })()
   }, [])
 
   useEffect(() => {
@@ -222,7 +226,7 @@ function Screen() {
             () => screenBus.send({ op: 'keyframe' }),
             () => {
               // this browser cannot decode it: pictures from now on, and the choice is remembered
-              localStorage.setItem('jolty-screen-novideo', '1')
+              localStorage.setItem('jolty-screen-novideo', String(Date.now()))
               screenBus.send({ op: 'stop' })
               start()
             },
@@ -293,6 +297,46 @@ function Screen() {
     setShowStats(next)
     localStorage.setItem('jolty-screen-stats', next ? '1' : '0')
   }
+
+  // Back (the Android button, a gesture from the edge, iOS swipe) must not leave the screen by accident: the first one
+  // stays and says so, a second one within 2 s closes the screen view (and only it, the app stays)
+  useEffect(() => {
+    history.pushState({ pcscreen: true }, '')
+    let armed = 0
+    let hide: ReturnType<typeof setTimeout> | undefined
+    const onPop = (): void => {
+      if (Date.now() - armed < 2000) return setOpen(false)
+      armed = Date.now()
+      history.pushState({ pcscreen: true }, '')
+      setBackHint(true)
+      clearTimeout(hide)
+      hide = setTimeout(() => setBackHint(false), 2000)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+      clearTimeout(hide)
+      if ((history.state as { pcscreen?: boolean } | null)?.pcscreen) history.back()
+    }
+  }, [setOpen])
+
+  // iOS ignores the page's zoom settings: its own pinch and the page's rubber band are stopped here, so two fingers
+  // always reach the PC screen (Android keeps to touch-action: none on the screen)
+  useEffect(() => {
+    const el = stage.current
+    const stop = (e: Event): void => e.preventDefault()
+    const move = (e: TouchEvent): void => {
+      if (e.cancelable) e.preventDefault()
+    }
+    document.addEventListener('gesturestart', stop)
+    document.addEventListener('gesturechange', stop)
+    el?.addEventListener('touchmove', move, { passive: false })
+    return () => {
+      document.removeEventListener('gesturestart', stop)
+      document.removeEventListener('gesturechange', stop)
+      el?.removeEventListener('touchmove', move)
+    }
+  }, [])
 
   // the screen stays on while it is being watched
   useEffect(() => {
@@ -562,7 +606,7 @@ function Screen() {
   const display = info?.displays.find((d) => d.index === info.display)
 
   return (
-    <div ref={root} className={`pcs ${closing ? 'closing' : ''} ${hud ? '' : 'hud-off'}`} role="dialog" aria-label={tr("Ecran PC")} onPointerDown={() => audioContext()}>
+    <div ref={root} className={`pcs ${closing ? 'closing' : ''} ${hud ? '' : 'hud-off'}`} role="dialog" aria-label={tr("Ecran PC")} onPointerDown={() => audioContext()} onPointerUp={() => audioContext()} onTouchEnd={() => audioContext()} onClick={() => audioContext()}>
       <header className="pcs-top" ref={topBar}>
         <button className="pcs-icon" onClick={close} aria-label={tr("Închide ecranul PC")}>
           <X size={20} />
@@ -633,7 +677,8 @@ function Screen() {
             </button>
           </div>
         )}
-        {hint && phase === 'live' && <div className="pcs-hint">{tr("Un deget mișcă cursorul, atingerea face clic, două degete derulează sau fac zoom, apăsarea lungă trage.")}</div>}
+        {backHint && <div className="pcs-hint">{tr("Apasă din nou Înapoi ca să închizi ecranul PC")}</div>}
+        {hint && !backHint && phase === 'live' && <div className="pcs-hint">{tr("Un deget mișcă cursorul, atingerea face clic, două degete derulează sau fac zoom, apăsarea lungă trage.")}</div>}
       </div>
 
       <div className="pcs-bottom" ref={bottomBar}>
