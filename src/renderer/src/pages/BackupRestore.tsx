@@ -138,10 +138,12 @@ export function RestorePanel({ entry, onClose, onLegacy }: { entry: BackupEntry;
                 <span>
                   <b>{data.chats}</b> {tr("conversații")}
                 </span>
-                <span>
-                  <b>{data.profiles}</b> {tr("profiluri cu istoricul lor")}
-                </span>
-                <span>{data.personal ? tr("skilluri, comenzi, instrucțiuni și servere MCP") : tr("fără skilluri")}</span>
+                {data.profiles > 0 && (
+                  <span>
+                    <b>{data.profiles}</b> {tr("profiluri cu istoricul lor")}
+                  </span>
+                )}
+                {data.personal && <span>{tr("skilluri, comenzi, instrucțiuni și servere MCP")}</span>}
               </div>
               <div className="restore-versions" role="radiogroup" aria-label={tr("Versiunea de restaurat")}>
                 {data.versions.map((v, i) => (

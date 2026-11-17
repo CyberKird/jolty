@@ -9,6 +9,11 @@
 .backup-auto input {
   margin: 3px 0 0;
 }
+.backup-auto-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 .backup-status {
   display: flex;
   align-items: center;
@@ -23,7 +28,7 @@
   flex: none;
 }
 .backup-status .dot.good {
-  background: var(--volt);
+  background: var(--good);
 }
 .backup-status .dot.warn {
   background: var(--warning);

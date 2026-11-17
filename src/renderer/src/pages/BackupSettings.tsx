@@ -161,7 +161,7 @@ function ProviderCard({ entry, reload }: { entry: BackupEntry; reload: () => Pro
                   disabled={busy === 'auto'}
                   onChange={(e) => void run('auto', async () => void (await api.backup.setAuto(info.id, e.target.checked)))}
                 />
-                <span className="stack" style={{ gap: 2 }}>
+                <span className="backup-auto-text">
                   <span>{tr("Actualizează automat")}</span>
                   <span className="faint small">{tr("După ce schimbi ceva, cel mult o dată la 10 minute și la închidere. Se trimite doar ce s-a schimbat, criptat.")}</span>
                 </span>
