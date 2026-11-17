@@ -69,8 +69,8 @@ html[data-theme='frost'] .actgraph {
   --ag-icon-used: #2a2d3e;
   --ag-icon-on: #c8402e;
   --ag-icon-shadow: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9));
-  --ag-badge: #e2e5ee;
-  --ag-badge-ink: #23263a;
+  --ag-badge: #d8dce7;
+  --ag-badge-ink: #1f2235;
   --ag-cut: #eef0f6;
   --ag-core-ink: #1c1e2c;
   --ag-core-ink-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);

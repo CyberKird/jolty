@@ -26,24 +26,26 @@ export const SPINE_Y = 96
 /** half the side of a tile */
 export const TILE = 14
 export const NODES: Def[] = [
-  { id: 'you', label: () => tr("Tu"), icon: MessageCircle, row: 'top', x: 205, lane: 0 },
-  { id: 'model', label: () => tr("Model"), icon: Cpu, row: 'top', x: 250, lane: 0 },
-  { id: 'skills', label: () => tr("Skilluri"), icon: Puzzle, row: 'top', x: 295, lane: 1 },
-  { id: 'memory', label: () => tr("Memorie"), icon: Brain, row: 'top', x: 340, lane: 1 },
-  { id: 'files', label: () => tr("Fișiere"), icon: FolderTree, row: 'bottom', x: 160, lane: 3 },
-  { id: 'shell', label: () => tr("Shell"), icon: SquareTerminal, row: 'bottom', x: 205, lane: 3 },
-  { id: 'network', label: () => tr("Rețea"), icon: Globe, row: 'bottom', x: 250, lane: 3 },
-  { id: 'browser', label: () => tr("Browser"), icon: AppWindow, row: 'bottom', x: 295, lane: 2 },
-  { id: 'agents', label: () => tr("Subagenți"), icon: Bot, row: 'bottom', x: 340, lane: 2 }
+  { id: 'you', label: () => tr("Tu"), icon: MessageCircle, row: 'top', x: 181, lane: 0 },
+  { id: 'model', label: () => tr("Model"), icon: Cpu, row: 'top', x: 232, lane: 0 },
+  { id: 'skills', label: () => tr("Skilluri"), icon: Puzzle, row: 'top', x: 283, lane: 1 },
+  { id: 'memory', label: () => tr("Memorie"), icon: Brain, row: 'top', x: 334, lane: 1 },
+  { id: 'files', label: () => tr("Fișiere"), icon: FolderTree, row: 'bottom', x: 130, lane: 3 },
+  { id: 'shell', label: () => tr("Shell"), icon: SquareTerminal, row: 'bottom', x: 181, lane: 3 },
+  { id: 'network', label: () => tr("Rețea"), icon: Globe, row: 'bottom', x: 232, lane: 3 },
+  { id: 'browser', label: () => tr("Browser"), icon: AppWindow, row: 'bottom', x: 283, lane: 2 },
+  { id: 'agents', label: () => tr("Subagenți"), icon: Bot, row: 'bottom', x: 334, lane: 2 }
 ]
 
 export const CORE: P = { x: 48, y: SPINE_Y }
+/** the one light of the board, up and a little left of the middle: every orb's reflection is turned towards it */
+export const LIGHT: P = { x: 150, y: -150 }
 /** the core's radius, and the rim the fibres leave from */
 export const CORE_R = 25
 /** lanes from the top of the bus down */
 export const LANE_Y = [-4.8, -1.6, 1.6, 4.8].map((d) => SPINE_Y + d)
 const LANE_ANGLE = [-27, -9, 9, 27].map((a) => (a * Math.PI) / 180)
-const BUS_X = 116
+const BUS_X = 106
 const CORNER = 7
 
 const f = (n: number): string => n.toFixed(2)
@@ -61,7 +63,7 @@ function fan(l: Lane): string {
   const sx = CORE.x + Math.cos(a) * r
   const sy = CORE.y + Math.sin(a) * r
   const y = LANE_Y[l]
-  return `M ${f(sx)} ${f(sy)} C ${f(sx + Math.cos(a) * 26)} ${f(sy + Math.sin(a) * 26)} ${f(BUS_X - 34)} ${f(y)} ${f(BUS_X)} ${f(y)}`
+  return `M ${f(sx)} ${f(sy)} C ${f(sx + Math.cos(a) * 16)} ${f(sy + Math.sin(a) * 16)} ${f(BUS_X - 20)} ${f(y)} ${f(BUS_X)} ${f(y)}`
 }
 
 /** The turn off a lane up or down to a tile, starting on the lane `CORNER` before the tile's x. */

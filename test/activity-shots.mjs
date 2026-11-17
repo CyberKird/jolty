@@ -51,6 +51,9 @@ if (mode === 'shots') {
   for (const t of THEMES)
     for (const w of sizes) jobs.push({ url: `${page}?theme=${t}&w=${w}`, w, h: 1180, out: path.join(shots, `${label}-${t}-${w}.png`) })
   for (const t of THEMES) jobs.push({ url: `${page}?theme=${t}&w=372&lp=1`, w: 372, h: 1180, out: path.join(shots, `${label}-${t}-lowpower.png`) })
+  // long names: French and German at the default width and the narrowest phone
+  for (const l of (process.env.LANGS || 'en,fr,de').split(',').filter(Boolean))
+    for (const w of [372, 360]) jobs.push({ url: `${page}?theme=${THEMES[0]}&w=${w}&lang=${l}`, w, h: 1180, out: path.join(shots, `${label}-${THEMES[0]}-${w}-${l}.png`) })
   // the first page of a fresh process paints late (fonts): give it longer
   if (jobs[0]) jobs[0].wait = 4000
   await run({ JOBS: JSON.stringify(jobs), DSF: process.env.DSF || '2' })

@@ -5,10 +5,15 @@ import { toolKind } from './Messages'
 import { dragShield } from '../dragShield'
 import type { Phase } from './LivePanel'
 import { usePulses, travelMs } from './activity-pulses'
-import { CORE, H, NODES, ROUTES, TOP_Y, BOTTOM_Y, W, WIRES, tileY, type Node } from './activity-geometry'
+import { CORE, H, LIGHT, NODES, ROUTES, TOP_Y, BOTTOM_Y, W, WIRES, tileY, type Node } from './activity-geometry'
 import { ActivityCore } from './ActivityCore'
 import { useTilt } from './activity-tilt'
-import { orb, useOrbTheme, type OrbState } from './activity-orbs'
+import { lightAt, orb, useOrbTheme, type Light, type OrbState } from './activity-orbs'
+import { useLabelFit } from './activity-fit'
+
+// every orb's light, from where it sits relative to the board's one light (and a small variation of its own)
+const LIGHTS = Object.fromEntries(NODES.map((n, i) => [n.id, lightAt(n.x, tileY(n), LIGHT, i + 1)])) as Record<Node, Light>
+const CORE_LIGHT = lightAt(CORE.x, CORE.y, LIGHT, 0)
 
 // What the model is doing, as a small control surface: the model is the core on the left (its ring is the context used), fibres fan out
 // of it into one flat bus and turn off to a tile for every place it reaches. Every call sends one packet of light down the fibre to the
@@ -169,9 +174,10 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
   const target = waiting ? null : stats.target
   const pulses = usePulses({ target, counts: stats.count, speed })
   const tilt = useTilt()
+  useLabelFit(pulses.box, [])
   useOrbTheme()
-  const sprite = (st: OrbState): CSSProperties => {
-    const o = orb(st, 64)
+  const sprite = (st: OrbState, light: Light, size = 64): CSSProperties => {
+    const o = orb(st, size, light)
     return { '--orb-back': `url(${o.back})`, '--orb-front': `url(${o.front})` } as CSSProperties
   }
   // no ticks and no shakes for what was already there when the board opened
@@ -262,35 +268,38 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
           </svg>
           <canvas ref={pulses.cv} className="ag-cv" aria-hidden />
 
-          <ActivityCore style={at(CORE.x, CORE.y)} pct={pct} total={total} sprite={sprite(waiting ? 'core-wait' : phase.on ? 'core-on' : 'core')} />
+          <ActivityCore style={at(CORE.x, CORE.y)} pct={pct} total={total} sprite={sprite(waiting ? 'core-wait' : phase.on ? 'core-on' : 'core', CORE_LIGHT, 96)} />
           <span className="ag-engine" style={at(CORE.x, CORE.y + 36)}>
             {engineName}
             {pct === undefined && model ? <em>{model.length > 10 ? `${model.slice(0, 9)}…` : model}</em> : null}
           </span>
 
-          {caption(tr("Context"), 185, TOP_Y)}
-          {caption(tr("Unelte"), 140, BOTTOM_Y)}
+          {caption(tr("Context"), 161, TOP_Y)}
+          {caption(tr("Unelte"), 110, BOTTOM_Y)}
 
           {NODES.map((n) => {
             const on = stats.active.has(n.id)
             const count = stats.count[n.id]
             const failed = stats.failed[n.id]
             const Icon = n.icon
+            // every second name in a row, for when the row has to stagger its names (activity-fit.ts)
+            const alt = NODES.filter((m) => m.row === n.row).indexOf(n) % 2 === 1
             return (
-              <div key={n.id} className={`ag-node ${n.row} ${on ? 'on' : ''} ${count > 0 ? 'used' : ''} ${arriving === n.id ? 'arrive' : ''}`} style={at(n.x, tileY(n))}>
+              <div key={n.id} className={`ag-node ${n.row} ${alt ? 'alt' : ''} ${on ? 'on' : ''} ${count > 0 ? 'used' : ''} ${arriving === n.id ? 'arrive' : ''}`} style={at(n.x, tileY(n))}>
                 <span key={failed} className={`ag-key ${failed > 0 ? 'shake' : ''}`} title={`${n.label()}: ${count}`}>
-                  <span className="ag-tile" style={sprite(on ? (waiting ? 'wait' : 'on') : count > 0 ? 'used' : 'idle')}>
+                  <span className="ag-tile" style={sprite(on ? (waiting ? 'wait' : 'on') : count > 0 ? 'used' : 'idle', LIGHTS[n.id])}>
                     <i className="ag-orb-back" />
                     <i className="ag-orb-glow" />
-                    <Icon className="ag-icon" size={15} strokeWidth={1.75} />
                     <i className="ag-orb-front" />
+                    <Icon className="ag-icon" size={15} strokeWidth={1.75} />
                   </span>
+                  {/* one badge, on the side away from the name: how many times, and in red how many failed */}
                   {count > 0 && (
                     <span key={count} className="ag-count" style={{ animationDelay: `${Math.round(travelMs(n.id, speed))}ms` }}>
                       {count}
+                      {failed > 0 && <b className="ag-fail">{failed}</b>}
                     </span>
                   )}
-                  {failed > 0 && <span className="ag-fail">{failed}</span>}
                 </span>
                 <span className="ag-label">{n.label()}</span>
               </div>
