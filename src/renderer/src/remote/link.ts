@@ -41,6 +41,8 @@ function readSnap(channel: string, args: unknown[]): { value: unknown } | undefi
 function writeSnap(channel: string, args: unknown[], value: unknown): void {
   const key = snapKey(channel)
   if (!key) return
+  // a very long conversation would not fit anyway: it is not turned into text just to be thrown away (a slow phone feels that)
+  if (Array.isArray(value) && value.length > 1500) return
   try {
     const text = JSON.stringify({ id: channel === 'sessions:history' ? args[0] : undefined, value })
     if (text.length < 900_000) localStorage.setItem(key, text)
@@ -80,6 +82,8 @@ export class Link {
   private helloTimer?: ReturnType<typeof setTimeout>
   private lastRx = 0
   private lastPing = 0
+  /** connection tries in a row that ran out of time (each next one waits longer) */
+  private slowTries = 0
   /** smoothed round trip of a ping (ms) */
   private rtt = 0
   /** the PC's run and the number of the last event received from it */
@@ -103,6 +107,12 @@ export class Link {
     document.addEventListener('visibilitychange', wake)
     window.addEventListener('online', wake)
     window.addEventListener('pageshow', wake)
+    // another network (Wi-Fi to cellular, a new address, Tailscale going from relay to direct): the old line may be dead without a word.
+    // It is proven with a ping at once; a try that was being made on the old network starts over on the new one.
+    const net = (navigator as unknown as { connection?: EventTarget }).connection
+    net?.addEventListener?.('change', wake)
+    // the browser says the network is gone: the next try waits for it to come back ('online') instead of piling up failures
+    window.addEventListener('offline', () => (this.delay = Math.max(this.delay, 2000)))
     setInterval(() => this.beat(), 4000)
   }
 
@@ -125,7 +135,11 @@ export class Link {
     this.ws = ws
     ws.binaryType = 'arraybuffer'
     // a connection that hangs half-made is dropped and tried again, not waited on for as long as the browser would
-    this.helloTimer = setTimeout(() => this.drop(ws), HELLO_MS + this.rtt * 4)
+    // (patient on a slow line: a few round trips more, and longer after each try that ran out of time, so a slow link never loops)
+    this.helloTimer = setTimeout(() => {
+      this.slowTries = Math.min(this.slowTries + 1, 4)
+      this.drop(ws)
+    }, HELLO_MS * (1 + this.slowTries) + this.rtt * 4)
     ws.onopen = () => ws.send(JSON.stringify({ t: 'auth', token: this.token, since: this.epoch ? { epoch: this.epoch, seq: this.seq } : undefined }))
     ws.onmessage = (ev) => {
       this.lastRx = Date.now()
@@ -183,6 +197,7 @@ export class Link {
     this.everReady = true
     this.delay = 400
     this.failed = 0
+    this.slowTries = 0
     this.onState(true)
     this.onVersion(m.version)
     this.onReady()

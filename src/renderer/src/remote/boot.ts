@@ -45,6 +45,20 @@ async function pairAgain(note: string | undefined, old: string, over = false): P
   return token
 }
 
+/**
+ * Once the page is up and the phone idle, the service worker keeps the rest of the phone's scripts (the pages not opened
+ * yet), so opening one later does not wait for the network. Not on a phone that asks to save data or is on a 2G line.
+ */
+let warmed = false
+function warmOnce(): void {
+  if (warmed) return
+  warmed = true
+  const c = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+  if (c?.saveData || /2g/.test(c?.effectiveType || '')) return
+  const later = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 2000))
+  window.setTimeout(() => later(() => void navigator.serviceWorker?.ready.then((r) => r.active?.postMessage('warm')), { timeout: 10000 }), 5000)
+}
+
 const UPDATING = 'jolty-updating'
 const updating = (): boolean => Date.now() - Number(sessionStorage.getItem(UPDATING) || 0) < 5 * 60_000
 
@@ -123,6 +137,7 @@ export async function connectRemote(): Promise<void> {
     link.onVersion = refreshIfNewer
     // every connection keeps the key in all three places again (the cookie included)
     link.onReady = () => {
+      warmOnce()
       if (!token) return
       void saveKey(token)
       renewCookie(token)

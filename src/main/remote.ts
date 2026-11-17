@@ -1,7 +1,5 @@
 import crypto from 'crypto'
-import fs from 'fs'
 import http from 'http'
-import zlib from 'zlib'
 import path from 'path'
 import type { Duplex } from 'stream'
 import { WebSocketServer, type WebSocket } from 'ws'
@@ -9,6 +7,7 @@ import { getLang } from '@shared/i18n'
 import type { RemoteStatus, WakeConfig, WakeStatus, WakeTest } from '@shared/remote'
 import { DEFAULT_PORT, DeviceStore, same, type Stored, type Who } from './remote-devices'
 import { CUT_BACKLOG, EventLog, Once, Outbox, coalesce, send as sendEvents } from './remote-events'
+import { PhoneFiles } from './remote-files'
 import { PhoneMedia, type Shrink } from './remote-media'
 import { remoteArgs } from './remote-policy'
 import { lanMacs, validAgentUrl } from './remote-wake'
@@ -26,36 +25,6 @@ const PAIR_MINUTES = 5
 const MAX_MESSAGE = 30 * 1024 * 1024
 
 type Handler = (...args: unknown[]) => unknown
-
-const MIME: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.webmanifest': 'application/manifest+json',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2',
-  '.woff': 'font/woff',
-  '.glb': 'model/gltf-binary',
-  '.wasm': 'application/wasm'
-}
-
-/** What makes the page installable on a phone's home screen and lets it use the whole screen. */
-const PHONE_HEAD = [
-  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />',
-  '<link rel="manifest" href="/manifest.webmanifest" />',
-  '<link rel="apple-touch-icon" href="/apple-touch-icon.png" />',
-  '<meta name="apple-mobile-web-app-capable" content="yes" />',
-  '<meta name="mobile-web-app-capable" content="yes" />',
-  '<meta name="apple-mobile-web-app-title" content="Jolty Remote" />',
-  '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />',
-  '<meta name="theme-color" content="#060709" />'
-].join('')
-
-/** the dictionary chunks of the interface languages (named like "de-AbCd1234.js"): a phone keeps only its own */
-const LOCALE_CHUNK = /^(ar|de|en|es|fr|hi|id|it|ja|ko|pt-BR)-[\w-]{8}\.js$/
 
 const COOKIE = 'jolty_dev'
 
@@ -78,6 +47,7 @@ export class Remote {
   private clients = new Set<{ ws: WebSocket; device: string; out: Outbox }>()
   private events = new EventLog()
   private media = new PhoneMedia()
+  private files: PhoneFiles
   /** per phone: the actions it sent, so one sent again after a lost answer is not done twice */
   private once = new Map<string, Once>()
   private pairing?: { code: string; until: number }
@@ -87,8 +57,10 @@ export class Remote {
 
   constructor(
     private onChange: () => void = () => undefined,
-    private root = path.join(__dirname, '../renderer')
-  ) {}
+    root = path.join(__dirname, '../renderer')
+  ) {
+    this.files = new PhoneFiles(root, () => this.agentOrigin())
+  }
 
   private screen?: RemoteScreen
 
@@ -294,7 +266,11 @@ export class Remote {
         this.server = undefined
         reject(new Error(e.code === 'EADDRINUSE' ? `Port ${port} is already used by another program` : e.message))
       })
-      server.listen(port, '127.0.0.1', () => resolve())
+      server.listen(port, '127.0.0.1', () => {
+        resolve()
+        // the page's files compressed ahead, in the background, for the first phone that comes
+        setTimeout(() => void this.files.warm(), 3000)
+      })
     })
   }
 
@@ -483,77 +459,7 @@ export class Remote {
     }
     if (url.pathname === '/lang.js') return end(200, `window.joltyLang=${JSON.stringify(getLang())};window.joltyVersion=${JSON.stringify(typeof __JOLTY_VERSION__ === 'string' ? __JOLTY_VERSION__ : 'dev')};`, 'text/javascript; charset=utf-8')
     if (req.method !== 'GET' && req.method !== 'HEAD') return end(405)
-    this.file(url.pathname, req.headers.host || '', req, end)
-  }
-
-  private file(pathname: string, host: string, req: http.IncomingMessage, end: (code: number, body?: string | Buffer, type?: string, extra?: Record<string, string>) => void): void {
-    let rel: string
-    try {
-      rel = decodeURIComponent(pathname)
-    } catch {
-      return end(400)
-    }
-    if (rel === '/shell.json') return end(200, JSON.stringify(this.shellFiles()), 'application/json', { 'Cache-Control': 'no-cache' })
-    const target = path.resolve(this.root, '.' + (rel === '/' ? '/index.html' : rel))
-    if (target !== this.root && !target.startsWith(this.root + path.sep)) return end(403)
-    fs.readFile(target, (err, data) => {
-      if (err) return end(404, 'Not found')
-      const ext = path.extname(target).toLowerCase()
-      const type = MIME[ext] || 'application/octet-stream'
-      let body: Buffer | string = data
-      let cache = rel.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache'
-      if (target.endsWith(`${path.sep}index.html`)) body = this.page(data.toString('utf8'), host)
-      // the kept pages are named after the version, so an update replaces them
-      else if (rel === '/sw.js') {
-        body = data.toString('utf8').replace('__VERSION__', typeof __JOLTY_VERSION__ === 'string' ? __JOLTY_VERSION__ : 'dev')
-        cache = 'no-cache'
-      }
-      this.send(req, body, type, cache, `${target}:${data.length}`, end, rel === '/sw.js' ? { 'Service-Worker-Allowed': '/' } : {})
-    })
-  }
-
-  /** Compressed copies of the text files, kept: a phone on a weak connection downloads a fifth of the bytes. */
-  private packed = new Map<string, { br?: Buffer; gz?: Buffer }>()
-
-  private send(req: http.IncomingMessage, body: Buffer | string, type: string, cache: string, key: string, end: (code: number, body?: string | Buffer, type?: string, extra?: Record<string, string>) => void, more: Record<string, string> = {}): void {
-    const raw = typeof body === 'string' ? Buffer.from(body) : body
-    const etag = `"${crypto.createHash('sha1').update(raw).digest('base64url').slice(0, 22)}"`
-    const extra: Record<string, string> = { 'Cache-Control': cache, ETag: etag, Vary: 'Accept-Encoding', ...more }
-    if (req.headers['if-none-match'] === etag) return end(304, '', type, extra)
-    const text = /^(text\/|application\/(json|manifest\+json|wasm)|image\/svg)/.test(type) && raw.length > 1024
-    if (!text) return end(200, raw, type, extra)
-    const accept = String(req.headers['accept-encoding'] || '')
-    const k = `${key}:${etag}`
-    let hit = this.packed.get(k)
-    if (!hit) {
-      if (this.packed.size > 400) this.packed.clear()
-      hit = {}
-      this.packed.set(k, hit)
-    }
-    if (/\bbr\b/.test(accept)) {
-      hit.br ??= zlib.brotliCompressSync(raw, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 8, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length } })
-      return end(200, hit.br, type, { ...extra, 'Content-Encoding': 'br' })
-    }
-    if (/\bgzip\b/.test(accept)) {
-      hit.gz ??= zlib.gzipSync(raw, { level: 9 })
-      return end(200, hit.gz, type, { ...extra, 'Content-Encoding': 'gzip' })
-    }
-    end(200, raw, type, extra)
-  }
-
-  /** What the phone keeps for the page to open at once (and while the PC is off): the built files, without the heavy ones a phone never shows. */
-  private shellFiles(): string[] {
-    try {
-      const lang = getLang()
-      // the other languages' dictionaries (named like "de-AbCd1234.js") and the 3D character are not kept
-      return fs
-        .readdirSync(path.join(this.root, 'assets'))
-        .filter((f) => !/^(Rig3D|ragdoll)-/.test(f))
-        .filter((f) => !LOCALE_CHUNK.test(f) || f.startsWith(`${lang}-`))
-        .map((f) => `/assets/${f}`)
-    } catch {
-      return []
-    }
+    this.files.serve(url.pathname, req.headers.host || '', req, end)
   }
 
   /** The wake agent's address, allowed in the page's security policy so the phone can ask it while the PC is off. */
@@ -564,12 +470,5 @@ export class Remote {
     } catch {
       return ''
     }
-  }
-
-  /** The desktop page, with the phone's connection allowed in its security policy and the language set before the app loads. */
-  private page(html: string, host: string): string {
-    return html
-      .replace("connect-src 'self' blob:", `connect-src 'self' blob: wss://${host} ws://${host}${this.agentOrigin()}`)
-      .replace('<head>', `<head><script src="/lang.js"></script>${PHONE_HEAD}`)
   }
 }

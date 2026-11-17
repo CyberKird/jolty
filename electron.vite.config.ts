@@ -12,5 +12,6 @@ export default defineConfig({
   preload: { resolve: { alias } },
   // minified: a third of the size to parse on every launch
   // .glb: the mascot's model (imported ?inline)
-  renderer: { resolve: { alias }, plugins: [react()], assetsInclude: ['**/*.glb'], build: { minify: 'esbuild' } }
+  // manifest: the phone's page names the scripts it will run up front (main/remote-files.ts)
+  renderer: { resolve: { alias }, plugins: [react()], assetsInclude: ['**/*.glb'], build: { minify: 'esbuild', manifest: 'build-manifest.json' } }
 })

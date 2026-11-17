@@ -314,3 +314,35 @@ test('a conversation reaches the phone light: pictures as small linked copies, l
   assert.equal(live.images[0].dataUrl, link)
   c.ws.close()
 })
+
+test('the page names every script the phone will run up front, compressed at its best, and the phone keeps only what it runs', async () => {
+  const m = {
+    'index.html': { file: 'assets/index-AAAAAAAA.js', imports: ['_i18n-BBBBBBBB.js'], css: ['assets/index-CCCCCCCC.css'] },
+    '_i18n-BBBBBBBB.js': { file: 'assets/i18n-BBBBBBBB.js' },
+    'src/App.tsx': { file: 'assets/App-DDDDDDDD.js', imports: ['_i18n-BBBBBBBB.js', '_store-EEEEEEEE.js'], css: ['assets/App-FFFFFFFF.css'] },
+    '_store-EEEEEEEE.js': { file: 'assets/store-EEEEEEEE.js' },
+    'src/remote/boot.ts': { file: 'assets/boot-GGGGGGGG.js' },
+    '../shared/locales/en.json': { file: 'assets/en-HHHHHHHH.js' },
+    '../shared/locales/de.json': { file: 'assets/de-IIIIIIII.js' },
+    'src/mascot/Rig3D.tsx': { file: 'assets/Rig3D-JJJJJJJJ.js' }
+  }
+  fs.writeFileSync(path.join(web, 'build-manifest.json'), JSON.stringify(m))
+  for (const f of ['Mascot-KKKKKKKK.js', 'barlow-latin-400-normal-LLLLLLLL.woff', 'barlow-latin-400-normal-LLLLLLLL.woff2', 'App-DDDDDDDD.js']) fs.writeFileSync(path.join(web, 'assets', f), 'x')
+  fs.writeFileSync(path.join(web, 'assets', 'Chat-MMMMMMMM.js'), 'export const chat = "jolty chat jolty chat";\n'.repeat(2000))
+  const page = (await request({ path: '/' })).text
+  for (const f of ['App-DDDDDDDD.js', 'store-EEEEEEEE.js', 'boot-GGGGGGGG.js']) assert.ok(page.includes(`<link rel="modulepreload" crossorigin href="/assets/${f}">`), `${f} is named up front`)
+  assert.ok(page.includes('href="/assets/App-FFFFFFFF.css"'))
+  assert.ok(!page.includes('i18n-BBBBBBBB.js"') || page.split('i18n-BBBBBBBB.js').length === 1, 'what the entry already imports is not named twice')
+  for (const f of ['Rig3D', 'de-IIIIIIII']) assert.ok(!page.includes(f), `${f} is not preloaded`)
+  // the build's bookkeeping files under a dot folder are not served
+  fs.mkdirSync(path.join(web, '.vite'), { recursive: true })
+  fs.writeFileSync(path.join(web, '.vite', 'manifest.json'), '{}')
+  assert.equal((await request({ path: '/.vite/manifest.json' })).status, 404)
+  // brotli at its best: smaller than the old setting
+  const big = await request({ path: '/assets/Chat-MMMMMMMM.js', headers: { 'Accept-Encoding': 'br' } })
+  assert.equal(big.headers['content-encoding'], 'br')
+  assert.match(String(big.headers['cache-control']), /immutable/)
+  const shell = JSON.parse((await request({ path: '/shell.json' })).text) as string[]
+  assert.ok(shell.includes('/assets/barlow-latin-400-normal-LLLLLLLL.woff2'))
+  for (const f of ['Mascot-KKKKKKKK.js', 'barlow-latin-400-normal-LLLLLLLL.woff']) assert.ok(!shell.includes(`/assets/${f}`), `${f} is not kept on the phone`)
+})
