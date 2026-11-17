@@ -46,7 +46,7 @@ export function setupGestures(): void {
     const s = window.getSelection()
     if (s && !s.isCollapsed) selectedAt = Date.now()
   })
-  const narrow = window.matchMedia('(max-width: 760px)')
+  const narrow = window.matchMedia('(max-width: 760px), (max-height: 520px) and (orientation: landscape)')
   const root = document.documentElement
   let drag: Drag | null = null
   let pending: { mode: 'open' | 'close'; x0: number; y0: number } | null = null

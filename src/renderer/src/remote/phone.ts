@@ -5,7 +5,7 @@ import { setupGestures } from './gestures'
 
 /** Behaviour only a phone needs: the sidebar is a drawer, closed at the start and after a conversation or page is chosen. */
 export function setupPhone(): void {
-  const narrow = window.matchMedia('(max-width: 760px)')
+  const narrow = window.matchMedia('(max-width: 760px), (max-height: 520px) and (orientation: landscape)')
   if (narrow.matches) useStore.setState({ sidebarOpen: false, liveOpen: false })
   let last = ''
   useStore.subscribe((s) => {
@@ -56,6 +56,12 @@ export function setupPhone(): void {
     document.addEventListener('focusout', () => window.setTimeout(fit, 120))
     // turning the phone changes what "full" is
     window.addEventListener('orientationchange', () => window.setTimeout(() => ((full = vv.height), fit()), 400))
+    // so does a window that changes size with no field in use (split screen, a foldable opened or closed): measured again, or the
+    // page would take the new, shorter screen for a keyboard
+    window.addEventListener('resize', () => {
+      if (!typing()) full = vv.height
+      fit()
+    })
     apply()
   }
   setupGestures()

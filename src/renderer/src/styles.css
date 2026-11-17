@@ -2468,6 +2468,11 @@ html:is([data-theme='glass'], [data-theme='frost']) .question-option kbd {
   color: var(--grey);
   margin-top: 4px;
 }
+/* an account with no activity: its empty figures step back, its words stay readable */
+.usage-idle .stat .v,
+.usage-idle .profile-dot {
+  opacity: 0.55;
+}
 
 .meter {
   margin: 14px 0;

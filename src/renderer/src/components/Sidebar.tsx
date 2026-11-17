@@ -496,7 +496,14 @@ export function Sidebar() {
           if (live && window.innerWidth > 1180) live.style.maxWidth = v == null ? '' : `max(300px, calc(100vw - ${v}px - 480px))`
         }}
       />
-      <button className="btn primary new-chat" onClick={() => void openSession(undefined)}>
+      <button
+        className="btn primary new-chat"
+        onClick={() => {
+          // on a phone the drawer covers the chat: a new conversation is the chat, so the drawer gets out of the way
+          if (phone && window.matchMedia('(max-width: 760px), (max-height: 520px) and (orientation: landscape)').matches) useStore.getState().setSidebarOpen(false)
+          void openSession(undefined)
+        }}
+      >
         <Plus size={14} strokeWidth={2.5} /> {tr("Conversație nouă")}
       </button>
       {phone && (
