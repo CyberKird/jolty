@@ -1774,5 +1774,6 @@
  "Trimite": "送信",
  "Alege unul sau mai multe răspunsuri": "1つ以上選択してください",
  "Alege un răspuns": "1つ選択してください",
- "Scrie alt răspuns...": "自分の回答を入力..."
+ "Scrie alt răspuns...": "自分の回答を入力...",
+ "Jolty de pe PC nu recunoaște acum telefonul. Reîncerc singur în fundal; îl poți și împerechea din nou cu un cod nou.": "PCのJoltyが今このスマートフォンを認識できません。バックグラウンドで再試行を続けています。新しいコードでもう一度ペアリングすることもできます。"
 }

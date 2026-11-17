@@ -206,6 +206,34 @@ try {
   await phone.waitForTimeout(800)
   assert.equal(await phone.locator('.msg-assistant .md').count() > 0, true, 'the phone keeps its conversation while the PC goes to another page')
 
+  // the phone stays paired whatever its own storage loses: the IndexedDB copy brings the key back, then the PC's cookie alone is enough
+  const paired = async (what) => {
+    await phone.waitForSelector('.titlebar-btn', { timeout: 30000 })
+    await phone.waitForFunction(() => window.jolty?.sessions.list().then((l) => l.length > 0), null, { timeout: 30000 })
+    assert.equal(await phone.locator('input[placeholder="Pairing code"]').count(), 0, `${what}: still paired`)
+  }
+  await phone.evaluate(() => localStorage.removeItem('jolty-remote-token'))
+  await phone.reload()
+  await paired('key gone from localStorage')
+  assert.ok(await phone.evaluate(() => Boolean(localStorage.getItem('jolty-remote-token'))), 'the key is restored from IndexedDB')
+  await phone.evaluate(async () => {
+    localStorage.clear()
+    await new Promise((r) => {
+      const q = indexedDB.deleteDatabase('jolty-remote')
+      q.onsuccess = q.onerror = q.onblocked = r
+    })
+  })
+  await phone.reload()
+  await paired('all storage cleared, the cookie left')
+  // the PC cuts every phone (as when Jolty restarts) and its list of phones is rewritten: the phone comes back by itself, still paired
+  await app.evaluate((_e, f) => {
+    const fs = process.mainModule.require('fs')
+    fs.writeFileSync(f, JSON.stringify(JSON.parse(fs.readFileSync(f, 'utf8'))))
+  }, path.join(data, 'remote.json'))
+  await win.evaluate(() => window.jolty.remote.disconnect())
+  await phone.waitForTimeout(1500)
+  await paired('after the PC cut the line')
+
   // the desktop sees the paired phone
   const st = await win.evaluate(() => window.jolty.remote.status())
   assert.equal(st.running, true)

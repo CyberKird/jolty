@@ -9,6 +9,8 @@ function say(message: string): string {
   if (/not valid|expired/i.test(message)) return tr("Codul nu e valid sau a expirat")
   if (/pairing failed/i.test(message)) return tr("Împerecherea a eșuat")
   if (/no longer paired/i.test(message)) return tr("Telefonul nu mai e împerecheat. Deschide din nou linkul din Jolty.")
+  // the key is kept and tried again behind this screen (boot.ts): the phone was not unpaired
+  if (/unknown key/i.test(message)) return tr("Jolty de pe PC nu recunoaște acum telefonul. Reîncerc singur în fundal; îl poți și împerechea din nou cu un cod nou.")
   return tr("Nu pot ajunge la PC. Verifică Tailscale și că Jolty e pornit pe PC.")
 }
 
@@ -38,8 +40,10 @@ export function brandBar(): HTMLElement {
 }
 
 /** Shows the pairing screen in place of the app until a code is accepted; `claim` trades the code for the phone's key. */
-export function pairScreen(first: string | undefined, claim: (code: string) => Promise<string>): Promise<string> {
-  const root = document.getElementById('root')!
+export function pairScreen(first: string | undefined, claim: (code: string) => Promise<string>, over = false): Promise<string> {
+  // over a page that is already up (opened from the last picture of the PC): the screen covers it, React keeps its own root
+  const root = over ? Object.assign(document.createElement('div'), { id: 'pair-host', className: 'offline-over' }) : document.getElementById('root')!
+  if (over) document.body.append(root)
   root.replaceChildren()
   const page = el('div', 'pair')
 

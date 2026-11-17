@@ -6,12 +6,15 @@ import path from 'path'
 import type { Duplex } from 'stream'
 import { WebSocketServer, type WebSocket } from 'ws'
 import { getLang } from '@shared/i18n'
-import type { RemoteDevice, RemoteStatus, WakeConfig, WakeStatus, WakeTest } from '@shared/remote'
+import type { RemoteStatus, WakeConfig, WakeStatus, WakeTest } from '@shared/remote'
+import { DEFAULT_PORT, DeviceStore, same, type Stored, type Who } from './remote-devices'
+import { CUT_BACKLOG, EventLog, Once, Outbox, coalesce, send as sendEvents } from './remote-events'
+import { PhoneMedia, type Shrink } from './remote-media'
 import { remoteArgs } from './remote-policy'
 import { lanMacs, validAgentUrl } from './remote-wake'
 import type { RemoteScreen, ScreenClient } from './remote-screen'
 import * as tailscale from './remote-tailscale'
-import { dataDir, loadSettings } from './store'
+import { loadSettings } from './store'
 
 // Lets a paired phone use this PC's Jolty: the same page as the desktop window, over a WebSocket that carries the
 // same channels as the window's IPC. The server only listens on this PC (127.0.0.1); Tailscale Serve puts HTTPS
@@ -19,17 +22,8 @@ import { dataDir, loadSettings } from './store'
 
 declare const __JOLTY_VERSION__: string | undefined
 
-const DEFAULT_PORT = 47821
 const PAIR_MINUTES = 5
 const MAX_MESSAGE = 30 * 1024 * 1024
-
-interface Stored {
-  enabled: boolean
-  port: number
-  devices: Array<RemoteDevice & { hash: string }>
-  /** the wake agent: where, and the secret shared with it */
-  wake?: { url: string; token: string }
-}
 
 type Handler = (...args: unknown[]) => unknown
 
@@ -70,14 +64,6 @@ function cookieToken(req: http.IncomingMessage): string | undefined {
   return new RegExp(`(?:^|;\\s*)${COOKIE}=([\\w-]+)`).exec(String(req.headers.cookie || ''))?.[1]
 }
 
-const sha = (s: string): string => crypto.createHash('sha256').update(s).digest('hex')
-
-function same(a: string, b: string): boolean {
-  const x = Buffer.from(a)
-  const y = Buffer.from(b)
-  return x.length === y.length && crypto.timingSafeEqual(x, y)
-}
-
 /** Only this PC itself and tailnet names are served: a page on another site cannot reach the server through DNS tricks. */
 function hostOk(host: string | undefined): boolean {
   if (!/^[a-z0-9.-]+(:\d{1,5})?$/i.test(host || '')) return false
@@ -89,7 +75,11 @@ export class Remote {
   private handlers = new Map<string, Handler>()
   private server?: http.Server
   private wss?: WebSocketServer
-  private clients = new Set<{ ws: WebSocket; device: string }>()
+  private clients = new Set<{ ws: WebSocket; device: string; out: Outbox }>()
+  private events = new EventLog()
+  private media = new PhoneMedia()
+  /** per phone: the actions it sent, so one sent again after a lost answer is not done twice */
+  private once = new Map<string, Once>()
   private pairing?: { code: string; until: number }
   private failures: number[] = []
   private url?: string
@@ -174,40 +164,34 @@ export class Remote {
   /** Pushes an event (a streamed chunk, a status) to every connected phone. */
   broadcast(channel: string, data: unknown): void {
     if (channel === 'jolty:event' && data && typeof data === 'object') this.track(data as Parameters<Remote['track']>[0])
-    if (!this.clients.size) return
-    const msg = JSON.stringify({ t: 'ev', channel, data })
-    for (const c of this.clients) if (c.ws.readyState === 1) c.ws.send(msg)
+    // numbered and kept even with no phone connected: a phone that comes back asks for what it missed
+    const phone = this.media.event(channel, data)
+    const d = phone as { type?: string; delta?: string }
+    const size = d && d.type === 'delta' && typeof d.delta === 'string' ? d.delta.length + 120 : (JSON.stringify(phone)?.length ?? 8)
+    const ev = this.events.add(channel, phone, size)
+    for (const c of this.clients) if (c.ws.readyState === 1) c.out.push(ev)
   }
 
-  /** the last file that was read whole: a read that fails for a moment (the file is being replaced, a scanner holds it) must not look like "no phones are paired" */
-  private good?: Stored
+  /** Pictures in the phone's conversations are made smaller with this (the PC passes Electron's image tools). */
+  useImages(shrink: Shrink): void {
+    this.media.useShrink(shrink)
+  }
+
+  private devices = new DeviceStore()
 
   private load(): Stored {
-    const file = path.join(dataDir(), 'remote.json')
-    for (let attempt = 0; attempt < 4; attempt++) {
-      try {
-        const j = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<Stored>
-        return (this.good = { enabled: j.enabled === true, port: Number(j.port) || DEFAULT_PORT, devices: Array.isArray(j.devices) ? j.devices : [], wake: j.wake && typeof j.wake.token === 'string' ? j.wake : undefined })
-      } catch (e) {
-        // no file: nothing was ever paired (or it was deleted on purpose)
-        if ((e as NodeJS.ErrnoException).code === 'ENOENT') break
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20)
-      }
-    }
-    return this.good && fs.existsSync(file) ? this.good : { enabled: false, port: DEFAULT_PORT, devices: [] }
+    return this.devices.load()
   }
 
   private save(s: Stored): void {
-    const file = path.join(dataDir(), 'remote.json')
-    fs.mkdirSync(path.dirname(file), { recursive: true })
-    const tmp = `${file}.${process.pid}.tmp`
-    fs.writeFileSync(tmp, JSON.stringify(s, null, 2), { mode: 0o600 })
-    fs.renameSync(tmp, file)
-    this.good = s
+    this.devices.save(s)
   }
 
   /** Called once the app is ready: starts the server again when the user left it on. */
-  async init(): Promise<void> {
+  async init(waitMs = 1000): Promise<void> {
+    // the list cannot be read yet (held by the old process during an update, a drive not mounted yet): waited for, for up
+    // to ten minutes, instead of leaving the phones without a server until the next start of Jolty
+    for (let waited = 0; this.load() && this.devices.degraded && waited < 600_000; waited += waitMs) await new Promise((r) => setTimeout(r, waitMs))
     if (!this.load().enabled) return
     // after an update the old process can still hold the port for a few seconds: try again before giving up
     for (let attempt = 0; attempt < 12; attempt++) {
@@ -272,8 +256,7 @@ export class Remote {
   }
 
   revoke(id: string): void {
-    const s = this.load()
-    this.save({ ...s, devices: s.devices.filter((d) => d.id !== id) })
+    this.devices.revoke(id)
     for (const c of this.clients) if (c.device === id) c.ws.close(4401, 'revoked')
     this.onChange()
   }
@@ -332,15 +315,22 @@ export class Remote {
 
   private connection(ws: WebSocket, req: http.IncomingMessage): void {
     let device: string | undefined
-    let client: { ws: WebSocket; device: string } | undefined
+    let client: { ws: WebSocket; device: string; out: Outbox } | undefined
     // a slow line can take a while to deliver the first message: that is not a wrong key (4408 is retried by the phone, 4401 is not)
     const waiting = setTimeout(() => ws.close(4408, 'no key'), 20_000)
+    // a phone that went away without closing (out of signal, the browser killed) is found by its silence and cut, so nothing
+    // piles up for it; one so far behind that what waits for it is huge is cut too, and catches up when it connects again
+    let heard = Date.now()
+    ws.on('pong', () => (heard = Date.now()))
     const alive = setInterval(() => {
-      if (ws.readyState === 1) ws.ping()
-    }, 25_000)
+      if (ws.readyState !== 1) return
+      if (Date.now() - heard > 50_000 || ws.bufferedAmount > CUT_BACKLOG) return ws.terminate()
+      ws.ping()
+    }, 20_000)
     const reply = (v: unknown): void => {
       if (ws.readyState === 1) ws.send(JSON.stringify(v))
     }
+    const out = new Outbox({ send: (text) => ws.readyState === 1 && ws.send(text), backlog: () => ws.bufferedAmount })
     const view: ScreenClient = {
       id: crypto.randomBytes(6).toString('hex'),
       send: reply,
@@ -350,11 +340,13 @@ export class Remote {
     ws.on('close', () => {
       clearTimeout(waiting)
       clearInterval(alive)
+      out.stop()
       if (client && this.clients.delete(client)) this.onChange()
       this.screen?.drop(view)
     })
     ws.on('message', (raw) => {
-      let m: { t?: string; token?: string; id?: number; channel?: string; args?: unknown }
+      heard = Date.now()
+      let m: { t?: string; token?: string; id?: number; channel?: string; args?: unknown; k?: unknown; since?: { epoch?: unknown; seq?: unknown } }
       try {
         m = JSON.parse(String(raw))
       } catch {
@@ -362,14 +354,24 @@ export class Remote {
       }
       if (!device) {
         if (m.t !== 'auth' || typeof m.token !== 'string') return ws.close(4400, 'bad first message')
-        // the key is kept in the phone's storage and, set by this server, in a cookie: a phone whose storage was cleared (Safari does that to pages not opened for a week) is still known by the cookie
-        device = this.deviceFor(m.token || cookieToken(req) || '')
-        if (!device) return ws.close(4401, 'unknown key')
+        // the key is kept in the phone's storage and, set by this server, in a cookie: either one names the phone (a storage that was cleared,
+        // or a cookie that expired, is not "unpaired"). Only a key revoked at the PC is told "revoked"; a list that cannot be read now is "try again".
+        const who = this.devices.whoOf([m.token, cookieToken(req)])
+        if (who === 'unavailable') return ws.close(1013, 'try again')
+        if (who === 'revoked') return ws.close(4401, 'revoked')
+        if (who === 'unknown') return ws.close(4401, 'unknown key')
+        device = who.id
         clearTimeout(waiting)
-        client = { ws, device }
+        client = { ws, device, out }
         this.clients.add(client)
         this.onChange()
-        reply({ t: 'ready', lang: getLang(), version: typeof __JOLTY_VERSION__ === 'string' ? __JOLTY_VERSION__ : 'dev' })
+        // a phone coming back says the number of the last event it got: when this run still has what came after, it gets exactly that
+        const missed = m.since ? this.events.since(m.since.epoch, m.since.seq) : undefined
+        reply({ t: 'ready', lang: getLang(), version: typeof __JOLTY_VERSION__ === 'string' ? __JOLTY_VERSION__ : 'dev', epoch: this.events.epoch, seq: this.events.seq, resumed: Boolean(missed) })
+        if (missed) {
+          if (missed.length) sendEvents(out.sink, coalesce(missed.map((e) => [e.channel, e.data, e.seq])))
+          return
+        }
         // the turns running now and the questions waiting for a yes, as the events that would have told it
         for (const [id, since] of this.working) reply({ t: 'ev', channel: 'jolty:event', data: { type: 'status', sessionId: id, status: 'running', ageMs: Date.now() - since } })
         for (const ev of this.asking.values()) reply({ t: 'ev', channel: 'jolty:event', data: ev })
@@ -383,8 +385,11 @@ export class Remote {
         return
       }
       if (m.t !== 'call' || typeof m.channel !== 'string' || typeof m.id !== 'number') return
-      void this.run(m.channel, m.args).then(
-        (value) => reply({ t: 'res', id: m.id, ok: true, value: value === undefined ? null : value }),
+      const channel = m.channel
+      let once = this.once.get(device)
+      if (!once) this.once.set(device, (once = new Once()))
+      void once.run(m.k, () => this.run(channel, m.args)).then(
+        (value) => reply({ t: 'res', id: m.id, ok: true, value: value === undefined ? null : this.media.result(channel, value) }),
         (e: unknown) => reply({ t: 'res', id: m.id, ok: false, error: e instanceof Error ? e.message : String(e) })
       )
     })
@@ -395,18 +400,6 @@ export class Remote {
     const fn = this.handlers.get(channel)
     if (!fn) throw new Error(`Not available: ${channel}`)
     return fn(...checked)
-  }
-
-  private deviceFor(token: string): string | undefined {
-    const s = this.load()
-    const hash = sha(token)
-    const d = s.devices.find((x) => same(x.hash, hash))
-    if (!d) return undefined
-    if (!d.lastSeen || Date.now() - d.lastSeen > 3_600_000) {
-      d.lastSeen = Date.now()
-      this.save(s)
-    }
-    return d.id
   }
 
   private locked(): boolean {
@@ -420,12 +413,10 @@ export class Remote {
       this.failures.push(Date.now())
       return undefined
     }
-    this.pairing = undefined
-    const token = crypto.randomBytes(32).toString('base64url')
-    const s = this.load()
     const label = typeof name === 'string' && name.trim() ? name.trim().slice(0, 40) : 'Phone'
-    s.devices.push({ id: crypto.randomBytes(6).toString('hex'), name: label, created: Date.now(), lastSeen: Date.now(), hash: sha(token) })
-    this.save(s)
+    // the code is used up only once the phone is written down (a list that cannot be read now keeps the code for another try)
+    const { token } = this.devices.add(label)
+    this.pairing = undefined
     this.onChange()
     return { token }
   }
@@ -438,31 +429,58 @@ export class Remote {
     }
     if (!hostOk(req.headers.host)) return end(421, 'Wrong host')
     const url = new URL(req.url || '/', 'http://x')
-    if (url.pathname === '/api/pair' && req.method === 'POST') {
-      let body = ''
+    const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''
+    const keep = (token: string): Record<string, string> => ({ 'Set-Cookie': `${COOKIE}=${token}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict${secure}` })
+    const body = (then: (j: Record<string, unknown>) => void): void => {
+      let text = ''
       req.on('data', (c: Buffer) => {
-        body += c
-        if (body.length > 2000) req.destroy()
+        text += c
+        if (text.length > 2000) req.destroy()
       })
       req.on('end', () => {
+        let j: unknown
         try {
-          const j = JSON.parse(body) as { code?: unknown; name?: unknown }
-          const out = this.claim(j.code, j.name)
-          if (!out) return end(403, '{"error":"Code not valid or expired"}', 'application/json')
-          const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''
-          end(200, JSON.stringify(out), 'application/json', { 'Set-Cookie': `${COOKIE}=${out.token}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict${secure}` })
+          j = JSON.parse(text)
         } catch {
-          end(400, '{"error":"Bad request"}', 'application/json')
+          return end(400, '{"error":"Bad request"}', 'application/json')
         }
+        if (!j || typeof j !== 'object') return end(400, '{"error":"Bad request"}', 'application/json')
+        then(j as Record<string, unknown>)
       })
-      return
     }
-    // does the cookie still name a paired phone? (a phone whose own copy of the key is gone asks before showing the pairing screen)
-    if (url.pathname === '/api/session' && req.method === 'GET') {
-      const t = cookieToken(req)
-      return t && this.deviceFor(t) ? end(200, '{"ok":true}', 'application/json') : end(401, '{"ok":false}', 'application/json')
+    if (url.pathname === '/api/pair' && req.method === 'POST') {
+      return body((j) => {
+        let out: { token: string } | undefined
+        try {
+          out = this.claim(j.code, j.name)
+        } catch {
+          return end(503, '{"error":"Try again in a moment"}', 'application/json')
+        }
+        if (!out) return end(403, '{"error":"Code not valid or expired"}', 'application/json')
+        end(200, JSON.stringify(out), 'application/json', keep(out.token))
+      })
+    }
+    // is this phone still paired? GET asks by the cookie alone; POST brings the key the phone keeps and renews the cookie with it, so the
+    // cookie and the phone's own copies keep each other alive. "revoked" is the only answer after which the phone forgets its key.
+    if (url.pathname === '/api/session' && (req.method === 'GET' || req.method === 'POST')) {
+      const answer = (who: Who, token?: string): void => {
+        if (typeof who === 'object') return end(200, '{"ok":true}', 'application/json', token ? keep(token) : {})
+        if (who === 'unavailable') return end(503, '{"ok":false,"retry":true}', 'application/json')
+        end(401, JSON.stringify({ ok: false, revoked: who === 'revoked' }), 'application/json', who === 'revoked' ? { 'Set-Cookie': `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict${secure}` } : {})
+      }
+      if (req.method === 'GET') return answer(this.devices.whoOf([cookieToken(req)]))
+      return body((j) => {
+        const token = typeof j.token === 'string' ? j.token : ''
+        const who = this.devices.whoOf([token])
+        answer(typeof who === 'object' || !cookieToken(req) ? who : this.devices.whoOf([token, cookieToken(req)]), typeof who === 'object' ? token : undefined)
+      })
     }
     // the version tells the page it is an old copy kept on the phone (after an update of Jolty): it then loads the new one
+    // a picture of a conversation, made smaller for the phone (remote-media.ts): the link itself is the permission
+    if (url.pathname.startsWith('/api/img/') && req.method === 'GET') {
+      const img = this.media.serve(url.pathname)
+      return img ? end(200, img.data, img.mime, { 'Cache-Control': 'private, max-age=31536000, immutable' }) : end(404, 'Not found')
+    }
     if (url.pathname === '/lang.js') return end(200, `window.joltyLang=${JSON.stringify(getLang())};window.joltyVersion=${JSON.stringify(typeof __JOLTY_VERSION__ === 'string' ? __JOLTY_VERSION__ : 'dev')};`, 'text/javascript; charset=utf-8')
     if (req.method !== 'GET' && req.method !== 'HEAD') return end(405)
     this.file(url.pathname, req.headers.host || '', req, end)
