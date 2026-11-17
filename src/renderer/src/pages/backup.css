@@ -1,0 +1,80 @@
+/* Settings > Account > backup: the automatic switch, its status line and the restore panel. */
+.backup-auto {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+  cursor: pointer;
+}
+.backup-auto input {
+  margin: 3px 0 0;
+}
+.backup-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+}
+.backup-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--grey);
+  flex: none;
+}
+.backup-status .dot.good {
+  background: var(--volt);
+}
+.backup-status .dot.warn {
+  background: var(--warning);
+}
+.backup-note {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.restore-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.restore-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+}
+.restore-versions {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.restore-version {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.restore-version + .restore-version {
+  border-top: 1px solid var(--line);
+}
+.restore-version.on {
+  background: var(--s2);
+}
+.restore-version input {
+  margin: 0;
+}
+.restore-report {
+  margin-bottom: 10px;
+}
+.restore-missing {
+  margin: 6px 0 4px;
+  padding-inline-start: 18px;
+}

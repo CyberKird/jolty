@@ -596,7 +596,14 @@ if (!app.requestSingleInstanceLock()) {
     }
     jolty.sweepTrash()
     // a restore applied at this start: the skills and the rest outside the data folder go back too
-    void backup.finishRestore().catch(() => undefined)
+    void backup
+      .finishRestore()
+      .catch(() => undefined)
+      .then(() => {
+        // once, right after the restart that applied it
+        const rep = backup.report()
+        if (rep && Date.now() - rep.at < 120_000 && Notification.isSupported()) new Notification({ title: tr("Jolty a fost restaurat din backup"), body: tr("Vezi în Setări, la Cont, ce s-a restaurat și ce lipsește pe acest PC.") }).show()
+      })
     if (!process.env.JOLTY_TEST || process.env.JOLTY_BACKUP_AUTO) backup.startAuto(() => undefined)
     if (!process.env.JOLTY_TEST) useTime.startUseTime(() => jolty.anyBusy(), () => BrowserWindow.getAllWindows().some((w) => w.isFocused()))
     // automated runs start with What's new already seen, unless the run sets an older seenVersion itself
