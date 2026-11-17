@@ -34,7 +34,7 @@ import * as quick from './quick'
 import { Remote } from './remote'
 import { RemoteScreen } from './remote-screen'
 import { nativeScreenInput, nativeScreenSource } from './remote-screen-native'
-import { EncoderHost } from './remote-video'
+import { ScreenVideoAuto } from './remote-ffmpeg'
 import { userServerNames } from './mcp-share'
 import * as github from './github'
 import { getLang, setLang, tr } from '@shared/i18n'
@@ -80,7 +80,7 @@ let jolty: Jolty
 const browserLive = new BrowserLive(send)
 const preview = new Preview()
 const remote = new Remote(() => win && !win.isDestroyed() && win.webContents.send('remote:changed'))
-const screenVideo = new EncoderHost()
+const screenVideo = new ScreenVideoAuto(() => nativeScreenSource.displays())
 remote.useScreen(new RemoteScreen(nativeScreenSource, nativeScreenInput, () => store.loadSettings().remoteScreen === true, () => win && !win.isDestroyed() && win.webContents.send('remote:changed'), screenVideo))
 nativeComputer.onKill(() => remote.stopScreen())
 
