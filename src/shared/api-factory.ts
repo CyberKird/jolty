@@ -79,7 +79,15 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       setPassword: (id, password) => call('backup:setPassword', id, password),
       run: (id) => call('backup:run', id),
       remote: (id) => call('backup:remote', id),
-      restore: (id, password) => call('backup:restore', id, password)
+      restore: (id, password) => call('backup:restore', id, password),
+      setAuto: (id, on) => call('backup:setAuto', id, on),
+      inspect: (id, password) => call('backup:inspect', id, password),
+      restoreAll: (id, version, password) => call('backup:restoreAll', id, version, password),
+      progress: () => call('backup:progress'),
+      compact: (id) => call('backup:compact', id),
+      report: () => call('backup:report'),
+      dismissReport: () => call('backup:dismissReport'),
+      relaunch: () => call('backup:relaunch')
     },
     usage: {
       time: () => call('usage:time'),

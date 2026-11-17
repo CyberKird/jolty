@@ -13,6 +13,8 @@ import { backupVault, keysFor, storeOf, forgetKeys } from '../src/main/backup/va
 import { download, newestVersion } from '../src/main/backup/vault-read'
 import { applyPendingRestore, claudeDirName, STAGING } from '../src/main/backup/vault-apply'
 import { HEAD, readHead, type Store } from '../src/main/backup/vault-format'
+import { compact } from '../src/main/backup/vault-compact'
+import { AUTO, due, markChanged } from '../src/main/backup/auto'
 
 const roots: string[] = []
 test.after(() => {
@@ -141,6 +143,40 @@ test('old versions are pruned, storage stays bounded', async () => {
   assert.equal(snaps.length, 5, 'dropped versions are deleted')
   assert.deepEqual(new Set(packs), new Set(Object.keys(head.packs)), 'no stray packs')
   console.log(`[measure] after 10 versions: ${packs.length} packs, ${(Object.values(head.packs).reduce((a, p) => a + p.bytes, 0) / 1048576).toFixed(2)} MiB`)
+})
+
+test('compact now rewrites packs that are mostly old data, and frees the space', async () => {
+  // the big chat is replaced: once its old version is dropped, the first packs hold mostly dead chunks
+  write(path.join(A.data, 'transcripts', 'big.json'), randomBytes(6 * 1024 * 1024))
+  for (let i = 0; i < 6; i++) {
+    write(path.join(A.data, 'ledgers', 'site.md'), `# ledger again ${i}\n`)
+    await backupVault('folder', store, keys)
+  }
+  const measured = await compact(store, keys, 0.9, true)
+  const r = await compact(store, keys, 0.9)
+  console.log(`[measure] compact: ${(r.before / 1048576).toFixed(2)} MiB -> ${(r.after / 1048576).toFixed(2)} MiB (${r.packs} packs; waste measured ${(measured.waste / 1048576).toFixed(2)} MiB)`)
+  assert.ok(measured.waste > 4 * 1024 * 1024 && r.packs > 0 && r.after < r.before - 4 * 1024 * 1024, 'the dead chunks are gone')
+  const head = (await readHead(store, keys))!
+  assert.deepEqual(new Set(fs.readdirSync(vaultDir).filter((f) => f.startsWith('jolty2-p-'))), new Set(Object.keys(head.packs)))
+  // the next run finds its way after the vault changed under it
+  write(path.join(A.data, 'ledgers', 'site.md'), '# ledger after compact\n')
+  assert.equal((await backupVault('folder', store, keys)).unchanged, false)
+})
+
+test('automatic runs wait for a pause, never run more often than the gap, and back off', () => {
+  const t0 = 10_000_000_000
+  const s = { lastRunAt: t0, fails: 0, nextAt: 0, kicked: false }
+  markChanged(t0 + 1000)
+  assert.equal(due(s, t0 + 2000, false), false, 'too soon after the last run')
+  assert.equal(due(s, t0 + AUTO.gap + 1000, false), true, 'changes paused long enough after the gap')
+  const later = t0 + AUTO.longest + 2000
+  markChanged(later - 100)
+  assert.equal(due(s, t0 + AUTO.gap + 1000, false), false, 'still changing, not for long yet')
+  assert.equal(due(s, later, false), true, 'changes have gone on for long: run anyway')
+  assert.equal(due({ ...s, lastRunAt: later - 50 }, later, false), false, 'nothing changed since the last run')
+  assert.equal(due(s, later, true), false, 'on battery the gap is longer')
+  assert.equal(due({ ...s, nextAt: later + AUTO.gap }, later, false), false, 'after a failure it waits')
+  assert.equal(due({ ...s, kicked: true }, t0 + 1, false), true, 'a fresh connection runs at once')
 })
 
 // ---------------------------------------------------------------- new PC

@@ -1,3 +1,5 @@
+// a restore downloaded in the last run goes in place before anything reads the data folder
+import './backup/at-start'
 // first: every module after this one builds its texts in the chosen language
 import './lang'
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, globalShortcut, ipcMain, nativeImage, Notification, session, shell } from 'electron'
@@ -397,6 +399,20 @@ function registerIpc(): void {
   handle('backup:run', (id: string) => backup.run(id))
   handle('backup:remote', (id: string) => backup.remote(id))
   handle('backup:restore', (id: string, password?: string) => backup.restore(id, typeof password === 'string' ? password : undefined))
+  const optPass = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
+  handle('backup:setAuto', (id: string, on: boolean) => backup.setAuto(id, on === true))
+  handle('backup:inspect', (id: string, password?: string) => backup.inspect(id, optPass(password)))
+  handle('backup:restoreAll', (id: string, version?: string, password?: string) => backup.restoreAll(id, optPass(version), optPass(password)))
+  handle('backup:progress', () => backup.progress())
+  handle('backup:compact', (id: string) => backup.compact(id))
+  handle('backup:report', () => backup.report())
+  handle('backup:dismissReport', () => backup.dismissReport())
+  // after a restore was downloaded: the next start applies it
+  handle('backup:relaunch', () => {
+    if (backup.progress()?.phase !== 'ready') return
+    app.relaunch()
+    app.quit()
+  })
   handle('usage:time', () => useTime.stats())
   handle('sessions:improvePrompt', (text: string, profileId?: string, model?: string, cwd?: string, sessionId?: string) =>
     jolty.improvePrompt(String(text), typeof profileId === 'string' ? profileId : undefined, typeof model === 'string' ? model : undefined, typeof cwd === 'string' ? cwd : undefined, typeof sessionId === 'string' ? sessionId : undefined)
@@ -579,6 +595,9 @@ if (!app.requestSingleInstanceLock()) {
       void obsidian.backup(vault, store.loadSettings().obsidianBackupDir || obsidian.defaultBackupDir())
     }
     jolty.sweepTrash()
+    // a restore applied at this start: the skills and the rest outside the data folder go back too
+    void backup.finishRestore().catch(() => undefined)
+    if (!process.env.JOLTY_TEST || process.env.JOLTY_BACKUP_AUTO) backup.startAuto(() => undefined)
     if (!process.env.JOLTY_TEST) useTime.startUseTime(() => jolty.anyBusy(), () => BrowserWindow.getAllWindows().some((w) => w.isFocused()))
     // automated runs start with What's new already seen, unless the run sets an older seenVersion itself
     if (process.env.JOLTY_TEST && !store.loadSettings().seenVersion) store.saveSettings({ seenVersion: __JOLTY_VERSION__ })
@@ -605,10 +624,12 @@ app.on('before-quit', (e) => {
   const obsidianDone = vault
     ? obsidian.backup(vault, store.loadSettings().obsidianBackupDir || obsidian.defaultBackupDir()).catch(() => undefined).then(() => obsidian.stop())
     : undefined
-  void Promise.all([nativeComputer.stop().catch(() => undefined), jolty.shutdown(), obsidianDone]).then(() => nativeBrowser.stop()).finally(() => app.quit())
+  // what changed since the last automatic backup goes up now (bounded in time)
+  const backupDone = backup.finalRun().catch(() => undefined)
+  void Promise.all([nativeComputer.stop().catch(() => undefined), jolty.shutdown(), obsidianDone, backupDone]).then(() => nativeBrowser.stop()).finally(() => app.quit())
   quick.stop()
   background.destroy()
-  void Promise.all([nativeComputer.stop().catch(() => undefined), jolty.shutdown()]).then(() => nativeBrowser.stop()).finally(() => app.quit())
+  void Promise.all([nativeComputer.stop().catch(() => undefined), jolty.shutdown(), backupDone]).then(() => nativeBrowser.stop()).finally(() => app.quit())
 })
 
 app.on('window-all-closed', () => {

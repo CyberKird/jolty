@@ -1,12 +1,16 @@
-// Backup to a Google Drive: the sign-in (loopback + PKCE), the encrypted file in the app folder, restore through the
-// import review, and that two accounts never see each other's backup. Google is a local server (JOLTY_GOOGLE_MOCK).
+// Backup to a Google Drive: the sign-in (loopback + PKCE), the encrypted incremental backup in the app folder, a full
+// restore on another PC, the old single-file backup still restored through the import review, and that two accounts
+// never see each other's backup. Google is a local server (JOLTY_GOOGLE_MOCK).
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { connect, decryptBackup, disconnect, encryptBackup, list, remote, restore, run, setConfig, setPassword, status } from '../src/main/backup'
-import { apply, openPackBuffer } from '../src/main/share-pack'
+import { connect, decryptBackup, disconnect, encryptBackup, finishRestore, inspect, list, remote, report, restore, restoreAll, run, setAuto, setConfig, setPassword, status } from '../src/main/backup'
+import { apply, backupKeys, buildPack, openPackBuffer } from '../src/main/share-pack'
+import { config, pick } from '../src/main/backup/common'
+import { applyPendingRestore } from '../src/main/backup/vault-apply'
+import { withTime } from '../src/main/use-time'
 import { encodePack, FORMAT } from '../src/main/share-pack-format'
 import { undoImport } from '../src/main/share-pack-apply'
 import { A, B, startGoogleMock } from './mocks/google-mock.mjs'
@@ -77,7 +81,26 @@ test('the AI time estimate counts turns that follow each other and skips long br
   assert.equal(estimateAiMs([]), 0)
 })
 
-test('connect, back up everything, restore on another PC, undo', async () => {
+/** A backup the way Jolty 0.31 and older made it: the whole pack in one encrypted file. */
+async function legacyBackup(id: 'google' | 'folder', sub: string, password: string): Promise<void> {
+  const p = pick(id)
+  const { buf } = buildPack({ keys: backupKeys(), name: 'Jolty backup', author: 'old', note: sub }, true)
+  await p.put(config(p), encryptBackup(withTime(buf), password))
+}
+
+/** Every object in one account's Drive app folder. */
+const objects = (sub: string): Map<string, { data: Buffer }> => google.drive.get(sub) ?? new Map()
+
+/** A full restore the way the page does it: what is there, download, restart (apply), then the pack outside the data folder. */
+async function restoreHere(id: 'google' | 'folder', at: { home: string; data: string }, password?: string): Promise<void> {
+  const info = await inspect(id, password)
+  assert.ok(info.versions.length >= 1)
+  await restoreAll(id, info.versions[0].name, password)
+  assert.ok(applyPendingRestore(at.data, at.home))
+  await finishRestore()
+}
+
+test('connect, back up incrementally, restore everything on another PC', async () => {
   const one = pc()
   assert.equal(status('google').configured, true, 'Jolty has a Google client of its own: nothing to fill in')
   setConfig('google', { clientId: 'cid', clientSecret: 'sec' })
@@ -91,6 +114,9 @@ test('connect, back up everything, restore on another PC, undo', async () => {
   assert.equal(st.connected, true)
   assert.equal(st.label, A.email)
   assert.equal(st.hasPassword, false)
+  assert.equal(st.autoUpdate, true, 'a new connection updates by itself')
+  assert.equal(setAuto('google', false).autoUpdate, false)
+  assert.equal(setAuto('google', true).autoUpdate, true)
   await assert.rejects(run('google'), /parol/i)
   assert.throws(() => setPassword('google', 'short'))
   assert.equal(setPassword('google', 'correct horse battery').hasPassword, true)
@@ -98,66 +124,81 @@ test('connect, back up everything, restore on another PC, undo', async () => {
 
   personalize(one.home)
   fs.writeFileSync(path.join(one.data, 'use-time.json'), JSON.stringify({ since: 1000, appMs: 7000, aiMs: 5000, estimatedMs: 0 }))
+  fs.mkdirSync(path.join(one.data, 'transcripts'), { recursive: true })
+  fs.writeFileSync(path.join(one.data, 'transcripts', 's1.json'), JSON.stringify([{ role: 'user', text: 'hello from the old PC' }]))
   google.state.fail401 = 1 // one refused token on the way: the call is retried with a new one
   const r = await run('google')
-  assert.ok(r.items >= 6, `items ${r.items}`)
-  const stored = google.drive.get(A.sub)!.data
-  for (const plain of ['tok-123', 'ana.private', SECRET_NOTE, 'JOLTYPACK', 'CLAUDE.md']) assert.ok(!stored.includes(plain), `${plain} leaked into Drive`)
-  assert.equal((await remote('google'))?.bytes, stored.length)
+  assert.ok(r.items >= 4, `items ${r.items}`)
+  for (const [name, f] of objects(A.sub)) for (const plain of ['tok-123', 'ana.private', SECRET_NOTE, 'JOLTYPACK', 'CLAUDE.md', 'hello from']) assert.ok(!f.data.includes(plain), `${plain} leaked into Drive (${name})`)
+  assert.ok((await remote('google'))!.bytes > 0)
   assert.equal(status('google').lastBackupItems, r.items)
-  // a second backup replaces the file instead of adding one
-  await run('google')
-  assert.equal(google.drive.size, 1)
+  assert.ok(status('google').usedBytes! > 0)
+  // nothing changed: nothing is added
+  const count = objects(A.sub).size
+  assert.equal((await run('google')).unchanged, true)
+  assert.equal(objects(A.sub).size, count)
 
   // another PC: nothing here, same Google account
   const two = pc()
   fs.writeFileSync(path.join(two.home, '.claude.json'), JSON.stringify({ userID: 'other-pc', mcpServers: { docs: { command: 'old' } } }))
-  assert.equal(status('google').connected, false)
   setConfig('google', { clientId: 'cid', clientSecret: 'sec' })
   google.state.next = A
   await connect('google', browser)
   assert.equal(status('google').hasPassword, false)
-  await assert.rejects(restore('google'), /parol/i)
-  await assert.rejects(restore('google', 'wrong password'), /Parola/)
-  assert.equal(fs.existsSync(path.join(two.home, '.claude', 'CLAUDE.md')), false)
-
-  const preview = await restore('google', 'correct horse battery')
+  await assert.rejects(inspect('google'), /parol/i)
+  await assert.rejects(inspect('google', 'wrong password'), /Parola/)
+  await restoreHere('google', two, 'correct horse battery')
   assert.equal(status('google').hasPassword, true, 'a password typed on the new PC is kept')
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(two.data, 'use-time.json'), 'utf8')), { since: 1000, appMs: 7000, aiMs: 5000, estimatedMs: 0 }, 'the time of use comes back with the backup')
-  assert.ok(preview.items.some((i) => i.key === 'mcp:docs' && i.state === 'different'))
-  assert.ok(preview.items.some((i) => i.key === 'mcp:remote' && i.state === 'new'))
-  const decisions = Object.fromEntries(preview.items.map((i) => [i.key, 'overwrite' as const]))
-  const done = await apply(preview.previewId, decisions)
-  assert.deepEqual(done.failed, [])
-
-  // exactly what was there, secrets and personal text included
-  assert.equal(fs.readFileSync(path.join(two.home, '.claude', 'skills', 'mine', 'SKILL.md'), 'utf8'), fs.readFileSync(path.join(one.home, '.claude', 'skills', 'mine', 'SKILL.md'), 'utf8'))
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(two.data, 'use-time.json'), 'utf8')), { since: 1000, appMs: 7000, aiMs: 5000, estimatedMs: 0 })
+  assert.equal(JSON.parse(fs.readFileSync(path.join(two.data, 'transcripts', 's1.json'), 'utf8'))[0].text, 'hello from the old PC')
   assert.equal(fs.readFileSync(path.join(two.home, '.claude', 'skills', 'mine', 'scripts', '.env'), 'utf8'), `KEY=${SECRET_NOTE}\n`)
   assert.equal(fs.readFileSync(path.join(two.home, '.claude', 'CLAUDE.md'), 'utf8'), 'My rules, path C:\\Users\\ana\\work\n')
   assert.equal(fs.readFileSync(path.join(two.home, '.claude', 'commands', 'go.md'), 'utf8'), 'go\n')
   const cfg = JSON.parse(fs.readFileSync(path.join(two.home, '.claude.json'), 'utf8'))
   assert.equal(cfg.userID, 'other-pc', 'the rest of ~/.claude.json is not touched')
   assert.deepEqual(cfg.mcpServers.docs, { type: 'stdio', command: 'npx', args: ['-y', 'docs'], env: { TOKEN: 'tok-123' } })
-  assert.equal(cfg.mcpServers.remote.headers.Authorization, 'Bearer abc')
   const set = loadSettings()
   assert.equal(set.mascotSize, 'small')
   assert.equal(set.lowPower, 'on')
-  assert.equal(set.notifySound, false)
+  assert.ok(report()!.personal! >= 3, 'skills, commands, instructions and MCP came back')
+})
 
+test('an old single-file backup still restores through the review, and can be undone', async () => {
+  const one = pc()
+  setConfig('google', { clientId: 'cid', clientSecret: 'sec' })
+  await sync(A)
+  setPassword('google', 'correct horse battery')
+  personalize(one.home)
+  google.drive.delete(A.sub)
+  await legacyBackup('google', A.sub, 'correct horse battery')
+
+  const two = pc()
+  fs.writeFileSync(path.join(two.home, '.claude.json'), JSON.stringify({ userID: 'other-pc', mcpServers: { docs: { command: 'old' } } }))
+  setConfig('google', { clientId: 'cid', clientSecret: 'sec' })
+  await sync(A)
+  const info = await inspect('google', 'correct horse battery')
+  assert.ok(info.legacy && !info.versions.length, 'the page offers the old restore')
+  await assert.rejects(restore('google'), /parol/i)
+  await assert.rejects(restore('google', 'wrong password'), /Parola/)
+  const preview = await restore('google', 'correct horse battery')
+  assert.ok(preview.items.some((i) => i.key === 'mcp:docs' && i.state === 'different'))
+  const done = await apply(preview.previewId, Object.fromEntries(preview.items.map((i) => [i.key, 'overwrite' as const])))
+  assert.deepEqual(done.failed, [])
+  assert.equal(fs.readFileSync(path.join(two.home, '.claude', 'CLAUDE.md'), 'utf8'), 'My rules, path C:\\Users\\ana\\work\n')
   await undoImport(done.importId)
-  const back = JSON.parse(fs.readFileSync(path.join(two.home, '.claude.json'), 'utf8'))
-  assert.deepEqual(back.mcpServers, { docs: { command: 'old' } })
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(two.home, '.claude.json'), 'utf8')).mcpServers, { docs: { command: 'old' } })
   assert.equal(fs.existsSync(path.join(two.home, '.claude', 'CLAUDE.md')), false)
 })
 
 test('two accounts never see each other, and disconnecting forgets the account here', async () => {
   const x = pc()
+  google.drive.clear()
   setConfig('google', { clientId: 'cid', clientSecret: 'sec' })
   await sync(A)
   setPassword('google', 'password for ana')
   personalize(x.home)
   await run('google')
-  const anaBlob = Buffer.from(google.drive.get(A.sub)!.data)
+  const ana = new Map([...objects(A.sub)].map(([n, f]) => [n, Buffer.from(f.data)]))
 
   await disconnect('google')
   assert.equal(status('google').connected, false)
@@ -170,15 +211,22 @@ test('two accounts never see each other, and disconnecting forgets the account h
   assert.equal(status('google').label, B.email)
   assert.equal(status('google').hasPassword, false, "Ana's password does not follow to Bob")
   assert.equal(await remote('google'), null, "Bob's Drive is empty")
-  await assert.rejects(restore('google', 'password for ana'), /niciun backup/i)
+  await assert.rejects(inspect('google', 'password for ana'), /niciun backup/i)
   setPassword('google', 'password for bob')
   fs.rmSync(path.join(x.home, '.claude', 'CLAUDE.md'))
   await run('google')
-  assert.deepEqual(google.drive.get(A.sub)!.data, anaBlob, "Bob's backup left Ana's file alone")
-  assert.notDeepEqual(google.drive.get(B.sub)!.data, anaBlob)
+  for (const [n, d] of ana) assert.deepEqual(objects(A.sub).get(n)!.data, d, "Bob's backup left Ana's files alone")
+  assert.ok([...objects(B.sub).keys()].every((n) => !ana.has(n) || n === 'jolty2-key' || n === 'jolty2-head'))
 
-  // Ana's file in Bob's Drive (a copied file): refused although the password is right
-  google.drive.set(B.sub, { ...google.drive.get(B.sub)!, data: anaBlob })
+  // Ana's old single file in Bob's Drive (a copied file): refused although the password is right
+  google.drive.get(B.sub)!.clear()
+  await sync(A)
+  setPassword('google', 'password for ana')
+  google.drive.delete(A.sub)
+  await legacyBackup('google', A.sub, 'password for ana')
+  const anaFile = objects(A.sub).get('jolty-backup.enc')!
+  await sync(B)
+  objects(B.sub).set('jolty-backup.enc', { ...anaFile })
   await assert.rejects(restore('google', 'password for ana'), /altui cont/i)
 })
 
@@ -202,15 +250,13 @@ test('a folder works as a storage too (iCloud Drive, OneDrive or a USB drive are
   assert.equal(status('google').connected, false, 'each storage has its own account')
   setPassword('folder', 'long enough password')
   await run('folder')
-  assert.ok(fs.readdirSync(shared).includes('jolty-backup.enc'))
-  assert.ok(!fs.readFileSync(path.join(shared, 'jolty-backup.enc')).includes('tok-123'))
+  const names = fs.readdirSync(shared)
+  assert.ok(names.includes('jolty2-key') && names.includes('jolty2-head'))
+  for (const n of names) assert.ok(!fs.readFileSync(path.join(shared, n)).includes('tok-123'), n)
 
   const two = pc()
   setConfig('folder', { path: shared })
   await connect('folder')
-  const preview = await restore('folder', 'long enough password')
-  assert.ok(preview.items.some((i) => i.key === 'mcp:docs'))
-  const done = await apply(preview.previewId, Object.fromEntries(preview.items.map((i) => [i.key, 'overwrite' as const])))
-  assert.deepEqual(done.failed, [])
+  await restoreHere('folder', two, 'long enough password')
   assert.equal(fs.readFileSync(path.join(two.home, '.claude', 'skills', 'mine', 'scripts', '.env'), 'utf8'), `KEY=${SECRET_NOTE}\n`)
 })

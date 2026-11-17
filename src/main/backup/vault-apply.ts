@@ -5,6 +5,7 @@
 import fs from 'fs'
 import path from 'path'
 import { COMPLETE, stagedPath, type Staged } from './vault-read'
+import type { RestoreReport } from '@shared/backup'
 import type { Origin } from './vault-format'
 
 export const STAGING = 'restore-pending'
@@ -13,17 +14,6 @@ export const REPORT = 'restore-report.json'
 /** Jolty's own files that hold paths of the PC they were written on */
 const PATH_FILES = ['sessions.json', 'profiles.json', 'settings.json', 'schedules.json']
 
-export interface RestoreReport {
-  at: number
-  /** when the restored version was made, and on which PC */
-  versionAt: number
-  host: string
-  files: number
-  /** where the replaced files went */
-  previous?: string
-  /** project folders of restored chats that do not exist on this PC */
-  missing: string[]
-}
 
 /** Claude names a project's folder after its path with every other character than a letter or digit as '-'. */
 export const claudeDirName = (p: string): string => p.replace(/[^a-zA-Z0-9]/g, '-')

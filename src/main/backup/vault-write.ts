@@ -49,6 +49,8 @@ export interface LocalCache {
   files: Record<string, { s: number; m: number; b: string[] }>
   /** the chunks the newest version references: anything here need not be uploaded again */
   blobs: Record<string, BlobLoc>
+  /** packs uploaded by a run that did not finish: deleted by the next run unless a head names them */
+  orphans?: string[]
 }
 
 export interface WriteResult {
@@ -107,6 +109,8 @@ export async function writeVersion(o: WriteOptions): Promise<WriteResult> {
   const { store, keys, cache } = o
   const target = o.packTarget ?? PACK_TARGET
   const head0 = (await readHead(store, keys)) ?? emptyHead(keys.repo)
+  for (const p of cache.orphans ?? []) if (!head0.packs[p]) await store.remove(p).catch(() => undefined)
+  cache.orphans = []
   // another PC wrote since our last run (or this PC never ran): our memory of the vault is rebuilt from the newest version
   if (cache.repo !== keys.repo || cache.rev !== head0.rev) {
     cache.repo = keys.repo
@@ -134,6 +138,7 @@ export async function writeVersion(o: WriteOptions): Promise<WriteResult> {
     if (!parts.length) return
     const name = packName()
     const data = Buffer.concat(parts)
+    cache.orphans!.push(name)
     await store.put(name, data)
     for (const [id, off, len, raw] of entries) locs[id] = [name, off, len, raw]
     newPacks[name] = { bytes: data.length }
@@ -223,6 +228,7 @@ export async function writeVersion(o: WriteOptions): Promise<WriteResult> {
   const headBody = encodeObject(keys, HEAD, next)
   await store.put(HEAD, headBody)
   uploaded += headBody.length
+  cache.orphans = []
 
   // deletes only after the head no longer names them: a crash here leaves stray objects, never a broken version
   for (const s of dropped) await store.remove(s.name).catch(() => undefined)
