@@ -9,7 +9,7 @@ import { _electron as electron } from 'playwright-core'
 const shots = path.resolve(process.env.SHOTS || 'shots-remote')
 fs.mkdirSync(shots, { recursive: true })
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-remote-ui-'))
-const PORT = 47823
+const PORT = Number(process.env.REMOTE_UI_PORT) || 47823
 const items = [
   { kind: 'user', id: 'u1', text: 'Make the bridge deck longer' },
   { kind: 'assistant', id: 'a1', text: 'Done. The deck is now **12 m** long.\n\n```py\nbpy.data.objects["Deck"].scale.x = 1.5\n```' }

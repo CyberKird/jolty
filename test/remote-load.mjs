@@ -2,6 +2,7 @@
 //   node test/remote-load.mjs                  all profiles
 //   PROFILES=slow3g node test/remote-load.mjs  one of: lan, slow3g, bad
 //   JOLTY_OUT=<path to an out folder> LABEL=before node test/remote-load.mjs   another build (to compare)
+//   CPU=6 node test/remote-load.mjs            the phone slowed 6x instead of 4x (a low-end Android)
 // A throttling proxy (net-shaper.mjs) sits between a phone-sized window with no preload and a test Jolty with its own
 // data folder and port, so it counts every byte both ways (page, socket, pictures) and can cut the line. The phone's CPU
 // is slowed 4x (a low-end phone). It opens one window pair; nothing of the user's real Jolty is touched.
@@ -21,6 +22,7 @@ const PROFILES = {
   bad: { kbps: 100, rttMs: 1500, loss: 0.05 }
 }
 const pick = (process.env.PROFILES || 'lan,slow3g,bad').split(',')
+const CPU = Number(process.env.CPU || 4)
 const CHAT_LIMIT = Number(process.env.CHAT_LIMIT || 150_000)
 
 // a PC with 60 conversations, one of them big: 8 pasted screenshots and 1500 tool calls (a real one weighs 35 MB)
@@ -169,7 +171,7 @@ try {
 
   for (const name of pick) {
     net.set(PROFILES[name])
-    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU })
     const cold = await load('cold')
     const warm = await load('warm')
     const chat = await openChat().catch((e) => ({ kind: 'open big chat', ms: 'failed', error: String(e).slice(0, 80) }))
