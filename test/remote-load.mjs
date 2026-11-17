@@ -99,6 +99,8 @@ try {
       await cdp.send('Network.clearBrowserCache')
       await phone.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('jolty-snap:')).forEach((k) => localStorage.removeItem(k)))
     }
+    // whether the page kept on the phone (service worker) is in charge before this load
+    const sw = await phone.evaluate(() => navigator.serviceWorker?.getRegistration().then((r) => (r?.active ? 'active' : r?.installing ? 'installing' : 'none'))).catch(() => 'n/a')
     net.reset()
     const t0 = Date.now()
     const LIMIT = 180000
@@ -120,7 +122,7 @@ try {
     const lt = await phone.evaluate(() => window.__lt || [])
     await phone.waitForTimeout(1500)
     const s = net.reset()
-    return { kind, fcpMs: fcp, barMs: tBar, dataMs: tData, downKB: kb(s.down), upKB: kb(s.up), requests: s.requests.length, js: s.requests.filter((r) => r.endsWith('.js')).length, conns: s.conns, longTasks: lt.length, longestTaskMs: Math.max(0, ...lt) }
+    return { kind, sw, fcpMs: fcp, barMs: tBar, dataMs: tData, downKB: kb(s.down), upKB: kb(s.up), requests: s.requests.length, js: s.requests.filter((r) => r.endsWith('.js')).length, conns: s.conns, longTasks: lt.length, longestTaskMs: Math.max(0, ...lt) }
   }
 
   /** opens the big conversation and waits for its last message */
@@ -184,7 +186,7 @@ try {
   fs.writeFileSync(path.join('out-test', `remote-load-${LABEL}.json`), JSON.stringify(results, null, 2))
   console.log(`\n${LABEL}: transcript ${results.transcriptMB} MB on the PC, ${results.assets.files} built files ${results.assets.totalKB} KB`)
   for (const r of results.runs) {
-    for (const x of [r.cold, r.warm]) console.log(`${r.profile.padEnd(7)} ${x.kind.padEnd(5)} fcp ${x.fcpMs} ms, app bar ${x.barMs} ms, list ${x.dataMs} ms, ${x.downKB} KB down, ${x.requests} requests (${x.js} js), long tasks ${x.longTasks} (max ${x.longestTaskMs} ms)`)
+    for (const x of [r.cold, r.warm]) console.log(`${r.profile.padEnd(7)} ${x.kind.padEnd(5)} (worker ${x.sw}) fcp ${x.fcpMs} ms, app bar ${x.barMs} ms, list ${x.dataMs} ms, ${x.downKB} KB down, ${x.requests} requests (${x.js} js), long tasks ${x.longTasks} (max ${x.longestTaskMs} ms)`)
     console.log(`${r.profile.padEnd(7)} chat  ${r.chat.ms} ms, ${r.chat.downKB} KB down, ${r.chat.images} pictures, heap ${r.chat.heapMB} MB`)
     if (r.live) console.log(`${r.profile.padEnd(7)} live  complete ${r.live.complete}, duplicated ${r.live.duplicated}, ${r.live.ms} ms, ${r.live.wsDownKB} KB on the socket, ${r.live.conns} connections`)
   }
