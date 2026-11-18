@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.32.1
+
+### Fixed
+
+- Using your PC with two monitors at different scaling (for example 150% next to 100%) no longer stops Jolty every few steps with "the user moved the mouse". Windows was putting the pointer in the wrong spot when it crossed or came near the other monitor, and Jolty took its own move for yours. Now the pointer lands exactly where it should, and only your real mouse and keyboard stop it.
+
 ## 0.32.0
 
 ### New

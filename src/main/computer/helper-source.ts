@@ -81,6 +81,10 @@ class Helper
     static readonly object OutLock = new object();
     static TextWriter Stdout;
     static long lastPhys = 0;
+    // SetCursorPos is not flagged as injected, so the mouse hook would count it as the user: remember where and when
+    // Jolty itself put the pointer and let the hook skip that one move.
+    static volatile int selfX, selfY;
+    static long selfAt = 0;
     static volatile int abortSeq = 0;
     static int killVk = 0, killMods = 0;
     static Win.HookProc kbProc, mouseProc;
@@ -188,7 +192,13 @@ class Helper
         if (code >= 0)
         {
             var s = (Win.MSLLHOOKSTRUCT)Marshal.PtrToStructure(l, typeof(Win.MSLLHOOKSTRUCT));
-            if ((s.flags & 0x03) == 0) lastPhys = Stopwatch.GetTimestamp();
+            if ((s.flags & 0x03) == 0)
+            {
+                long now = Stopwatch.GetTimestamp();
+                bool self = selfAt != 0 && (now - selfAt) * 1000.0 / Stopwatch.Frequency < 200
+                    && Math.Abs(s.pt.x - selfX) <= 1 && Math.Abs(s.pt.y - selfY) <= 1;
+                if (!self) lastPhys = now;
+            }
         }
         return Win.CallNextHookEx(IntPtr.Zero, code, w, l);
     }
@@ -368,13 +378,26 @@ class Helper
         Send(i);
     }
 
+    static void SelfSetCursor(int x, int y)
+    {
+        selfX = x; selfY = y; selfAt = Stopwatch.GetTimestamp();
+        Win.SetCursorPos(x, y);
+    }
+
     static void MoveTo(int x, int y)
     {
         int vx = Win.GetSystemMetrics(76), vy = Win.GetSystemMetrics(77), vw = Win.GetSystemMetrics(78), vh = Win.GetSystemMetrics(79);
         int nx = (int)Math.Round((x - vx) * 65535.0 / Math.Max(1, vw - 1));
         int ny = (int)Math.Round((y - vy) * 65535.0 / Math.Max(1, vh - 1));
         MouseEv(0x8000 | 0x4000 | 0x0001, nx, ny, 0);
-        lastInj.x = x; lastInj.y = y; haveInj = true;
+        // With monitors at different scaling (150% next to 100%) Windows maps the normalized point to the wrong pixel,
+        // up to hundreds of pixels off when the move crosses or nears another monitor. Put the pointer where the plan
+        // wants it, and remember where it really is (it can be clamped into a gap between monitors): comparing against
+        // the requested point made every such move look like the user grabbing the mouse.
+        Win.POINT c;
+        Win.GetCursorPos(out c);
+        if (c.x != x || c.y != y) { SelfSetCursor(x, y); Win.GetCursorPos(out c); }
+        lastInj = c; haveInj = true;
     }
 
     static bool IsPlain(int code)
@@ -498,7 +521,7 @@ class Helper
         if (haveInj)
         {
             Win.GetCursorPos(out cur);
-            if (cur.x != lastInj.x || cur.y != lastInj.y) { if (Math.Abs(cur.x - lastInj.x) <= 3 && Math.Abs(cur.y - lastInj.y) <= 3) Win.SetCursorPos(lastInj.x, lastInj.y); }
+            if (cur.x != lastInj.x || cur.y != lastInj.y) { if (Math.Abs(cur.x - lastInj.x) <= 3 && Math.Abs(cur.y - lastInj.y) <= 3) SelfSetCursor(lastInj.x, lastInj.y); }
         }
         return Fin(n, n, "ok", lateSum / Math.Max(1, n), lateMax, null);
     }
