@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { bucketFor, extraWindows, newExtras } from '../src/shared/limits'
+import { bucketFor, extraWindows, newExtras, withIdleSession } from '../src/shared/limits'
 
 // trimmed from a real answer of the account usage endpoint (Pro plan, Fable included for half of the weekly limit)
 const answer = {
@@ -71,4 +71,14 @@ test('a bucket is announced once, when it first shows up; the main limits never 
   assert.deepEqual(newExtras([main, fable], [main, { ...fable, usedPercent: 40 }]), [])
   assert.deepEqual(newExtras([main, fable], [main]), [])
   assert.deepEqual(newExtras(undefined, [main]), [])
+})
+
+test('no running 5 h window: the limit shows as untouched; a running one, an empty read and a bucket alone stay as they are', () => {
+  const week = { label: '7 zile', usedPercent: 41 }
+  const fable = { label: 'Fable', usedPercent: 0, extra: true as const, scope: 'Fable' }
+  assert.deepEqual(withIdleSession([week, fable], '5 ore'), [{ label: '5 ore', usedPercent: 0 }, week, fable])
+  const running = [{ label: '5 ore', usedPercent: 12 }, week]
+  assert.equal(withIdleSession(running, '5 ore'), running)
+  assert.deepEqual(withIdleSession([], '5 ore'), [])
+  assert.deepEqual(withIdleSession([fable], '5 ore'), [fable])
 })

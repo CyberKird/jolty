@@ -1836,5 +1836,13 @@
  "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "このスマートフォンでの Jolty の動き方です。すぐに反映され、このスマートフォンにだけ保存されます。",
  "rapid": "高速",
  "mediu": "中速",
- "lent": "低速"
+ "lent": "低速",
+ "ZDR · UE": "ZDR · EU",
+ "fără ZDR": "ZDR なし",
+ "Rută ZDR, cu provider în UE: prompturile nu sunt păstrate.": "EU 内のプロバイダーを使う ZDR ルートです。プロンプトは保存されません。",
+ "Rută ZDR: prompturile nu sunt păstrate, dar providerul nu e în UE.": "ZDR ルートですが、プロバイダーは EU 内ではありません。プロンプトは保存されません。",
+ "Nu e ZDR: providerul poate păstra prompturile o vreme{where}.": "ZDR ではありません。プロバイダーがプロンプトをしばらく保存する場合があります{where}。",
+ "o adresă de email": "メールアドレス",
+ "un număr de telefon": "電話番号",
+ "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "メッセージに{what}が含まれているようです。選択したモデルはプロンプトを保存しないことを保証していないため、顧客データには ZDR モデルを使うか、架空の名前に置き換えてください。"
 }

@@ -69,6 +69,7 @@ import { forget } from './recall'
 import { Scheduler } from './scheduler'
 import * as modelWatch from './model-watch'
 import { modelScore } from '@shared/scores'
+import { isNanoGptProfile, summarizePrivacy, type PrivacySummary } from '@shared/nanogpt'
 import { canHelpSetup, setupHelperBrief } from '@shared/setup'
 import { candidates, FULL_PERCENT, pickAuto, rankHelpers, worthRouting, type Candidate } from './auto-model'
 import type { ScheduledTask } from '@shared/schedule'
@@ -106,6 +107,10 @@ const HELPER_PROMPT = /^(\[external unsupported block: image\]\s*)?(Name this co
 // The model-catalog probe opens an empty OpenCode session in the home folder each time it runs; it keeps the engine's default title.
 const PROBE_TITLE = /^New session - \d{4}-\d\d-\d\dT[\d:.]+Z$/
 const isProbe = (s: { title: string; cwd?: string }): boolean => PROBE_TITLE.test(s.title) && s.cwd === os.homedir()
+
+/** A helper call, by its title or (when the engine gave a summary as title) by what was first said in it. */
+const isHelper = (s: { title: string; firstPrompt?: string }): boolean =>
+  HELPER_PROMPT.test(s.title.trim()) || (s.firstPrompt !== undefined && HELPER_PROMPT.test(s.firstPrompt.trim()))
 
 /** Copies a Claude Code conversation (transcript, subagents, file checkpoints) into another profile's folder so it resumes there. */
 function copyClaudeSession(from: Profile, to: Profile, id: string): void {
@@ -413,6 +418,33 @@ export class Jolty {
     return modelWatch.decorate(p, await this.driver(p.engine).models(p))
   }
 
+  /**
+   * What NanoGPT says each route of each model keeps, read here because the renderer's CSP blocks outside requests.
+   * A model without an answer has no entry; nothing here throws.
+   */
+  async privacy(id: string): Promise<Record<string, PrivacySummary>> {
+    const p = this.profile(id)
+    const out: Record<string, PrivacySummary> = {}
+    if (!isNanoGptProfile(p)) return out
+    const base = (p.baseUrl || '').replace(/\/+$/, '')
+    const key = store.getSecret(p.id)
+    const headers: Record<string, string> = { Accept: 'application/json' }
+    if (key) headers.Authorization = `Bearer ${key}`
+    await Promise.all(
+      (p.models || []).map(async (model) => {
+        try {
+          const res = await fetch(`${base}/models/${encodeURIComponent(model)}/providers`, { headers, signal: AbortSignal.timeout(8000) })
+          if (!res.ok) return
+          const summary = summarizePrivacy(((await res.json()) as { providers?: Parameters<typeof summarizePrivacy>[0] })?.providers)
+          if (summary) out[model] = summary
+        } catch {
+          // offline or slow: the model simply has no chip
+        }
+      })
+    )
+    return out
+  }
+
   // -------------------------------------------------------------------------
   // Events from engines
   // -------------------------------------------------------------------------
@@ -561,7 +593,7 @@ export class Jolty {
     const p = this.profile(profileId)
     const known = new Set([...store.loadSessions(), ...this.temps.values()].map((s) => s.engineSessionId).filter(Boolean))
     const list = await this.driver(p.engine).externalSessions(p, cwd)
-    return list.filter((s) => !known.has(s.engineSessionId))
+    return list.filter((s) => !known.has(s.engineSessionId) && !isHelper(s) && !(s.engine === 'opencode' && isProbe(s)))
   }
 
   async startSession(input: StartSessionInput): Promise<SessionMeta> {
@@ -633,7 +665,7 @@ export class Jolty {
 
   /** Probe sessions imported by earlier versions, unless something was said in them. */
   private withoutProbes(metas: SessionMeta[]): SessionMeta[] {
-    return metas.filter((s) => !(s.engine === 'opencode' && isProbe(s) && !this.live.has(s.id) && !store.loadTranscript(s.id).length))
+    return metas.filter((s) => !((isHelper(s) || (s.engine === 'opencode' && isProbe(s))) && !this.live.has(s.id) && !store.loadTranscript(s.id).length))
   }
 
   /**
@@ -662,7 +694,7 @@ export class Jolty {
       for (const s of list) {
         if (known.has(s.engineSessionId)) continue
         known.add(s.engineSessionId)
-        if (HELPER_PROMPT.test(s.title.trim()) || (s.engine === 'opencode' && isProbe(s))) continue
+        if (isHelper(s) || (s.engine === 'opencode' && isProbe(s))) continue
         metas.push({
           id: randomUUID(),
           profileId: p.id,

@@ -241,6 +241,7 @@ function registerIpc(): void {
   handle('profiles:login', (id: string) => jolty.login(id))
   handle('profiles:logout', (id: string) => jolty.logout(id))
   handle('profiles:models', (id: string) => jolty.models(id))
+  handle('profiles:privacy', (id: string) => jolty.privacy(id))
 
   handle('sessions:list', () => jolty.sessions())
   handle('sessions:external', (profileId: string, cwd?: string) => jolty.externalSessions(profileId, cwd))

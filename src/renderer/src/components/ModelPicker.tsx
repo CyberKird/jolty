@@ -2,6 +2,8 @@
 // the way the Claude app does it. Also the compact permission-mode menu next to it.
 import { Check, ChevronDown, ShieldOff } from 'lucide-react'
 import { isUncensored } from '@shared/uncensored'
+import { isNanoGptProfile, type PrivacySummary } from '@shared/nanogpt'
+import { privacyMap } from '../nanogpt-privacy'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { capability } from '@shared/complexity'
@@ -18,6 +20,8 @@ export interface ModelGroup {
   models: ModelOption[]
   loading: boolean
   error?: string
+  /** what each NanoGPT route keeps, keyed by model id; other profiles have none */
+  privacy?: Record<string, PrivacySummary>
 }
 
 /** A small shield with a slash on models that answer without refusals, so they are not mistaken for the usual ones. */
@@ -25,6 +29,25 @@ export function UncensoredMark({ id, size = 12 }: { id?: string; size?: number }
   if (!isUncensored(id)) return null
   const text = tr("Fără filtre de refuz: model abliterated sau uncensored.")
   return <ShieldOff className="uncensored-mark" size={size} aria-label={text}><title>{text}</title></ShieldOff>
+}
+
+/** Whether the route keeps the prompt, in one word: it decides where someone else's personal data may go. */
+export function PrivacyMark({ privacy }: { privacy?: PrivacySummary }) {
+  if (!privacy) return null
+  return (
+    <span className={`picker-badge privacy ${privacy.zdr ? 'zdr' : 'keeps'}`} title={privacyTitle(privacy)}>
+      {privacy.zdr ? (privacy.eu ? tr('ZDR · UE') : 'ZDR') : tr('fără ZDR')}
+    </span>
+  )
+}
+
+export function privacyTitle(p: PrivacySummary): string {
+  if (p.zdr) {
+    return p.eu
+      ? tr('Rută ZDR, cu provider în UE: prompturile nu sunt păstrate.')
+      : tr('Rută ZDR: prompturile nu sunt păstrate, dar providerul nu e în UE.')
+  }
+  return tr('Nu e ZDR: providerul poate păstra prompturile o vreme{where}.', { where: p.region ? ` (${p.region})` : '' })
 }
 
 // cached for half an hour (badges and scores come with the list); the key changes when an endpoint profile's model list does
@@ -51,14 +74,21 @@ function load(p: Profile): Promise<ModelOption[]> {
 
 /** Models of every profile, loaded in parallel. A profile that is not logged in shows its error. */
 export function useAllModels(profiles: Profile[]): ModelGroup[] {
-  const [state, setState] = useState<Record<string, { models: ModelOption[]; loading: boolean; error?: string }>>({})
+  const [state, setState] = useState<Record<string, { models: ModelOption[]; loading: boolean; error?: string; privacy?: Record<string, PrivacySummary> }>>({})
   const sig = profiles.map(key).join('|')
   useEffect(() => {
     let alive = true
     for (const p of profiles) {
       setState((s) => (s[p.id] && !s[p.id].error ? s : { ...s, [p.id]: { models: [], loading: true } }))
       load(p)
-        .then((models) => alive && setState((s) => ({ ...s, [p.id]: { models, loading: false } })))
+        .then((models) => {
+          if (!alive) return
+          setState((s) => ({ ...s, [p.id]: { models, loading: false, privacy: s[p.id]?.privacy } }))
+          // who serves each model and what the route keeps, for the privacy mark in the picker
+          if (isNanoGptProfile(p)) {
+            void privacyMap(p).then((privacy) => alive && setState((s) => (s[p.id] ? { ...s, [p.id]: { ...s[p.id], privacy } } : s)))
+          }
+        })
         .catch((err) => alive && setState((s) => ({ ...s, [p.id]: { models: [], loading: false, error: errMsg(err) } })))
     }
     return () => {
@@ -187,7 +217,8 @@ export function ModelPicker(p: {
                       : tr("{name} e inclus în plan. Se numără separat: {used}% folosit, resetare {when}.", bucketVars)
                     : ''
                   const scoreTip = sc ? (sc.measured ? tr("{label} nu are încă măsurătoare. Estimare după versiunea {v}: inteligență {iq}{v1}", { label: m.label, v: sc.measured, iq: sc.iq, v1: sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : '' }) : tr("Inteligență {iq}{v1} (Artificial Analysis): {note}", { iq: sc.iq, v1: sc.tps ? `, ~${Math.round(sc.tps)} tokeni/s` : '', note: sc.note })) : cap.compare
-                  const rowTip = [m.tip, m.description, other && p.otherProfileHint ? p.otherProfileHint : '', m.efforts?.length ? tr("Gândire: {join}", { join: m.efforts.join(', ') }) : tr("Fără niveluri de gândire"), m.vision === false ? tr("Nu vede imagini: le descrie alt profil") : '', scoreTip, bucketTip].filter(Boolean) as string[]
+                  const pr = g.privacy?.[m.id]
+                  const rowTip = [m.tip, m.description, other && p.otherProfileHint ? p.otherProfileHint : '', pr ? privacyTitle(pr) : '', m.efforts?.length ? tr("Gândire: {join}", { join: m.efforts.join(', ') }) : tr("Fără niveluri de gândire"), m.vision === false ? tr("Nu vede imagini: le descrie alt profil") : '', scoreTip, bucketTip].filter(Boolean) as string[]
                   return (
                     <button
                       key={m.id}
@@ -208,6 +239,7 @@ export function ModelPicker(p: {
                         <span className="picker-opt-name">
                           {m.label}
                           <UncensoredMark id={m.id} />
+                          <PrivacyMark privacy={pr} />
                           {sc && (
                             <span key={iq} className={`picker-score ${on ? 'tick' : ''} ${sc.measured ? 'est' : iq >= 45 ? 'hi' : iq < 25 ? 'lo' : ''}`}>
                               {sc.measured ? `~${iq}` : iq}

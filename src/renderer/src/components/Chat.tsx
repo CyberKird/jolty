@@ -3,6 +3,7 @@ import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, us
 import type { ReactNode } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
+import { personalHint } from '@shared/personal'
 import { usageRisk } from '@shared/usage-risk'
 import type { AppSettings, Attachment, ChatItem, ModelOption, PermissionMode, Profile, SessionMeta } from '@shared/types'
 import { hasJoltyBrowser, hasJoltyComputer, hasJoltyTools, isAcp } from '@shared/types'
@@ -208,6 +209,11 @@ function Composer(p: ComposerProps) {
   // a hint, not a block: what is typed here goes to the provider of the chosen profile, unless that profile is local
   const sendProfile = p.profiles.find((x) => x.id === p.profileId)
   const secret = sendProfile && !sendProfile.local ? secretHint(text) : undefined
+  // someone else's personal data going to a route that may keep it: one line, only when it is true
+  const sendGroup = groups.find((g) => g.profile.id === p.profileId)
+  const sendModel = sendGroup?.models.find((m) => m.id === p.model || m.alias === p.model) || sendGroup?.models.find((m) => m.isDefault)
+  const sendPrivacy = sendGroup?.privacy?.[sendModel?.id || '']
+  const personal = sendPrivacy && !sendPrivacy.zdr ? personalHint(text) : undefined
   const costNote = usageRisk(text, atts.filter((a) => a.mime.startsWith('image/')).length, atts.filter((a) => a.mime.startsWith('video/')).length)
   // the box no longer keeps the waiting list: the conversation shows it, so what waits reads like a message
   const stop = (): void => {
@@ -450,6 +456,11 @@ function Composer(p: ComposerProps) {
         {secret && (
           <div className="attachment-note" role="status">
            {tr("Mesajul pare să conțină {secret}. Nu l-am blocat, dar se trimite către {profile}. Pentru ceva sensibil, un model local nu trimite nimic în afara PC-ului.", { secret, profile: sendProfile?.name })}
+          </div>
+        )}
+        {personal && (
+          <div className="attachment-note" role="status">
+            {tr("Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.", { what: personal })}
           </div>
         )}
         <div className="composer-bar">

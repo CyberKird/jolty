@@ -72,3 +72,12 @@ export function newExtras(before: LimitWindow[] | undefined, now: LimitWindow[])
   const known = new Set((before || []).filter((w) => w.extra).map((w) => w.label))
   return now.filter((w) => w.extra && !known.has(w.label))
 }
+
+/**
+ * The usage answer sends `five_hour: null` while no 5 h window is running (nothing sent for 5 hours): the limit is untouched,
+ * not unknown. A read that lists the other main limits but not this one shows it as 0% used, as Claude desktop does.
+ */
+export function withIdleSession(windows: LimitWindow[], label: string): LimitWindow[] {
+  const main = windows.filter((w) => !w.extra)
+  return main.length && !main.some((w) => w.label === label) ? [{ label, usedPercent: 0 }, ...windows] : windows
+}

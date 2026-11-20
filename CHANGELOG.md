@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.33.0
+
+### New
+
+- NanoGPT models show what their route does with your prompts. In the model picker, each NanoGPT model carries a small ZDR mark (zero data retention, with the EU where the provider is inside the EU) or "no ZDR", and the hover explains it.
+- A note above the message box when the text looks like it holds someone else's personal data (an email address, an IBAN, a phone number) and the chosen model does not promise zero retention. It never blocks the message; it only tells you to pick a ZDR model or use made-up names.
+
+### Fixed
+
+- Import no longer lists Jolty's own helper requests as conversations. The Claude and Codex list of conversations to bring in (Import, sidebar refresh) showed hundreds of rows reading "Name this conversation so the user can find it..." and "Rewrite the message below..." (the calls that name your chats and improve your prompts). They are left out of the list, of the count and of the import, and the ones already imported with nothing said in them are removed at start.
+- The 5 hour limit shows 0% used, instead of nothing, while no 5 hour window is running.
+
+### Improvements
+
+- Updated the Claude and Codex engines, the updater tooling and other dependencies to their latest compatible versions.
+
 ## 0.32.1
 
 ### Fixed

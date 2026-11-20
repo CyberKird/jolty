@@ -46,7 +46,7 @@ import { SECRET_FILE_RULES, touchesSecretFile } from './secret-files'
 import { ProfileProcesses } from './profile-processes'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
 import { tr } from '@shared/i18n'
-import { extraWindows } from '@shared/limits'
+import { extraWindows, withIdleSession } from '@shared/limits'
 import { mergeAccountModels, parseAccountModels, type AccountModel } from '@shared/claude-models'
 import { SIDE_READ_ONLY } from '../side-chat'
 import { askRule, DISMISSED, NOBODY_WATCHING, parseQuestions } from '../ask-user'
@@ -1015,6 +1015,7 @@ export class ClaudeDriver implements EngineDriver {
       profileId: profile.id,
       engineSessionId: s.sessionId,
       title: s.customTitle || s.summary || s.firstPrompt || s.sessionId,
+      firstPrompt: s.firstPrompt,
       cwd: s.cwd || cwd || '',
       updatedAt: s.lastModified
     }))
@@ -1072,6 +1073,7 @@ export class ClaudeDriver implements EngineDriver {
       windows.push({ label: LIMIT_LABELS[key], usedPercent: used, resetsAt: toMs(w.resets_at) })
     }
     if (windows.length) {
+      windows.splice(0, windows.length, ...withIdleSession(windows, LIMIT_LABELS.five_hour))
       windows.push(...extraWindows(direct.limits))
       // the SDK's own answer lists the same buckets as model_scoped
       const viaSdk = (usage?.rate_limits as { model_scoped?: { display_name: string; utilization: number | null; resets_at: string | null }[] } | undefined)?.model_scoped

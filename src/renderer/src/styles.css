@@ -3331,6 +3331,21 @@ html:is([data-theme='glass'], [data-theme='frost']) .picker-foot .segmented butt
   color: var(--white);
   border-color: var(--line-2);
 }
+/* whether a NanoGPT route keeps the prompt: the quiet answer to "can this see a client's data" */
+.picker-badge.privacy {
+  margin-inline-start: 6px;
+  flex: none;
+  white-space: nowrap;
+  color: var(--grey-2);
+  border-color: var(--line-2);
+}
+.picker-badge.privacy.zdr {
+  color: var(--grey);
+}
+.picker-badge.privacy.keeps {
+  color: var(--warning);
+  border-color: rgba(250, 178, 25, 0.32);
+}
 .picker-legend {
   padding: 8px 12px;
   font-size: 11px;

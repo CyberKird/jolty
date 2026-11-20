@@ -1836,5 +1836,13 @@
  "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "이 휴대폰에서 Jolty가 움직이는 방식입니다. 바로 적용되며 이 휴대폰에만 저장됩니다.",
  "rapid": "빠름",
  "mediu": "보통",
- "lent": "느림"
+ "lent": "느림",
+ "ZDR · UE": "ZDR · EU",
+ "fără ZDR": "ZDR 없음",
+ "Rută ZDR, cu provider în UE: prompturile nu sunt păstrate.": "EU 내 제공자를 쓰는 ZDR 경로입니다. 프롬프트는 저장되지 않습니다.",
+ "Rută ZDR: prompturile nu sunt păstrate, dar providerul nu e în UE.": "ZDR 경로이지만 제공자가 EU에 있지 않습니다. 프롬프트는 저장되지 않습니다.",
+ "Nu e ZDR: providerul poate păstra prompturile o vreme{where}.": "ZDR이 아닙니다. 제공자가 프롬프트를 한동안 보관할 수 있습니다{where}.",
+ "o adresă de email": "이메일 주소",
+ "un număr de telefon": "전화번호",
+ "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "메시지에 {what}이(가) 들어 있는 것 같습니다. 선택한 모델은 프롬프트를 보관하지 않는다고 보장하지 않으므로, 고객 데이터에는 ZDR 모델을 쓰거나 가상의 이름으로 바꾸세요."
 }

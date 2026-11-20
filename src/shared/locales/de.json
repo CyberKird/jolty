@@ -1836,5 +1836,13 @@
  "Cum se mișcă Jolty pe acest telefon. Se aplică imediat și rămâne doar pe telefonul acesta.": "Wie sich Jolty auf diesem Telefon bewegt. Gilt sofort und bleibt nur auf diesem Telefon.",
  "rapid": "schnell",
  "mediu": "mittel",
- "lent": "langsam"
+ "lent": "langsam",
+ "ZDR · UE": "ZDR · EU",
+ "fără ZDR": "ohne ZDR",
+ "Rută ZDR, cu provider în UE: prompturile nu sunt păstrate.": "ZDR-Route mit einem Anbieter in der EU: Prompts werden nicht gespeichert.",
+ "Rută ZDR: prompturile nu sunt păstrate, dar providerul nu e în UE.": "ZDR-Route: Prompts werden nicht gespeichert, der Anbieter sitzt aber nicht in der EU.",
+ "Nu e ZDR: providerul poate păstra prompturile o vreme{where}.": "Nicht ZDR: Der Anbieter kann Prompts eine Weile speichern{where}.",
+ "o adresă de email": "eine E-Mail-Adresse",
+ "un număr de telefon": "eine Telefonnummer",
+ "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "Die Nachricht scheint {what} zu enthalten. Das gewählte Modell garantiert nicht, dass Prompts nicht gespeichert werden. Für Kundendaten also ein ZDR-Modell wählen oder die Angaben durch fiktive Namen ersetzen."
 }

@@ -1,6 +1,7 @@
 // Types shared by the main process, the preload bridge and the renderer.
 import type { ScheduledTask, TaskInput } from './schedule'
 import type { ModelScore } from './scores'
+import type { PrivacySummary } from './nanogpt'
 import type { ClaudeResets, ClaudeWebInfo } from './claude-resets'
 import type { RemoteStatus, WakeConfig, WakeStatus, WakeTest } from './remote'
 
@@ -183,6 +184,8 @@ export interface ExternalSession {
   profileId: string
   engineSessionId: string
   title: string
+  /** The first thing said in it, when the engine reports it separately from the title. */
+  firstPrompt?: string
   cwd?: string
   updatedAt: number
 }
@@ -630,6 +633,8 @@ export interface JoltyApi {
     login(id: string): Promise<AccountStatus>
     logout(id: string): Promise<AccountStatus>
     models(id: string): Promise<ModelOption[]>
+    /** NanoGPT only: zero data retention and region of each model's routes, keyed by model id */
+    privacy(id: string): Promise<Record<string, PrivacySummary>>
   }
   sessions: {
     list(): Promise<SessionMeta[]>

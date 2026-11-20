@@ -18,7 +18,8 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       status: (id) => call('profiles:status', id),
       login: (id) => call('profiles:login', id),
       logout: (id) => call('profiles:logout', id),
-      models: (id) => call('profiles:models', id)
+      models: (id) => call('profiles:models', id),
+      privacy: (id) => call('profiles:privacy', id)
     },
     sessions: {
       list: () => call('sessions:list'),
