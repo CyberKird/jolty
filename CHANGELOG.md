@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.33.2
+
+### Fixed
+
+- The right-click menu no longer opens partly outside the window when you click near the bottom or the right edge, on the Glass and Frost themes. It was placed using its size while it was still growing in.
+
 ## 0.33.1
 
 ### Fixed

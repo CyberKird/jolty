@@ -162,7 +162,8 @@ export function ContextMenu() {
     setActive(-1)
     if (!at) return
     if (!ref.current) return setPos(undefined)
-    const { width, height } = ref.current.getBoundingClientRect()
+    // the layout size: the opening animation scales the menu (to 20% of its height on Glass), and a scaled rect let it hang off the window
+    const { offsetWidth: width, offsetHeight: height } = ref.current
     setPos({ x: Math.max(8, Math.min(at.x, window.innerWidth - width - 8)), y: Math.max(8, Math.min(at.y, window.innerHeight - height - 8)) })
   }, [at, items])
 
