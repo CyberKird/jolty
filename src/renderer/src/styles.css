@@ -2113,6 +2113,8 @@ html:is([data-theme='glass'], [data-theme='frost']) .question-option kbd {
   font-size: 12px;
   word-break: normal;
   overflow-wrap: anywhere;
+  /* a command is read as a whole more often than a sentence: room for most of them, the rest is in the tooltip and the Terminal tab */
+  -webkit-line-clamp: 8;
 }
 .counters {
   display: grid;

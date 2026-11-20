@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.33.1
+
+### Fixed
+
+- In the Live panel, a long command under "Running" was cut after three lines. It now shows up to eight, and the whole command is still in the hover and in the Terminal tab.
+
 ## 0.33.0
 
 ### New
