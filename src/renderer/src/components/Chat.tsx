@@ -887,6 +887,9 @@ function useStickToBottom(dep: unknown): React.RefObject<HTMLDivElement | null> 
     el.addEventListener('scroll', onScroll)
     const resize = new ResizeObserver(follow)
     if (el.firstElementChild) resize.observe(el.firstElementChild)
+    // the box itself too: the room kept under the last message follows the composer's height (a second line, a note, an attachment), and a window
+    // or panel resize changes the viewport; neither changes the content, so the observer above never saw them and the chat stopped short of the end
+    resize.observe(el)
     follow()
     return () => {
       el.removeEventListener('wheel', markInput)

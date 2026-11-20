@@ -31,6 +31,12 @@ try {
   await pause(1200)
   const gap = () => win.evaluate(() => { const m = document.querySelector('.messages'); return Math.round(m.scrollHeight - m.scrollTop - m.clientHeight) })
   assert.ok((await gap()) < 3, 'opens on the last message')
+  // the room under the last message grows (a taller composer, a note above it): the end stays in view
+  await win.evaluate(() => { document.querySelector('.messages').style.paddingBottom = '320px' })
+  await pause(400)
+  assert.ok((await gap()) < 3, `follows when the room under the last message grows (gap ${await gap()})`)
+  await win.evaluate(() => { document.querySelector('.messages').style.paddingBottom = '' })
+  await pause(400)
   const box = await win.locator('.messages').boundingBox()
   await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await win.mouse.wheel(0, -60)

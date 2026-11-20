@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.33.3
+
+### Fixed
+
+- The chat follows the end of the conversation more reliably. When a conversation opened, or the box under the chat grew (a second line of text, a note, an attachment) or the window was resized, the chat could stop a few lines short of the end and stay there. It now keeps following in those cases too. Scrolling up by hand still lets go at once, and scrolling back to the bottom resumes following.
+
 ## 0.33.2
 
 ### Fixed
