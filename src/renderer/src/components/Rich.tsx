@@ -2,7 +2,7 @@ import DOMPurify from 'dompurify'
 import hljs from 'highlight.js/lib/common'
 import { Marked } from 'marked'
 import { FileCode, FileText, Plus, X } from 'lucide-react'
-import { Fragment, memo, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { Fragment, memo, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { isShell, shellCommand, valueKind } from '@shared/copy-values'
 import { lineNumbers, markOf, type ReviewComment } from '@shared/review'
 import type { FileDiff } from '@shared/types'
@@ -10,6 +10,7 @@ import { api, errMsg, useStore } from '../store'
 import { chipText, copyText, lastCodeBlock, runAct } from '../copy'
 import { copyItem, imageItems, itemsAt, showMenu } from './ContextMenu'
 import { tr } from '@shared/i18n'
+import { embeddable, needsClick } from '@shared/chat-image'
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -78,6 +79,10 @@ function newMarked(fold: boolean): Marked {
           long ? `<button type="button" class="cb-more" data-act="more" aria-expanded="false" data-t="${attr(tr("Arată tot ({n} linii)", { n: lines }))}" data-t2="${attr(tr("Restrânge"))}"></button>` : ''
         }</div>`
       },
+      // an embedded image: the page's CSP admits only data: images, so it is fetched through the main process and filled in
+      image({ href, text }) {
+        return imageHtml(href, text)
+      },
       // a span that looks like a value to copy becomes a chip; an ordinary word stays plain code
       codespan({ text }) {
         // marked hands over the raw characters: a <placeholder> must be escaped or the sanitizer drops it as a tag and the span comes out empty
@@ -89,8 +94,59 @@ function newMarked(fold: boolean): Marked {
   })
 }
 
+/** Images already fetched, as data: URLs: a reply re-rendered on every streamed flush shows them at once instead of reloading. */
+const shownImages = new Map<string, string>()
+/** Fetches still running, and images that could not be shown (kept as links). */
+const loadingImages = new Set<string>()
+const failedImages = new Set<string>()
+/** Web images the user chose to load with a click (their address looked like it could carry data out). */
+const allowedImages = new Set<string>()
+
+function imageHtml(href: string, alt: string): string {
+  const src = href.trim()
+  const label = alt.trim() || tr("imagine")
+  if (!embeddable(src) || failedImages.has(src)) return `<a href="${attr(src)}">${escapeHtml(label)}</a>`
+  const data = shownImages.get(src)
+  if (data) return `<span class="md-img" data-src="${attr(src)}"><img src="${data}" alt="${attr(label)}" title="${attr(label)}" loading="lazy" decoding="async"></span>`
+  if (needsClick(src) && !allowedImages.has(src)) {
+    let host = src
+    try { host = new URL(src).host } catch { /* show the address as written */ }
+    return `<span class="md-img ask" data-src="${attr(src)}"><button type="button" class="md-img-load" data-act="img" data-t="${attr(tr("Arată imaginea de pe {host}", { host }))}"></button></span>`
+  }
+  return `<span class="md-img wait" data-src="${attr(src)}" data-alt="${attr(label)}" role="img" aria-label="${attr(label)}"></span>`
+}
+
+/** Fills in the images of a rendered message that are not loaded yet; a message rendered again meanwhile gets them from the cache. */
+function loadImages(root: HTMLElement | null): void {
+  if (!root) return
+  for (const box of root.querySelectorAll<HTMLElement>('.md-img.wait')) {
+    const src = box.dataset.src
+    if (!src || loadingImages.has(src)) continue
+    loadingImages.add(src)
+    void api.app
+      .chatImage(src)
+      .then((data) => {
+        if (!/^data:image\/(png|jpeg|gif|webp);base64,/.test(data)) throw new Error('bad image')
+        shownImages.set(src, data)
+        if (shownImages.size > 80) shownImages.delete(shownImages.keys().next().value!)
+      })
+      .catch(() => failedImages.add(src))
+      .finally(() => {
+        loadingImages.delete(src)
+        // patch every copy now on screen (the same image can sit in several messages)
+        for (const el of document.querySelectorAll<HTMLElement>('.md-img.wait')) {
+          if (el.dataset.src !== src) continue
+          const alt = el.dataset.alt || ''
+          const tpl = document.createElement('template')
+          tpl.innerHTML = DOMPurify.sanitize(imageHtml(src, alt))
+          el.replaceWith(tpl.content)
+        }
+      })
+  }
+}
+
 function walkTokens(token: { type: string; href?: string }): void {
-  if (token.type !== 'link' || !token.href) return
+  if ((token.type !== 'link' && token.type !== 'image') || !token.href) return
   // A leading slash keeps Windows paths valid under the sanitizer's normal URL rules.
   if (/^[a-z]:[\\/]/i.test(token.href)) token.href = `/${token.href}`
   else if (/^file:\/\//i.test(token.href)) {
@@ -161,7 +217,19 @@ export function imageMenu(e: MouseEvent<HTMLElement>, image: string, imageName: 
 function onMdClick(e: MouseEvent<HTMLDivElement>): void {
   const t = e.target as HTMLElement
   const act = t.closest<HTMLElement>('[data-act]')
+  if (act?.dataset.act === 'img') {
+    const box = act.closest<HTMLElement>('.md-img')
+    const src = box?.dataset.src
+    if (!box || !src) return
+    allowedImages.add(src)
+    box.className = 'md-img wait'
+    box.replaceChildren()
+    return loadImages(box.parentElement)
+  }
   if (act) return runAct(act)
+  // a shown image opens full size in the PC's image viewer
+  const img = t.closest<HTMLImageElement>('.md-img img')
+  if (img && img.src.startsWith('data:image/')) return void api.app.image('open', img.src, img.alt || 'imagine')
   const chip = t.closest<HTMLElement>('code.cv')
   // dragging over a chip to select it is not a click to copy; a chip inside a link follows the link
   if (chip && !chip.closest('a') && window.getSelection()?.isCollapsed !== false) return copyText(chipText(chip), chip)
@@ -181,7 +249,9 @@ export const Markdown = memo(function Markdown({ text, streaming = false }: { te
     const out = (streaming ? markedLive : marked).parse(plainDashes(text), { async: false }) as string
     return DOMPurify.sanitize(out.includes('<table>') ? out.replace(/<table>/g, tableOpen()).replace(/<\/table>/g, '</table></div></div>') : out)
   }, [text, streaming])
-  return <div className="md" onClick={onMdClick} onKeyDown={onMdKey} dangerouslySetInnerHTML={{ __html: html }} />
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => loadImages(ref.current), [html])
+  return <div ref={ref} className="md" onClick={onMdClick} onKeyDown={onMdKey} dangerouslySetInnerHTML={{ __html: html }} />
 })
 
 const EXT_LANG: Record<string, string> = {

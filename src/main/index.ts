@@ -41,6 +41,7 @@ import { userServerNames } from './mcp-share'
 import * as github from './github'
 import { getLang, setLang, tr } from '@shared/i18n'
 import { openableUrl } from '@shared/links'
+import { chatImage } from './chat-images'
 
 /** Links from chats and pages open in the browser only when they are plain web links. */
 function openWeb(url: unknown): void {
@@ -541,6 +542,8 @@ function registerIpc(): void {
       void shell.openPath(file)
     }
   })
+  // an image an answer embeds with Markdown: fetched or read here, handed back as data: (the page's CSP allows only that)
+  handle('app:chatImage', (src: string) => chatImage(src))
   handle('app:version', () => __JOLTY_VERSION__)
 }
 

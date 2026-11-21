@@ -872,6 +872,8 @@ export interface JoltyApi {
     openLocal(path: string): Promise<void>
     /** an http(s) link in the browser Jolty uses for its own browsing */
     openLink(url: string): Promise<void>
+    /** an image an answer embeds (https or a local image file) as a data: URL */
+    chatImage(src: string): Promise<string>
     version(): Promise<string>
   }
   /** the merge assistant for a session's worktree branch; every call that changes git state is a user click */

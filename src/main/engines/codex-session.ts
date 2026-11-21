@@ -9,7 +9,7 @@ import { learnNowRule } from '../learning'
 import { loadSettings } from '../store'
 import { codexItem, planItemSteps, saveImages } from './codex-items'
 import { JsonRpcProcess, type RpcRequest } from './jsonrpc'
-import { COPY_RULE, LANGUAGE_RULE, PLAN_RULES, STEER_RULE, WRITING_RULES } from './prompt'
+import { COPY_RULE, IMAGE_RULE, LANGUAGE_RULE, PLAN_RULES, STEER_RULE, WRITING_RULES } from './prompt'
 import type { EngineHost, EngineSession } from './types'
 import { tr } from '@shared/i18n'
 
@@ -150,7 +150,7 @@ export class CodexSession implements EngineSession, ThreadListener {
       model: this.meta.model || null,
       approvalPolicy: mode.approvalPolicy,
       sandbox: mode.sandbox,
-      developerInstructions: [LANGUAGE_RULE, WRITING_RULES, PLAN_RULES, STEER_RULE, COPY_RULE, this.meta.parentId || this.meta.scheduled ? NOBODY_WATCHING : askRule('ask_user tool of the "jolty" MCP server'), JOLTY_TOOLS_PROMPT, this.learnRule(), this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' '),
+      developerInstructions: [LANGUAGE_RULE, WRITING_RULES, PLAN_RULES, STEER_RULE, COPY_RULE, IMAGE_RULE, this.meta.parentId || this.meta.scheduled ? NOBODY_WATCHING : askRule('ask_user tool of the "jolty" MCP server'), JOLTY_TOOLS_PROMPT, this.learnRule(), this.meta.browser ? browserPrompt() : '', this.meta.computer ? computerPrompt() : ''].filter(Boolean).join(' '),
       // one dotted key per server: the user's own MCP servers from config.toml stay next to them
       config: Object.fromEntries(
         Object.entries({

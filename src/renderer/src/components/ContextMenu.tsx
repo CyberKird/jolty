@@ -125,6 +125,8 @@ export function itemsAt(el: Element | null): Entry[] {
     try { p = decodeURIComponent(p) } catch { /* Keep literal percent signs. */ }
     group(...pathItems(p))
   }
+  const shown = el?.closest<HTMLElement>('.md-img')?.querySelector<HTMLImageElement>('img[src^="data:image/"]')
+  if (shown) group(...imageItems(shown.src, shown.alt || 'imagine'))
   const chip = el?.closest<HTMLElement>('code.cv')
   if (chip) group(...chipItems(chip))
   const path = el?.closest<HTMLElement>('[data-path]')?.dataset.path

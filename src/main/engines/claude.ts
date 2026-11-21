@@ -41,7 +41,7 @@ import { TaskBoard } from '@shared/tasks'
 import { getSecret, loadSettings, profileDir } from '../store'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
 import { learnNowRule } from '../learning'
-import { COPY_RULE, LANGUAGE_RULE, PLAN_RULES, STEER_RULE, WRITING_RULES } from './prompt'
+import { COPY_RULE, IMAGE_RULE, LANGUAGE_RULE, PLAN_RULES, STEER_RULE, WRITING_RULES } from './prompt'
 import { SECRET_FILE_RULES, touchesSecretFile } from './secret-files'
 import { ProfileProcesses } from './profile-processes'
 import type { EngineDriver, EngineHost, EngineSession } from './types'
@@ -80,7 +80,7 @@ const LIMIT_LABELS: Record<string, string> = {
   overage: 'Extra'
 }
 
-const APPEND_PROMPT = `You are running inside Jolty, a desktop app. ${LANGUAGE_RULE} ${WRITING_RULES} ${PLAN_RULES} ${STEER_RULE} ${COPY_RULE}`
+const APPEND_PROMPT = `You are running inside Jolty, a desktop app. ${LANGUAGE_RULE} ${WRITING_RULES} ${PLAN_RULES} ${STEER_RULE} ${COPY_RULE} ${IMAGE_RULE}`
 
 function percent(u: number | null | undefined): number | undefined {
   if (u == null || !Number.isFinite(u) || u < 0) return undefined

@@ -1844,5 +1844,7 @@
  "Nu e ZDR: providerul poate păstra prompturile o vreme{where}.": "ZDR ではありません。プロバイダーがプロンプトをしばらく保存する場合があります{where}。",
  "o adresă de email": "メールアドレス",
  "un număr de telefon": "電話番号",
- "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "メッセージに{what}が含まれているようです。選択したモデルはプロンプトを保存しないことを保証していないため、顧客データには ZDR モデルを使うか、架空の名前に置き換えてください。"
+ "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "メッセージに{what}が含まれているようです。選択したモデルはプロンプトを保存しないことを保証していないため、顧客データには ZDR モデルを使うか、架空の名前に置き換えてください。",
+ "imagine": "画像",
+ "Arată imaginea de pe {host}": "{host} の画像を表示"
 }

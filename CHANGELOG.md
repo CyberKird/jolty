@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.34.0
+
+### New
+
+- Images show up right inside the reply. When a model wants to show you a picture (a map from a guide, a screenshot it saved, an image from a page it read), it embeds it and Jolty displays it in the chat instead of a bare link. Click an image to open it full size, right-click to copy or save it. Images from the web are fetched without cookies, only real PNG, JPEG, GIF and WebP files are shown, and a web address that looks like it could carry data out waits behind a "Show the image" button instead of loading by itself.
+
 ## 0.33.3
 
 ### Fixed

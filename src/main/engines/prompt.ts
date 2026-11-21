@@ -18,3 +18,7 @@ export const PLAN_RULES =
 /** Jolty shows inline code as a click-to-copy field and fenced blocks with a Copy button, so the model puts what the user will copy there. */
 export const COPY_RULE =
   'Put every value the user may copy (command, path, URL, key name, code, config, number) in inline code or a fenced block, one value per block, never inside bold text. Never put a command and its explanation in the same block.'
+
+/** Jolty fetches Markdown images itself (https, or an image file on the PC) and shows them inside the reply. */
+export const IMAGE_RULE =
+  'To show the user a picture (a map, a screenshot you saved, an image from a page you read), embed it in the reply as Markdown: ![short description](direct https link to the image file, or its absolute path on this PC); Jolty displays it inline. Link the image file itself, not the page it sits on.'

@@ -1844,5 +1844,7 @@
  "Nu e ZDR: providerul poate păstra prompturile o vreme{where}.": "Pas de ZDR : le fournisseur peut conserver les prompts un moment{where}.",
  "o adresă de email": "une adresse e-mail",
  "un număr de telefon": "un numéro de téléphone",
- "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "Ce message semble contenir {what}. Le modèle choisi ne garantit pas que les prompts ne sont pas conservés : pour des données client, prenez un modèle ZDR ou remplacez-les par des noms fictifs."
+ "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "Ce message semble contenir {what}. Le modèle choisi ne garantit pas que les prompts ne sont pas conservés : pour des données client, prenez un modèle ZDR ou remplacez-les par des noms fictifs.",
+ "imagine": "image",
+ "Arată imaginea de pe {host}": "Afficher l'image de {host}"
 }

@@ -1844,5 +1844,7 @@
  "Nu e ZDR: providerul poate păstra prompturile o vreme{where}.": "ZDR नहीं: प्रोवाइडर प्रॉम्प्ट कुछ समय सहेज सकता है{where}।",
  "o adresă de email": "ईमेल पता",
  "un număr de telefon": "फ़ोन नंबर",
- "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "संदेश में {what} लगता है। चुना गया मॉडल यह गारंटी नहीं देता कि प्रॉम्प्ट सहेजे नहीं जाएंगे, इसलिए ग्राहक के डेटा के लिए ZDR मॉडल चुनें या उन्हें काल्पनिक नामों से बदलें।"
+ "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "संदेश में {what} लगता है। चुना गया मॉडल यह गारंटी नहीं देता कि प्रॉम्प्ट सहेजे नहीं जाएंगे, इसलिए ग्राहक के डेटा के लिए ZDR मॉडल चुनें या उन्हें काल्पनिक नामों से बदलें।",
+ "imagine": "छवि",
+ "Arată imaginea de pe {host}": "{host} से छवि दिखाएँ"
 }

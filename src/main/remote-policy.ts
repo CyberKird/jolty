@@ -14,6 +14,8 @@ const ALLOWED = new Set([
   'app:version',
   'app:sendBugReport',
   'app:notificationsBlocked',
+  // images inside answers: the phone shows the same chat
+  'app:chatImage',
   'updates:status',
   'updates:check',
   // the phone's own tap is the yes (the PC's dialog is for someone sitting at the PC): Jolty restarts and the phone reconnects by itself

@@ -10,7 +10,7 @@ import { ASK_USER_TOOL, askRule } from '../ask-user'
 import { dataDir, loadSettings } from '../store'
 import { JsonRpcProcess } from './jsonrpc'
 import { installOpencode } from './opencode-install'
-import { COPY_RULE, LANGUAGE_RULE } from './prompt'
+import { COPY_RULE, IMAGE_RULE, LANGUAGE_RULE } from './prompt'
 import { tr } from '@shared/i18n'
 
 const EXE = process.platform === 'win32' ? 'opencode.exe' : 'opencode'
@@ -112,7 +112,7 @@ export function joltyRules(mode: PermissionMode): Record<string, Rule> {
 /** opencode has no system prompt over ACP: the Jolty, browser and computer instructions go in as an instructions file. */
 function toolInstructions(browser: boolean, computer: boolean): string {
   const file = path.join(dataDir(), 'opencode-tools.md')
-  fs.writeFileSync(file, [LANGUAGE_RULE, COPY_RULE, askRule(`${JOLTY_SERVER}_${ASK_USER_TOOL}`), JOLTY_TOOLS_PROMPT, browser ? browserPrompt() : '', computer ? computerPrompt() : ''].filter(Boolean).join('\n\n') + '\n')
+  fs.writeFileSync(file, [LANGUAGE_RULE, COPY_RULE, IMAGE_RULE, askRule(`${JOLTY_SERVER}_${ASK_USER_TOOL}`), JOLTY_TOOLS_PROMPT, browser ? browserPrompt() : '', computer ? computerPrompt() : ''].filter(Boolean).join('\n\n') + '\n')
   return file
 }
 

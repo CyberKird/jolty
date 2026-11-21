@@ -184,6 +184,7 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       image: (kind, image, name) => call('app:image', kind, image, name),
       openLocal: (p) => call('app:openLocal', p),
       openLink: (u) => call('app:openLink', u),
+      chatImage: (src) => call('app:chatImage', src),
       version: () => call('app:version')
     },
     merge: {
