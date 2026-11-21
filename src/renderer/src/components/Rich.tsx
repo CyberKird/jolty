@@ -169,6 +169,18 @@ const tableOpen = (): string => `<div class="tbl"><span class="tbl-acts" role="g
  * Em and en dashes in prose become plain hyphens, as the user wants none in the app. Code blocks and
  * inline code keep their exact characters, since they show what is really in the files.
  */
+/**
+ * A Windows path in an image, written with backslashes: Markdown reads `\.` or `\_` as an escape and drops the backslash
+ * (`C:\Users\me\.claude\x.png` became `C:\Users\me.claude\x.png`), so the file was not found. Forward slashes mean the
+ * same path to Windows and survive the parser. Code keeps its exact characters.
+ */
+export function imagePaths(text: string): string {
+  return text
+    .split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/g)
+    .map((part, i) => (i % 2 ? part : part.replace(/(!\[[^\]\n]*\]\(\s*<?)([a-z]:\\[^)>\n]*)/gi, (_m, head: string, p: string) => head + p.replace(/\\/g, '/'))))
+    .join('')
+}
+
 export function plainDashes(text: string): string {
   return text
     .split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/g)
@@ -246,7 +258,7 @@ function onMdKey(e: KeyboardEvent<HTMLDivElement>): void {
 
 export const Markdown = memo(function Markdown({ text, streaming = false }: { text: string; streaming?: boolean }) {
   const html = useMemo(() => {
-    const out = (streaming ? markedLive : marked).parse(plainDashes(text), { async: false }) as string
+    const out = (streaming ? markedLive : marked).parse(imagePaths(plainDashes(text)), { async: false }) as string
     return DOMPurify.sanitize(out.includes('<table>') ? out.replace(/<table>/g, tableOpen()).replace(/<\/table>/g, '</table></div></div>') : out)
   }, [text, streaming])
   const ref = useRef<HTMLDivElement>(null)

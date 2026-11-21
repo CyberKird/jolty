@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.34.1
+
+### Fixed
+
+- Images saved on this PC now show up in the reply even when their path runs through a folder whose name starts with a dot (like .claude). The path lost a backslash on the way and the picture stayed a plain link.
+
 ## 0.34.0
 
 ### New
