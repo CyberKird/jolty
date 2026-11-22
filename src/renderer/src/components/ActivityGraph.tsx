@@ -7,7 +7,6 @@ import type { Phase } from './LivePanel'
 import { usePulses, travelMs } from './activity-pulses'
 import { CORE, H, LIGHT, NODES, ROUTES, TOP_Y, BOTTOM_Y, W, WIRES, tileY, type Node } from './activity-geometry'
 import { ActivityCore } from './ActivityCore'
-import { useTilt } from './activity-tilt'
 import { lightAt, orb, useOrbTheme, type Light, type OrbState } from './activity-orbs'
 import { useLabelFit } from './activity-fit'
 
@@ -173,7 +172,6 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
   // the light runs to where the model works, but not while it waits for the user
   const target = waiting ? null : stats.target
   const pulses = usePulses({ target, counts: stats.count, speed })
-  const tilt = useTilt()
   useLabelFit(pulses.box, [])
   useOrbTheme()
   const sprite = (st: OrbState, light: Light, size = 64): CSSProperties => {
@@ -252,10 +250,8 @@ export function ActivityGraph({ items, phase, engine, model, context, iq, effort
         style={vars}
         role="img"
         aria-label={phase.name}
-        onPointerMove={tilt.move}
-        onPointerLeave={tilt.leave}
       >
-        <div ref={tilt.stage} className="ag-stage">
+        <div className="ag-stage">
           <svg className="ag-wires" viewBox={`0 0 ${W} ${H}`} aria-hidden>
             {WIRES.map((w) => (
               <path key={`s${w.id}`} className="ag-sheath" d={w.d} />

@@ -1846,5 +1846,8 @@
  "un număr de telefon": "फ़ोन नंबर",
  "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "संदेश में {what} लगता है। चुना गया मॉडल यह गारंटी नहीं देता कि प्रॉम्प्ट सहेजे नहीं जाएंगे, इसलिए ग्राहक के डेटा के लिए ZDR मॉडल चुनें या उन्हें काल्पनिक नामों से बदलें।",
  "imagine": "छवि",
- "Arată imaginea de pe {host}": "{host} से छवि दिखाएँ"
+ "Arată imaginea de pe {host}": "{host} से छवि दिखाएँ",
+ "Mărimea interfeței": "इंटरफ़ेस का आकार",
+ "Pe automat, interfața se micșorează puțin pe ecranele 1080p și pe laptopuri, ca să încapă mai mult. O poți schimba și cu Ctrl + rotița sau Ctrl +/-, iar Ctrl+0 o readuce pe automat.": "ऑटोमैटिक पर, 1080p स्क्रीन और लैपटॉप पर इंटरफ़ेस थोड़ा छोटा हो जाता है ताकि ज़्यादा जगह मिले। आप इसे Ctrl + माउस व्हील या Ctrl +/- से भी बदल सकते हैं, और Ctrl+0 इसे वापस ऑटोमैटिक कर देता है।",
+ "Automat (după ecran)": "ऑटोमैटिक (स्क्रीन के अनुसार)"
 }

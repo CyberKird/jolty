@@ -1846,5 +1846,8 @@
  "un număr de telefon": "전화번호",
  "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "메시지에 {what}이(가) 들어 있는 것 같습니다. 선택한 모델은 프롬프트를 보관하지 않는다고 보장하지 않으므로, 고객 데이터에는 ZDR 모델을 쓰거나 가상의 이름으로 바꾸세요.",
  "imagine": "이미지",
- "Arată imaginea de pe {host}": "{host}의 이미지 표시"
+ "Arată imaginea de pe {host}": "{host}의 이미지 표시",
+ "Mărimea interfeței": "인터페이스 크기",
+ "Pe automat, interfața se micșorează puțin pe ecranele 1080p și pe laptopuri, ca să încapă mai mult. O poți schimba și cu Ctrl + rotița sau Ctrl +/-, iar Ctrl+0 o readuce pe automat.": "자동으로 두면 1080p 화면과 노트북에서 인터페이스가 조금 작아져 더 많은 내용이 들어갑니다. Ctrl + 마우스 휠이나 Ctrl +/-로도 바꿀 수 있고, Ctrl+0을 누르면 자동으로 돌아갑니다.",
+ "Automat (după ecran)": "자동(화면에 맞춤)"
 }

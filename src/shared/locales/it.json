@@ -1846,5 +1846,8 @@
  "un număr de telefon": "un numero di telefono",
  "Mesajul pare să conțină {what}. Modelul ales nu garantează că nu păstrează prompturile, deci pentru date de client pune un model ZDR sau înlocuiește-le cu nume fictive.": "Il messaggio sembra contenere {what}. Il modello scelto non garantisce che i prompt non vengano conservati: per i dati dei clienti usa un modello ZDR o sostituiscili con nomi fittizi.",
  "imagine": "immagine",
- "Arată imaginea de pe {host}": "Mostra l'immagine da {host}"
+ "Arată imaginea de pe {host}": "Mostra l'immagine da {host}",
+ "Mărimea interfeței": "Dimensione dell'interfaccia",
+ "Pe automat, interfața se micșorează puțin pe ecranele 1080p și pe laptopuri, ca să încapă mai mult. O poți schimba și cu Ctrl + rotița sau Ctrl +/-, iar Ctrl+0 o readuce pe automat.": "In automatico, l'interfaccia si rimpicciolisce un po' sugli schermi 1080p e sui portatili, così ci sta di più. Puoi cambiarla anche con Ctrl + rotellina o Ctrl +/-, e Ctrl+0 la riporta in automatico.",
+ "Automat (după ecran)": "Automatica (in base allo schermo)"
 }

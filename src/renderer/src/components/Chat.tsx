@@ -39,7 +39,9 @@ type QueuedMessage = { id: string; text: string; atts: Attachment[]; parallel?: 
 // ---------------------------------------------------------------------------
 // Images: pasted, dropped or picked, downscaled so they stay light
 // ---------------------------------------------------------------------------
-async function toAttachment(file: File): Promise<Attachment> {
+/** Re-encodes a picture as PNG or JPEG (the only kinds every engine takes), at most 1600 px and under the 5 MB the Claude API accepts.
+ *  Returns undefined when Chromium cannot draw it (HEIC, TIFF, a broken file, an SVG without a size): it then goes as a plain file. */
+async function toAttachment(file: File): Promise<Attachment | undefined> {
   // decode via a data: URL, not blob: + <img>: CSP img-src is 'self' data: only
   const src = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -47,22 +49,39 @@ async function toAttachment(file: File): Promise<Attachment> {
     reader.onerror = () => reject(new Error(tr("fișierul nu a putut fi citit")))
     reader.readAsDataURL(file)
   })
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+  const img = await new Promise<HTMLImageElement | undefined>((resolve) => {
     const i = new Image()
     i.onload = () => resolve(i)
-    i.onerror = () => reject(new Error(tr("imagine invalidă")))
+    i.onerror = () => resolve(undefined)
     i.src = src
   })
-  const max = 1600
-  const scale = Math.min(1, max / Math.max(img.width, img.height))
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.round(img.width * scale)
-  canvas.height = Math.round(img.height * scale)
-  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
-  const png = file.type === 'image/png' && file.size < 1.5e6
-  const mime = png ? 'image/png' : 'image/jpeg'
-  const data = canvas.toDataURL(mime, 0.9).split(',')[1]
-  return { id: crypto.randomUUID(), name: file.name || 'imagine.png', mime, data }
+  if (!img || !img.naturalWidth || !img.naturalHeight) return undefined
+  const encode = (max: number, mime: string, quality: number): string => {
+    const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+    const ctx = canvas.getContext('2d')!
+    // JPEG has no transparency: a see-through screenshot gets white behind it, not black
+    if (mime === 'image/jpeg') {
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+    }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL(mime, quality).split(',')[1] || ''
+  }
+  let mime = file.type === 'image/png' && file.size < 1.5e6 ? 'image/png' : 'image/jpeg'
+  let data = encode(1600, mime, 0.9)
+  // base64 is 4/3 of the bytes: keep the picture well under 5 MB
+  const LIMIT = 6.4e6
+  if (data.length > LIMIT) {
+    mime = 'image/jpeg'
+    data = encode(1600, mime, 0.85)
+  }
+  for (const max of [1280, 1024] as const) if (data.length > LIMIT) data = encode(max, mime, 0.82)
+  if (!data) return undefined
+  const base = (file.name || tr("imagine")).replace(/\.[^.]+$/, '')
+  return { id: crypto.randomUUID(), name: `${base}.${mime === 'image/png' ? 'png' : 'jpg'}`, mime, data }
 }
 
 export function ProfileDot({ profile, size = 7 }: { profile?: Profile; size?: number }) {
@@ -260,8 +279,12 @@ function Composer(p: ComposerProps) {
       for (const file of files.slice(0, room)) {
         try {
           if (file.type.startsWith('image/')) {
-            converted.push(await toAttachment(file))
-            continue
+            const image = await toAttachment(file)
+            if (image) {
+              converted.push(image)
+              continue
+            }
+            // a picture Chromium cannot draw (HEIC, TIFF...) still goes, as a file the model opens with its tools
           }
           const localPath = api.files.path(file)
           if (localPath) {
@@ -366,7 +389,18 @@ function Composer(p: ComposerProps) {
           void addFiles([...e.dataTransfer.files])
         }}
         onPaste={(e) => {
-          const files = [...e.clipboardData.items].filter((item) => item.kind === 'file').map((item) => item.getAsFile()).filter((file): file is File => Boolean(file))
+          // some apps put the same picture twice on the clipboard (one per format): one of each name, size and kind is enough
+          const seen = new Set<string>()
+          const files = [...e.clipboardData.items]
+            .filter((item) => item.kind === 'file')
+            .map((item) => item.getAsFile())
+            .filter((file): file is File => Boolean(file) && file!.size > 0)
+            .filter((file) => {
+              const key = `${file.name}|${file.size}|${file.type}`
+              if (seen.has(key)) return false
+              seen.add(key)
+              return true
+            })
           if (files.length) { e.preventDefault(); void addFiles(files) }
         }}
       >

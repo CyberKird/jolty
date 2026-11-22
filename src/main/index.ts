@@ -2,7 +2,7 @@
 import './backup/at-start'
 // first: every module after this one builds its texts in the chosen language
 import './lang'
-import { app, BrowserWindow, clipboard, ClipboardItem, dialog, globalShortcut, ipcMain, nativeImage, Notification, session, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, globalShortcut, ipcMain, nativeImage, Notification, screen, session, shell } from 'electron'
 import { execFile } from 'child_process'
 import fs from 'fs'
 import os from 'os'
@@ -35,6 +35,7 @@ import * as background from './background'
 import * as quick from './quick'
 import { Remote } from './remote'
 import { RemoteScreen } from './remote-screen'
+import { stepScale, zoomFor } from './ui-scale'
 import { nativeScreenInput, nativeScreenSource } from './remote-screen-native'
 import { ScreenVideoAuto } from './remote-ffmpeg'
 import { userServerNames } from './mcp-share'
@@ -148,7 +149,28 @@ async function applyWindowGlass(): Promise<void> {
   win.setBackgroundColor(clear ? '#00000000' : frost ? '#e6e9f1' : '#020204')
   // a glass theme draws its own bar: the caption buttons sit on it without a block of their own
   const glass = s.theme === 'glass' || frost
-  win.setTitleBarOverlay({ color: glass ? '#00000000' : '#060709', symbolColor: frost ? '#1c1e2c' : glass ? '#e6e4f5' : '#a3a3a3', height: 36 })
+  // the bar is 36 CSS px: at a page zoom the caption buttons follow it, so they never stand taller or shorter than the bar
+  win.setTitleBarOverlay({ color: glass ? '#00000000' : '#060709', symbolColor: frost ? '#1c1e2c' : glass ? '#e6e4f5' : '#a3a3a3', height: Math.round(36 * zoom) })
+}
+
+/** interface size (ui-scale.ts): the page zoom from the setting or the window's screen, applied only when it changes */
+let zoom = 1
+function applyZoom(): void {
+  if (!win || win.isDestroyed()) return
+  const next = zoomFor(win, store.loadSettings().uiScale)
+  if (Math.abs(next - win.webContents.getZoomFactor()) > 0.001) win.webContents.setZoomFactor(next)
+  if (next === zoom) return
+  zoom = next
+  void applyWindowGlass()
+}
+
+/** Ctrl + wheel, Ctrl +/- and Ctrl+0 change the saved size, so it stays after a restart */
+function changeScale(dir: 1 | -1 | 0): void {
+  if (!win || win.isDestroyed()) return
+  const uiScale = dir === 0 ? 'auto' : stepScale(win.webContents.getZoomFactor(), dir)
+  store.saveSettings({ uiScale } as never)
+  applyZoom()
+  send({ type: 'settingsChanged' })
 }
 
 function createWindow(): void {
@@ -193,6 +215,17 @@ function createWindow(): void {
   win.on('focus', () => {
     const s = store.loadSettings()
     if ((s.glassClear || 0) > 0 && (s.theme === 'glass' || s.theme === 'frost')) void applyWindowGlass()
+  })
+  win.webContents.on('did-finish-load', applyZoom)
+  // a window dragged to another screen takes that screen's size (auto only changes anything there)
+  win.on('moved', applyZoom)
+  win.webContents.on('zoom-changed', (_e, dir) => changeScale(dir === 'in' ? 1 : -1))
+  win.webContents.on('before-input-event', (e, input) => {
+    if (input.type !== 'keyDown' || !input.control || input.alt || input.meta) return
+    const dir = input.key === '=' || input.key === '+' ? 1 : input.key === '-' ? -1 : input.key === '0' ? 0 : undefined
+    if (dir === undefined) return
+    e.preventDefault()
+    changeScale(dir)
   })
   win.once('ready-to-show', () => (background.startHidden() ? undefined : process.env.JOLTY_TEST ? win?.showInactive() : win?.show()))
   // a dead or hung page stays a black window: bring it back, at most 3 times a minute so a real loop cannot spin
@@ -479,6 +512,7 @@ function registerIpc(): void {
     if (patch && typeof patch === 'object' && Object.keys(patch).some((k) => k.startsWith('browser'))) await jolty.reconnectBrowser()
     if (patch && typeof patch === 'object' && ('keepInBackground' in patch || 'startWithWindows' in patch)) background.apply(patch as never)
     if (patch && typeof patch === 'object' && ('theme' in patch || 'glassClear' in patch)) void applyWindowGlass()
+    if (patch && typeof patch === 'object' && 'uiScale' in patch) applyZoom()
     send({ type: 'settingsChanged' })
     return saved
   })
@@ -576,6 +610,8 @@ if (!app.requestSingleInstanceLock()) {
     void remote.init()
     allowFraming(session.defaultSession)
     createWindow()
+    // Windows scaling or resolution changed while Jolty runs
+    screen.on('display-metrics-changed', applyZoom)
     updater.init(
       (status) => send({ type: 'update', status }),
       () => {

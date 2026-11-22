@@ -33,7 +33,7 @@ const REFUSED = new Set([
 ])
 
 /** Preferences a phone may not change: where the PC's own doors are. */
-const SETTINGS_REFUSED = new Set(['remoteScreen', 'dataDir'])
+const SETTINGS_REFUSED = new Set(['remoteScreen', 'dataDir', 'uiScale'])
 
 function plain(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)

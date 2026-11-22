@@ -17,18 +17,11 @@
   width: 100%;
   aspect-ratio: 360 / 192;
   user-select: none;
-  perspective: 900px;
 }
-/* the panel leans towards the pointer (activity-tilt.ts); the keys and the core stand off it */
+/* the board stays flat and still: no lean towards the pointer */
 .ag-stage {
   position: absolute;
   inset: 0;
-  transform-style: preserve-3d;
-  transition: transform 0.7s var(--e-out, ease-out);
-}
-.ag-stage.tilting {
-  transition: transform 0.14s linear;
-  will-change: transform;
 }
 
 /* the fibres: a sheath and a thin core each, drawn once */
@@ -74,7 +67,7 @@
   position: absolute;
   width: calc(var(--u) * 64);
   height: calc(var(--u) * 64);
-  transform: translate(-50%, -50%) translateZ(10px);
+  transform: translate(-50%, -50%);
   pointer-events: none;
 }
 .ag-core > * {
@@ -185,12 +178,9 @@
   position: absolute;
   width: 0;
   height: 0;
-  transform: translateZ(16px);
-  transform-style: preserve-3d;
 }
 .ag-key {
   position: absolute;
-  transform-style: preserve-3d;
   left: calc(var(--u) * -14);
   top: calc(var(--u) * -14);
   width: calc(var(--u) * 28);
@@ -203,7 +193,6 @@
   place-items: center;
   border-radius: 50%;
   color: var(--ag-icon);
-  transform-style: preserve-3d;
   transition: color 0.4s var(--e-move, ease), transform 0.25s var(--e-out, ease-out);
 }
 .ag-orb-back,
@@ -226,14 +215,13 @@
   width: 125%;
   height: 125%;
 }
-/* the icon floats over the glass, nearer than the orb (parallax when the panel leans); the reflections never reach the middle */
+/* the icon sits over the glass; the reflections never reach the middle */
 .ag-icon {
   position: relative;
   width: calc(var(--u) * 13);
   height: calc(var(--u) * 13);
   fill: none;
   stroke: currentColor;
-  transform: translateZ(4px);
   filter: var(--ag-icon-shadow, none);
 }
 /* the light inside an orb at work: its own layer, so pulsing it costs nothing */

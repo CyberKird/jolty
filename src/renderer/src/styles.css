@@ -1896,18 +1896,20 @@ html:is([data-theme='glass'], [data-theme='frost']) .question-option kbd {
 }
 .attachments {
   display: flex;
-  gap: 2px;
+  gap: 6px;
   padding: 14px 16px 0;
   flex-wrap: wrap;
 }
+/* a thumbnail clips its picture to its own corners (square in Volt, rounded in Glass and Frost) */
 .attachment {
   position: relative;
   height: 68px;
   border: 1px solid var(--line-2);
+  overflow: hidden;
 }
 .attachment-image { width: 68px; }
 .attachment-image img { cursor: zoom-in; }
-.attachment-file { display: flex; align-items: center; gap: 7px; max-width: min(190px, 100%); padding-block: 0 0; padding-inline: 10px 25px; color: var(--grey); box-sizing: border-box; }
+.attachment-file { display: flex; align-items: center; gap: 7px; max-width: min(190px, 100%); padding-block: 0 0; padding-inline: 10px 30px; color: var(--grey); box-sizing: border-box; }
 .attachment-note { padding: 6px 16px 0; color: var(--warning); font-size: 11px; }
 .message-files { display: flex; flex-wrap: wrap; gap: 5px; }
 .message-files span { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 6px; border: 1px solid var(--line-2); color: var(--grey); font-size: 11px; }
@@ -1917,18 +1919,47 @@ html:is([data-theme='glass'], [data-theme='frost']) .question-option kbd {
   object-fit: cover;
   display: block;
 }
+/* remove: a small chip inside the corner, in the theme's ink and shape; it shows on hover or focus, always on touch */
 .attachment button {
   position: absolute;
-  top: 2px;
-  inset-inline-end: 2px;
+  top: 4px;
+  inset-inline-end: 4px;
   width: 18px;
   height: 18px;
+  padding: 0;
   border: 0;
-  background: var(--black);
+  border-radius: var(--radius, 0);
+  background: color-mix(in srgb, var(--black) 78%, transparent);
+  box-shadow: 0 0 0 1px var(--line-2), 0 2px 8px rgba(0, 0, 0, 0.28);
   color: var(--white);
   cursor: pointer;
   display: grid;
   place-items: center;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity var(--t-fast, 0.12s) ease, transform var(--t-fast, 0.12s) ease, background-color var(--t-fast, 0.12s) ease, color var(--t-fast, 0.12s) ease;
+}
+.attachment:hover button,
+.attachment:focus-within button,
+.attachment-file button {
+  opacity: 1;
+  transform: none;
+}
+.attachment-file button {
+  top: 50%;
+  translate: 0 -50%;
+}
+.attachment button:hover,
+.attachment button:focus-visible {
+  background: var(--volt);
+  color: var(--black);
+  outline: none;
+}
+@media (hover: none) {
+  .attachment button {
+    opacity: 1;
+    transform: none;
+  }
 }
 .send-btn {
   width: 40px;

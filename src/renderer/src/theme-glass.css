@@ -94,6 +94,13 @@ html:is([data-theme='glass'], [data-theme='frost']) :is(#root, .app, .sidebar, .
   border-radius: 0;
 }
 /* the mascot's particles keep their own shapes: a round corner turned the bolts into pills and left almost nothing of them */
+/* a 68 px thumbnail with the pane's full corner would read as a pill: a smaller corner, the remove chip round inside it */
+html:is([data-theme='glass'], [data-theme='frost']) .attachment {
+  border-radius: min(var(--radius), 14px);
+}
+html:is([data-theme='glass'], [data-theme='frost']) .attachment button {
+  border-radius: 50%;
+}
 html:is([data-theme='glass'], [data-theme='frost']) .mascot-spark {
   border-radius: 0;
 }

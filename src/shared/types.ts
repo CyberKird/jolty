@@ -435,6 +435,8 @@ export interface AppSettings {
   reduceMotion?: boolean
   /** flat look and a lighter mascot for weak PCs; 'auto' (the default) turns on for 4 cores or fewer, or 4 GB of memory or less */
   lowPower?: 'auto' | 'on' | 'off'
+  /** interface size in percent (80 to 125); 'auto' or unset: from the screen, a bit smaller on 1080p and laptops (main/ui-scale.ts) */
+  uiScale?: number | 'auto'
   /** Jolty the mascot runs around the interface; on unless false */
   mascot?: boolean
   /** Jolty's soft sounds; on unless false */

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.35.0
+
+### New
+
+- Jolty fits any screen. It is laid out for a 4K screen at 150 %, and on a 1080p screen or a laptop it felt crowded, so on Automatic it is now drawn a little smaller there and more fits in the window. Settings has a new "Interface size" choice (Automatic, or 80 % to 125 %), and Ctrl + mouse wheel or Ctrl +/- change it on the spot; Ctrl+0 goes back to Automatic. It follows the window to another screen and adjusts when Windows scaling changes.
+
+### Improvements
+
+- The remove button on attached pictures looks like the rest of the theme: a small chip inside the corner (round on Glass and Frost, square on Volt) that shows when you hover the picture, and the thumbnail now clips to its own rounded corners.
+- The activity board in the Live panel no longer leans towards the mouse; it stays flat and still.
+
+### Fixed
+
+- Pasting pictures is more reliable. A picture Chromium cannot open (HEIC, TIFF, an SVG without a size) no longer fails with "invalid image"; it goes along as a file the model opens with its tools. A picture pasted twice by the same app (one copy per format) is attached once, transparent screenshots get a white background instead of black, and very large pictures are shrunk until they fit under the 5 MB the Claude API accepts.
+
 ## 0.34.1
 
 ### Fixed

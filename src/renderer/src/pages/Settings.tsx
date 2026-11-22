@@ -1,4 +1,4 @@
-import { Coffee, Cpu, Keyboard, ExternalLink, UserRound, Eye, FolderOpen, Gauge, Globe, Info, Languages, Loader2, RefreshCw, Save, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react'
+import { Coffee, Cpu, Keyboard, ExternalLink, UserRound, Eye, FolderOpen, Gauge, Globe, Info, Languages, Loader2, RefreshCw, Save, ShieldCheck, Sparkles, SlidersHorizontal, ZoomIn } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '@shared/types'
 import { isAcp } from '@shared/types'
@@ -113,6 +113,29 @@ export function SettingsPage() {
                   </span>
                 </span>
               </label>
+              <div className="card" style={{ marginBottom: 14 }}>
+                <div className="row" style={{ marginBottom: 10 }}>
+                  <ZoomIn size={16} color="var(--volt)" />
+                  <b>{tr("Mărimea interfeței")}</b>
+                </div>
+                <p className="muted small" style={{ marginTop: 0 }}>
+                  {tr("Pe automat, interfața se micșorează puțin pe ecranele 1080p și pe laptopuri, ca să încapă mai mult. O poți schimba și cu Ctrl + rotița sau Ctrl +/-, iar Ctrl+0 o readuce pe automat.")}
+                </p>
+                <Select
+                  className="select"
+                  aria-label={tr("Mărimea interfeței")}
+                  value={String(s.uiScale ?? 'auto')}
+                  onChange={async (e) => {
+                    const v = e.target.value
+                    setS(await api.app.saveSettings({ uiScale: v === 'auto' ? 'auto' : Number(v) }))
+                  }}
+                >
+                  <option value="auto">{tr("Automat (după ecran)")}</option>
+                  {[80, 90, 100, 110, 125].map((n) => (
+                    <option key={n} value={String(n)}>{n}%</option>
+                  ))}
+                </Select>
+              </div>
               <div className="card" style={{ marginBottom: 14 }}>
                 <div className="row" style={{ marginBottom: 10 }}>
                   <Gauge size={16} color="var(--volt)" />
