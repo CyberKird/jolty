@@ -84,6 +84,9 @@ export class Brain {
   private scale = 1
   private cool = new Map<string, number>()
   private blockedSince = 0
+  /** until then he stays at the window's edge: there was no clear spot (free.ts edge) */
+  private edgeUntil = 0
+  private stepAside = false
   private typedAt = 0
   private pokes: number[] = []
   private dodgedAt = 0
@@ -165,6 +168,7 @@ export class Brain {
     if (this.mode !== 'ground') return
     const g = goal()
     const to = freeSpot({ el: this.anchor, x: this.x, y: this.y, scale: this.scale })
+    if (to.el === this.anchor && Math.abs(to.x - this.x) < 12 && Math.abs(to.y - this.y) < 12) return
     this.busyUntil = 0
     this.setScale(to.scale)
     this.travel(to, g)
@@ -173,9 +177,15 @@ export class Brain {
   /** every moment he is checked against what is under him: still in the way after a beat, he moves */
   private guard = (): void => {
     if (document.hidden || (this.mode !== 'ground' && this.mode !== 'walk')) return void (this.blockedSince = 0)
+    // a picture, a menu or a dialog over everything: he is behind it, so he stays put and quiet until it closes
+    if (modalOpen() || performance.now() < this.edgeUntil) return void (this.blockedSince = 0)
     // on his way to a free spot: a turn back now would only send him to and fro
     const ok = !blocked(this.x, this.y, this.scale) || (this.mode === 'walk' && !blocked(this.walkTo, this.y, this.scale))
-    if (ok) return void (this.blockedSince = 0)
+    if (ok) {
+      // stepped aside for lack of room, and the page made room where he stands: he is back
+      if (this.stepAside) this.aside(false)
+      return void (this.blockedSince = 0)
+    }
     const now = performance.now()
     this.blockedSince ||= now
     if (now - this.blockedSince < 280) return
@@ -192,13 +202,27 @@ export class Brain {
     }
   }
 
-  private travel(to: { el: Element | null; x: number; y: number }, g: Goal): void {
+  /** out of sight while the window has no clear spot for him; nothing to see, nothing to click, no sound */
+  private aside(on: boolean): void {
+    if (on) this.edgeUntil = performance.now() + 4000
+    if (on === this.stepAside) return
+    this.stepAside = on
+    this.el.classList.toggle('aside', on)
+  }
+
+  private travel(to: { el: Element | null; x: number; y: number; edge?: boolean }, g: Goal): void {
+    // nowhere clear (a narrow window, a crowded page): he used to hop into the right corner, over the message box, and hop there
+    // again every beat. He steps aside instead and looks again in a few seconds
+    if (to.edge) return this.aside(true)
+    this.aside(false)
     if (calm()) {
       this.place(to.el, to.x, to.y)
       return this.settle(g)
     }
     const dx = to.x - this.x
     const dist = Math.hypot(dx, to.y - this.y)
+    // already there: no crouch, no jump, no landing sound for a move of a few pixels
+    if (to.el === this.anchor && dist < 8) return this.settle(g)
     // walking would take him across something in the way: he jumps it instead
     if (to.el === this.anchor && Math.abs(to.y - this.y) < 4 && !pathBlocked(this.x, to.x, this.y, this.scale)) {
       this.mode = 'walk'

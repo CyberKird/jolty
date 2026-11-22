@@ -20,6 +20,8 @@ export interface Spot {
   y: number
   /** always 1 now: he keeps his size (the field stays for the callers that pass it along) */
   scale: number
+  /** no clear spot in the whole window: half out of an edge, where he is still in the way but as little as can be */
+  edge?: boolean
 }
 
 const INTERACTIVE =
@@ -134,7 +136,7 @@ export function freeSpot(want: Spot): Spot {
   const found = search(want, 1)
   if (found) return found
   const side = want.x < innerWidth / 2 ? -1 : 1
-  return { el: null, x: side < 0 ? 4 : innerWidth - 4, y: innerHeight - 7, scale: 1 }
+  return { el: null, x: side < 0 ? 4 : innerWidth - 4, y: innerHeight - 7, scale: 1, edge: true }
 }
 
 /** invalidates what was read: the page changed under him */

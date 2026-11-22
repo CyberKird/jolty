@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.35.1
+
+### Fixed
+
+- Jolty the mascot no longer gets stuck in the bottom right corner. When the window had no free spot for him (a picture opened full size, a narrow window, a crowded page) he hopped into the corner over the message box and kept hopping there every moment, with a landing sound each time. Now he stays still and quiet while a picture, menu or dialog is open, and when there is no room at all he fades out where he is and comes back as soon as there is space.
+
 ## 0.35.0
 
 ### New

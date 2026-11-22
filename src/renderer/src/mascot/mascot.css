@@ -16,6 +16,16 @@
 .reduce-motion .mascot {
   transition: none;
 }
+/* no clear spot in the window (brain.ts aside): he fades out where he is and comes back once there is room */
+.mascot {
+  transition: scale 320ms var(--ease, ease-out), opacity 240ms ease;
+}
+.mascot.aside {
+  opacity: 0;
+}
+.mascot.aside * {
+  pointer-events: none !important;
+}
 .m-canvas,
 .m-glow {
   position: absolute;

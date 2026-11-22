@@ -73,7 +73,8 @@ const SAMPLER = () => {
       break
     }
     const now = performance.now()
-    if (!who || mascot.dataset.pose === 'held') since = 0
+    // stepped aside (no clear spot in the window): faded out and click-through, so out of the way
+    if (!who || mascot.dataset.pose === 'held' || mascot.classList.contains('aside')) since = 0
     else {
       since ||= now
       if (now - since > rep.worst) Object.assign(rep, { worst: now - since, who, at: `${Math.round(b.left)},${Math.round(b.top)} ${mascot.dataset.pose}` })
@@ -82,8 +83,8 @@ const SAMPLER = () => {
 }
 
 const app = await electron.launch({
-  executablePath: path.resolve('node_modules/.bin/electron'),
-  args: ['--no-sandbox', path.resolve('out/main/index.js')],
+  executablePath: path.resolve(process.platform === 'win32' ? 'node_modules/electron/dist/electron.exe' : 'node_modules/.bin/electron'),
+  args: ['--no-sandbox', '--user-data-dir=' + path.join(data, 'user-data'), path.resolve('out/main/index.js')],
   env: { ...process.env, JOLTY_DATA_DIR: data, JOLTY_TEST: '1' }
 })
 console.log('electron pid', app.process().pid, 'mock pid', mock.pid)
@@ -156,6 +157,7 @@ try {
     const left = await win
       .waitForFunction(() => {
         const b = document.getElementById('probe-under').getBoundingClientRect()
+        if (document.querySelector('.mascot.aside')) return true
         const m = document.querySelector('.m-hit').getBoundingClientRect()
         return m.right < b.left || m.left > b.right || m.bottom < b.top || m.top > b.bottom
       }, null, { timeout: 5000 })

@@ -80,7 +80,7 @@ export type Sound = 'hop' | 'land' | 'thud' | 'oof' | 'grab' | 'whoosh' | 'cheer
 
 /** strength 0..1 scales the impact sounds */
 export function play(sound: Sound, strength = 0.5): void {
-  if (!on || !document.hasFocus() || document.hidden || document.documentElement.classList.contains('reduce-motion')) return
+  if (!on || !document.hasFocus() || document.hidden || document.documentElement.classList.contains('reduce-motion') || document.querySelector('.mascot.aside')) return
   ctx ??= new AudioContext()
   const a = ctx
   if (a.state === 'suspended') void a.resume()
