@@ -87,6 +87,14 @@ try {
       await phone.locator('.titlebar-btn').first().click()
       await phone.waitForTimeout(350)
     }
+    // the highlight sits on the page in use: rows are 44 px on a phone, and a highlight made for 34 px drifted up a row's height or more
+    await phone.waitForTimeout(450)
+    const glow = await phone.evaluate(() => {
+      const g = document.querySelector('.nav-glow')?.getBoundingClientRect()
+      const a = document.querySelector('.nav-item.active')?.getBoundingClientRect()
+      return g && a && !document.querySelector('.nav-glow.off') ? { dy: Math.abs(g.top - a.top), dh: Math.abs(g.height - a.height) } : null
+    })
+    if (glow) assert.ok(glow.dy <= 1 && glow.dh <= 1, `${pages[i]}: the drawer highlight is on its row (off by ${glow.dy} px, ${glow.dh} px tall)`)
     await phone.locator('.nav-item').nth(i).click()
     await phone.waitForSelector('.page', { timeout: 15000 })
     await phone.waitForTimeout(500)

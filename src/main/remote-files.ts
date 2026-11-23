@@ -222,7 +222,7 @@ export class PhoneFiles {
   private page(html: string, host: string): string {
     return html
       .replace("connect-src 'self' blob:", `connect-src 'self' blob: wss://${host} ws://${host}${this.agentOrigin()}`)
-      .replace('<head>', `<head><script src="/lang.js"></script>${PHONE_HEAD}`)
+      .replace('<head>', `<head><script src="/lang.js"></script><script src="/boot-guard.js"></script>${PHONE_HEAD}`)
       .replace('</head>', `${this.preloads()}</head>`)
       // the app's bar, drawn as soon as the page and its styles are in: on a slow line the scripts take a while, and a blank
       // screen looks broken. React replaces it with the real app on its first render.

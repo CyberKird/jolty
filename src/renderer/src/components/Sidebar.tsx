@@ -1,7 +1,7 @@
 import { BarChart3, CalendarClock, Cpu, Download, Images, KeyRound, Monitor, Plus, Puzzle, RefreshCw, Search, Settings, ShieldCheck } from 'lucide-react'
 import { BugReportButton } from './BugReport'
 import { MergeHost } from './MergePanel'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useScreenUi } from '../remote/screen-bus'
 import { audioContext } from '../remote/screen-video'
 import { api, basename, fmtTokens, fmtUsd, levelColor, refreshLimitsSoon, resetIn, timeAgo, useStore, type Page } from '../store'
@@ -474,6 +474,24 @@ export function Sidebar() {
   }, [longList, recentOnly, everyone, activeId])
   const seen = (list: SessionMeta[]): SessionMeta[] => (recent ? list.filter((s) => recent.has(s.id)) : list)
   const at = nav.findIndex((n) => n.id === page)
+  // the highlight sits on the row as drawn: a phone's rows are 44 px, not the desktop's 34, and a label can wrap in some languages
+  const navBox = useRef<HTMLDivElement>(null)
+  const [glow, setGlow] = useState<{ y: number; h: number } | null>(null)
+  const navKey = nav.map((n) => n.id).join()
+  useLayoutEffect(() => {
+    const box = navBox.current
+    if (!box) return
+    const measure = (): void => {
+      const row = box.querySelectorAll<HTMLElement>('.nav-item')[at]
+      const next = row ? { y: row.offsetTop, h: row.offsetHeight } : null
+      setGlow((g) => (g?.y === next?.y && g?.h === next?.h ? g : next))
+    }
+    measure()
+    const watch = new ResizeObserver(measure)
+    watch.observe(box)
+    box.querySelectorAll('.nav-item').forEach((r) => watch.observe(r))
+    return () => watch.disconnect()
+  }, [at, navKey])
   return (
     <nav className="sidebar" aria-label={tr("Navigare")}>
       <Resizer
@@ -518,9 +536,9 @@ export function Sidebar() {
           <Monitor size={14} strokeWidth={2} /> {tr("Ecran PC")}
         </button>
       )}
-      <div className="nav">
+      <div className="nav" ref={navBox}>
         {/* one highlight that slides to the page in use */}
-        <span className={`nav-glow ${at < 0 ? 'off' : ''}`} style={{ '--i': Math.max(at, 0) } as React.CSSProperties} aria-hidden />
+        <span className={`nav-glow ${at < 0 ? 'off' : ''}`} style={{ '--i': Math.max(at, 0), ...(glow ? { '--y': `${glow.y}px`, '--h': `${glow.h}px` } : {}) } as React.CSSProperties} aria-hidden />
         {nav.map((n) => (
           <button key={n.id} className={`nav-item ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)} title={MOVE_HINT} {...navDrag(n.id)}>
             <n.icon size={15} strokeWidth={1.6} /> {n.label}

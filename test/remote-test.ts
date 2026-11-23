@@ -22,7 +22,7 @@ fs.writeFileSync(path.join(web, 'assets', 'de-AbCd1234.js'), 'y')
 fs.writeFileSync(path.join(web, 'sw.js'), "const CACHE = 'jolty-shell-__VERSION__'")
 fs.writeFileSync(path.join(dir, 'secret.txt'), 'secret')
 
-const PORT = 47990
+const PORT = Number(process.env.REMOTE_TEST_PORT) || 47990
 fs.writeFileSync(path.join(dir, 'remote.json'), JSON.stringify({ enabled: false, port: PORT, devices: [] }))
 const remote = new Remote(undefined, web)
 const calls: unknown[][] = []

@@ -36,7 +36,8 @@ const recover = (e: unknown): void => {
   console.error('[jolty] renderer crashed', e)
   const now = Date.now()
   const recent = JSON.parse(sessionStorage.getItem('jolty-reloads') || '[]').filter((t: number) => now - t < 60_000)
-  if (recent.length >= 2) return
+  // gave up: on a phone the boot guard (public/boot-guard.js) says so instead of leaving a black screen
+  if (recent.length >= 2) return void window.dispatchEvent(new CustomEvent('jolty:crashed', { detail: e instanceof Error ? e.message : String(e) }))
   sessionStorage.setItem('jolty-reloads', JSON.stringify([...recent, now]))
   location.reload()
 }

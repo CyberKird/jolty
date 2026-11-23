@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.35.3
+
+### Fixed
+
+- The phone no longer ends up on a black screen with only the bolt in the top left corner. That bar is what the PC draws first while the app's scripts load; when they could not load (the copy kept on the phone was older than the PC's Jolty, or a script failed), it just stayed there with nothing behind it. Now the phone clears the old kept copy and loads the page again by itself, and if the page still does not come up after a few seconds it says so, with Reload and "Clear and reload" buttons and the last error in small print, so a screenshot shows what went wrong.
+- The highlight in the phone's side menu sits on the page you are on. It was drawn for the desktop's 34 px rows, but rows are 44 px on a phone, so it drifted up and showed as a stray band between two items.
+
 ## 0.35.1
 
 ### Fixed

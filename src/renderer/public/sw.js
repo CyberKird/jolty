@@ -1,7 +1,7 @@
 // Keeps Jolty's page on the phone, so it opens at once even on a poor connection and while the PC that serves it is off
 // (that is when "Start the PC" is needed). The cache is named after the version (the server fills it in), so an update replaces the old pages.
 const CACHE = 'jolty-shell-__VERSION__'
-const SHELL = ['/', '/lang.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png']
+const SHELL = ['/', '/lang.js', '/boot-guard.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png']
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()))

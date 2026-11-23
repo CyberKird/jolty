@@ -232,11 +232,12 @@ a {
 }
 .nav-glow {
   position: absolute;
-  top: 4px;
+  top: 0;
   inset-inline: 8px;
-  height: 34px;
+  height: var(--h, 34px);
   background: rgba(255, 255, 255, 0.05);
-  transform: translateY(calc(var(--i) * 34px));
+  /* --y and --h are the measured row (Sidebar.tsx); the desktop's 34 px rows are the fallback before the first measure */
+  transform: translateY(var(--y, calc(4px + var(--i) * 34px)));
   transition: transform 0.32s var(--ease), opacity 0.2s;
   pointer-events: none;
 }
