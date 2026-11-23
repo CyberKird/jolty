@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.35.3
+## 0.35.2
+
+### Improvements
+
+- The bundled Claude and Codex command line tools are updated to their latest versions.
 
 ### Fixed
 
