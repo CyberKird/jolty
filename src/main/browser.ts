@@ -181,6 +181,12 @@ export function activeBrowser(): { name: string; open: (url: string) => void; ex
   return { name: BROWSERS[app].name, open: (url) => spawn(exe, [url], { detached: true, stdio: 'ignore' }).unref(), extensionsUrl: app === 'firefox' ? 'about:debugging#/runtime/this-firefox' : `${SCHEME[app]}://extensions` }
 }
 
+/** The executable of the browser Jolty uses, for programs that take a BROWSER variable. */
+export function activeBrowserExe(): string | undefined {
+  const app = browsers().active
+  return app ? installedExe(app) : undefined
+}
+
 function cliPath(): string {
   // the package exports only its API, so the CLI is found next to package.json;
   // packaged, it is unpacked next to app.asar so a child process can read it

@@ -1849,5 +1849,7 @@
  "Arată imaginea de pe {host}": "Bild von {host} anzeigen",
  "Mărimea interfeței": "Größe der Oberfläche",
  "Pe automat, interfața se micșorează puțin pe ecranele 1080p și pe laptopuri, ca să încapă mai mult. O poți schimba și cu Ctrl + rotița sau Ctrl +/-, iar Ctrl+0 o readuce pe automat.": "Auf Automatisch wird die Oberfläche auf 1080p-Bildschirmen und Laptops etwas kleiner, damit mehr darauf passt. Du kannst sie auch mit Strg + Mausrad oder Strg +/- ändern, Strg+0 stellt wieder Automatisch ein.",
- "Automat (după ecran)": "Automatisch (nach Bildschirm)"
+ "Automat (după ecran)": "Automatisch (nach Bildschirm)",
+ "{profile} s-a deconectat": "{profile} wurde abgemeldet",
+ "Claude a încheiat autentificarea acestui cont. Deschide Conturi și chei și apasă Conectează contul.": "Claude hat die Anmeldung dieses Kontos beendet. Öffne Konten und Schlüssel und klicke auf Konto verbinden."
 }

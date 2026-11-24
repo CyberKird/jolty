@@ -29,7 +29,7 @@ import type {
   SessionMeta
 } from '@shared/types'
 import { claudeEnv, claudeExecutable, prepareProfileDir } from '../runtime'
-import { BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, pageHost } from '../browser'
+import { activeBrowserExe, BROWSER_ACT_TOOLS, BROWSER_BLOCKED_TOOLS, browserPrompt, BROWSER_READ_TOOLS, BROWSER_SERVER, pageHost } from '../browser'
 import { claudeBrowserServer, claudeComputerServer, claudeJoltyServer, claudeSharedServers } from '../browser-mcp'
 import { COMPUTER_SERVER, computerPrompt } from '../computer/names'
 import { JOLTY_READ_TOOLS, JOLTY_SERVER, JOLTY_TOOLS_PROMPT } from '../jolty-tools'
@@ -39,6 +39,7 @@ import { endpointEfforts, endpointThinking } from './thinking'
 import { editDiff, partialJsonString } from './partial-json'
 import { TaskBoard } from '@shared/tasks'
 import { getSecret, loadSettings, profileDir } from '../store'
+import { emailIn } from '../signin-watch-core'
 import { claudeToolDiffs, claudeToolTitle, toolResultImages, toolResultText, truncate } from './format'
 import { learnNowRule } from '../learning'
 import { COPY_RULE, IMAGE_RULE, LANGUAGE_RULE, PLAN_RULES, STEER_RULE, WRITING_RULES } from './prompt'
@@ -931,7 +932,13 @@ export class ClaudeDriver implements EngineDriver {
     if (!exe) throw new Error(tr("Nu găsesc Claude Code (binarul inclus lipsește)"))
     prepareProfileDir(profile)
     await profileProcesses.stop(profile.id)
-    openLoginWindow(profile.id, exe, ['auth', 'login', '--claudeai'], claudeEnv(profile))
+    // the sign-in page opens in the browser Jolty uses (where the user is signed in), not in whatever Windows calls the default,
+    // and with this profile's own email preselected, so a second account is not signed into the first one's profile
+    const env = claudeEnv(profile)
+    const browser = activeBrowserExe()
+    if (browser) env.BROWSER = browser
+    const email = emailIn(profileDir(profile))
+    openLoginWindow(profile.id, exe, ['auth', 'login', '--claudeai', ...(email ? ['--email', email] : [])], env)
     return this.status(profile)
   }
 

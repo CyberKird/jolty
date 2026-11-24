@@ -20,6 +20,7 @@ import { Jolty } from './jolty'
 import * as updater from './updater'
 import * as local from './local'
 import * as modelWatch from './model-watch'
+import * as signinWatch from './signin-watch'
 import * as store from './store'
 import { buildLibrary } from './library'
 import * as skills from './skills'
@@ -645,6 +646,8 @@ if (!app.requestSingleInstanceLock()) {
       models: (id) => jolty.models(id),
       limits: (id) => jolty.refreshLimits(id)
     })
+    // a Claude account whose sign-in the server ended is announced, so it is found before a chat fails
+    signinWatch.start({ profiles: () => jolty.profiles(), open: () => { background.reveal(); send({ type: 'openPage', page: 'accounts' }) } })
     void jolty.sweepTemps().catch(() => undefined)
     const vault = store.loadSettings().obsidianVault
     if (vault && !process.env.JOLTY_TEST) {

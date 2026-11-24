@@ -5,6 +5,8 @@
 ### Improvements
 
 - The bundled Claude and Codex command line tools are updated to their latest versions.
+- Jolty tells you when a Claude account has been signed out. Anthropic's server can end a sign-in on its own (the saved login stops being accepted), and until now you only found out when a chat would not start. Now a notification names the account, and clicking it opens Accounts and keys. It checks every 10 minutes and tells you once per account.
+- "Connect the account" opens the sign-in page in the browser Jolty uses (the one you are already signed in to Claude with) instead of whatever Windows has as default, which sometimes opened nothing. It also fills in the email of that account, so a second account is not signed into the wrong profile.
 
 ### Fixed
 

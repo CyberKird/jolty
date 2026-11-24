@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import { candidates, pickAuto, rankHelpers, worthRouting, type HelperEntry } from '../src/main/auto-model'
 import { FLAG_DAYS, flagOf, observe, parseOllamaTags, parseProviderList, withBadges } from '../src/main/model-watch-core'
 import { iqAt, levelsIn, modelScore, parseRemoteScores, setRemoteScores } from '../src/shared/scores'
+import { emailIn, lostSignIn, rememberedEmail, signedOutIn } from '../src/main/signin-watch-core'
 import { isUncensored } from '../src/shared/uncensored'
 import { endpointEfforts, endpointThinking } from '../src/main/engines/thinking'
 import type { ModelOption, Profile } from '../src/shared/types'
@@ -234,4 +235,42 @@ test('NanoGPT gets thinking levels from off to max, sent as thinking and effort 
   assert.deepEqual(endpointEfforts(ds).efforts, ['off', 'low', 'high', 'max'])
   assert.equal(endpointThinking('medium', ds).effort, undefined, 'DeepSeek has no medium')
   assert.equal(endpointEfforts({ ...nano, baseUrl: 'https://evil.example/nano-gpt.com' } as Profile).efforts, undefined)
+})
+
+test('a sign-in the server ended is told apart from never signing in and from signing out', () => {
+  // what Claude Code leaves on disk after invalid_grant
+  assert.equal(lostSignIn({ claudeAiOauth: { accessToken: '', refreshToken: '', expiresAt: 0, loginEnded: 'time_limit' } }), true)
+  assert.equal(lostSignIn({ claudeAiOauth: { accessToken: '', refreshToken: '', expiresAt: 0 } }), true)
+  // a live sign-in, a missing block (signed out on purpose or never), and unreadable files
+  assert.equal(lostSignIn({ claudeAiOauth: { accessToken: 'a', refreshToken: 'r', expiresAt: 1 } }), false)
+  assert.equal(lostSignIn({ mcpOAuth: {} }), false)
+  assert.equal(lostSignIn(undefined), false)
+  assert.equal(lostSignIn(null), false)
+  assert.equal(lostSignIn('x'), false)
+})
+
+test('the remembered email preselects the account on the sign-in page', () => {
+  assert.equal(rememberedEmail({ oauthAccount: { emailAddress: 'a@b.co' } }), 'a@b.co')
+  assert.equal(rememberedEmail({ oauthAccount: { emailAddress: 'a b@c.d' } }), undefined)
+  assert.equal(rememberedEmail({ oauthAccount: { emailAddress: 42 } }), undefined)
+  assert.equal(rememberedEmail({}), undefined)
+})
+
+test('a profile folder is read from its own credentials and config files', async () => {
+  const fs = await import('node:fs')
+  const os = await import('node:os')
+  const path = await import('node:path')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jolty-signin-'))
+  try {
+    assert.equal(signedOutIn(dir), false)
+    assert.equal(emailIn(dir), undefined)
+    fs.writeFileSync(path.join(dir, '.credentials.json'), JSON.stringify({ claudeAiOauth: { refreshToken: '', loginEnded: 'time_limit' } }))
+    fs.writeFileSync(path.join(dir, '.claude.json'), JSON.stringify({ oauthAccount: { emailAddress: 'me@example.com' } }))
+    assert.equal(signedOutIn(dir), true)
+    assert.equal(emailIn(dir), 'me@example.com')
+    fs.writeFileSync(path.join(dir, '.credentials.json'), '{ not json')
+    assert.equal(signedOutIn(dir), false)
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
 })

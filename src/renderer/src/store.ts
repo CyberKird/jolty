@@ -333,6 +333,9 @@ export const useStore = create<State>((set, get) => ({
       case 'focus':
         void get().openSession(e.open)
         return
+      case 'openPage':
+        get().setPage(e.page)
+        return
       case 'sessionsChanged':
         void get().loadSessions()
         return

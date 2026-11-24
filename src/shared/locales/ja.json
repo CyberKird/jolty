@@ -1849,5 +1849,7 @@
  "Arată imaginea de pe {host}": "{host} の画像を表示",
  "Mărimea interfeței": "インターフェースのサイズ",
  "Pe automat, interfața se micșorează puțin pe ecranele 1080p și pe laptopuri, ca să încapă mai mult. O poți schimba și cu Ctrl + rotița sau Ctrl +/-, iar Ctrl+0 o readuce pe automat.": "自動では、1080p の画面やノートPCで少し小さく表示し、より多くの内容が収まるようにします。Ctrl + マウスホイールや Ctrl +/- でも変更でき、Ctrl+0 で自動に戻ります。",
- "Automat (după ecran)": "自動(画面に合わせる)"
+ "Automat (după ecran)": "自動(画面に合わせる)",
+ "{profile} s-a deconectat": "{profile} がサインアウトされました",
+ "Claude a încheiat autentificarea acestui cont. Deschide Conturi și chei și apasă Conectează contul.": "Claude がこのアカウントのサインインを終了しました。「アカウントとキー」を開いて「アカウントを接続」を押してください。"
 }

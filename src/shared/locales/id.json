@@ -1849,5 +1849,7 @@
  "Arată imaginea de pe {host}": "Tampilkan gambar dari {host}",
  "Mărimea interfeței": "Ukuran antarmuka",
  "Pe automat, interfața se micșorează puțin pe ecranele 1080p și pe laptopuri, ca să încapă mai mult. O poți schimba și cu Ctrl + rotița sau Ctrl +/-, iar Ctrl+0 o readuce pe automat.": "Dalam mode otomatis, antarmuka sedikit diperkecil di layar 1080p dan laptop agar lebih banyak yang muat. Anda juga bisa mengubahnya dengan Ctrl + roda mouse atau Ctrl +/-, dan Ctrl+0 mengembalikannya ke otomatis.",
- "Automat (după ecran)": "Otomatis (sesuai layar)"
+ "Automat (după ecran)": "Otomatis (sesuai layar)",
+ "{profile} s-a deconectat": "{profile} keluar sendiri",
+ "Claude a încheiat autentificarea acestui cont. Deschide Conturi și chei și apasă Conectează contul.": "Claude mengakhiri sesi masuk akun ini. Buka Akun dan kunci lalu tekan Hubungkan akun."
 }

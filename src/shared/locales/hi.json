@@ -1849,5 +1849,7 @@
  "Arată imaginea de pe {host}": "{host} से छवि दिखाएँ",
  "Mărimea interfeței": "इंटरफ़ेस का आकार",
  "Pe automat, interfața se micșorează puțin pe ecranele 1080p și pe laptopuri, ca să încapă mai mult. O poți schimba și cu Ctrl + rotița sau Ctrl +/-, iar Ctrl+0 o readuce pe automat.": "ऑटोमैटिक पर, 1080p स्क्रीन और लैपटॉप पर इंटरफ़ेस थोड़ा छोटा हो जाता है ताकि ज़्यादा जगह मिले। आप इसे Ctrl + माउस व्हील या Ctrl +/- से भी बदल सकते हैं, और Ctrl+0 इसे वापस ऑटोमैटिक कर देता है।",
- "Automat (după ecran)": "ऑटोमैटिक (स्क्रीन के अनुसार)"
+ "Automat (după ecran)": "ऑटोमैटिक (स्क्रीन के अनुसार)",
+ "{profile} s-a deconectat": "{profile} साइन आउट हो गया",
+ "Claude a încheiat autentificarea acestui cont. Deschide Conturi și chei și apasă Conectează contul.": "Claude ने इस खाते का साइन-इन समाप्त कर दिया। खाते और की खोलें और खाता कनेक्ट करें दबाएँ।"
 }

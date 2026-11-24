@@ -353,6 +353,8 @@ export type ChatEvent =
   | { type: 'schedules' }
   /** the tray or the quick entry asks the main window to open a chat (none: a new conversation) */
   | { type: 'focus'; open?: string }
+  /** Jolty asks the window to show a page (a notification about an account that signed out opens Accounts) */
+  | { type: 'openPage'; page: 'accounts' }
   /** the list of conversations changed in a way no `meta` event tells (removed, archived, pinned, restored): read it again */
   | { type: 'sessionsChanged' }
   /** a preference was saved: every window and phone reads the settings again */
