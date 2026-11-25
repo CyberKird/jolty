@@ -97,6 +97,12 @@ export class Link {
   /** the PC's run and the number of the last event received from it */
   private epoch?: string
   private seq = 0
+  /**
+   * What is running or asked right now, as the events that told it (the newest per session / question). The PC tells this right after
+   * the line is up, often before the page has mounted and subscribed: whoever subscribes to the events later gets it from here, so
+   * a turn that started on the PC is in Live on the phone from the first picture.
+   */
+  private state = new Map<string, { channel: string; data: Record<string, unknown>; at: number }>()
   /** the page was drawn from the last picture of the PC before this line was up */
   optimistic = false
   /** called when the line goes down or comes back, to tell the user */
@@ -145,6 +151,24 @@ export class Link {
       }
     })
     setInterval(() => this.beat(), 4000)
+    // the user asks for a fresh picture (pull down in the side menu, or the button there)
+    window.addEventListener('jolty:refresh', () => this.refresh())
+  }
+
+  private refreshing = false
+
+  /**
+   * A new line to the PC that is not a resumed one: the PC tells again what runs and what waits, the lists and the open conversation
+   * are read again (remote/phone.ts), whatever the phone thought it knew. 'jolty:refreshed' tells the pull indicator it is done.
+   */
+  refresh(): void {
+    if (!this.started || this.stopped) return
+    this.refreshing = true
+    this.epoch = undefined
+    this.delay = 400
+    const ws = this.ws
+    if (ws) this.drop(ws)
+    else this.open()
   }
 
   /** Resolves when the PC accepted the key for the first time. */
@@ -215,7 +239,25 @@ export class Link {
   }
 
   private emit(channel: string, data: unknown): void {
+    this.remember(channel, data)
     for (const cb of this.listeners.get(channel) || []) cb(data)
+  }
+
+  /** Keeps the current state of turns and questions (see `state`). */
+  private remember(channel: string, data: unknown): void {
+    if (channel !== 'jolty:event' || !data || typeof data !== 'object') return
+    const e = data as Record<string, unknown>
+    const sid = String(e.sessionId ?? '')
+    if (e.type === 'status' && sid) {
+      if (e.status === 'running') this.state.set(`status|${sid}`, { channel, data: e, at: this.state.get(`status|${sid}`)?.at ?? Date.now() - (Number(e.ageMs) || 0) })
+      else {
+        this.state.delete(`status|${sid}`)
+        for (const [k, v] of this.state) if (v.data.type === 'permission' && v.data.sessionId === sid) this.state.delete(k)
+      }
+    } else if (e.type === 'permission') {
+      const id = (e.request as { id?: string } | undefined)?.id
+      if (id) this.state.set(`ask|${id}`, { channel, data: e, at: Date.now() })
+    } else if (e.type === 'permissionResolved' && typeof e.requestId === 'string') this.state.delete(`ask|${e.requestId}`)
   }
 
   private up(ws: WebSocket, m: Msg): void {
@@ -225,7 +267,11 @@ export class Link {
     const sameRun = m.epoch !== undefined && m.epoch === this.epoch
     screenBus.attach((msg) => ws.readyState === 1 && ws.send(JSON.stringify(msg)))
     // what was missed comes right after this when the PC still has it; otherwise counting starts again from the PC's number
-    if (!m.resumed) this.seq = m.seq ?? 0
+    if (!m.resumed) {
+      this.seq = m.seq ?? 0
+      // the PC tells again what runs now: what was kept from before may have ended while the phone was away
+      this.state.clear()
+    }
     this.epoch = m.epoch
     this.ready = true
     this.everReady = true
@@ -253,6 +299,10 @@ export class Link {
     }
     this.first?.()
     this.first = undefined
+    if (this.refreshing) {
+      this.refreshing = false
+      window.dispatchEvent(new Event('jolty:refreshed'))
+    }
   }
 
   /** Cuts a line that is not answering; the close handler does the rest. */
@@ -395,6 +445,8 @@ export class Link {
     const set = this.listeners.get(channel) || new Set()
     set.add(cb)
     this.listeners.set(channel, set)
+    // a page that subscribes after the line was up still learns what runs and what waits for a yes
+    if (channel === 'jolty:event') for (const { data, at } of [...this.state.values()]) cb(data.type === 'status' ? { ...data, ageMs: Date.now() - at } : data)
     return () => set.delete(cb)
   }
 }

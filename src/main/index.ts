@@ -409,6 +409,8 @@ function registerIpc(): void {
   handle('sessions:rename', (id: string, title: string) => jolty.renameSession(String(id), String(title)))
   handle('sessions:setFlags', async (ids: unknown, flags: { pinned?: boolean; archived?: boolean }) => listChanged(await jolty.setFlags(Array.isArray(ids) ? ids.map(String) : [], flags ?? {})))
   handle('sessions:closed', () => jolty.closedSessions())
+  // a device looked at a finished conversation: every other device drops it from Live
+  handle('sessions:seen', (id: unknown) => void send({ type: 'seen', sessionId: String(id) }))
   handle('sessions:restore', async (id?: string) => listChanged(await jolty.restoreSession(id === undefined ? undefined : String(id))))
   handle('sessions:review', (id: string) => jolty.review(String(id)))
   // the worktree comes from the session's own record, never from a path the renderer sends

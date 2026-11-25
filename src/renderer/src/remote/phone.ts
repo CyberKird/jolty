@@ -2,6 +2,8 @@ import { tr } from '@shared/i18n'
 import { api, useStore } from '../store'
 import { play, soundsOn, unlockAudio } from '../mascot/sfx'
 import { setupGestures } from './gestures'
+import { setupPullRefresh } from './pull'
+import { setupLongPress } from './longpress'
 
 /** Behaviour only a phone needs: the sidebar is a drawer, closed at the start and after a conversation or page is chosen. */
 export function setupPhone(): void {
@@ -65,6 +67,8 @@ export function setupPhone(): void {
     apply()
   }
   setupGestures()
+  setupPullRefresh()
+  setupLongPress()
   installHint()
   phoneSounds()
   keepWake()
