@@ -86,6 +86,20 @@ html.low-power .btn:active:not(:disabled) {
 .session-item .when {
   transition: opacity var(--t-fast) var(--e-move);
 }
+/* a finger has no hover (every :hover rule is built under @media (hover: hover), scripts/postcss-hover-media.ts): the open
+   conversation's row shows its buttons where the time was, so one tap reaches them, and the other rows open with one tap */
+@media (hover: none) {
+  .session-item.active .del,
+  .session-item.active .row-act,
+  .live-x {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .session-item.active .when {
+    display: block;
+    opacity: 0;
+  }
+}
 
 /* ------------------------------------------------------------------ menus and popovers */
 .picker-pop,

@@ -1439,6 +1439,12 @@ a {
 .diff-add:focus-visible {
   opacity: 1;
 }
+/* touch: no hover finds it, so it stays faintly in view and one tap comments */
+@media (hover: none) {
+  .diff-add {
+    opacity: 0.45;
+  }
+}
 .diff-note,
 .diff-note-input {
   margin: 3px 14px 5px 26px;
@@ -4022,6 +4028,12 @@ html:is([data-theme='glass'], [data-theme='frost']) .picker-foot .segmented butt
 }
 .rewind.armed {
   color: var(--serious);
+}
+/* touch: the button only exists once the turn was tapped and has files to bring back, so it shows at once */
+@media (hover: none) {
+  .rewind {
+    opacity: 1;
+  }
 }
 .rewind:disabled {
   display: none;
