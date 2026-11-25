@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.36.0
+
+### New
+
+- Refresh on the phone. There was no way to make the phone read everything from the PC again. Now pull down in the side menu (when it is scrolled to the top) and let go, or tap the new refresh button next to the number of conversations. The phone opens a fresh line to the PC and reads the lists, what runs and what waits for a yes, and the open conversation again.
+- A long press on a conversation (or a Live item) in the side menu opens the same menu as a right click on the PC: pin, archive, rename, the merge assistant, hide from Live. iPhones never send a right click, so those menus were out of reach.
+
+### Fixed
+
+- The phone now shows what runs on the PC. A turn that was already running when the phone connected, or one started on the PC while the phone was open, was missing from Live on the phone: the PC tells it right after the line comes up, but the page had not subscribed yet, so the message was lost. The page now gets the current state when it subscribes.
+- A finished conversation leaves Live on every device once it has been seen on one. If you asked something from the phone, the PC kept the finished check forever (and the other way round). Looking at it, or hiding it, on the phone or the PC now clears it on both.
+- One tap opens a conversation or a menu on the phone. iPhones swallow the first tap on anything that changes when the finger hovers, and the app had many of those (hover buttons, hover tints). Hover styles now apply only on devices that have hover; the desktop looks and behaves as before.
+- The PC screen on the phone is sharp. A 4K screen was sent at half its pixels (never more than 1920 px wide), so text was soft and zooming blew up a small picture. The quality steps now keep the pixels and give up frames first (4K at 60, 4K at 30, 1440p, 1080p, 720p, 540p), whole pictures come every 8 s instead of 4, and a whole picture gets room to arrive in one piece. Phones on a slow line still drop down step by step.
+- The chat on the phone follows the stream. It now stays at the bottom while a reply streams, when you send a message, when a conversation opens, and when pictures or code blocks grow after the first paint or the keyboard opens and closes, and it stops following the moment you scroll up by hand.
+- No more black strip under the app on the phone. The app now always fills the visible area (with and without the keyboard, in the browser and installed, portrait and landscape), the composer sits on the bottom edge above the home bar, and the page background follows the theme so a short gap can never show as black. The glass header no longer lets text show through it.
+
 ## 0.35.2
 
 ### Improvements
