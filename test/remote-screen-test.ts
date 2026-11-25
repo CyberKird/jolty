@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { DisplayInfo } from '../src/main/computer/geometry'
 import type { Ev } from '../src/main/computer/plan'
+import { LADDER } from '../src/main/remote-screen-adapt'
 import { avcLevel, capsFloor, parseCaps } from '../src/main/remote-screen-caps'
 import { BIN_AUDIO, BIN_JPEG, BIN_VIDEO, HEAD_AUDIO, HEAD_JPEG, HEAD_VIDEO, RemoteScreen, type EncoderConfig, type ScreenClient, type ScreenSource, type ScreenVideo, type VideoChunk } from '../src/main/remote-screen'
 
@@ -337,11 +338,55 @@ test('two phones: the weaker decoder sets the profile; a phone that sends no cap
 test('caps from a phone are checked at the door', () => {
   assert.equal(parseCaps(undefined), undefined)
   assert.equal(parseCaps({ profiles: ['x'] }), undefined, 'no known profile')
-  assert.deepEqual(parseCaps({ profiles: ['baseline'], maxEdge: 99999, maxFps: -5 }), { profiles: ['baseline'], maxEdge: 1920, maxFps: 1 })
+  assert.deepEqual(parseCaps({ profiles: ['baseline'], maxEdge: 99999, maxFps: -5 }), { profiles: ['baseline'], maxEdge: 3840, maxFps: 1 })
   assert.equal(avcLevel(1920, 1080, 60).name, '4.2')
   assert.equal(avcLevel(1920, 1080, 30).name, '4.0')
   assert.equal(avcLevel(1280, 720, 30).name, '3.1')
   assert.equal(avcLevel(640, 360, 10).name, '3.0')
   assert.equal(avcLevel(3840, 2160, 30).name, '5.1')
-  assert.equal(capsFloor({ profiles: ['main'], maxEdge: 1280, maxFps: 30 }), 2, '30/720p is the best step it plays')
+  assert.equal(avcLevel(3840, 2160, 60).name, '5.2')
+  assert.equal(avcLevel(2560, 1440, 30).name, '5.0')
+  assert.equal(capsFloor({ profiles: ['main'], maxEdge: 1280, maxFps: 30 }), 2, 'a 720p30 phone climbs no higher than the 2 Mbit/s step')
+  assert.equal(capsFloor({ profiles: ['high'], maxEdge: 1920, maxFps: 60 }), 0, 'a 1080p60 phone still gets the top step, cut to 1080p')
+  assert.equal(capsFloor({ profiles: ['high'], maxEdge: 3840, maxFps: 60 }), 0)
+})
+
+// ---------------------------------------------------------------- sharpness
+
+const uhd: DisplayInfo[] = [{ index: 0, id: 7, x: 0, y: 0, w: 3840, h: 2160, primary: true, scaleFactor: 1.5 }]
+
+test('a 4K screen goes at its own pixels to a phone that decodes 4K (text read zoomed in stays sharp)', async () => {
+  const f = fakeVideo()
+  const src: ScreenSource = { ...source, displays: () => uhd }
+  const screen = new RemoteScreen(src, async () => ({ play: async () => undefined }), () => true, () => undefined, f.video, { startLevel: 0, cpus: calm })
+  const iphone = phone('iphone')
+  screen.handle(iphone, { t: 'screen', op: 'start', video: true, caps: { profiles: ['high', 'main', 'baseline'], maxEdge: 3840, maxFps: 60 } })
+  await until(() => iphone.json.some((j) => j.op === 'info'))
+  const c = f.log.configs.at(-1)!
+  assert.deepEqual([c.width, c.height, c.fps, c.level, c.codec], [3840, 2160, 60, '5.2', 'avc1.640034'])
+  screen.stopAll()
+})
+
+test('a phone that decodes only 1080p gets the same screen cut to 1080p, still at 60 fps', async () => {
+  const f = fakeVideo()
+  const src: ScreenSource = { ...source, displays: () => uhd }
+  const screen = new RemoteScreen(src, async () => ({ play: async () => undefined }), () => true, () => undefined, f.video, { startLevel: 0, cpus: calm })
+  const p = phone('older')
+  screen.handle(p, { t: 'screen', op: 'start', video: true, caps: { profiles: ['high'], maxEdge: 1920, maxFps: 60 } })
+  await until(() => p.json.some((j) => j.op === 'info'))
+  const c = f.log.configs.at(-1)!
+  assert.deepEqual([c.width, c.height, c.fps], [1920, 1080, 60])
+  screen.stopAll()
+})
+
+test('steps give up pictures per second before pixels; JPEG pictures stay small', () => {
+  for (let i = 1; i < LADDER.length; i++) {
+    assert.ok(LADDER[i].edge <= LADDER[i - 1].edge, `${LADDER[i].name}: never sharper than the step above`)
+    assert.ok(LADDER[i].bps < LADDER[i - 1].bps)
+    assert.ok(LADDER[i].jpegEdge <= 1920)
+  }
+  assert.equal(LADDER[1].edge, LADDER[0].edge, 'a link short of 60 fps first loses frames, not sharpness')
+  // at every step the picture is at least 1.4 times as wide as it was before (1920, 1920, 1280, 960, 854, 640, 640)
+  const before = [1920, 1920, 1280, 960, 854, 640, 640]
+  before.forEach((e, i) => assert.ok(LADDER[i].edge >= e * 1.4, `${LADDER[i].name}`))
 })

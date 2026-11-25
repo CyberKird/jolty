@@ -316,7 +316,7 @@ export class RemoteScreen {
         if (!v.adapt.step.keyOnly && v.adapt.askKey(now)) this.video?.keyframe()
         continue
       }
-      if (!v.adapt.canSend(size, now) || v.client.backlog() > BACKLOG_HARD) {
+      if (!v.adapt.canSend(size, now, c.key) || v.client.backlog() > BACKLOG_HARD) {
         // it does not fit in what the link carries now: dropped, and a whole picture follows when there is room
         if (!v.needKey) v.keySince = now
         v.needKey = true
@@ -467,7 +467,7 @@ export class RemoteScreen {
         const d = this.source.displays()[index]
         if (!d) continue
         // one capture per display, at the largest size and best quality any of its viewers takes
-        const edge = Math.min(MAX_EDGE, Math.max(...list.map((v) => v.adapt.step.edge)))
+        const edge = Math.min(MAX_EDGE, Math.max(...list.map((v) => v.adapt.step.jpegEdge)))
         const quality = Math.max(...list.map((v) => v.adapt.step.jpegQ))
         const shot = await this.source.frame(d, edge, quality)
         if (!shot) continue

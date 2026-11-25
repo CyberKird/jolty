@@ -12,6 +12,8 @@ export interface PhoneCaps {
 }
 
 const PROFILES: Profile[] = ['high', 'main', 'baseline']
+/** the largest picture edge sent: a 4K display at its own pixels, so text stays sharp when the phone zooms in */
+export const MAX_VIDEO_EDGE = 3840
 /** a phone that says nothing (an older page) is taken to play what the PC sent before: High, 1080p60 */
 export const ANY_PHONE: PhoneCaps = { profiles: [...PROFILES], maxEdge: 1920, maxFps: 60 }
 
@@ -22,7 +24,7 @@ export function parseCaps(v: unknown): PhoneCaps | undefined {
   const profiles = Array.isArray(o.profiles) ? PROFILES.filter((p) => (o.profiles as unknown[]).includes(p)) : []
   const n = (x: unknown, lo: number, hi: number, d: number): number => (typeof x === 'number' && Number.isFinite(x) ? Math.min(hi, Math.max(lo, Math.round(x))) : d)
   if (!profiles.length) return undefined
-  return { profiles, maxEdge: n(o.maxEdge, 320, 1920, 1920), maxFps: n(o.maxFps, 1, 60, 60) }
+  return { profiles, maxEdge: n(o.maxEdge, 320, MAX_VIDEO_EDGE, 1920), maxFps: n(o.maxFps, 1, 60, 60) }
 }
 
 /** The best profile every phone in the list decodes (Constrained Baseline when they share nothing better). */
@@ -30,10 +32,12 @@ export function commonProfile(list: Array<PhoneCaps | undefined>): Profile {
   return PROFILES.find((p) => list.every((c) => (c ?? ANY_PHONE).profiles.includes(p))) ?? 'baseline'
 }
 
-/** The best step of the ladder this phone plays: a floor for its controller. */
+/** The best step of the ladder this phone plays: a floor for its controller. The picture is cut to the phone's edge anyway
+ *  (remote-screen.ts), so a step counts as playable up to twice that edge: past it, the step's bits only buy pixels the
+ *  phone never gets. */
 export function capsFloor(c: PhoneCaps | undefined): number {
   if (!c) return 0
-  const i = LADDER.findIndex((s) => s.edge <= c.maxEdge && s.fps <= c.maxFps)
+  const i = LADDER.findIndex((s) => s.edge <= c.maxEdge * 2 && s.fps <= c.maxFps)
   return i < 0 ? LADDER.length - 1 : i
 }
 
@@ -44,7 +48,9 @@ const LEVELS: Array<[string, number, number, number]> = [
   ['3.2', 32, 5120, 216_000],
   ['4.0', 40, 8192, 245_760],
   ['4.2', 42, 8704, 522_240],
-  ['5.1', 51, 36_864, 983_040]
+  ['5.0', 50, 22_080, 589_824],
+  ['5.1', 51, 36_864, 983_040],
+  ['5.2', 52, 36_864, 2_073_600]
 ]
 
 /** The lowest H.264 level that carries `w` x `h` at `fps`, as "4.2" and as the codec string's last byte. */

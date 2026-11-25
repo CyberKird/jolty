@@ -12,8 +12,10 @@
 export interface Step {
   name: string
   fps: number
-  /** long edge of the picture, in pixels */
+  /** long edge of the video picture, in pixels (never more than the display's own, nor than the phone decodes) */
   edge: number
+  /** long edge of a JPEG picture, for phones without video (a JPEG costs far more per pixel than video) */
+  jpegEdge: number
   bps: number
   /** seconds between whole pictures when nothing asks for one */
   gopSec: number
@@ -27,15 +29,24 @@ export interface Step {
   keyOnly?: boolean
 }
 
+// What the phone reads is mostly text, so a step keeps pixels and gives up pictures per second first. Measured on a 4K
+// desktop with the PC's hardware encoder (PSNR against the screen itself, a still screen / one scrolling 400 px/s):
+//   4K60 12 Mbit/s 44.4 scrolling (8 Mbit/s falls apart at 4K60: 23.5)   where 1080p60 8 Mbit/s was 31.0 / 31.1
+//   4K30 4 Mbit/s 43.6 / 39.4        where 1080p30 was 31.0 / 31.0
+//   1440p30 2 Mbit/s 34.2 / 32.1     where 720p was 28.2 / 28.1
+//   1080p20 1 Mbit/s 31.0 / 30.3     where 540p was 26.8 / 27.1
+//   720p15 500k 28.2 / 27.8, 540p10 220k 26.8 / 27.1   where 480p and 360p were 26.5 / 26.6 and 25.7 / 26.0
+// A smaller picture blown up on the phone was the blur, not the bits: a still screen costs a video encoder almost
+// nothing whatever its size. Below 1 Mbit/s a bigger picture than this loses while scrolling, so the sizes stop there.
 export const LADDER: readonly Step[] = [
-  { name: '60/1080p', fps: 60, edge: 1920, bps: 8_000_000, gopSec: 4, audio: true, cursorHz: 60, jpegQ: 72 },
-  { name: '30/1080p', fps: 30, edge: 1920, bps: 4_000_000, gopSec: 4, audio: true, cursorHz: 30, jpegQ: 68 },
-  { name: '30/720p', fps: 30, edge: 1280, bps: 2_000_000, gopSec: 4, audio: true, cursorHz: 30, jpegQ: 64 },
-  { name: '20/540p', fps: 20, edge: 960, bps: 1_000_000, gopSec: 5, audio: true, cursorHz: 20, jpegQ: 60 },
-  { name: '15/480p', fps: 15, edge: 854, bps: 500_000, gopSec: 6, audio: false, cursorHz: 15, jpegQ: 55 },
-  { name: '10/360p', fps: 10, edge: 640, bps: 220_000, gopSec: 8, audio: false, cursorHz: 10, jpegQ: 50 },
-  { name: '5/360p', fps: 5, edge: 640, bps: 110_000, gopSec: 10, audio: false, cursorHz: 8, jpegQ: 45 },
-  { name: 'slideshow', fps: 1, edge: 640, bps: 50_000, gopSec: 1, audio: false, cursorHz: 5, jpegQ: 40, keyOnly: true }
+  { name: '60/2160p', fps: 60, edge: 3840, jpegEdge: 1920, bps: 12_000_000, gopSec: 8, audio: true, cursorHz: 60, jpegQ: 72 },
+  { name: '30/2160p', fps: 30, edge: 3840, jpegEdge: 1920, bps: 4_000_000, gopSec: 8, audio: true, cursorHz: 30, jpegQ: 68 },
+  { name: '30/1440p', fps: 30, edge: 2560, jpegEdge: 1280, bps: 2_000_000, gopSec: 8, audio: true, cursorHz: 30, jpegQ: 64 },
+  { name: '20/1080p', fps: 20, edge: 1920, jpegEdge: 960, bps: 1_000_000, gopSec: 8, audio: true, cursorHz: 20, jpegQ: 60 },
+  { name: '15/720p', fps: 15, edge: 1280, jpegEdge: 854, bps: 500_000, gopSec: 8, audio: false, cursorHz: 15, jpegQ: 55 },
+  { name: '10/540p', fps: 10, edge: 960, jpegEdge: 640, bps: 220_000, gopSec: 8, audio: false, cursorHz: 10, jpegQ: 50 },
+  { name: '5/540p', fps: 5, edge: 960, jpegEdge: 640, bps: 110_000, gopSec: 10, audio: false, cursorHz: 8, jpegQ: 45 },
+  { name: 'slideshow', fps: 1, edge: 640, jpegEdge: 640, bps: 50_000, gopSec: 1, audio: false, cursorHz: 5, jpegQ: 40, keyOnly: true }
 ]
 
 /** A new phone starts low (a bad link is not flooded by the first pictures) and climbs fast until the link first pushes back. */
@@ -176,8 +187,9 @@ export class Adapt {
     this.lastReport = r
   }
 
-  /** May a chunk of `bytes` go now? Nothing in the air: always. Otherwise only inside the window. */
-  canSend(bytes: number, now: number): boolean {
+  /** May a chunk of `bytes` go now? Nothing in the air: always. Otherwise only inside the window. A whole picture (`key`)
+   *  gets room for itself: a sharp 4K one can be several times the step's usual whole picture, and the phone is waiting for it. */
+  canSend(bytes: number, now: number, key = false): boolean {
     if (!this.flights.length) return true
     if (this.step.keyOnly) return false
     // a link that stopped answering gets nothing more until it does
@@ -187,7 +199,8 @@ export class Adapt {
     const first = this.flights[0]
     const rate = Math.max(this.step.bps, this.goodput(now)) / 8 / 1000
     const due = this.base(now) + this.allowance(now) + 50 + first.bytes / rate
-    const ok = this.firstAck >= 0 && now - first.at <= due && this.inflight + bytes <= this.window(now)
+    const room = this.window(now) + (key ? Math.max(0, bytes - this.minWindow(this.level)) : 0)
+    const ok = this.firstAck >= 0 && now - first.at <= due && this.inflight + bytes <= room
     // a picture that does not fit is a picture the phone loses: that is congestion too, even when latency looks fine
     if (!ok) this.refused(now)
     return ok

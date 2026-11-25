@@ -288,3 +288,13 @@ test('stepFor picks the highest step that fits, and the PC load caps 60 fps', ()
 test('measured numbers', () => {
   console.log('SIM ' + JSON.stringify(results))
 })
+
+test('a whole picture bigger than the window still goes while a little is in the air (a sharp 4K one is large)', () => {
+  const a = new Adapt(0, 0)
+  a.sent(1, 2000, 0)
+  a.acked(1, 20)
+  a.sent(2, 2000, 30)
+  const big = a.window(31) + 200_000
+  assert.equal(a.canSend(big, 31), false, 'a change that big does not fit')
+  assert.equal(a.canSend(big, 31, true), true, 'a whole picture gets room for itself')
+})
