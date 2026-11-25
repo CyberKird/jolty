@@ -4,6 +4,7 @@ import { play, soundsOn, unlockAudio } from '../mascot/sfx'
 import { setupGestures } from './gestures'
 import { setupPullRefresh } from './pull'
 import { setupLongPress } from './longpress'
+import { fitViewport } from './viewport'
 
 /** Behaviour only a phone needs: the sidebar is a drawer, closed at the start and after a conversation or page is chosen. */
 export function setupPhone(): void {
@@ -29,20 +30,32 @@ export function setupPhone(): void {
       const a = document.activeElement
       return a instanceof HTMLTextAreaElement || a instanceof HTMLInputElement || (a instanceof HTMLElement && a.isContentEditable)
     }
+    const iphoneApp = /iPhone/.test(navigator.userAgent) && ((navigator as unknown as { standalone?: boolean }).standalone === true || window.matchMedia('(display-mode: standalone)').matches)
     const apply = (): void => {
       frame = 0
       const root = document.documentElement
-      if (!typing()) full = Math.max(full, vv.height)
-      const kb = vv.height < full - 110
+      const writing = typing()
+      if (!writing) full = Math.max(full, vv.height)
+      const fit = fitViewport({ typing: writing, vvHeight: vv.height, vvTop: vv.offsetTop, full, iphoneApp, screenW: screen.width, screenH: screen.height, landscape: window.matchMedia('(orientation: landscape)').matches })
       const messages = document.querySelector<HTMLElement>('.messages')
       // at the bottom of the conversation the newest message stays in view when the keyboard comes up
       const atEnd = !!messages && messages.scrollHeight - messages.scrollTop - messages.clientHeight < 90
       const was = root.classList.contains('kb')
-      root.style.setProperty('--vvh', `${vv.height}px`)
-      // iOS also scrolls the page up to show the focused field: the page follows the visible area (offsetTop) instead of staying put
-      root.style.setProperty('--vvt', `${vv.offsetTop}px`)
-      root.classList.toggle('kb', kb)
-      if (kb !== was && atEnd && messages) requestAnimationFrame(() => (messages.scrollTop = messages.scrollHeight))
+      root.classList.toggle('vv', fit.follow)
+      if (fit.follow) {
+        root.style.setProperty('--vvh', `${fit.height}px`)
+        // iOS also scrolls the page up to show the focused field: the page follows the visible area (offsetTop) instead of staying put
+        root.style.setProperty('--vvt', `${fit.top}px`)
+      } else {
+        root.style.removeProperty('--vvh')
+        root.style.removeProperty('--vvt')
+        // the keyboard went down and left the page scrolled: the fixed page would sit that far up, with a band under it
+        if (window.scrollY) window.scrollTo(0, 0)
+      }
+      if (fit.floor) root.style.setProperty('--fill-h', `${fit.floor}px`)
+      else root.style.removeProperty('--fill-h')
+      root.classList.toggle('kb', fit.keyboard)
+      if (fit.keyboard !== was && atEnd && messages) requestAnimationFrame(() => (messages.scrollTop = messages.scrollHeight))
     }
     // once per frame: the keyboard's slide fires many events, and the page follows it in step instead of stuttering behind
     const fit = (): void => {

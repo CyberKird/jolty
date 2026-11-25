@@ -12,14 +12,15 @@ const items = [
   { kind: 'assistant', id: 'a1', text: 'Done. The deck is now **12 m** long.\n\n```py\nbpy.data.objects["Deck"].scale.x = 1.5  # a long line of code that has to scroll inside its own box\n```\n\n| Part | Length | Width | Height | Material |\n|---|---|---|---|---|\n| Deck | 12 m | 3 m | 0.4 m | Concrete |\n\nSee https://example.com/a/very/long/link/that/should/wrap/instead/of/pushing/the/screen/wider' }
 ]
 
-export async function openPhone({ port, prefix = 'jolty-remote-phone-', lang = 'en', size = [390, 844] }) {
+// transcript replaces the conversation's messages; init is a script run in the phone page before its own (a fake visualViewport)
+export async function openPhone({ port, prefix = 'jolty-remote-phone-', lang = 'en', size = [390, 844], transcript = items, init }) {
   const data = fs.mkdtempSync(path.join(os.tmpdir(), prefix))
   fs.writeFileSync(path.join(data, 'profiles.json'), JSON.stringify([{ id: 'p1', name: 'Tools', engine: 'claude', auth: 'subscription', color: '#d97757' }, { id: 'p2', name: 'NanoGPT', engine: 'claude', auth: 'endpoint', baseUrl: 'https://nano-gpt.com/api', models: ['zai-org/glm-5'], color: '#7aa2ff' }]))
   fs.writeFileSync(path.join(data, 'sessions.json'), JSON.stringify([{ id: 's1', profileId: 'p2', model: 'zai-org/glm-5', engine: 'claude', cwd: data, title: long, permissionMode: 'ask', createdAt: 1, updatedAt: 100 }, ...Array.from({ length: 6 }, (_, i) => ({ id: `o${i}`, profileId: 'p1', engine: 'claude', cwd: data, title: `Older ${i}`, permissionMode: 'ask', createdAt: 1, updatedAt: 50 - i }))]))
   fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ language: lang, lastCwd: data }))
   fs.writeFileSync(path.join(data, 'remote.json'), JSON.stringify({ enabled: true, port, devices: [] }))
   fs.mkdirSync(path.join(data, 'transcripts'))
-  fs.writeFileSync(path.join(data, 'transcripts', 's1.json'), JSON.stringify(items))
+  fs.writeFileSync(path.join(data, 'transcripts', 's1.json'), JSON.stringify(transcript))
 
   const env = { ...process.env, JOLTY_TEST: '1', JOLTY_DATA_DIR: data }
   delete env.ELECTRON_RUN_AS_NODE
@@ -34,6 +35,7 @@ export async function openPhone({ port, prefix = 'jolty-remote-phone-', lang = '
     win.setDefaultTimeout(30000)
     await win.waitForSelector('.brand-name', { timeout: 60000 })
     const { code } = await win.evaluate(() => window.jolty.remote.pair())
+    if (init) await app.context().addInitScript(init)
     const opened = app.waitForEvent('window')
     await app.evaluate(({ BrowserWindow }, [url, w, h]) => {
       const bw = new BrowserWindow({ width: w, height: h, useContentSize: true, show: true, webPreferences: { sandbox: true } })

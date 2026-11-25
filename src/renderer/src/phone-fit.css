@@ -291,3 +291,13 @@ html.remote[data-theme='glass'] body::before {
 html.remote:is([data-theme='glass'], [data-theme='frost']) :is(.picker-pop, .picker-tip, .ctx, .mentions, .sel-popup) {
   background: var(--glass-sheen), var(--glass-pop-solid);
 }
+
+/* Glass and Frost on a phone: the conversation scrolls under the floating header bar, and with no lens to bend it (the PC's SVG
+   lens) the lines passing behind the bar and in the strip above it read as text printed over the title. The lines fade out just
+   before the bar instead; scrolled to the top, the first message starts below it, where the room for it is kept (84 px). */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  html.remote:is([data-theme='glass'], [data-theme='frost']) .main > .messages {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 58px, #000 82px);
+    mask-image: linear-gradient(to bottom, transparent 58px, #000 82px);
+  }
+}
