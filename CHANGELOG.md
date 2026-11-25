@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.36.1
+
+### Fixed
+
+- The Computer switch stays on. Jolty switched Computer off in every saved conversation each time it started, so after a restart or an update the choice you made was gone. It now stays as you left it, in old and new conversations. Ctrl+Alt+Esc, or the switch itself, still turns it off. In the "No permissions" mode the model can act on the PC without asking, as before, so check the mode before relying on the switch.
+- The bar under the message box no longer crushes its controls next to a long model name. With a model like "pqhaz/DeepSeek-V4.1-Flash-1017-abliterated" the permission label read "A...", the project "Cursor j..." and the model "pqhaz/DeepSeek-V4.1...". Now the permission label, the switches and the send button keep their words, the project name and then the model name give way first (the project shrinks to its icon on a narrower box), the button shows the model without the "owner/" prefix (the menu and the tooltip keep the full name), and on a narrow box the controls take two rows with the model filling the first.
+
 ## 0.36.0
 
 ### New
