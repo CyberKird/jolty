@@ -179,10 +179,11 @@ export function ModelPicker(p: {
   const label = current?.label || p.model || (group?.loading ? tr("Se încarcă…") : tr("Alege modelul"))
 
   return (
-    <div className="picker" ref={ref}>
+    <div className="picker picker-model" ref={ref}>
       <button className="picker-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title={group ? `${group.profile.name} · ${label}` : label}>
         <span className="dot" style={{ width: 7, height: 7, background: group?.profile.color || 'var(--grey-2)' }} />
-        <span className="ellipsis">{label}</span>
+        {/* a community model is named "owner/model": in the narrow button the model is what tells it apart, the whole name is in the menu and the tooltip */}
+        <span className="ellipsis">{label.replace(/^[\w.-]+\//, '') || label}</span>
         <UncensoredMark id={current?.id || p.model} />
         {effort && <span className="picker-effort">{effort}</span>}
         <ChevronDown size={13} />
@@ -397,7 +398,7 @@ export function ModePicker({ mode, onMode, engine }: { mode: PermissionMode; onM
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, onMode, setOpen, choices, armed])
   return (
-    <div className="picker" ref={ref}>
+    <div className="picker picker-mode" ref={ref}>
       <button className={`picker-btn mode-${mode}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title={current.title}>
         <span className="ellipsis">{current.label}</span>
         <ChevronDown size={13} />

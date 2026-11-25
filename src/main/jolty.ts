@@ -232,9 +232,8 @@ export class Jolty {
     const all = store.loadSessions()
     const clean = this.withoutProbes(all)
     if (clean.length !== all.length) store.saveSessions(clean)
-    // the PC is never handed over by a switch left on from before: computer use starts off in every chat
-    const left = store.loadSessions().filter((m) => m.computer)
-    if (left.length) store.saveSessions(store.loadSessions().map((m) => (m.computer ? { ...m, computer: undefined } : m)))
+    // the Computer switch stays as the user left it, across restarts and updates: it only says the model may ask for the PC, each action still goes through the
+    // chat's permission mode, and Ctrl+Alt+Esc (or the switch itself) turns it off for good
     nativeComputer.bind({
       mode: (sid) => (this.live.get(sid)?.meta ?? this.findMeta(sid))?.permissionMode,
       enabled: (sid) => Boolean((this.live.get(sid)?.meta ?? this.findMeta(sid))?.computer),

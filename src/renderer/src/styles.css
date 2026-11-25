@@ -1887,11 +1887,22 @@ html:is([data-theme='glass'], [data-theme='frost']) .question-option kbd {
   border-top: 1px solid var(--line);
   min-width: 0;
 }
-/* one row: the project name gives way first, the send button never drops below */
+/* one row, squeezed in this order: the project name first, then the model's name (a long community model name never takes the room of the
+   rest); the permission label, the switches and the send button keep their words and their size, so nothing reads "A..." */
 .cwd-btn {
-  flex: 0 1 auto;
-  min-width: 0;
+  flex: 0 4 auto;
+  min-width: 34px;
   max-width: 230px;
+}
+.composer-bar > .picker-model {
+  flex: 0 2 auto;
+  min-width: 120px;
+}
+.composer-bar > .picker-mode {
+  flex: none;
+}
+.composer-bar > .picker-model .picker-btn {
+  max-width: 100%;
 }
 .cwd-btn span {
   min-width: 0;
@@ -3790,10 +3801,12 @@ html:is([data-theme='glass'], [data-theme='frost']) .picker-foot .segmented butt
   container: composer / inline-size;
 }
 /* a narrow composer: the folder keeps its icon (name in the tooltip and the header), toggles pack closer */
-@container composer (max-width: 600px) {
+@container composer (max-width: 900px) {
   .cwd-btn .ellipsis {
     display: none;
   }
+}
+@container composer (max-width: 600px) {
   .composer-bar {
     gap: 2px;
     padding-inline: 8px 8px;
@@ -3804,6 +3817,10 @@ html:is([data-theme='glass'], [data-theme='frost']) .picker-foot .segmented butt
   /* the live panel can leave the box narrow in a wide window: the controls go to a second row instead of squeezing over each other */
   .composer-bar {
     flex-wrap: wrap;
+  }
+  /* on the wrapped rows the model takes the room the first row has left instead of a row of its own */
+  .composer-bar > .picker-model {
+    flex: 1 1 150px;
   }
   .composer-bar .send-btn:last-child {
     margin-inline-start: auto;
