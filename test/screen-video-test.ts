@@ -56,8 +56,13 @@ const fakeDecoder = (answer: (c: Cfg) => boolean | 'throw') => ({
 })
 ;(globalThis as { EncodedVideoChunk?: unknown }).EncodedVideoChunk ??= class {}
 
-test('a phone that decodes everything in hardware gets High, 1080p60', async () => {
+test('a phone that decodes everything in hardware gets High, 4K60 (the PC screen at its own pixels)', async () => {
   const caps = await videoCaps(fakeDecoder(() => true) as never)
+  assert.deepEqual(caps, { profiles: ['high', 'main', 'baseline'], maxEdge: 3840, maxFps: 60, hardware: true })
+})
+
+test('a phone whose hardware stops at 1080p60 says so (asked with the 4K level strings first)', async () => {
+  const caps = await videoCaps(fakeDecoder((c) => c.hardwareAcceleration === 'prefer-hardware' && (c.codedWidth ?? 0) <= 1920) as never)
   assert.deepEqual(caps, { profiles: ['high', 'main', 'baseline'], maxEdge: 1920, maxFps: 60, hardware: true })
 })
 

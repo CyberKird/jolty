@@ -31,8 +31,13 @@ export interface VideoCaps {
 }
 
 const PROFILE_IDC: Record<VideoCaps['profiles'][number], string> = { high: '6400', main: '4D40', baseline: '42E0' }
-/** H.264 levels from the best down, with what each carries (a step of the PC's ladder must fit) */
+/** H.264 levels from the best down, with what each carries (a step of the PC's ladder must fit). The PC sends a 4K screen
+ *  at its own pixels when the phone decodes it: text read zoomed in stays sharp. */
 const LEVELS: Array<{ hex: string; edge: number; fps: number; w: number; h: number }> = [
+  { hex: '34', edge: 3840, fps: 60, w: 3840, h: 2160 },
+  { hex: '33', edge: 3840, fps: 30, w: 3840, h: 2160 },
+  { hex: '33', edge: 2560, fps: 60, w: 2560, h: 1440 },
+  { hex: '32', edge: 2560, fps: 30, w: 2560, h: 1440 },
   { hex: '2A', edge: 1920, fps: 60, w: 1920, h: 1080 },
   { hex: '28', edge: 1920, fps: 30, w: 1920, h: 1080 },
   { hex: '20', edge: 1280, fps: 60, w: 1280, h: 720 },
