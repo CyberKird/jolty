@@ -186,6 +186,7 @@
 }
 .tbl:hover .tbl-acts,
 .tbl-acts:focus-within { opacity: 1; }
+@media (hover: none) { .tbl-acts { opacity: 1; } }
 .tbl-acts .cp { height: 20px; padding: 0 5px; background: var(--s2); }
 .tbl-acts .lbl { font-size: 10.5px; }
 

@@ -55,6 +55,12 @@
 .session-item:hover .title {
   padding-inline-end: 44px;
 }
+/* touch: the open conversation's row keeps its buttons in view (transitions.css) */
+@media (hover: none) {
+  .session-item.active .title {
+    padding-inline-end: 44px;
+  }
+}
 
 .side-head .head-act {
   display: inline-grid;
