@@ -1,21 +1,30 @@
 /* The page on a phone: a browser paired through the phone link (html.remote, see remote/boot.ts) with a narrow screen.
    The desktop window never matches (its minimum width is 960 px). */
 @media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
-  /* --vvh is the visible height set by remote/phone.ts: with the keyboard open it ends above the keyboard */
-  html.remote,
+  /* the page fills the screen by pinning to its four edges, not by a measured height: an iPhone measured it short (a dark band
+     under the app). Only while a field has focus (html.vv, remote/phone.ts) it takes the visible height (--vvh), which ends above
+     the keyboard. Behind it the page is the theme's own color, so a passing gap is never a black bar. */
+  html.remote {
+    height: 100%;
+    background: var(--black);
+  }
   html.remote #root {
-    height: var(--vvh, 100dvh);
+    height: 100%;
   }
   html.remote body {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: var(--vvh, 100dvh);
-    transform: translateY(var(--vvt, 0px));
+    inset: 0;
+    min-height: var(--fill-h, 0px);
     overscroll-behavior: none;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+  }
+  /* a field has focus: the page is the visible area, moved with it (iOS scrolls the page up to show the field) */
+  html.remote.vv body {
+    bottom: auto;
+    height: var(--vvh, 100%);
+    min-height: 0;
+    transform: translateY(var(--vvt, 0px));
   }
   html.remote button,
   html.remote [role='button'],

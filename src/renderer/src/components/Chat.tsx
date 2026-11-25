@@ -1,5 +1,5 @@
 import { ArrowRight, ArrowUp, ClipboardList, FolderOpen, GitFork, Globe, Loader2, MessageSquareDashed, Monitor, RotateCcw, Paperclip, PanelRightClose, PanelRightOpen, Power, Sparkles, Square, Undo2, X } from 'lucide-react'
-import { Fragment, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { assess, recommend } from '@shared/complexity'
 import { secretHint } from '@shared/secrets'
@@ -12,6 +12,7 @@ import { api, basename, compactBefore, compactFirst, ENGINE_LABEL, errMsg, level
 import { ChatImage, MessageItem, PermissionCard, QuestionCard } from './Messages'
 import { CopyButton } from './CopyField'
 import { useWindowedItems } from './useWindowedItems'
+import { useStickToBottom } from './useStickToBottom'
 import { FindBar } from './FindBar'
 import { BrowserMenu, DEFAULT_MODE, modesFor, ModelPicker, ModePicker, OPEN_MODES, useAllModels, type ModelGroup } from './ModelPicker'
 import { MentionMenu, useMentions } from './Mentions'
@@ -882,68 +883,6 @@ function HandoffMenu({ session, profiles }: { session: SessionMeta; profiles: Pr
 // ---------------------------------------------------------------------------
 // Conversation
 // ---------------------------------------------------------------------------
-function useStickToBottom(dep: unknown): React.RefObject<HTMLDivElement | null> {
-  const ref = useRef<HTMLDivElement>(null)
-  const stick = useRef(true)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    let lastInput = 0
-    let lastTop = el.scrollTop
-    let held = false
-    const markInput = (): void => { lastInput = Date.now() }
-    // a finger is not "held" the way a mouse button is: the browser takes the touch over for scrolling and sends pointercancel, never pointerup, so a
-    // finger would stay "held" for good and every later scroll (the page growing or shrinking under a streaming answer) would look like the reader's
-    const onDown = (e: PointerEvent): void => { if (e.pointerType !== 'touch') held = true; markInput() }
-    const onUp = (): void => { held = false }
-    const onScroll = (): void => {
-      const top = el.scrollTop
-      const gap = el.scrollHeight - top - el.clientHeight
-      const byUser = held || Date.now() - lastInput < 500
-      // going up lets go at once, even inside the 120 px: otherwise the next resize pulls the reader back down (the rubber band)
-      if (byUser && top < lastTop) stick.current = false
-      else if (byUser) stick.current = gap < 120
-      // not by the reader (scroll anchoring, momentum): only the very bottom follows again
-      else if (top > lastTop && gap < 2) stick.current = true
-      lastTop = top
-    }
-    const onKey = (event: KeyboardEvent): void => {
-      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) markInput()
-    }
-    const follow = (): void => { if (stick.current) el.scrollTop = el.scrollHeight }
-    el.addEventListener('wheel', markInput, { passive: true })
-    el.addEventListener('touchmove', markInput, { passive: true })
-    el.addEventListener('pointerdown', onDown)
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onUp)
-    el.addEventListener('touchend', markInput, { passive: true })
-    el.addEventListener('keydown', onKey)
-    el.addEventListener('scroll', onScroll)
-    const resize = new ResizeObserver(follow)
-    if (el.firstElementChild) resize.observe(el.firstElementChild)
-    // the box itself too: the room kept under the last message follows the composer's height (a second line, a note, an attachment), and a window
-    // or panel resize changes the viewport; neither changes the content, so the observer above never saw them and the chat stopped short of the end
-    resize.observe(el)
-    follow()
-    return () => {
-      el.removeEventListener('wheel', markInput)
-      el.removeEventListener('touchmove', markInput)
-      el.removeEventListener('pointerdown', onDown)
-      window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onUp)
-      el.removeEventListener('touchend', markInput)
-      el.removeEventListener('keydown', onKey)
-      el.removeEventListener('scroll', onScroll)
-      resize.disconnect()
-    }
-  }, [])
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (el && stick.current) el.scrollTop = el.scrollHeight
-  }, [dep])
-  return ref
-}
-
 export function ChatView({ session }: { session: SessionMeta }) {
   const profiles = useStore((s) => s.profiles)
   const items = useStore((s) => s.transcripts[session.id]) || EMPTY
@@ -952,7 +891,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
   const { toast, liveOpen, setLiveOpen, loadSessions, openSession } = useStore(useShallow(({ toast, liveOpen, setLiveOpen, loadSessions, openSession }) => ({ toast, liveOpen, setLiveOpen, loadSessions, openSession })))
   const running = status === 'running'
   const profile = profiles.find((p) => p.id === session.profileId)
-  const scrollRef = useStickToBottom(items)
+  const { ref: scrollRef, stickNow } = useStickToBottom(items)
   // a chat created moments ago has no history to wait for; an old one is settled once its transcript is in
   const loaded = useStore((s) => s.transcripts[session.id] !== undefined) || Date.now() - session.createdAt < 10_000
   const settled = useSettled(loaded)
@@ -965,6 +904,8 @@ export function ChatView({ session }: { session: SessionMeta }) {
   const who = `${profile?.name || ENGINE_LABEL[session.engine]} · ${how}`
   const send = useCallback(
     async (text: string, atts: Attachment[], parallel?: boolean): Promise<void> => {
+      // on the phone what was just sent is shown even when the reader had scrolled up (the desktop keeps its place)
+      if (document.documentElement.classList.contains('remote')) stickNow()
       useStore.getState().onEvent({ type: 'status', sessionId: session.id, status: 'running' })
       try {
         await api.sessions.send(session.id, text, atts, parallel)
@@ -973,7 +914,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
         toast(errMsg(err), true)
       }
     },
-    [session.id, toast]
+    [session.id, stickNow, toast]
   )
   // what is written while the model works waits in the conversation itself, in order, and goes out when the turn ends
   const queueStore = session.temporary ? sessionStorage : localStorage
@@ -1015,6 +956,7 @@ export function ChatView({ session }: { session: SessionMeta }) {
     void send(next.text, next.atts, next.parallel)
   }, [queue, restoredQueue, running, send])
   const queueNow = (text: string, atts: Attachment[], parallel?: boolean): void => {
+    if (document.documentElement.classList.contains('remote')) stickNow()
     setQueue((q) => [...q, { id: crypto.randomUUID(), text, atts, parallel }])
   }
   const steer = (item: QueuedMessage): void => {
