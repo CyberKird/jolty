@@ -724,3 +724,56 @@ html.remote .offline-over {
     height: 15px;
   }
 }
+
+/* Pull down in the side menu to read everything from the PC again (remote/pull.ts) */
+.pull-refresh {
+  position: fixed;
+  z-index: 96;
+  top: calc(env(safe-area-inset-top) + 6px);
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  border-radius: 50%;
+  color: var(--text, #fff);
+  background: var(--panel-solid, rgba(30, 30, 40, 0.92));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.16));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(var(--y, 0px) - 44px)) rotate(calc(var(--p, 0) * 270deg)) scale(calc(0.6 + var(--p, 0) * 0.4));
+  transition: opacity 0.15s;
+}
+.pull-refresh.on {
+  opacity: 1;
+}
+.pull-refresh.ready {
+  border-color: var(--accent, #7fb2ff);
+}
+.pull-refresh.spin {
+  opacity: 1;
+  transform: translateY(40px);
+  transition: transform 0.2s, opacity 0.15s;
+}
+.pull-refresh.spin svg {
+  animation: pull-spin 0.8s linear infinite;
+}
+@keyframes pull-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+html:not(.remote) .pull-refresh {
+  display: none;
+}
+
+/* A long press opens the row's menu: the system's own callout and text selection must not fight it */
+html.remote .sidebar {
+  -webkit-touch-callout: none;
+}
+html.remote .sidebar :where(.session-item, .live-item) {
+  -webkit-user-select: none;
+  user-select: none;
+}

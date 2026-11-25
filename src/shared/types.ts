@@ -357,6 +357,8 @@ export type ChatEvent =
   | { type: 'openPage'; page: 'accounts' }
   /** the list of conversations changed in a way no `meta` event tells (removed, archived, pinned, restored): read it again */
   | { type: 'sessionsChanged' }
+  /** a device looked at a finished conversation: it leaves the Live list on every device */
+  | { type: 'seen'; sessionId: string }
   /** a preference was saved: every window and phone reads the settings again */
   | { type: 'settingsChanged' }
   /** Jolty is about to restart to install an update: the phones say so and reconnect */
@@ -683,6 +685,8 @@ export interface JoltyApi {
     setFlags(sessionIds: string[], flags: { pinned?: boolean; archived?: boolean }): Promise<void>
     /** removed this run, newest first */
     closed(): Promise<ClosedSession[]>
+    /** tells every device that a finished conversation was looked at (it leaves Live everywhere) */
+    seen(id: string): Promise<void>
     /** brings back a removed conversation (the newest when no id) */
     restore(sessionId?: string): Promise<SessionMeta>
     /** a throwaway read-only chat beside this one, primed with a short brief of it (shown to the user as `brief`) */

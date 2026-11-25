@@ -49,6 +49,7 @@ export function createApi(call: Call, listen: Listen, filePath: (file: File) => 
       referenceFile: (id) => call('sessions:referenceFile', id),
       setFlags: (ids, flags) => call('sessions:setFlags', ids, flags),
       closed: () => call('sessions:closed'),
+      seen: (id) => call('sessions:seen', id),
       restore: (id) => call('sessions:restore', id),
       side: (id, profileId, model, effort) => call('sessions:side', id, profileId, model, effort),
       promoteSide: (id) => call('sessions:promoteSide', id),

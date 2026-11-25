@@ -555,6 +555,12 @@ export function Sidebar() {
         <span className="label">{tr("Conversații")}</span>
         <span className="head-right">
           <span className="label">{saved.length - archived.length}</span>
+          {/* an installed page has no browser refresh: this reads everything from the PC again */}
+          {document.documentElement.classList.contains('remote') && (
+            <button className="head-act" title={tr("Reîmprospătează")} aria-label={tr("Reîmprospătează")} onClick={() => window.dispatchEvent(new Event('jolty:refresh'))}>
+              <RefreshCw size={13} />
+            </button>
+          )}
           <OrganizeMenu />
         </span>
       </div>

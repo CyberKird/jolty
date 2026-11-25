@@ -269,6 +269,7 @@ export const useStore = create<State>((set, get) => ({
     const history = id && !get().transcripts[id] ? api.sessions.history(id) : undefined
     if (history) await Promise.race([history.then(() => undefined, () => undefined), new Promise((r) => setTimeout(r, 150))])
     if (get().activeId !== id || get().page !== 'chat') swapPage(() => set({ activeId: id, page: 'chat' }))
+    if (id && get().unseen[id]) void api.sessions.seen(id).catch(() => undefined)
     if (id) get().dismissUnseen(id)
     if (id && !get().transcripts[id]) {
       const items = await (history ?? api.sessions.history(id))
@@ -324,12 +325,18 @@ export const useStore = create<State>((set, get) => ({
           set((s) => ({ permissions: { ...s.permissions, [e.sessionId]: [] } }))
           // finished while the user looks at something else: it stays in the Live list until opened
           if (prev === 'running' && (get().activeId !== e.sessionId || get().page !== 'chat')) set((s) => ({ unseen: { ...s.unseen, [e.sessionId]: true } }))
+          // finished while this device shows it: the other devices (PC, phones) do not keep it as "not seen" either
+          else if (prev === 'running' && !document.hidden) void api.sessions.seen(e.sessionId).catch(() => undefined)
           void get().loadSessions()
           const profile = get().profiles.find((p) => p.id === get().sessions.find((x) => x.id === e.sessionId)?.profileId)
           if (profile) refreshLimitsSoon(profile)
         }
         return
       }
+      // another device (or this one) looked at the result: it leaves Live here too
+      case 'seen':
+        get().dismissUnseen(e.sessionId)
+        return
       case 'focus':
         void get().openSession(e.open)
         return
@@ -355,7 +362,8 @@ export const useStore = create<State>((set, get) => ({
         })
         return
       case 'permission':
-        set((s) => ({ permissions: { ...s.permissions, [e.sessionId]: [...(s.permissions[e.sessionId] || []), e.request] } }))
+        // told again after a reconnect or by a late subscriber: the same question is not shown twice
+        set((s) => (s.permissions[e.sessionId]?.some((r) => r.id === e.request.id) ? s : { permissions: { ...s.permissions, [e.sessionId]: [...(s.permissions[e.sessionId] || []), e.request] } }))
         return
       case 'permissionResolved':
         set((s) => ({ permissions: { ...s.permissions, [e.sessionId]: (s.permissions[e.sessionId] || []).filter((r) => r.id !== e.requestId) } }))

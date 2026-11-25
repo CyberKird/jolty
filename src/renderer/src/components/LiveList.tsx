@@ -26,6 +26,10 @@ function Elapsed({ since }: { since?: number }) {
 export function LiveList() {
   const { sessions, status, permissions, unseen, plans, clocks, activeId, page, openSession, dismissUnseen, profiles } = useStore(useShallow(({ sessions, status, permissions, unseen, plans, clocks, activeId, page, openSession, dismissUnseen, profiles }) => ({ sessions, status, permissions, unseen, plans, clocks, activeId, page, openSession, dismissUnseen, profiles })))
   const rows = useMemo(() => liveRows({ sessions, status, permissions, unseen }), [sessions, status, permissions, unseen])
+  const hide = (id: string): void => {
+    dismissUnseen(id)
+    void api.sessions.seen(id).catch(() => undefined)
+  }
   if (!rows.length) return null
   return (
     <section className="live-list" aria-label={tr("Live")}>
@@ -55,7 +59,7 @@ export function LiveList() {
             onContextMenu={(e) =>
               showMenu(e, [
                 ...(s.worktree ? [{ label: tr("Asistent de merge"), icon: GitMerge, run: () => openMerge(s.id) }, copyItem(tr("Copiază numele branch-ului"), s.worktree.branch, GitBranch), { label: tr("Arată worktree-ul în Explorer"), run: () => void api.app.revealPath(s.worktree!.path) }] : []),
-                ...(state === 'done' ? [{ label: tr("Ascunde din Live"), run: () => dismissUnseen(s.id) }] : [])
+                ...(state === 'done' ? [{ label: tr("Ascunde din Live"), run: () => hide(s.id) }] : [])
               ])
             }
           >
@@ -81,7 +85,7 @@ export function LiveList() {
                 title={tr("Ascunde din Live")}
                 onClick={(e) => {
                   e.stopPropagation()
-                  dismissUnseen(s.id)
+                  hide(s.id)
                 }}
               >
                 <X size={12} />
