@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.36.2
+
+### Fixed
+
+- A conversation that keeps working on its own stays in Live. When a command left running in the background finished (a long build, a render), Claude went on by itself to report the result, but Jolty only counted a turn as running when you sent a message, so the conversation dropped out of Live after 15 seconds while it was still working. Jolty now sees that turn start from what Claude writes and shows it as running, with its clock, until it really ends.
+
 ## 0.36.1
 
 ### Fixed

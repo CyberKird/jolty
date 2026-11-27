@@ -51,6 +51,7 @@ import { extraWindows, withIdleSession } from '@shared/limits'
 import { mergeAccountModels, parseAccountModels, type AccountModel } from '@shared/claude-models'
 import { SIDE_READ_ONLY } from '../side-chat'
 import { askRule, DISMISSED, NOBODY_WATCHING, parseQuestions } from '../ask-user'
+import { startsOwnTurn } from './auto-turn'
 
 type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk')
 let sdkModule: Promise<SdkModule> | undefined
@@ -480,8 +481,21 @@ class ClaudeSession implements EngineSession {
     this.host.emit({ type: 'item', sessionId: this.meta.id, item: { kind: 'notice', id: randomUUID(), text, level } })
   }
 
+  /**
+   * A turn Claude Code starts on its own (the report after a background command or agent ends) never goes
+   * through send(): mark it running when its first output arrives, so the chat stays in Live while it works.
+   */
+  private autoTurn(m: SDKMessage): void {
+    if (!startsOwnTurn(m, { turn: this.turn, stopping: this.stopRequested })) return
+    this.turn = true
+    clearTimeout(this.idleTimer)
+    clearTimeout(this.closeTimer)
+    this.host.emit({ type: 'status', sessionId: this.meta.id, status: 'running' })
+  }
+
   private onMessage(m: SDKMessage): void {
     const sid = this.meta.id
+    this.autoTurn(m)
     switch (m.type) {
       case 'system': {
         if (m.subtype === 'init') {
